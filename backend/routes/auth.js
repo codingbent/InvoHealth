@@ -128,9 +128,23 @@ router.post("/createservice",[
 // Fetch all services 
 
 router.get("/fetchallservice",
-
+async(req,res)=>{
+    var success=false;
+    const service=await Service.find({});
+    res.json(service);
+}
 )
 
+
+//fetch all patients
+
+router.get("/fetchallpatients",
+    async(req,res)=>{
+        var success=false;
+        const patient=await Patient.find({})
+        res.json(patient)
+    }
+)
 router.post(
     "/login",
     [

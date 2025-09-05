@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const mongourl = "mongodb://localhost:27017/GMSC"; // Replace 'inotebook' with your database name
+const mongourl = "mongodb://localhost:27017/GMSC";
 
 const connectToMongo = () => {
   mongoose.connect(mongourl)

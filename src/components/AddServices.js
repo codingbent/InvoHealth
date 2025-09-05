@@ -11,6 +11,7 @@ const AddServices = (props) => {
                 method: "POST",
                 headers: {
                     "Content-type": "application/json",
+                    "auth-token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U"
                 },
                 body: JSON.stringify({ name, amount }),
             }
@@ -21,6 +22,7 @@ const AddServices = (props) => {
             setService({ name: "", amount: "" });
             props.showAlert("Successfully Added", "success");
             document.querySelector("#serviceModal .btn-close").click();
+            window.location.reload();
         } else {
             setService({ name: "", amount: "" });
             props.showAlert("Already exists", "danger");

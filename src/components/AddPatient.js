@@ -1,9 +1,9 @@
 import { useState } from "react";
-
+import ServiceList from "./ServiceList";
 const AddPatient = (props) => {
     const [patient, setPatient] = useState({
         name: "",
-        service: "",
+        service: [],
         number: "",
         amount: ""
     });
@@ -12,7 +12,7 @@ const AddPatient = (props) => {
 
     const handlesubmit = async (e) => {
         e.preventDefault();
-
+        
         const response = await fetch("http://localhost:5001/api/auth/addpatient", {
             method: "POST",
             headers: {
@@ -25,7 +25,7 @@ const AddPatient = (props) => {
         console.log(json);
 
         if (json.success) {
-            setPatient({ name: "", service: "", number: "", amount: "" });
+            setPatient({ name: "", service: [], number: "", amount: "" });
             props.showAlert("Patient Added Successfully", "success");
             document.querySelector("#patientModal .btn-close").click();
         } else {
@@ -67,30 +67,46 @@ const AddPatient = (props) => {
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Service</label>
-                        <input
+                        {/* <input
                             type="text"
                             className="form-control"
                             placeholder="Enter Service"
                             name="service"
                             onChange={onChange}
                             value={service}
-                        />
+                        /> */}
+                        <ServiceList
+                            onSelect={(value, checked) => {
+                                setPatient((prev) => {
+                                let updatedServices;
+                                if (checked) {
+                                    updatedServices = [...prev.service, value];
+                                } else {
+                                    updatedServices = prev.service.filter((s) => s !== value);
+                                }
+                                return { ...prev, service: updatedServices };
+                                });
+                            }}
+                            />
+
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Number</label>
                         <input
-                            type="text"
+                            type="number"
                             className="form-control"
                             placeholder="Enter Number (10 digits)"
                             name="number"
                             onChange={onChange}
                             value={number}
+                            minLength={10}
+                            maxLength={10}
                         />
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Amount</label>
                         <input
-                            type="text"
+                            type="number"
                             className="form-control"
                             placeholder="Enter Amount"
                             name="amount"
