@@ -15,9 +15,12 @@ export default function ServiceList({ onSelect }) {
     }, []);
 
     return (
-        <div className="form-check">
+        <div className="d-flex flex-wrap gap-3">
             {services.map((s, index) => (
-                <div key={s._id || index} className="mb-2">
+                <div
+                    key={s._id || index}
+                    className="form-check d-flex align-items-center"
+                >
                     <input
                         type="checkbox"
                         id={`service-${index}`}
@@ -25,7 +28,7 @@ export default function ServiceList({ onSelect }) {
                         onChange={(e) =>
                             onSelect(e.target.value, e.target.checked)
                         }
-                        className="form-check-input"
+                        className="form-check-input me-2"
                     />
                     <label
                         className="form-check-label"
