@@ -15,6 +15,9 @@ const Patient = (props) => {
 
   return (
     <>
+    {localStorage.getItem("token") != null ? (
+        <>
+
       <div className="mt-3 d-grid gap-2 d-md-flex justify-content-md-center">
         {/* Modal for Adding patients */}
         <button
@@ -77,7 +80,7 @@ const Patient = (props) => {
         )}
       </div>
 
-      {localStorage.getItem("token") != null ? (
+      
         <div>
           {!showAppointment && (
             <div className="patient-list">
@@ -90,6 +93,7 @@ const Patient = (props) => {
             </div>
           )}
         </div>
+        </>
       ) : (
         <h1>Login to see Patient</h1>
       )}
