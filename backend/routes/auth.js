@@ -25,10 +25,10 @@ router.post(
             return res.status(400).json({ errors: errors.array() });
         }
 
-        console.log(req.body.email);
+        //console.log(req.body.email);
         try {
             let doc = await Doc.findOne({ email: req.body.email });
-            console.log(doc);
+            //console.log(doc);
             
             if (doc) {
                 return res
@@ -48,7 +48,7 @@ router.post(
                 },
             };
             const authtoken = jwt.sign(data, JWT_SECRET);
-            //console.log(authtoken);
+            ////console.log(authtoken);
             success = true;
             res.json({ success, authtoken });
         } catch (error) {
@@ -66,7 +66,8 @@ router.post(
         body("name", "Enter Name").notEmpty(),
         body("service"),
         body("number"),
-        body("amount")
+        body("amount"),
+        body("age")
         .optional({ checkFalsy: true }) // allows empty string or missing field
         .isNumeric().withMessage("Amount must be a number"),
     ],
@@ -74,7 +75,7 @@ router.post(
         let success = false;
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.log(errors.errors[0]);
+            //console.log(errors.errors[0]);
             return res.status(400).json({ success, errors: errors.array() });
         }
 
@@ -84,11 +85,12 @@ router.post(
                 service: req.body.service,
                 number: req.body.number,
                 amount: req.body.amount,
+                age:req.body.age
             });
 
             success = true;
             res.json({ success, patient }); // send both success + created doc
-            console.log("Successfully Added Patient");
+            //console.log("Successfully Added Patient");
         } catch (err) {
             console.error(err.message);
             res.status(500).json({ success, error: "Server error, please try again later" });
@@ -114,7 +116,7 @@ router.post("/createservice",[
             amount:req.body.amount
         })
         success=true;
-        console.log("Successfull Send");
+        //console.log("Successfull Send");
         return res.status(200).json({success,status:"Added successfully"});
     }
     catch (error) {
@@ -145,6 +147,22 @@ router.get("/fetchallpatients",
         res.json(patient)
     }
 )
+
+//fetch patient details
+
+router.get("/patientdetails/:id", async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.params.id); 
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+    res.json(patient);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.post(
     "/login",
     [
@@ -194,7 +212,7 @@ router.post(
             });
         } catch (e){
             console.error(e.message);
-            //console.log(e.message);
+            ////console.log(e.message);
 
             res.status(500).send("Internal server error");
         }

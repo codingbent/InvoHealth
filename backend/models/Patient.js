@@ -1,6 +1,4 @@
-const { type } = require('@testing-library/user-event/dist/type');
 const mongoose = require('mongoose');
-const { data } = require('react-router');
 const { Schema } = mongoose;
 
 const PatientSchema = new Schema({
@@ -19,6 +17,10 @@ const PatientSchema = new Schema({
     amount: {
         type: Number,
         default: 0
+    },
+    age:{
+        type:Number,
+        required:false
     },
     date:{
         type:Date,

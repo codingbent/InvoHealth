@@ -5,10 +5,11 @@ const AddPatient = (props) => {
         name: "",
         service: [],
         number: "",
-        amount: ""
+        amount: "",
+        age:""
     });
 
-    const { name, service, number, amount } = patient;
+    const { name, service, number, amount ,age } = patient;
 
     const handlesubmit = async (e) => {
         e.preventDefault();
@@ -17,15 +18,16 @@ const AddPatient = (props) => {
             method: "POST",
             headers: {
                 "Content-type": "application/json",
+                "auth-token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U"
             },
-            body: JSON.stringify({ name, service, number, amount }),
+            body: JSON.stringify({ name, service, number, amount,age }),
         });
 
         const json = await response.json();
-        console.log(json);
+        //console.log(json);
 
         if (json.success) {
-            setPatient({ name: "", service: [], number: "", amount: "" });
+            setPatient({ name: "", service: [], number: "", amount: "" ,age:""});
             props.showAlert("Patient Added Successfully", "success");
             document.querySelector("#patientModal .btn-close").click();
         } else {
@@ -110,6 +112,17 @@ const AddPatient = (props) => {
                             className="form-control"
                             placeholder="Enter Amount"
                             name="amount"
+                            onChange={onChange}
+                            value={amount}
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Age</label>
+                        <input
+                            type="number"
+                            className="form-control"
+                            placeholder="Enter Age"
+                            name="age"
                             onChange={onChange}
                             value={amount}
                         />

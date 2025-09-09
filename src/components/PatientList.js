@@ -1,5 +1,27 @@
+import {useEffect,useState} from "react"
+import {useNavigate} from "react-router-dom"
+import PatientDetails from "./PatientDetails";
 export default function PatientList(){
-    // const 
+    const navigate=useNavigate();
+    const [patient,setPatient]=useState([]);
+      const [selectedId, setSelectedId] = useState(null);
+    useEffect(()=>{
+        const list =  async ()=>{
+        const response = await fetch("http://localhost:5001/api/auth/fetchallpatients",{
+            method:"GET",
+            header:{
+                "Content-Type":"application/json",
+                "auth-token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U"
+            }
+        });
+        const json =await response.json();
+        //console.log(json);
+        setPatient(json)
+    }
+    list();
+    },[]
+    )
+    
     return (
         <>
         <nav aria-label="Page navigation example" className="mt-3">
@@ -24,30 +46,22 @@ export default function PatientList(){
                     <tr>
                         <th scope="col">Serial number</th>
                         <th scope="col">Name</th>
-                        <th scope="col">Amount</th>
-                        <th scope="col">Service</th>
+                        {/* <th scope="col">Amount</th> */}
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <th scope="row">1</th>
-                        <td>Mark</td>
-                        <td>Otto</td>
-                        <td>@mdo</td>
-                    </tr>
-                    <tr>
-                        <th scope="row">2</th>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
-                        <td>@fat</td>
-                    </tr>
-                    <tr>
-                        <th scope="row">3</th>
-                        <td>John</td>
-                        <td>Doe</td>
-                        <td>@social</td>
-                    </tr>
-                </tbody>
+                    {patient.map((s, index) => (
+          <tr
+            key={index}
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate(`/patient/${s._id}`)} 
+          >
+            <td>{index + 1}</td>
+            <td>{s.name}</td>
+          </tr>
+        ))}
+                    </tbody>
+                    {selectedId && <PatientDetails id={selectedId} />}
             </table>
         </>
     )

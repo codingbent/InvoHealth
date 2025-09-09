@@ -17,7 +17,7 @@ export default function Login(props) {
             }),
         });
         const json = await response.json();
-        console.log(json);
+        //console.log(json);
 
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
@@ -36,7 +36,7 @@ export default function Login(props) {
         <div className="container mt-5">
             <form onSubmit={handlesubmit}>
                 <div className="mb-3">
-                    <label htmlhtmlFor="exampleInputEmail1" className="form-label">
+                    <label htmlFor="exampleInputEmail1" className="form-label">
                         Email address
                     </label>
                     <input
@@ -54,7 +54,7 @@ export default function Login(props) {
                 </div>
                 <div className="mb-3">
                     <label
-                        htmlhtmlFor="exampleInputPassword1"
+                        htmlFor="exampleInputPassword1"
                         className="form-label"
                     >
                         Password

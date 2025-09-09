@@ -8,8 +8,8 @@ import ServiceList from "./ServiceList";
 const Patient = (props) => {
     const { showAlert } = props;
     const [showAppointment, setShowAppointment] = useState(false);
-    const [patients,setpatients]=useState({});
-    const [patient, setPatient] = useState({
+    // const [patients,setpatients]=useState({});
+    const [patients, setpatients] = useState({
         name: "",
         service: [],
         number: "",
@@ -28,7 +28,22 @@ const Patient = (props) => {
             })
             const json = await response.json();
             setpatients(json[0])
-            console.log(patients);
+            //console.log(patients);
+            
+        }
+        const updateadd=()=>{
+            if(localStorage.getItem('patient')==null){
+                alert("Select Patient")
+            }
+            else{
+                setShowAppointment(false);
+                localStorage.removeItem('patient');
+                props.showAlert('Appointment Added','success')
+            }
+        }
+        const updateclose=()=>{
+            setShowAppointment(false);
+            localStorage.removeItem('patient');
         }
     return (
         <>
@@ -95,30 +110,19 @@ const Patient = (props) => {
                     {showAppointment && (
                         <div className="appointment container">
                             <form onSubmit={handlesubmit}>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="name"
-                                        className="form-label"
-                                    >
-                                        Patient Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        id="name"
-                                        placeholder="Search name"
-                                    />
-                                </div>
+                                <AddAppointment/>
                                 <div className="mb-3">
                                     <label className="form-label">Services</label>
                                 <ServiceList
                                     onSelect={(value, checked) => {
-                                    setPatient((prev) => {
+                                    setpatients((prev) => {
+                                    const currentServices = Array.isArray(prev.service) ? prev.service : [];
+
                                     let updatedServices;
                                     if (checked) {
-                                        updatedServices = [...prev.service, value];
+                                        updatedServices = [...currentServices, value];
                                     } else {
-                                        updatedServices = prev.service.filter((s) => s !== value);
+                                        updatedServices = currentServices.filter((s) => s !== value);
                                     }
                                     return { ...prev, service: updatedServices };
                                     });
@@ -132,8 +136,8 @@ const Patient = (props) => {
                                 <input className="form-control" type="number" id="amount" placeholder="Enter Amount"/>
                                 </div>
                                 
-                                <button className="btn btn-primary" onClick={() => setShowAppointment(false)}>Add Appointment</button>
-                                <button className="btn btn-primary ms-2" onClick={()=>setShowAppointment(false)}>Close</button>
+                                <button type="submit" className="btn btn-primary" onClick={updateadd}>Add Appointment</button>
+                                <button className="btn btn-primary ms-2" onClick={updateclose}>Close</button>
                             </form>
                         </div>
                     )}

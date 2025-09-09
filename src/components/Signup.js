@@ -20,7 +20,7 @@ const  Signup=(props) =>{
             })
           })
           const json =await response.json()
-          console.log(json);
+          //console.log(json);
           
           if(json.success){
             localStorage.setItem('token',json.authtoken)
@@ -39,7 +39,7 @@ const onChange = (e) => {
         <div className="container mt-5">
             <form onSubmit={handlesubmit}>
               <div className="mb-3">
-                    <label htmlhtmlFor="exampleFormControlInput1" className="form-label">
+                    <label htmlFor="exampleFormControlInput1" className="form-label">
                         Name
                     </label>
                     <input
@@ -53,7 +53,7 @@ const onChange = (e) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label htmlhtmlFor="exampleFormControlInput2" className="form-label">
+                    <label htmlFor="exampleFormControlInput2" className="form-label">
                         Email address
                     </label>
                     <input
@@ -67,7 +67,7 @@ const onChange = (e) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label htmlhtmlFor="inputPassword5" className="form-label">
+                    <label htmlFor="inputPassword5" className="form-label">
                         Password
                     </label>
                     <input
@@ -81,7 +81,7 @@ const onChange = (e) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label htmlhtmlFor="inputPassword" className="form-label">
+                    <label htmlFor="inputPassword" className="form-label">
                         Confirm Password
                     </label>
                     <input

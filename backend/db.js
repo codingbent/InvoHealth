@@ -4,7 +4,7 @@ const mongourl = "mongodb://localhost:27017/GMSC";
 const connectToMongo = () => {
   mongoose.connect(mongourl)
     .then(() => {
-      console.log('Connected to MongoDB');
+      //console.log('Connected to MongoDB');
     })
     .catch((err) => {
       console.error('Error connecting to MongoDB:', err);
