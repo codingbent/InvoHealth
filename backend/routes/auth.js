@@ -141,26 +141,68 @@ async(req,res)=>{
 
 //fetch all patients
 
-router.get("/fetchallpatients",
-    async(req,res)=>{
-        var success=false;
-        const patient=await Patient.find({})
-        res.json(patient)
-    }
-)
-
-//fetch patient details
-
-router.get("/patientdetails/:id", async (req, res) => {
+router.get("/fetchallpatients", async (req, res) => {
   try {
-    const patient = await Patient.findById(req.params.id); 
-    if (!patient) {
-      return res.status(404).json({ message: "Patient not found" });
-    }
-    res.json(patient);
+    const patients = await Patient.find();
+
+    // For each patient, get last appointment date
+    const patientsWithLast = await Promise.all(
+      patients.map(async (p) => {
+        const appointment = await Appointment.findOne({ patient: p._id });
+        let lastDate = null;
+        if (appointment && appointment.visits.length > 0) {
+          lastDate = appointment.visits[appointment.visits.length - 1].date;
+        }
+        return {
+          ...p.toObject(),
+          lastAppointment: lastDate,
+        };
+      })
+    );
+
+    res.json(patientsWithLast);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: "Server error" });
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
+
+//
+
+router.get("/fetchpatientsbylastvisit", async (req, res) => {
+  try {
+    const patients = await Patient.find();
+
+    // Attach latest visit date per patient
+    const patientsWithVisit = await Promise.all(
+      patients.map(async (p) => {
+        const appointment = await Appointment.findOne({ patient: p._id });
+        let lastDate = null;
+        if (appointment && appointment.visits.length > 0) {
+          lastDate = appointment.visits[appointment.visits.length - 1].date;
+        }
+        return {
+          ...p.toObject(),
+          lastAppointment: lastDate,
+        };
+      })
+    );
+
+    // Group patients by lastAppointment date
+    const grouped = {};
+    patientsWithVisit.forEach((p) => {
+      const dateKey = p.lastAppointment
+        ? new Date(p.lastAppointment).toISOString().slice(0, 10) // YYYY-MM-DD
+        : "No Visits";
+
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(p);
+    });
+
+    res.json(grouped);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
   }
 });
 
@@ -258,30 +300,52 @@ router.post("/addappointment/:id", async (req, res) => {
   }
 });
 
-
-// PUT /api/auth/updateappointment/:id/:appointmentId
-router.put("/updateappointment/:id/:appointmentId", async (req, res) => {
+// GET /api/auth/patientdetails/:id
+router.get("/patientdetails/:id", async (req, res) => {
   try {
-    const { id, appointmentId } = req.params;
+    const patient = await Patient.findById(req.params.id);
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+    res.json(patient);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching patient", error: err.message });
+  }
+});
+
+
+// PUT /api/auth/updateappointment/:appointmentId
+router.put("/updateappointment/:appointmentId", async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
     const { date, service, amount } = req.body;
 
-    const patient = await Patient.findOneAndUpdate(
-      { _id: id, "appointments._id": appointmentId },
+    const appointment = await Appointment.findOneAndUpdate(
+      { "visits._id": appointmentId },
       {
         $set: {
-          "appointments.$.date": date,
-          "appointments.$.service": service,
-          "appointments.$.amount": amount,
+          "visits.$.date": date,
+          "visits.$.service": service,
+          "visits.$.amount": amount,
         },
       },
       { new: true }
     );
 
-    res.json(patient);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Appointment updated successfully",
+      appointment,
+    });
   } catch (err) {
     res.status(500).json({ message: "Error updating appointment", error: err.message });
   }
 });
+
 
 
 

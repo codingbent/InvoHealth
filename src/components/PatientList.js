@@ -4,133 +4,127 @@ import PatientDetails from "./PatientDetails";
 
 export default function PatientList() {
   const navigate = useNavigate();
-  const [patients, setPatients] = useState([]);
+  const [patientsByDate, setPatientsByDate] = useState({});
+  const [services, setServices] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedService, setSelectedService] = useState("");
   const [selectedId, setSelectedId] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const patientsPerPage = 10;
 
   useEffect(() => {
     const fetchPatients = async () => {
       const response = await fetch(
-        "http://localhost:5001/api/auth/fetchallpatients",
+        "http://localhost:5001/api/auth/fetchpatientsbylastvisit",
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "auth-token":
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+            "auth-token": "YOUR_AUTH_TOKEN",
           },
         }
       );
-
       const json = await response.json();
-      // Sort by creation date (latest first)
-      const sorted = json.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      setPatients(sorted);
+      setPatientsByDate(json);
+    };
+
+    const fetchServices = async () => {
+      const res = await fetch("http://localhost:5001/api/auth/fetchallservice");
+      const data = await res.json();
+      setServices(data);
     };
 
     fetchPatients();
+    fetchServices();
   }, []);
 
-  // Filter patients based on search term
-  const filteredPatients = patients.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 🔎 Filter patients inside each group (search + service only)
+  const applyFilters = (patients) => {
+    return patients.filter((p) => {
+      // search by name or number
+      const matchSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.number?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // Pagination logic
-  const indexOfLastPatient = currentPage * patientsPerPage;
-  const indexOfFirstPatient = indexOfLastPatient - patientsPerPage;
-  const currentPatients = filteredPatients.slice(
-    indexOfFirstPatient,
-    indexOfLastPatient
-  );
-  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+      // filter by service (if selected)
+      const matchService =
+        !selectedService ||
+        p.service?.some(
+          (s) => s.toLowerCase() === selectedService.toLowerCase()
+        );
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+      return matchSearch && matchService;
+    });
+  };
 
   return (
     <>
-      {/* Search Bar */}
+      {/* Search & Filters */}
       <div className="container mt-3">
         <input
           type="text"
-          className="form-control"
-          placeholder="Search patient by name"
+          className="form-control mb-2"
+          placeholder="Search by name or phone"
           value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1); // Reset to page 1 on new search
-          }}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
+
+        {/* Filter by Service */}
+        <select
+          className="form-select mb-2"
+          value={selectedService}
+          onChange={(e) => setSelectedService(e.target.value)}
+        >
+          <option value="">All Services</option>
+          {services.map((s) => (
+            <option key={s._id} value={s.name}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Patients Grouped by Date */}
+        {Object.keys(patientsByDate)
+          .sort((a, b) => new Date(b) - new Date(a)) // latest date first
+          .map((date) => {
+            const filteredGroup = applyFilters(
+              Array.isArray(patientsByDate[date]) ? patientsByDate[date] : []
+            );
+            if (filteredGroup.length === 0) return null;
+
+            return (
+              <div key={date} className="mb-4">
+                <h5 className="bg-light p-2 rounded">
+                  {date === "No Visits"
+                    ? "No Visits Yet"
+                    : new Date(date).toLocaleDateString()}
+                </h5>
+
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredGroup.map((p) => (
+                      <tr
+                        key={p._id}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/patient/${p._id}`)}
+                      >
+                        <td>{p.name}</td>
+                        <td>{p.number}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
       </div>
 
-      {/* Patient Table */}
-      <table className="table container mt-2">
-        <thead>
-          <tr>
-            <th scope="col">Serial number</th>
-            <th scope="col">Name</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentPatients.map((p, index) => (
-            <tr
-              key={p._id}
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/patient/${p._id}`)}
-            >
-              <td>{indexOfFirstPatient + index + 1}</td>
-              <td>{p.name}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Pagination */}
-      <nav aria-label="Page navigation" className="mt-3">
-        <ul className="pagination justify-content-center">
-          <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              &laquo;
-            </button>
-          </li>
-
-          {Array.from({ length: totalPages }, (_, i) => (
-            <li
-              key={i}
-              className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-            >
-              <button
-                className="page-link"
-                onClick={() => handlePageChange(i + 1)}
-              >
-                {i + 1}
-              </button>
-            </li>
-          ))}
-
-          <li
-            className={`page-item ${
-              currentPage === totalPages ? "disabled" : ""
-            }`}
-          >
-            <button
-              className="page-link"
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              &raquo;
-            </button>
-          </li>
-        </ul>
-      </nav>
-
-      {/* Patient Details (optional) */}
+      {/* Patient Details (optional, if using inline view) */}
       {selectedId && <PatientDetails id={selectedId} />}
     </>
   );

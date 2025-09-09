@@ -169,7 +169,9 @@ const AddAppointment = (props) => {
         <form onSubmit={handleAddAppointment}>
           <div className="mb-3">
             <label className="form-label">Services</label>
-            <ServiceList onSelect={handleServiceSelect} />
+            <ServiceList services={availableServices}        // ✅ Pass available services
+        selectedServices={services}        // ✅ Current selected services
+        onSelect={handleServiceSelect} />
           </div>
 
           {/* Bill Details with editable amounts */}
