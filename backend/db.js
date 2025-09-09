@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const mongourl = "mongodb://localhost:27017/GMSC";
+const mongourl = process.env.MONGO_URL;
 
 const connectToMongo = () => {
   mongoose.connect(mongourl)

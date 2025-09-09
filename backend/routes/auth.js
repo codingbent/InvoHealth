@@ -8,7 +8,7 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 var fetchuser = require("../middleware/fetchuser");
-const JWT_SECRET = "abhedagarwal%male";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
 
