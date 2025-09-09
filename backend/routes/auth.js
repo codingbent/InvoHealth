@@ -259,6 +259,30 @@ router.post("/addappointment/:id", async (req, res) => {
 });
 
 
+// PUT /api/auth/updateappointment/:id/:appointmentId
+router.put("/updateappointment/:id/:appointmentId", async (req, res) => {
+  try {
+    const { id, appointmentId } = req.params;
+    const { date, service, amount } = req.body;
+
+    const patient = await Patient.findOneAndUpdate(
+      { _id: id, "appointments._id": appointmentId },
+      {
+        $set: {
+          "appointments.$.date": date,
+          "appointments.$.service": service,
+          "appointments.$.amount": amount,
+        },
+      },
+      { new: true }
+    );
+
+    res.json(patient);
+  } catch (err) {
+    res.status(500).json({ message: "Error updating appointment", error: err.message });
+  }
+});
+
 
 
 

@@ -9,11 +9,15 @@ const AddAppointment = (props) => {
       ? JSON.parse(localStorage.getItem("patient"))
       : null
   );
+
+  const [availableServices, setAvailableServices] = useState([]);
   const [services, setServices] = useState([]);
-  const [amount, setAmount] = useState("");
+  const [serviceAmounts, setServiceAmounts] = useState([]);
+  const [amount, setAmount] = useState(0);
+
   const [searchText, setSearchText] = useState("");
 
-  // Fetch all patients
+  // ✅ Fetch all patients
   useEffect(() => {
     const list = async () => {
       const response = await fetch(
@@ -33,13 +37,39 @@ const AddAppointment = (props) => {
     list();
   }, []);
 
-  // Filter patients as user types
+  // ✅ Fetch all services
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await fetch("http://localhost:5001/api/auth/fetchallservice");
+        const data = await res.json(); // [{ name, amount }]
+        setAvailableServices(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  // ✅ Filter patients as user types
   useEffect(() => {
     const filtered = patientsList.filter((p) =>
       p.name.toLowerCase().includes(searchText.toLowerCase())
     );
     setFilteredPatients(filtered);
   }, [searchText, patientsList]);
+
+  // ✅ Update serviceAmounts whenever services change
+  useEffect(() => {
+    const newAmounts = services.map((s) => {
+      const obj = availableServices.find((svc) => svc.name === s);
+      return obj?.amount || 0;
+    });
+    setServiceAmounts(newAmounts);
+
+    const total = newAmounts.reduce((a, b) => a + b, 0);
+    setAmount(total);
+  }, [services, availableServices]);
 
   const handleSelect = (patient) => {
     setSelectedPatient(patient);
@@ -51,6 +81,15 @@ const AddAppointment = (props) => {
     setServices((prev) =>
       checked ? [...prev, value] : prev.filter((s) => s !== value)
     );
+  };
+
+  const handleServiceAmountChange = (index, value) => {
+    const newAmounts = [...serviceAmounts];
+    newAmounts[index] = Number(value);
+    setServiceAmounts(newAmounts);
+
+    const total = newAmounts.reduce((a, b) => a + b, 0);
+    setAmount(total);
   };
 
   const handleAddAppointment = async (e) => {
@@ -65,7 +104,7 @@ const AddAppointment = (props) => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service: services, amount: Number(amount) }),
+          body: JSON.stringify({ service: services, amount }),
         }
       );
 
@@ -73,7 +112,8 @@ const AddAppointment = (props) => {
       if (response.ok) {
         props.showAlert("Appointment added successfully!", "success");
         setServices([]);
-        setAmount("");
+        setServiceAmounts([]);
+        setAmount(0);
         setSelectedPatient(null);
         localStorage.removeItem("patient");
       } else {
@@ -131,16 +171,40 @@ const AddAppointment = (props) => {
             <label className="form-label">Services</label>
             <ServiceList onSelect={handleServiceSelect} />
           </div>
-          <div className="mb-3">
-            <label className="form-label">Amount</label>
-            <input
-              type="number"
-              className="form-control"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount"
-            />
-          </div>
+
+          {/* Bill Details with editable amounts */}
+          {services.length > 0 && (
+            <div className="mb-3">
+              <label className="form-label">Bill Details</label>
+              <ul className="list-group mb-2">
+                {services.map((s, index) => (
+                  <li
+                    key={s}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    <span>{s}</span>
+                    <input
+                      type="number"
+                      className="form-control w-25"
+                      value={serviceAmounts[index]}
+                      onChange={(e) =>
+                        handleServiceAmountChange(index, e.target.value)
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+
+              <label className="form-label">Total Amount</label>
+              <input
+                type="number"
+                className="form-control"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+              />
+            </div>
+          )}
+
           <button type="submit" className="btn btn-primary">
             Save Appointment
           </button>
