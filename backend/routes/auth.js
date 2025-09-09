@@ -3,6 +3,7 @@ const router = express.Router();
 const Doc = require("../models/Doc");
 const Patient = require("../models/Patient");
 const Service = require("../models/Service")
+const Appointment =require("../models/Appointment")
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
@@ -159,6 +160,113 @@ router.get("/patientdetails/:id", async (req, res) => {
     res.json(patient);
   } catch (err) {
     console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//update patient details
+
+router.put(
+  "/updatepatientdetails/:id",
+  [
+    body("name", "Enter Name").notEmpty(),
+    body("service").optional(),
+    body("number").optional(),
+    body("amount").optional(),
+    body("age")
+      .optional({ checkFalsy: true }) // allows empty string or missing field
+      .isNumeric()
+      .withMessage("Age must be a number"),
+  ],
+  async (req, res) => {
+    try {
+      // Check validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      // Build update object
+      const { name, service, number, amount, age } = req.body;
+      const updateFields = {};
+      if (name) updateFields.name = name;
+      if (service) updateFields.service = service;
+      if (number) updateFields.number = number;
+      if (amount) updateFields.amount = amount;
+      if (age) updateFields.age = age;
+
+      // Update patient
+      const patient = await Patient.findByIdAndUpdate(
+        req.params.id,
+        { $set: updateFields },
+        { new: true } // return updated document
+      );
+
+      if (!patient) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      res.status(200).json({
+        success: true,
+        status: "Updated successfully",
+        patient,
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// POST /api/auth/addappointment/:id
+router.post("/addappointment/:id", async (req, res) => {
+  try {
+    const { service, amount } = req.body;
+    const patientId = req.params.id;
+
+    if (!service || !Array.isArray(service)) {
+      return res.status(400).json({ message: "Service must be an array" });
+    }
+
+    if (amount == null) {
+      return res.status(400).json({ message: "Amount is required" });
+    }
+
+    // Find appointment record for this patient and add new visit
+    const appointment = await Appointment.findOneAndUpdate(
+      { patient: patientId },
+      {
+        $push: {
+          visits: {
+            date: new Date(),
+            service,
+            amount,
+          },
+        },
+      },
+      { upsert: true, new: true } // Create if not exists
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Appointment added successfully",
+      appointment,
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+
+
+router.get("/appointments/:patientId", async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ patient: req.params.patientId });
+    res.json(appointments);
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
