@@ -36,7 +36,7 @@ export default function PatientDetails() {
         const date = new Date(dateStr);
         const istOffset = 5.5 * 60; // IST +5:30 in minutes
         const istDate = new Date(date.getTime() + istOffset * 60000);
-        return istDate.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+        return istDate.toISOString().slice(0, 10); // YYYY-MM-DDTHH:MM
     };
 
     // Convert IST input back to UTC for backend storage
@@ -332,7 +332,7 @@ export default function PatientDetails() {
                                                 {visit.date
                                                     ? new Date(
                                                           visit.date
-                                                      ).toLocaleString(
+                                                      ).toLocaleDateString(
                                                           "en-IN",
                                                           {
                                                               dateStyle:
@@ -417,7 +417,7 @@ export default function PatientDetails() {
                                 <div className="mb-3">
                                     <label className="form-label">Date</label>
                                     <input
-                                        type="datetime-local"
+                                        type="date"
                                         className="form-control"
                                         value={apptData.date}
                                         onChange={(e) =>
