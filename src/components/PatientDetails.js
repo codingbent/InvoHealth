@@ -196,7 +196,7 @@ const handleUpdateAppt = async () => {
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Number</label>
-                  <input type="number" className="form-control" name="number" value={patient.number} onChange={handleChange} />
+                  <input type="number" className="form-control" name="number" value={patient.number} onChange={handleChange} minLength={10} maxLength={10} />
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Age</label>
