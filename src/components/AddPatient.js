@@ -136,7 +136,9 @@ const AddPatient = (props) => {
           "Patient and appointment added successfully!",
           "success"
         );
-        const closeBtn = document.querySelector("#addPatientModal .btn-close");
+        const closeBtn = document.querySelector("#addPatientModal");
+        console.log(closeBtn);
+        
       if (closeBtn) closeBtn.click();
       } else {
         props.showAlert(
@@ -261,7 +263,7 @@ const AddPatient = (props) => {
         <div className="modal-footer">
           <button
             type="button"
-            className="btn btn-secondary btn-close"
+            className="btn btn-secondary"
             id="#addPatientModal"
             data-bs-dismiss="modal"
           >
