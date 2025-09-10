@@ -14,7 +14,7 @@ export default function UpdateAppointmentModal({ appointment, patientId, onClose
   const handleUpdate = async () => {
     const res = await fetch(`/api/auth/updateappointment/${patientId}/${appointment._id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json","auth-token":localStorage.getItem("token") },
       body: JSON.stringify({ date, service, amount }),
     });
 

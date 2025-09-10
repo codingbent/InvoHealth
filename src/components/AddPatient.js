@@ -100,7 +100,9 @@ const handleSubmit = async (e) => {
       `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "auth-token":localStorage.getItem("token")
+        },
         body: JSON.stringify({
           service,
           amount,
