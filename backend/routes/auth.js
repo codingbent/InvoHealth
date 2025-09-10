@@ -114,7 +114,7 @@ router.post(
       // 🔑 Use req.user.id (from fetchuser), not req.doc
       const existingService = await Service.findOne({
         name: req.body.name,
-        doc: req.user.id, // consistent with schema
+        doctor: req.user.id, // consistent with schema
       });
 
       if (existingService) {
@@ -126,7 +126,7 @@ router.post(
       const service = await Service.create({
         name: req.body.name,
         amount: req.body.amount,
-        doc: req.user.id, // consistent with schema
+        doctor: req.user.id, // consistent with schema
       });
 
       res
@@ -160,7 +160,7 @@ router.get("/fetchallservice", fetchuser, async (req, res) => {
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
     try {
         // Only fetch patients created by the logged-in doctor
-        const patients = await Patient.find({ doctor: req.doc.id });
+        const patients = await Patient.find({ doctor: req.user.id });
 
         // For each patient, get last appointment date
         const patientsWithLast = await Promise.all(
