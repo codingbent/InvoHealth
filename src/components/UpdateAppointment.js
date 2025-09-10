@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 export default function UpdateAppointmentModal({ appointment, patientId, servicesList, onClose, onUpdate }) {
   const [date, setDate] = useState(
-    appointment.date ? new Date(appointment.date).toISOString().slice(0, 16) : ""
+    appointment.date ? new Date(appointment.date).toISOString().slice(0, 10) : ""
   );
   const [selectedServices, setSelectedServices] = useState(appointment.service || []);
   const [serviceAmounts, setServiceAmounts] = useState([]);
@@ -74,7 +74,7 @@ export default function UpdateAppointmentModal({ appointment, patientId, service
 
         <label className="block mb-2">Date</label>
         <input
-          type="datetime-local"
+          type="date"
           className="border p-2 w-full mb-3"
           value={date}
           onChange={(e) => setDate(e.target.value)}
