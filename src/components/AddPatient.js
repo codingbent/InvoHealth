@@ -4,7 +4,7 @@ import ServiceList from "./ServiceList";
 const AddPatient = (props) => {
   const [patient, setPatient] = useState({
     name: "",
-    service: [],
+    service: [], // array of service objects
     number: "",
     amount: 0,
     age: "",
@@ -14,7 +14,7 @@ const AddPatient = (props) => {
   const [serviceAmounts, setServiceAmounts] = useState([]);
   const [appointmentDate, setAppointmentDate] = useState(
     new Date().toISOString().slice(0, 10)
-  ); // default today
+  );
 
   const { name, service, number, amount, age } = patient;
 
@@ -24,42 +24,47 @@ const AddPatient = (props) => {
       : "http://localhost:5001";
 
   // Fetch services from backend
-useEffect(() => {
-  const fetchServices = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
-        headers: {  "auth-token": localStorage.getItem("token") },
-      });
-      const data = await res.json();
-      setAvailableServices(data); // only services for logged-in doc
-    } catch (err) {
-      console.error("Error fetching services:", err);
-    }
-  };
-  fetchServices();
-}, []);
-
-  // Update service amounts when services change
   useEffect(() => {
-    const newAmounts = service.map((s) => {
-      const svc = availableServices.find((svc) => svc.name === s);
-      return svc?.amount || 0;
-    });
-    setServiceAmounts(newAmounts);
+    const fetchServices = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
+          headers: { "auth-token": localStorage.getItem("token") },
+        });
+        const data = await res.json();
+        setAvailableServices(data); // array of objects
+      } catch (err) {
+        console.error("Error fetching services:", err);
+      }
+    };
+    fetchServices();
+  }, []);
 
+  // Update total amount whenever selected services change
+  useEffect(() => {
+    const newAmounts = service.map((s, index) => {
+      return serviceAmounts[index] ?? s.amount ?? 0;
+    });
     const total = newAmounts.reduce((a, b) => a + b, 0);
     setPatient((prev) => ({ ...prev, amount: total }));
-  }, [service, availableServices]);
+  }, [service, serviceAmounts]);
 
-  const handleServiceSelect = (value, checked) => {
+  // Handle selection of service from list
+  const handleServiceSelect = (serviceObj, checked) => {
     setPatient((prev) => {
       const updatedServices = checked
-        ? [...prev.service, value]
-        : prev.service.filter((s) => s !== value);
+        ? [...prev.service, serviceObj]
+        : prev.service.filter((s) => s._id !== serviceObj._id);
       return { ...prev, service: updatedServices };
+    });
+
+    setServiceAmounts((prevAmounts) => {
+      const index = service.findIndex((s) => s._id === serviceObj._id);
+      if (checked) return [...prevAmounts, serviceObj.amount ?? 0];
+      else return prevAmounts.filter((_, i) => i !== index);
     });
   };
 
+  // Update individual service amount
   const handleServiceAmountChange = (index, value) => {
     const newAmounts = [...serviceAmounts];
     newAmounts[index] = Number(value);
@@ -72,72 +77,87 @@ useEffect(() => {
   const onChange = (e) =>
     setPatient({ ...patient, [e.target.name]: e.target.value });
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  try {
-    // 1️⃣ Add patient
-    const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "auth-token": localStorage.getItem("token"), // use actual token
-      },
-      body: JSON.stringify({ name, service, number, amount, age }),
-    });
-
-    const patientJson = await patientRes.json();
-    if (!patientJson.success) {
-      props.showAlert(patientJson.error || "Failed to add patient", "danger");
-      return;
-    }
-
-    const newPatientId = patientJson.patient._id;
-
-    // 2️⃣ Create initial appointment with **today's date**
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const appointmentRes = await fetch(
-      `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
-      {
+    try {
+      // 1️⃣ Add patient
+      const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-          "auth-token":localStorage.getItem("token")
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": localStorage.getItem("token"),
         },
         body: JSON.stringify({
-          service,
+          name,
+          service: service.map((s, index) => ({
+            id: s._id,
+            name: s.name,
+            amount: serviceAmounts[index] ?? s.amount ?? 0,
+          })),
+          number,
           amount,
-          date: today, // use today for the initial appointment
+          age,
         }),
+      });
+
+      const patientJson = await patientRes.json();
+      if (!patientJson.success) {
+        props.showAlert(patientJson.error || "Failed to add patient", "danger");
+        return;
       }
-    );
 
-    const appointmentJson = await appointmentRes.json();
-    if (appointmentJson.success) {
-      props.showAlert("Patient and appointment added successfully!", "success");
-    } else {
-      props.showAlert(
-        appointmentJson.error || "Patient added but appointment failed",
-        "warning"
+      const newPatientId = patientJson.patient._id;
+
+      // 2️⃣ Create initial appointment
+      const appointmentRes = await fetch(
+        `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": localStorage.getItem("token"),
+          },
+          body: JSON.stringify({
+            service: service.map((s, index) => ({
+              id: s._id,
+              name: s.name,
+              amount: serviceAmounts[index] ?? s.amount ?? 0,
+            })),
+            amount,
+            date: appointmentDate,
+          }),
+        }
       );
+
+      const appointmentJson = await appointmentRes.json();
+      if (appointmentJson.success) {
+        props.showAlert(
+          "Patient and appointment added successfully!",
+          "success"
+        );
+      } else {
+        props.showAlert(
+          appointmentJson.error || "Patient added but appointment failed",
+          "warning"
+        );
+      }
+
+      // Reset form
+      setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
+      setServiceAmounts([]);
+      setAppointmentDate(new Date().toISOString().slice(0, 10));
+    } catch (err) {
+      console.error(err);
+      props.showAlert("Server error", "danger");
     }
-
-    // Reset form
-    setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
-    setServiceAmounts([]);
-  } catch (err) {
-    console.error(err);
-    props.showAlert("Server error", "danger");
-  }
-};
-
+  };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="modal-content">
         <div className="modal-header">
-          <h1 className="modal-title fs-5">
-            Add Patient & Initial Appointment
-          </h1>
+          <h1 className="modal-title fs-5">Add Patient & Initial Appointment</h1>
           <button type="button" className="btn-close" data-bs-dismiss="modal" />
         </div>
 
@@ -172,14 +192,14 @@ const handleSubmit = async (e) => {
               <ul className="list-group mb-2">
                 {service.map((s, index) => (
                   <li
-                    key={s}
+                    key={s._id}
                     className="list-group-item d-flex justify-content-between align-items-center"
                   >
-                    <span>{s}</span>
+                    <span>{s.name}</span>
                     <input
                       type="number"
                       className="form-control w-25"
-                      value={serviceAmounts[index]}
+                      value={serviceAmounts[index] ?? s.amount ?? 0}
                       onChange={(e) =>
                         handleServiceAmountChange(index, e.target.value)
                       }
