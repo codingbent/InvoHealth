@@ -156,6 +156,7 @@ const AddPatient = (props) => {
   };
 
   return (
+    <div className="modal fade" id="addPatientModal" tabIndex="-1" aria-hidden="true">
     <form onSubmit={handleSubmit}>
       <div className="modal-content">
         <div className="modal-header">
@@ -272,6 +273,7 @@ const AddPatient = (props) => {
         </div>
       </div>
     </form>
+    </div>
   );
 };
 
