@@ -136,7 +136,7 @@ const AddPatient = (props) => {
           "Patient and appointment added successfully!",
           "success"
         );
-        const closeBtn = document.querySelector("#addPatientModal");
+        const closeBtn = document.querySelector("#addPatientModal .btn-close");
         console.log(closeBtn);
         
       if (closeBtn) closeBtn.click();
@@ -162,7 +162,7 @@ const AddPatient = (props) => {
       <div className="modal-content">
         <div className="modal-header">
           <h1 className="modal-title fs-5">Add Patient & Initial Appointment</h1>
-          <button type="button" className="btn-close" data-bs-dismiss="modal" />
+          <button type="button" className="btn-close" id="#addPatientModal" data-bs-dismiss="modal" />
         </div>
 
         <div className="modal-body">
