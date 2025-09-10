@@ -10,27 +10,6 @@ const AddAppointment = (props) => {
       : null
   );
 
-  const handleApptServiceChange = (serviceObj, checked) => {
-    setApptData(prev => {
-        let updatedServices = [...prev.service];
-        let updatedAmounts = [...apptServiceAmounts];
-
-        if (checked) {
-            updatedServices.push(serviceObj);
-            updatedAmounts.push(serviceObj.amount || 0);
-        } else {
-            const index = updatedServices.findIndex(s => s._id === serviceObj._id);
-            if (index > -1) {
-                updatedServices.splice(index, 1);
-                updatedAmounts.splice(index, 1);
-            }
-        }
-
-        const total = updatedAmounts.reduce((a, b) => a + b, 0);
-        setApptServiceAmounts(updatedAmounts);
-        return { ...prev, service: updatedServices, amount: total };
-    });
-};
   const [services, setServices] = useState([]); // array of service objects
   const [serviceAmounts, setServiceAmounts] = useState({}); // { serviceId: amount }
   const [amount, setAmount] = useState(0);
@@ -196,7 +175,7 @@ const AddAppointment = (props) => {
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-              onSelect={handleApptServiceChange}
+            onSelect={handleApptServiceChange}
               selectedServices={apptData.service}
               services={availableServices}
             />
