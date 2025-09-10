@@ -356,13 +356,13 @@ export default function PatientDetails() {
                                                           .map((s) =>
                                                               typeof s ===
                                                               "object"
-                                                                  ? s.name
+                                                                  ? s.amount
                                                                   : s
                                                           )
                                                           .join(", ")
                                                     : typeof visit.service ===
                                                       "object"
-                                                    ? visit.service.name
+                                                    ? visit.service.amount
                                                     : visit.service || "N/A"}
                                             </td>
                                             <td>
