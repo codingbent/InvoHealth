@@ -229,7 +229,10 @@ setApptData({
             </thead>
             <tbody>
   {appointments.map((appt, index) =>
-    appt.visits?.map((visit, vIndex) => (
+  appt.visits
+    ?.slice() // create a copy so original array isn’t mutated
+    .sort((a, b) => new Date(b.date) - new Date(a.date)) // latest first
+    .map((visit, vIndex) => (
       <tr key={`${index}-${vIndex}`}>
         <td>
           {visit.date
@@ -254,7 +257,7 @@ setApptData({
         </td>
       </tr>
     ))
-  )}
+)}
 </tbody>
 
           </table>
