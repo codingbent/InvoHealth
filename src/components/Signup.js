@@ -7,8 +7,12 @@ const  Signup=(props) =>{
   const handlesubmit=async (e)=>{
     e.preventDefault();
     const {name,email,password}=credentials
-    const http="http://"
-    const response=await fetch(`${http}localhost:5001/api/auth/createdoc`,{
+    
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
+
+    const response=await fetch(`${API_BASE_URL}/api/auth/createdoc`,{
     method: "POST",
             headers: {
                 "Content-Type": "application/json",

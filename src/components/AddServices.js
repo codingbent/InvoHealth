@@ -3,10 +3,15 @@ import { useState } from "react";
 const AddServices = (props) => {
     const [service, setService] = useState({ name: "", amount: "" });
     const { name, amount } = service;
+
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
+
     const handlesubmit = async (e) => {
         e.preventDefault();
         const response = await fetch(
-            "http://localhost:5001/api/auth/createservice",
+            `${API_BASE_URL}/api/auth/createservice`,
             {
                 method: "POST",
                 headers: {

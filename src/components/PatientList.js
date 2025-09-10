@@ -11,10 +11,14 @@ export default function PatientList() {
   const [selectedService, setSelectedService] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
+    const API_BASE_URL = process.env.NODE_ENV === "production"
+        ? "https://gmsc-backend.onrender.com"
+        : "http://localhost:5001";
+
   useEffect(() => {
     const fetchPatients = async () => {
       const response = await fetch(
-        "http://localhost:5001/api/auth/fetchpatientsbylastvisit",
+        `${API_BASE_URL}/api/auth/fetchpatientsbylastvisit`,
         {
           method: "GET",
           headers: {
@@ -27,8 +31,12 @@ export default function PatientList() {
       setPatientsByDate(json);
     };
 
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
+
     const fetchServices = async () => {
-      const res = await fetch("http://localhost:5001/api/auth/fetchallservice");
+      const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
       const data = await res.json();
       setServices(data);
     };

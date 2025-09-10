@@ -5,8 +5,12 @@ export default function Login(props) {
     const [details, setDetails] = useState(null);
     const handlesubmit = async (e) => {
         e.preventDefault();
-        const host = "http://";
-        const response = await fetch(`${host}localhost:5001/api/auth/login`, {
+        
+    const API_BASE_URL = process.env.NODE_ENV === "production"
+        ? "https://gmsc-backend.onrender.com"
+        : "http://localhost:5001";
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

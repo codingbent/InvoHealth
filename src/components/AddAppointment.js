@@ -17,11 +17,16 @@ const AddAppointment = (props) => {
 
   const [searchText, setSearchText] = useState("");
 
+
+    const API_BASE_URL = process.env.NODE_ENV === "production"
+    ? "https://gmsc-backend.onrender.com"
+    : "http://localhost:5001";
+
   // ✅ Fetch all patients
   useEffect(() => {
     const list = async () => {
       const response = await fetch(
-        "http://localhost:5001/api/auth/fetchallpatients",
+        `${API_BASE_URL}/api/auth/fetchallpatients`,
         {
           method: "GET",
           headers: {
@@ -37,11 +42,12 @@ const AddAppointment = (props) => {
     list();
   }, []);
 
+
   // ✅ Fetch all services
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/auth/fetchallservice");
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
         const data = await res.json(); // [{ name, amount }]
         setAvailableServices(data);
       } catch (err) {
@@ -100,7 +106,7 @@ const AddAppointment = (props) => {
     }
     try {
       const response = await fetch(
-        `http://localhost:5001/api/auth/addappointment/${selectedPatient._id}`,
+        `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList"; // ✅ Import service list
 
-const API_BASE = "http://localhost:5001/api/auth";
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
 
 export default function PatientDetails() {
   const { id } = useParams();

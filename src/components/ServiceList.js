@@ -3,9 +3,13 @@ import { useState, useEffect } from "react";
 export default function ServiceList({ onSelect, selectedServices = [] }) {
   const [services, setServices] = useState([]);
 
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
+
   useEffect(() => {
     const fetchServices = async () => {
-      const response = await fetch("http://localhost:5001/api/auth/fetchallservice");
+      const response = await fetch(`${API_BASE_URL}`);
       const json = await response.json();
       setServices(json);
     };

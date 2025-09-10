@@ -18,11 +18,15 @@ const AddPatient = (props) => {
 
   const { name, service, number, amount, age } = patient;
 
+const API_BASE_URL = process.env.NODE_ENV === "production"
+  ? "https://gmsc-backend.onrender.com"
+  : "http://localhost:5001";
+
   // Fetch services from backend
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await fetch("http://localhost:5001/api/auth/fetchallservice");
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
         const data = await res.json(); // [{name, amount}]
         setAvailableServices(data);
       } catch (err) {
@@ -64,13 +68,14 @@ const AddPatient = (props) => {
 
   const onChange = (e) => setPatient({ ...patient, [e.target.name]: e.target.value });
 
+  
   // Submit patient and create initial appointment
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       // 1️⃣ Add patient
-      const patientRes = await fetch("http://localhost:5001/api/auth/addpatient", {
+      const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,9 +92,13 @@ const AddPatient = (props) => {
 
       const newPatientId = patientJson.patient._id; // assuming backend returns patient object
 
+        const API_BASE_URL = process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
+
       // 2️⃣ Create initial appointment for this patient
       const appointmentRes = await fetch(
-        `http://localhost:5001/api/auth/addappointment/${newPatientId}`,
+        `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
