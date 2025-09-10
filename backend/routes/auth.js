@@ -9,7 +9,6 @@ const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 var fetchuser = require("../middleware/fetchuser");
 const JWT_SECRET = process.env.JWT_SECRET;
-const Appointment = require("../../models/Appointment"); // adjust path
 const authMiddleware = require("../../middleware/auth"); // if using auth
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
