@@ -157,9 +157,9 @@ const handleUpdateAppt = async () => {
     if (data.success) {
       alert("Appointment updated successfully!");
       fetchData(); // Refresh table
-      const modalEl = document.getElementById("editAppointmentModal");
-      const modal = bootstrap.Modal.getInstance(modalEl);
-      modal.hide(); // Close modal safely
+      const modalEl = document.getElementById("editAppointmentModal").close();
+      // const modal = bootstrap.Modal.getInstance(modalEl);
+      // modal.hide(); // Close modal safely
     } else {
       alert("Update failed: " + data.message);
     }

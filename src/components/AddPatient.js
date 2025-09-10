@@ -136,6 +136,8 @@ const AddPatient = (props) => {
           "Patient and appointment added successfully!",
           "success"
         );
+        const closeBtn = document.querySelector("#addPatientModal .btn-close");
+      if (closeBtn) closeBtn.click();
       } else {
         props.showAlert(
           appointmentJson.error || "Patient added but appointment failed",
