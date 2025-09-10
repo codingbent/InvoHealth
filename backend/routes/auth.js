@@ -139,13 +139,14 @@ router.post(
 // Fetch all services for the logged-in doctor
 router.get("/fetchallservice", fetchuser, async (req, res) => {
   try {
-    const services = await Service.find({ doctor: req.doc.id }); // only this doctor's services
+    const services = await Service.find({ user: req.user.id });
     res.json(services);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ success: false, error: "Server error" });
+    res.status(500).send("Server error");
   }
 });
+
 
 
 //fetch all patients
