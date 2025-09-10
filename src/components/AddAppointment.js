@@ -183,7 +183,7 @@ const AddAppointment = (props) => {
                 );
               }}
               selectedServices={services}
-              services={availableServices}
+              // services={availableServices}
             />
           </div>
 
