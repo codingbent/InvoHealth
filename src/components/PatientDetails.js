@@ -257,8 +257,8 @@ export default function PatientDetails() {
                                         className="form-control"
                                         name="number"
                                         value={patient.number}
-                                        minLength={10}
-                                        maxLength={10}
+                                        minLength="10"
+                                        maxLength="10"
                                         onChange={handleChange}
                                     />
                                 </div>
