@@ -25,6 +25,11 @@ const PatientSchema = new Schema({
     date:{
         type:Date,
         default:Date.now
+    },
+    doctor: {
+        type: Schema.Types.ObjectId,
+        ref: 'doc',
+        required: true
     }
 });
 
