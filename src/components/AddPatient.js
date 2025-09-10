@@ -261,7 +261,8 @@ const AddPatient = (props) => {
         <div className="modal-footer">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-close"
+            id="#addPatientModal"
             data-bs-dismiss="modal"
           >
             Close
