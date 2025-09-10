@@ -4,6 +4,7 @@ import ServiceList from "./ServiceList";
 const AddAppointment = (props) => {
   const [patientsList, setPatientsList] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]); 
   const [selectedPatient, setSelectedPatient] = useState(
     localStorage.getItem("patient")
       ? JSON.parse(localStorage.getItem("patient"))
@@ -175,7 +176,12 @@ const AddAppointment = (props) => {
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-            onSelect={handleServiceSelect}
+              onSelect={(serviceObj, checked) => {
+                // Update selected services
+                setServices(prev =>
+                  checked ? [...prev, serviceObj] : prev.filter(s => s._id !== serviceObj._id)
+                );
+              }}
               selectedServices={services}
               services={availableServices}
             />
