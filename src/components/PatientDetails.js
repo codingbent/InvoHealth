@@ -253,14 +253,22 @@ export default function PatientDetails() {
                                 <div className="mb-3">
                                     <label className="form-label">Number</label>
                                     <input
-                                        type="text"
-                                        className="form-control"
-                                        name="number"
-                                        value={patient.number}
-                                        minLength="10"
-                                        maxLength="10"
-                                        onChange={handleChange}
+                                      type="text"
+                                      className="form-control"
+                                      name="number"
+                                      value={patient.number}
+                                      minLength={10}
+                                      maxLength={10}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (/^\d*$/.test(val)) {  // Only allow digits
+                                          handleChange(e);         // Call your existing handler
+                                        }
+                                      }}
+                                      placeholder="Enter 10-digit number"
+                                      required
                                     />
+
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Age</label>
