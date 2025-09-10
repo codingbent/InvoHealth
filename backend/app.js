@@ -7,7 +7,6 @@ connectToMongo();
 const app = express()
 const port = process.env.PORT||5001
 app.use(express.json())
-const cors = require("cors");
 app.use(
   cors({
     origin: ["https://gmsc.vercel.app", "http://localhost:3000"], // allowed origins

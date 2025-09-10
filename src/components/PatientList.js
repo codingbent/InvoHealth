@@ -11,49 +11,68 @@ export default function PatientList() {
   const [selectedService, setSelectedService] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
-    const API_BASE_URL = process.env.NODE_ENV === "production"
-        ? "https://gmsc-backend.onrender.com"
-        : "http://localhost:5001";
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://gmsc-backend.onrender.com"
+      : "http://localhost:5001";
 
   useEffect(() => {
+    // fetch patients
     const fetchPatients = async () => {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/fetchpatientsbylastvisit`,
-        {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/fetchpatientsbylastvisit`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "auth-token": localStorage.getItem("token"),
+            },
+          }
+        );
+        const json = await response.json();
+        setPatientsByDate(json || {});
+      } catch (err) {
+        console.error("Error fetching patients:", err);
+        setPatientsByDate({});
+      }
+    };
+
+    // fetch services (✅ with token)
+    const fetchServices = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
             "auth-token": localStorage.getItem("token"),
           },
+        });
+
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setServices(data);
+        } else {
+          console.error("Expected array, got:", data);
+          setServices([]);
         }
-      );
-      const json = await response.json();
-      setPatientsByDate(json);
-    };
-
-const API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://gmsc-backend.onrender.com"
-  : "http://localhost:5001";
-
-    const fetchServices = async () => {
-      const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
-      const data = await res.json();
-      setServices(data);
+      } catch (err) {
+        console.error("Error fetching services:", err);
+        setServices([]);
+      }
     };
 
     fetchPatients();
     fetchServices();
-  }, []);
+  }, [API_BASE_URL]);
 
   // 🔎 Filter patients inside each group (search + service only)
   const applyFilters = (patients) => {
     return patients.filter((p) => {
-      // search by name or number
       const matchSearch =
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.number?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // filter by service (if selected)
       const matchService =
         !selectedService ||
         p.service?.some(
@@ -66,8 +85,8 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
 
   return (
     <>
-      {/* Search & Filters */}
       <div className="container mt-3">
+        {/* 🔎 Search */}
         <input
           type="text"
           className="form-control mb-2"
@@ -76,27 +95,28 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        {/* Filter by Service */}
+        {/* 🏥 Filter by Service */}
         <select
           className="form-select mb-2"
           value={selectedService}
           onChange={(e) => setSelectedService(e.target.value)}
         >
           <option value="">All Services</option>
-          {services.map((s) => (
-            <option key={s._id} value={s.name}>
-              {s.name}
-            </option>
-          ))}
+          {Array.isArray(services) &&
+            services.map((s) => (
+              <option key={s._id} value={s.name}>
+                {s.name}
+              </option>
+            ))}
         </select>
 
-        {/* Patients Grouped by Date */}
+        {/* 👥 Patients grouped by last visit */}
         {Object.keys(patientsByDate)
           .sort((a, b) => {
-            if (a === "No Visits") return 1; // put "No Visits" at the end
+            if (a === "No Visits") return 1;
             if (b === "No Visits") return -1;
-            return new Date(b) - new Date(a); // latest first
-          }) // latest date first
+            return new Date(b) - new Date(a);
+          })
           .map((date) => {
             const filteredGroup = applyFilters(
               Array.isArray(patientsByDate[date]) ? patientsByDate[date] : []
@@ -136,7 +156,6 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
           })}
       </div>
 
-      {/* Patient Details (optional, if using inline view) */}
       {selectedId && <PatientDetails id={selectedId} />}
     </>
   );

@@ -10,9 +10,8 @@ const AddAppointment = (props) => {
       : null
   );
 
-  const [availableServices, setAvailableServices] = useState([]);
-  const [services, setServices] = useState([]); // ✅ stores selected service objects
-  const [serviceAmounts, setServiceAmounts] = useState({}); // ✅ key = serviceId
+  const [services, setServices] = useState([]); // selected services (objects)
+  const [serviceAmounts, setServiceAmounts] = useState({}); // { serviceId: amount }
   const [amount, setAmount] = useState(0);
 
   const [searchText, setSearchText] = useState("");
@@ -29,8 +28,7 @@ const AddAppointment = (props) => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "auth-token":
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+          "auth-token": localStorage.getItem("token") || "",
         },
       });
       const json = await response.json();
@@ -38,27 +36,6 @@ const AddAppointment = (props) => {
       setFilteredPatients(json);
     };
     list();
-  }, []);
-
-
-  // ✅ Fetch all services
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token":
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
-          },
-        });
-        const data = await res.json(); // [{ _id, name, amount }]
-        setAvailableServices(data);
-      } catch (err) {
-        console.error("Error fetching services:", err);
-      }
-    };
-    fetchServices();
   }, []);
 
   // ✅ Filter patients as user types
@@ -110,8 +87,7 @@ const AddAppointment = (props) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "auth-token":
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+            "auth-token": localStorage.getItem("token") || "",
           },
           body: JSON.stringify({
             services: services.map((s) => ({
@@ -186,7 +162,6 @@ const AddAppointment = (props) => {
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-              services={availableServices}
               selectedServices={services}
               onSelect={handleServiceSelect}
             />
@@ -197,7 +172,7 @@ const AddAppointment = (props) => {
             <div className="mb-3">
               <label className="form-label">Bill Details</label>
               <ul className="list-group mb-2">
-                {services.map((s) => (
+                {Array.isArray(services) && services.map((s) => (
                   <li
                     key={s._id}
                     className="list-group-item d-flex justify-content-between align-items-center"
