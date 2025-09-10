@@ -111,22 +111,27 @@ router.post(
   ],
   async (req, res) => {
     try {
+      // 🔑 Use req.user.id (from fetchuser), not req.doc
       const existingService = await Service.findOne({
         name: req.body.name,
-        doctor: req.doc.id, // check only for this doctor
+        doc: req.user.id, // consistent with schema
       });
 
       if (existingService) {
-        return res.status(400).json({ success: false, error: "Service already exists for this doctor" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Service already exists for this doctor" });
       }
 
       const service = await Service.create({
         name: req.body.name,
         amount: req.body.amount,
-        doctor: req.doc.id, // attach doctor id
+        doc: req.user.id, // consistent with schema
       });
 
-      res.status(200).json({ success: true, status: "Added successfully", service });
+      res
+        .status(200)
+        .json({ success: true, status: "Added successfully", service });
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ success: false, error: "Internal server error" });
