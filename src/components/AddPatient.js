@@ -28,7 +28,7 @@ useEffect(() => {
   const fetchServices = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
-        headers: { "auth-token": localStorage.getItem("token") },
+        headers: {  "auth-token": localStorage.getItem("token") },
       });
       const data = await res.json();
       setAvailableServices(data); // only services for logged-in doc
