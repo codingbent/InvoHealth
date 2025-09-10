@@ -13,6 +13,11 @@ const DocSchema = new Schema({
     password:{
         type:String,
         required:true
+    },
+    doctor: {
+        type: Schema.Types.ObjectId,
+        ref: 'doc',
+        required: true
     }
 });
 

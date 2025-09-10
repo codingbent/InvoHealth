@@ -60,43 +60,47 @@ router.post(
 );
 
 // Creating a Patient using : POST "/API/AUTH" Doesn't require auth
-
+// Add fetchuser middleware to get logged-in doctor
 router.post(
-    "/addpatient",
-    [
-        body("name", "Enter Name").notEmpty(),
-        body("service"),
-        body("number"),
-        body("amount"),
-        body("age")
-        .optional({ checkFalsy: true }) // allows empty string or missing field
-        .isNumeric().withMessage("Amount must be a number"),
-    ],
-    async (req, res) => {
-        let success = false;
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            //console.log(errors.errors[0]);
-            return res.status(400).json({ success, errors: errors.array() });
-        }
-
-        try {
-            const patient = await Patient.create({
-                name: req.body.name,
-                service: req.body.service,
-                number: req.body.number,
-                amount: req.body.amount,
-                age:req.body.age
-            });
-
-            success = true;
-            res.json({ success, patient }); // send both success + created doc
-            //console.log("Successfully Added Patient");
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).json({ success, error: "Server error, please try again later" });
-        }
+  "/addpatient",
+  fetchuser, // ensures only logged-in doctors can add patients
+  [
+    body("name", "Enter Name").notEmpty(),
+    body("service"),
+    body("number"),
+    body("amount"),
+    body("age")
+      .optional({ checkFalsy: true })
+      .isNumeric().withMessage("Age must be a number"),
+  ],
+  async (req, res) => {
+    let success = false;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success, errors: errors.array() });
     }
+
+    try {
+      const doctorId = req.doc.id; // fetched from JWT
+      const patient = await Patient.create({
+        name: req.body.name,
+        service: req.body.service,
+        number: req.body.number,
+        amount: req.body.amount,
+        age: req.body.age,
+        doctor: doctorId, // link patient to logged-in doctor
+      });
+
+      success = true;
+      res.json({ success, patient });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({
+        success,
+        error: "Server error, please try again later",
+      });
+    }
+  }
 );
 
 
@@ -141,9 +145,10 @@ async(req,res)=>{
 
 //fetch all patients
 
-router.get("/fetchallpatients", async (req, res) => {
+router.get("/fetchallpatients", fetchuser, async (req, res) => {
   try {
-    const patients = await Patient.find();
+    // Only fetch patients created by the logged-in doctor
+    const patients = await Patient.find({ doctor: req.doc.id });
 
     // For each patient, get last appointment date
     const patientsWithLast = await Promise.all(
@@ -166,6 +171,7 @@ router.get("/fetchallpatients", async (req, res) => {
     res.status(500).send("Server error");
   }
 });
+
 
 //
 

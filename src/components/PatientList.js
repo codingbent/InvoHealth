@@ -23,7 +23,7 @@ export default function PatientList() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "auth-token": "YOUR_AUTH_TOKEN",
+            "auth-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
           },
         }
       );
