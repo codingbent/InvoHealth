@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList"; // ✅ Import service list
 
-const API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://gmsc-backend.onrender.com"
-  : "http://localhost:5001";
 
 export default function PatientDetails() {
+  const API_BASE_URL = process.env.NODE_ENV === "production"
+    ? "https://gmsc-backend.onrender.com"
+    : "http://localhost:5001";
   const { id } = useParams();
   const [details, setDetails] = useState(null);
   const [patient, setPatient] = useState({
@@ -34,9 +34,9 @@ export default function PatientDetails() {
     const fetchData = async () => {
       try {
         const [patientRes, appointmentsRes, servicesRes] = await Promise.all([
-          fetch(`${API_BASE}/patientdetails/${id}`),
-          fetch(`${API_BASE}/appointments/${id}`),
-          fetch(`${API_BASE}/fetchallservice`),
+          fetch(`${API_BASE_URL}/patientdetails/${id}`),
+          fetch(`${API_BASE_URL}/appointments/${id}`),
+          fetch(`${API_BASE_URL}/fetchallservice`),
         ]);
 
         const patientData = await patientRes.json();
@@ -68,7 +68,7 @@ export default function PatientDetails() {
   // Save patient details
   const handleSave = async () => {
     try {
-      const response = await fetch(`${API_BASE}/updatepatientdetails/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/updatepatientdetails/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patient),
@@ -131,7 +131,7 @@ export default function PatientDetails() {
     if (!editingAppt) return;
     try {
       const response = await fetch(
-        `${API_BASE}/updateappointment/${editingAppt.visits[0]._id}`,
+        `${API_BASE_URL}/updateappointment/${editingAppt.visits[0]._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
