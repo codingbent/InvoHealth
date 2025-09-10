@@ -70,71 +70,62 @@ const AddPatient = (props) => {
   const onChange = (e) =>
     setPatient({ ...patient, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        props.showAlert("You must be logged in", "danger");
-        return;
-      }
+  try {
+    // 1️⃣ Add patient
+    const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "auth-token": localStorage.getItem("token"), // use actual token
+      },
+      body: JSON.stringify({ name, service, number, amount, age }),
+    });
 
-      // 1️⃣ Add patient linked to logged-in doctor
-      const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": token,
-        },
-        body: JSON.stringify({ name, service, number, amount, age }),
-      });
-
-      const patientJson = await patientRes.json();
-      if (!patientJson.success) {
-        props.showAlert(patientJson.error || "Failed to add patient", "danger");
-        return;
-      }
-
-      const newPatientId = patientJson.patient._id;
-
-      // 2️⃣ Create initial appointment
-      const appointmentRes = await fetch(
-        `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            service,
-            amount,
-            date: appointmentDate,
-          }),
-        }
-      );
-
-      const appointmentJson = await appointmentRes.json();
-      if (appointmentJson.success) {
-        props.showAlert(
-          "Patient and appointment added successfully!",
-          "success"
-        );
-      } else {
-        props.showAlert(
-          appointmentJson.error || "Patient added but appointment failed",
-          "warning"
-        );
-      }
-
-      // Reset form
-      setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
-      setAppointmentDate(new Date().toISOString().slice(0, 10));
-      setServiceAmounts([]);
-      document.querySelector("#patientModal .btn-close")?.click();
-    } catch (err) {
-      console.error("Server error:", err);
-      props.showAlert("Server error", "danger");
+    const patientJson = await patientRes.json();
+    if (!patientJson.success) {
+      props.showAlert(patientJson.error || "Failed to add patient", "danger");
+      return;
     }
-  };
+
+    const newPatientId = patientJson.patient._id;
+
+    // 2️⃣ Create initial appointment with **today's date**
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const appointmentRes = await fetch(
+      `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service,
+          amount,
+          date: today, // use today for the initial appointment
+        }),
+      }
+    );
+
+    const appointmentJson = await appointmentRes.json();
+    if (appointmentJson.success) {
+      props.showAlert("Patient and appointment added successfully!", "success");
+    } else {
+      props.showAlert(
+        appointmentJson.error || "Patient added but appointment failed",
+        "warning"
+      );
+    }
+
+    // Reset form
+    setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
+    setServiceAmounts([]);
+  } catch (err) {
+    console.error(err);
+    props.showAlert("Server error", "danger");
+  }
+};
+
 
   return (
     <form onSubmit={handleSubmit}>

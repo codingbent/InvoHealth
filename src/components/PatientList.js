@@ -92,7 +92,11 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
 
         {/* Patients Grouped by Date */}
         {Object.keys(patientsByDate)
-          .sort((a, b) => new Date(b) - new Date(a)) // latest date first
+          .sort((a, b) => {
+            if (a === "No Visits") return 1; // put "No Visits" at the end
+            if (b === "No Visits") return -1;
+            return new Date(b) - new Date(a); // latest first
+          }) // latest date first
           .map((date) => {
             const filteredGroup = applyFilters(
               Array.isArray(patientsByDate[date]) ? patientsByDate[date] : []
