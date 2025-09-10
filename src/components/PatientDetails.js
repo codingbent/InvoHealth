@@ -44,36 +44,37 @@ export default function PatientDetails() {
   };
 
   // Fetch patient, appointments, and services
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem("token"); // Auth token
+      const [patientRes, appointmentsRes, servicesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, { headers: { "auth-token": token } }),
+        fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, { headers: { "auth-token": token } }),
+        fetch(`${API_BASE_URL}/api/auth/fetchallservice`, { headers: { "auth-token": token } }),
+      ]);
+
+      const patientData = await patientRes.json();
+      const appointmentsData = await appointmentsRes.json();
+      const servicesData = await servicesRes.json();
+
+      setDetails(patientData);
+      setPatient({
+        name: patientData.name || "",
+        service: patientData.service || [],
+        number: patientData.number || "",
+        age: patientData.age || "",
+        amount: patientData.amount || 0,
+      });
+      setAppointments(appointmentsData);
+      setAvailableServices(servicesData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token"); // Auth token
-        const [patientRes, appointmentsRes, servicesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, { headers: { "auth-token": token } }),
-          fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, { headers: { "auth-token": token } }),
-          fetch(`${API_BASE_URL}/api/auth/fetchallservice`, { headers: { "auth-token": token } }),
-        ]);
-
-        const patientData = await patientRes.json();
-        const appointmentsData = await appointmentsRes.json();
-        const servicesData = await servicesRes.json();
-
-        setDetails(patientData);
-        setPatient({
-          name: patientData.name || "",
-          service: patientData.service || [],
-          number: patientData.number || "",
-          age: patientData.age || "",
-          amount: patientData.amount || 0,
-        });
-        setAppointments(appointmentsData);
-        setAvailableServices(servicesData);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, [id]);
 
@@ -104,15 +105,17 @@ export default function PatientDetails() {
     const visit = appt.visits?.[0] || {};
     setEditingAppt(appt);
 
-    const serviceAmounts = (visit.service || []).map((s, i) => {
-      const defaultAmount = availableServices.find((svc) => svc.name === s)?.amount || 0;
-      return visit.serviceAmounts?.[i] ?? defaultAmount;
+    const serviceAmounts = (visit.service || []).map((s) => {
+      if (typeof s === "object") return s.amount || 0;
+      return availableServices.find((svc) => svc.name === s)?.amount || 0;
     });
+
+    const serviceNames = (visit.service || []).map((s) => (typeof s === "object" ? s.name : s));
 
     setApptServiceAmounts(serviceAmounts);
     setApptData({
       date: toISTDateTime(visit.date),
-      service: visit.service || [],
+      service: serviceNames,
       amount: serviceAmounts.reduce((a, b) => a + b, 0),
     });
   };
@@ -147,14 +150,17 @@ export default function PatientDetails() {
         headers: { "Content-Type": "application/json", "auth-token": token },
         body: JSON.stringify({
           date: fromISTToUTC(apptData.date),
-          service: apptData.service,
-          serviceAmounts: apptServiceAmounts,
+          service: apptData.service.map((name, i) => ({ name, amount: apptServiceAmounts[i] })),
           amount: apptData.amount,
         }),
       });
       const data = await response.json();
-      if (data.success) alert("Appointment updated successfully!");
-      else alert("Update failed: " + data.message);
+      if (data.success) {
+        alert("Appointment updated successfully!");
+        fetchData(); // Refresh data immediately
+      } else {
+        alert("Update failed: " + data.message);
+      }
     } catch (err) {
       console.error("Error updating appointment:", err);
     }
@@ -226,8 +232,15 @@ export default function PatientDetails() {
                 appt.visits?.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map((visit, vIndex) => (
                   <tr key={`${index}-${vIndex}`}>
                     <td>{visit.date ? new Date(visit.date).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "N/A"}</td>
-                    <td>{visit.service?.join(", ") || "N/A"}</td>
-                    <td>{visit.amount ?? "N/A"}</td>
+                    <td>
+                      {(visit.service || [])
+                        .map((s) => (typeof s === "object" ? s.name : s))
+                        .join(", ") || "N/A"}
+                    </td>
+                    <td>
+                      {(visit.service || [])
+                        .reduce((sum, s) => sum + (typeof s === "object" ? s.amount : 0), 0) || visit.amount || 0}
+                    </td>
                     <td>
                       <button className="btn btn-sm btn-warning me-2" data-bs-toggle="modal" data-bs-target="#editAppointmentModal" onClick={() => handleEditAppt({ ...appt, visits: [visit] })}>Update</button>
                       <button className="btn btn-sm btn-danger">Delete</button>
@@ -277,7 +290,7 @@ export default function PatientDetails() {
                       ))}
                     </ul>
                     <label className="form-label">Total Amount</label>
-                    <input type="number" className="form-control" value={apptData.amount} onChange={(e) => setApptData(prev => ({ ...prev, amount: Number(e.target.value) }))} />
+                    <input type="number" className="form-control" value={apptData.amount} readOnly />
                   </div>
                 )}
               </form>
