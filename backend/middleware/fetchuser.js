@@ -9,7 +9,7 @@ const fetchuser = (req,res,next)=>{
     }
     try {
         const data = jwt.verify(token, JWT_SECRET);
-        req.doc = data.user;
+        req.doc = data.doc;
         next();
     } catch (error) {
      res.status(401).send({error:"Please Uthenticate using a valid token"})   

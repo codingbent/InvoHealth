@@ -78,7 +78,7 @@ router.post(
         }
 
         try {
-            const doctorId = req.user.id; // fetched from JWT
+            const doctorId = req.doc.id; // fetched from JWT
             const patient = await Patient.create({
                 name: req.body.name,
                 service: req.body.service,
@@ -111,10 +111,10 @@ router.post(
   ],
   async (req, res) => {
     try {
-      // 🔑 Use req.user.id (from fetchuser), not req.doc
+      // 🔑 Use req.doc.id (from fetchuser), not req.doc
       const existingService = await Service.findOne({
         name: req.body.name,
-        doctor: req.user.id, // consistent with schema
+        doctor: req.doc.id, // consistent with schema
       });
 
       if (existingService) {
@@ -126,7 +126,7 @@ router.post(
       const service = await Service.create({
         name: req.body.name,
         amount: req.body.amount,
-        doctor: req.user.id, // consistent with schema
+        doctor: req.doc.id, // consistent with schema
       });
 
       res
@@ -145,7 +145,7 @@ router.post(
 // routes/service.js
 router.get("/fetchallservice", fetchuser, async (req, res) => {
   try {
-    const services = await Service.find({ doc: req.user.id });
+    const services = await Service.find({ doctor: req.doc.id });
     res.json(services);
   } catch (error) {
     console.error(error.message);
@@ -160,7 +160,7 @@ router.get("/fetchallservice", fetchuser, async (req, res) => {
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
     try {
         // Only fetch patients created by the logged-in doctor
-        const patients = await Patient.find({ doctor: req.user.id });
+        const patients = await Patient.find({ doctor: req.doc.id });
 
         // For each patient, get last appointment date
         const patientsWithLast = await Promise.all(
