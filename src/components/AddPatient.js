@@ -179,8 +179,8 @@ const AddPatient = (props) => {
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-                onSelect={handleApptServiceChange}
-                selectedServices={apptData.service}
+                onSelect={handleServiceSelect}
+                selectedServices={service}
                 services={availableServices}
             />
           </div>
