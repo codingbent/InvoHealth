@@ -103,42 +103,50 @@ router.post(
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 
 router.post(
-    "/createservice",
-    [body("name").notEmpty(), body("amount").isNumeric()],
-    async (req, res) => {
-        try {
-            var success = false;
-            const existingservice = await Service.findOne({
-                name: req.body.name,
-            });
-            if (existingservice) {
-                return res
-                    .status(400)
-                    .json({ success, error: "Service already exists" });
-            }
-            const service = await Service.create({
-                name: req.body.name,
-                amount: req.body.amount,
-            });
-            success = true;
-            //console.log("Successfull Send");
-            return res
-                .status(200)
-                .json({ success, status: "Added successfully" });
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).json({ success, error: "Internal server error" });
-        }
+  "/createservice",
+  fetchuser,
+  [
+    body("name").notEmpty(),
+    body("amount").isNumeric(),
+  ],
+  async (req, res) => {
+    try {
+      const existingService = await Service.findOne({
+        name: req.body.name,
+        doctor: req.doc.id, // check only for this doctor
+      });
+
+      if (existingService) {
+        return res.status(400).json({ success: false, error: "Service already exists for this doctor" });
+      }
+
+      const service = await Service.create({
+        name: req.body.name,
+        amount: req.body.amount,
+        doctor: req.doc.id, // attach doctor id
+      });
+
+      res.status(200).json({ success: true, status: "Added successfully", service });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ success: false, error: "Internal server error" });
     }
+  }
 );
 
 // Fetch all services
 
-router.get("/fetchallservice", async (req, res) => {
-    var success = false;
-    const service = await Service.find({});
-    res.json(service);
+// Fetch all services for the logged-in doctor
+router.get("/fetchallservice", fetchuser, async (req, res) => {
+  try {
+    const services = await Service.find({ doctor: req.doc.id }); // only this doctor's services
+    res.json(services);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
+
 
 //fetch all patients
 

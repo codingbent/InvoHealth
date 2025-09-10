@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 
-
 export default function PatientDetails() {
   const API_BASE_URL = process.env.NODE_ENV === "production"
     ? "https://gmsc-backend.onrender.com"
     : "http://localhost:5001";
+    
   const { id } = useParams();
   const [details, setDetails] = useState(null);
   const [patient, setPatient] = useState({
@@ -22,11 +22,7 @@ export default function PatientDetails() {
 
   // Appointment edit state
   const [editingAppt, setEditingAppt] = useState(null);
-  const [apptData, setApptData] = useState({
-    date: "",
-    service: [],
-    amount: 0,
-  });
+  const [apptData, setApptData] = useState({ date: "", service: [], amount: 0 });
   const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
 
   // Convert backend UTC to IST for datetime-local input
@@ -44,7 +40,6 @@ export default function PatientDetails() {
     const [datePart, timePart] = istDateTime.split("T");
     const [year, month, day] = datePart.split("-").map(Number);
     const [hours, minutes] = timePart.split(":").map(Number);
-    // Subtract IST offset
     return new Date(Date.UTC(year, month - 1, day, hours - 5, minutes - 30));
   };
 
@@ -52,10 +47,11 @@ export default function PatientDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem("token"); // Auth token
         const [patientRes, appointmentsRes, servicesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`),
-          fetch(`${API_BASE_URL}/api/auth/appointments/${id}`),
-          fetch(`${API_BASE_URL}/api/auth/fetchallservice`),
+          fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, { headers: { "auth-token": token } }),
+          fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, { headers: { "auth-token": token } }),
+          fetch(`${API_BASE_URL}/api/auth/fetchallservice`, { headers: { "auth-token": token } }),
         ]);
 
         const patientData = await patientRes.json();
@@ -81,21 +77,16 @@ export default function PatientDetails() {
     fetchData();
   }, [id]);
 
-  // Handle patient input change
-  const handleChange = (e) =>
-    setPatient({ ...patient, [e.target.name]: e.target.value });
+  const handleChange = (e) => setPatient({ ...patient, [e.target.name]: e.target.value });
 
-  // Save patient details
   const handleSave = async () => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/updatepatientdetails/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patient),
-        }
-      );
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/auth/updatepatientdetails/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify(patient),
+      });
       const result = await response.json();
       if (response.ok) {
         setDetails(patient);
@@ -109,7 +100,6 @@ export default function PatientDetails() {
     }
   };
 
-  // Edit appointment modal
   const handleEditAppt = (appt) => {
     const visit = appt.visits?.[0] || {};
     setEditingAppt(appt);
@@ -120,15 +110,13 @@ export default function PatientDetails() {
     });
 
     setApptServiceAmounts(serviceAmounts);
-
     setApptData({
-      date: toISTDateTime(visit.date), // convert UTC to IST
+      date: toISTDateTime(visit.date),
       service: visit.service || [],
       amount: serviceAmounts.reduce((a, b) => a + b, 0),
     });
   };
 
-  // Handle appointment service selection
   const handleApptServiceChange = (serviceName, checked) => {
     setApptData((prev) => {
       let updatedServices = [...prev.service];
@@ -150,23 +138,20 @@ export default function PatientDetails() {
     });
   };
 
-  // Update appointment
   const handleUpdateAppt = async () => {
     if (!editingAppt) return;
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: fromISTToUTC(apptData.date), // convert IST to UTC
-            service: apptData.service,
-            serviceAmounts: apptServiceAmounts,
-            amount: apptData.amount,
-          }),
-        }
-      );
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({
+          date: fromISTToUTC(apptData.date),
+          service: apptData.service,
+          serviceAmounts: apptServiceAmounts,
+          amount: apptData.amount,
+        }),
+      });
       const data = await response.json();
       if (data.success) alert("Appointment updated successfully!");
       else alert("Update failed: " + data.message);
@@ -185,12 +170,7 @@ export default function PatientDetails() {
         <h3>Age: {details?.age || ""}</h3>
       </div>
 
-      <button
-        type="button"
-        className="btn btn-primary m-2"
-        data-bs-toggle="modal"
-        data-bs-target="#editPatientModal"
-      >
+      <button type="button" className="btn btn-primary m-2" data-bs-toggle="modal" data-bs-target="#editPatientModal">
         Edit Details
       </button>
 
@@ -243,34 +223,17 @@ export default function PatientDetails() {
             </thead>
             <tbody>
               {appointments.map((appt, index) =>
-                appt.visits
-                  ?.slice()
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                  .map((visit, vIndex) => (
-                    <tr key={`${index}-${vIndex}`}>
-                      <td>
-                        {visit.date
-                          ? new Date(visit.date).toLocaleString("en-IN", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })
-                          : "N/A"}
-                      </td>
-                      <td>{visit.service?.join(", ") || "N/A"}</td>
-                      <td>{visit.amount ?? "N/A"}</td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          data-bs-toggle="modal"
-                          data-bs-target="#editAppointmentModal"
-                          onClick={() => handleEditAppt({ ...appt, visits: [visit] })}
-                        >
-                          Update
-                        </button>
-                        <button className="btn btn-sm btn-danger">Delete</button>
-                      </td>
-                    </tr>
-                  ))
+                appt.visits?.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map((visit, vIndex) => (
+                  <tr key={`${index}-${vIndex}`}>
+                    <td>{visit.date ? new Date(visit.date).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "N/A"}</td>
+                    <td>{visit.service?.join(", ") || "N/A"}</td>
+                    <td>{visit.amount ?? "N/A"}</td>
+                    <td>
+                      <button className="btn btn-sm btn-warning me-2" data-bs-toggle="modal" data-bs-target="#editAppointmentModal" onClick={() => handleEditAppt({ ...appt, visits: [visit] })}>Update</button>
+                      <button className="btn btn-sm btn-danger">Delete</button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -289,23 +252,13 @@ export default function PatientDetails() {
               <form>
                 <div className="mb-3">
                   <label className="form-label">Date</label>
-                  <input
-                    type="datetime-local"
-                    className="form-control"
-                    value={apptData.date}
-                    onChange={(e) => setApptData(prev => ({ ...prev, date: e.target.value }))}
-                  />
+                  <input type="datetime-local" className="form-control" value={apptData.date} onChange={(e) => setApptData(prev => ({ ...prev, date: e.target.value }))} />
                 </div>
-
                 <div className="mb-3">
                   <label className="form-label">Services</label>
-                  <ServiceList
-                    onSelect={handleApptServiceChange}
-                    selectedServices={apptData.service}
-                    services={availableServices}
-                  />
+                  <ServiceList onSelect={handleApptServiceChange} selectedServices={apptData.service} services={availableServices} />
                 </div>
-
+                                
                 {apptData.service.length > 0 && (
                   <div className="mb-3">
                     <label className="form-label">Bill Details</label>
@@ -313,28 +266,18 @@ export default function PatientDetails() {
                       {apptData.service.map((s, index) => (
                         <li key={s} className="list-group-item d-flex justify-content-between align-items-center">
                           <span>{s}</span>
-                          <input
-                            type="number"
-                            className="form-control w-25"
-                            value={apptServiceAmounts[index] ?? 0}
-                            onChange={(e) => {
-                              const newAmounts = [...apptServiceAmounts];
-                              newAmounts[index] = Number(e.target.value);
-                              setApptServiceAmounts(newAmounts);
-                              const total = newAmounts.reduce((a, b) => a + b, 0);
-                              setApptData(prev => ({ ...prev, amount: total }));
-                            }}
-                          />
+                          <input type="number" className="form-control w-25" value={apptServiceAmounts[index] ?? 0} onChange={(e) => {
+                            const newAmounts = [...apptServiceAmounts];
+                            newAmounts[index] = Number(e.target.value);
+                            setApptServiceAmounts(newAmounts);
+                            const total = newAmounts.reduce((a, b) => a + b, 0);
+                            setApptData(prev => ({ ...prev, amount: total }));
+                          }} />
                         </li>
                       ))}
                     </ul>
                     <label className="form-label">Total Amount</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={apptData.amount}
-                      onChange={(e) => setApptData(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                    />
+                    <input type="number" className="form-control" value={apptData.amount} onChange={(e) => setApptData(prev => ({ ...prev, amount: Number(e.target.value) }))} />
                   </div>
                 )}
               </form>

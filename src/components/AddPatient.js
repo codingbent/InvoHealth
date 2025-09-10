@@ -24,18 +24,20 @@ const AddPatient = (props) => {
       : "http://localhost:5001";
 
   // Fetch services from backend
-  useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
-        const data = await res.json();
-        setAvailableServices(data);
-      } catch (err) {
-        console.error("Error fetching services:", err);
-      }
-    };
-    fetchServices();
-  }, []);
+useEffect(() => {
+  const fetchServices = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
+        headers: { "auth-token": localStorage.getItem("token") },
+      });
+      const data = await res.json();
+      setAvailableServices(data); // only services for logged-in doc
+    } catch (err) {
+      console.error("Error fetching services:", err);
+    }
+  };
+  fetchServices();
+}, []);
 
   // Update service amounts when services change
   useEffect(() => {
