@@ -280,13 +280,18 @@ router.post("/addappointment/:id", async (req, res) => {
       return res.status(400).json({ message: "Amount is required" });
     }
 
+    // Convert current time to IST
+    const now = new Date();
+    const istOffset = 5.5 * 60; // IST offset in minutes
+    const istDate = new Date(now.getTime() + istOffset * 60000);
+
     // Find appointment record for this patient and add new visit
     const appointment = await Appointment.findOneAndUpdate(
       { patient: patientId },
       {
         $push: {
           visits: {
-            date: new Date(),
+            date: istDate,
             service,
             amount,
           },
@@ -306,6 +311,7 @@ router.post("/addappointment/:id", async (req, res) => {
   }
 });
 
+
 // GET /api/auth/patientdetails/:id
 router.get("/patientdetails/:id", async (req, res) => {
   try {
@@ -321,34 +327,47 @@ router.get("/patientdetails/:id", async (req, res) => {
 
 
 // PUT /api/auth/updateappointment/:appointmentId
-router.put("/updateappointment/:appointmentId", async (req, res) => {
+router.post("/addappointment/:id", async (req, res) => {
   try {
-    const { appointmentId } = req.params;
-    const { date, service, amount } = req.body;
+    const { service, amount } = req.body;
+    const patientId = req.params.id;
 
-    const appointment = await Appointment.findOneAndUpdate(
-      { "visits._id": appointmentId },
-      {
-        $set: {
-          "visits.$.date": date,
-          "visits.$.service": service,
-          "visits.$.amount": amount,
-        },
-      },
-      { new: true }
-    );
-
-    if (!appointment) {
-      return res.status(404).json({ message: "Appointment not found" });
+    if (!service || !Array.isArray(service)) {
+      return res.status(400).json({ message: "Service must be an array" });
     }
 
-    res.json({
+    if (amount == null) {
+      return res.status(400).json({ message: "Amount is required" });
+    }
+
+    // Convert current time to IST
+    const now = new Date();
+    const istOffset = 5.5 * 60; // IST offset in minutes
+    const istDate = new Date(now.getTime() + istOffset * 60000);
+
+    // Find appointment record for this patient and add new visit
+    const appointment = await Appointment.findOneAndUpdate(
+      { patient: patientId },
+      {
+        $push: {
+          visits: {
+            date: istDate,
+            service,
+            amount,
+          },
+        },
+      },
+      { upsert: true, new: true } // Create if not exists
+    );
+
+    res.status(201).json({
       success: true,
-      message: "Appointment updated successfully",
+      message: "Appointment added successfully",
       appointment,
     });
   } catch (err) {
-    res.status(500).json({ message: "Error updating appointment", error: err.message });
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
