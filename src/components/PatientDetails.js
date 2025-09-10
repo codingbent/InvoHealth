@@ -140,31 +140,34 @@ export default function PatientDetails() {
       return { ...prev, service: updatedServices, amount: total };
     });
   };
-
-  const handleUpdateAppt = async () => {
-    if (!editingAppt) return;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "auth-token": token },
-        body: JSON.stringify({
-          date: fromISTToUTC(apptData.date),
-          service: apptData.service.map((name, i) => ({ name, amount: apptServiceAmounts[i] })),
-          amount: apptData.amount,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert("Appointment updated successfully!");
-        fetchData(); // Refresh data immediately
-      } else {
-        alert("Update failed: " + data.message);
-      }
-    } catch (err) {
-      console.error("Error updating appointment:", err);
+const handleUpdateAppt = async () => {
+  if (!editingAppt) return;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "auth-token": token },
+      body: JSON.stringify({
+        date: fromISTToUTC(apptData.date),
+        service: apptData.service.map((name, i) => ({ name, amount: apptServiceAmounts[i] })),
+        amount: apptData.amount,
+      }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      alert("Appointment updated successfully!");
+      fetchData(); // Refresh table
+      const modalEl = document.getElementById("editAppointmentModal");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide(); // Close modal safely
+    } else {
+      alert("Update failed: " + data.message);
     }
-  };
+  } catch (err) {
+    console.error("Error updating appointment:", err);
+  }
+};
+
 
   if (loading) return <p>Loading patient details...</p>;
 
@@ -238,8 +241,11 @@ export default function PatientDetails() {
                         .join(", ") || "N/A"}
                     </td>
                     <td>
-                      {(visit.service || [])
-                        .reduce((sum, s) => sum + (typeof s === "object" ? s.amount : 0), 0) || visit.amount || 0}
+                            {Array.isArray(visit.service)
+                              ? visit.service.map(s => (typeof s === "object" ? s.name : s)).join(", ")
+                              : typeof visit.service === "object"
+                              ? visit.service.name
+                              : visit.service || "N/A"}
                     </td>
                     <td>
                       <button className="btn btn-sm btn-warning me-2" data-bs-toggle="modal" data-bs-target="#editAppointmentModal" onClick={() => handleEditAppt({ ...appt, visits: [visit] })}>Update</button>
