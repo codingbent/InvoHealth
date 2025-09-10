@@ -12,13 +12,16 @@ export default function ServiceList({ onSelect, selectedServices = [] }) {
     const fetchServices = async () => {
       try {
         const token = localStorage.getItem("token"); // 👈 from login/signup response
-        const response = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token": token || "", // 👈 required for fetchuser
-          },
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/fetchallservice`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "auth-token": token || "",
+            },
+          }
+        );
 
         if (!response.ok) {
           const text = await response.text();
@@ -39,15 +42,18 @@ export default function ServiceList({ onSelect, selectedServices = [] }) {
 
   return (
     <div className="d-flex flex-wrap gap-2">
-      {services.length > 0 ? (
+      {Array.isArray(services) && services.length > 0 ? (
         services.map((s) => (
-          <div key={s._id} className="form-check me-3 d-flex align-items-center">
+          <div
+            key={s._id}
+            className="form-check me-3 d-flex align-items-center"
+          >
             <input
               type="checkbox"
               className="form-check-input me-1"
-              value={s.name}
-              checked={selectedServices.includes(s.name)}
-              onChange={(e) => onSelect(s.name, e.target.checked)}
+              value={s._id}
+              checked={selectedServices.some((svc) => svc._id === s._id)} // ✅ check by _id
+              onChange={(e) => onSelect(s, e.target.checked)} // ✅ send full service object
             />
             <label className="form-check-label">
               {s.name} - ₹{s.amount}

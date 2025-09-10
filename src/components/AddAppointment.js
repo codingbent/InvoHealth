@@ -11,30 +11,28 @@ const AddAppointment = (props) => {
   );
 
   const [availableServices, setAvailableServices] = useState([]);
-  const [services, setServices] = useState([]);
-  const [serviceAmounts, setServiceAmounts] = useState([]);
+  const [services, setServices] = useState([]); // ✅ stores selected service objects
+  const [serviceAmounts, setServiceAmounts] = useState({}); // ✅ key = serviceId
   const [amount, setAmount] = useState(0);
 
   const [searchText, setSearchText] = useState("");
 
-
-    const API_BASE_URL = process.env.NODE_ENV === "production"
-    ? "https://gmsc-backend.onrender.com"
-    : "http://localhost:5001";
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://gmsc-backend.onrender.com"
+      : "http://localhost:5001";
 
   // ✅ Fetch all patients
   useEffect(() => {
     const list = async () => {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/fetchallpatients`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token":
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+        },
+      });
       const json = await response.json();
       setPatientsList(json);
       setFilteredPatients(json);
@@ -47,11 +45,17 @@ const AddAppointment = (props) => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
-        const data = await res.json(); // [{ name, amount }]
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token":
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+          },
+        });
+        const data = await res.json(); // [{ _id, name, amount }]
         setAvailableServices(data);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching services:", err);
       }
     };
     fetchServices();
@@ -65,17 +69,14 @@ const AddAppointment = (props) => {
     setFilteredPatients(filtered);
   }, [searchText, patientsList]);
 
-  // ✅ Update serviceAmounts whenever services change
+  // ✅ Recalculate total whenever services or serviceAmounts change
   useEffect(() => {
-    const newAmounts = services.map((s) => {
-      const obj = availableServices.find((svc) => svc.name === s);
-      return obj?.amount || 0;
-    });
-    setServiceAmounts(newAmounts);
-
-    const total = newAmounts.reduce((a, b) => a + b, 0);
+    const total = services.reduce(
+      (acc, s) => acc + (serviceAmounts[s._id] ?? s.amount ?? 0),
+      0
+    );
     setAmount(total);
-  }, [services, availableServices]);
+  }, [services, serviceAmounts]);
 
   const handleSelect = (patient) => {
     setSelectedPatient(patient);
@@ -83,19 +84,17 @@ const AddAppointment = (props) => {
     setSearchText("");
   };
 
-  const handleServiceSelect = (value, checked) => {
+  const handleServiceSelect = (service, checked) => {
     setServices((prev) =>
-      checked ? [...prev, value] : prev.filter((s) => s !== value)
+      checked ? [...prev, service] : prev.filter((s) => s._id !== service._id)
     );
   };
 
-  const handleServiceAmountChange = (index, value) => {
-    const newAmounts = [...serviceAmounts];
-    newAmounts[index] = Number(value);
-    setServiceAmounts(newAmounts);
-
-    const total = newAmounts.reduce((a, b) => a + b, 0);
-    setAmount(total);
+  const handleServiceAmountChange = (id, value) => {
+    setServiceAmounts((prev) => ({
+      ...prev,
+      [id]: Number(value),
+    }));
   };
 
   const handleAddAppointment = async (e) => {
@@ -109,8 +108,19 @@ const AddAppointment = (props) => {
         `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service: services, amount }),
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token":
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+          },
+          body: JSON.stringify({
+            services: services.map((s) => ({
+              id: s._id,
+              name: s.name,
+              amount: serviceAmounts[s._id] ?? s.amount,
+            })),
+            amount,
+          }),
         }
       );
 
@@ -118,7 +128,7 @@ const AddAppointment = (props) => {
       if (response.ok) {
         props.showAlert("Appointment added successfully!", "success");
         setServices([]);
-        setServiceAmounts([]);
+        setServiceAmounts({});
         setAmount(0);
         setSelectedPatient(null);
         localStorage.removeItem("patient");
@@ -175,9 +185,11 @@ const AddAppointment = (props) => {
         <form onSubmit={handleAddAppointment}>
           <div className="mb-3">
             <label className="form-label">Services</label>
-            <ServiceList services={availableServices}        // ✅ Pass available services
-        selectedServices={services}        // ✅ Current selected services
-        onSelect={handleServiceSelect} />
+            <ServiceList
+              services={availableServices}
+              selectedServices={services}
+              onSelect={handleServiceSelect}
+            />
           </div>
 
           {/* Bill Details with editable amounts */}
@@ -185,18 +197,18 @@ const AddAppointment = (props) => {
             <div className="mb-3">
               <label className="form-label">Bill Details</label>
               <ul className="list-group mb-2">
-                {services.map((s, index) => (
+                {services.map((s) => (
                   <li
-                    key={s}
+                    key={s._id}
                     className="list-group-item d-flex justify-content-between align-items-center"
                   >
-                    <span>{s}</span>
+                    <span>{s.name}</span>
                     <input
                       type="number"
                       className="form-control w-25"
-                      value={serviceAmounts[index]}
+                      value={serviceAmounts[s._id] ?? s.amount}
                       onChange={(e) =>
-                        handleServiceAmountChange(index, e.target.value)
+                        handleServiceAmountChange(s._id, e.target.value)
                       }
                     />
                   </li>
@@ -208,7 +220,7 @@ const AddAppointment = (props) => {
                 type="number"
                 className="form-control"
                 value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                readOnly
               />
             </div>
           )}

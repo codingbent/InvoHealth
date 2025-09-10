@@ -78,7 +78,7 @@ router.post(
         }
 
         try {
-            const doctorId = req.doc.id; // fetched from JWT
+            const doctorId = req.user.id; // fetched from JWT
             const patient = await Patient.create({
                 name: req.body.name,
                 service: req.body.service,
