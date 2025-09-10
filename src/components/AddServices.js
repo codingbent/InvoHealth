@@ -27,7 +27,6 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
             setService({ name: "", amount: "" });
             props.showAlert("Successfully Added", "success");
             document.querySelector("#serviceModal .btn-close").click();
-            window.location.reload();
         } else {
             setService({ name: "", amount: "" });
             props.showAlert("Already exists", "danger");
