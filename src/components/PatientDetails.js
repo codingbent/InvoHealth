@@ -40,15 +40,12 @@ export default function PatientDetails() {
     };
 
     // Convert IST input back to UTC for backend storage
-    const fromISTToUTC = (istDateTime) => {
-        if (!istDateTime) return null;
-        const [datePart, timePart] = istDateTime.split("T");
-        const [year, month, day] = datePart.split("-").map(Number);
-        const [hours, minutes] = timePart.split(":").map(Number);
-        return new Date(
-            Date.UTC(year, month - 1, day, hours - 5, minutes - 30)
-        );
-    };
+    const fromISTToUTC = (istDate) => {
+    if (!istDate) return null;
+    const [year, month, day] = istDate.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day)); // 00:00 UTC
+};
+
 
     // Fetch patient, appointments, and services
     const fetchData = async () => {
@@ -122,49 +119,47 @@ export default function PatientDetails() {
         }
     };
 
-    const handleEditAppt = (appt) => {
-        const visit = appt.visits?.[0] || {};
-        setEditingAppt(appt);
+const handleEditAppt = (appt) => {
+    const visit = appt.visits?.[0] || {};
+    setEditingAppt(appt);
 
-        const serviceAmounts = (visit.service || []).map((s) => {
-            if (typeof s === "object") return s.amount || 0;
-            return availableServices.find((svc) => svc.name === s)?.amount || 0;
-        });
+    const serviceObjs = (visit.service || []).map((s) =>
+        typeof s === "object" ? s : availableServices.find(svc => svc._id === s) || { name: s, amount: 0 }
+    );
 
-        const serviceNames = (visit.service || []).map((s) =>
-            typeof s === "object" ? s.name : s
-        );
+    const amounts = serviceObjs.map(s => s.amount || 0);
 
-        setApptServiceAmounts(serviceAmounts);
-        setApptData({
-            date: toISTDateTime(visit.date),
-            service: serviceNames,
-            amount: serviceAmounts.reduce((a, b) => a + b, 0),
-        });
-    };
+    setApptServiceAmounts(amounts);
+    setApptData({
+        date: toISTDateTime(visit.date),
+        service: serviceObjs, // store objects, not just names
+        amount: amounts.reduce((a,b)=>a+b, 0)
+    });
+};
 
-    const handleApptServiceChange = (serviceName, checked) => {
-        setApptData((prev) => {
-            let updatedServices = [...prev.service];
-            let updatedAmounts = [...apptServiceAmounts];
 
-            if (checked) {
-                updatedServices.push(serviceName);
-                const defaultAmount =
-                    availableServices.find((s) => s.name === serviceName)
-                        ?.amount || 0;
-                updatedAmounts.push(defaultAmount);
-            } else {
-                const index = updatedServices.indexOf(serviceName);
+const handleApptServiceChange = (serviceObj, checked) => {
+    setApptData(prev => {
+        let updatedServices = [...prev.service];
+        let updatedAmounts = [...apptServiceAmounts];
+
+        if (checked) {
+            updatedServices.push(serviceObj);
+            updatedAmounts.push(serviceObj.amount || 0);
+        } else {
+            const index = updatedServices.findIndex(s => s._id === serviceObj._id);
+            if (index > -1) {
                 updatedServices.splice(index, 1);
                 updatedAmounts.splice(index, 1);
             }
+        }
 
-            const total = updatedAmounts.reduce((a, b) => a + b, 0);
-            setApptServiceAmounts(updatedAmounts);
-            return { ...prev, service: updatedServices, amount: total };
-        });
-    };
+        const total = updatedAmounts.reduce((a, b) => a + b, 0);
+        setApptServiceAmounts(updatedAmounts);
+        return { ...prev, service: updatedServices, amount: total };
+    });
+};
+
     const handleUpdateAppt = async () => {
         if (!editingAppt) return;
         try {

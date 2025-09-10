@@ -175,8 +175,9 @@ const AddAppointment = (props) => {
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-              selectedServices={services}
-              onSelect={handleServiceSelect}
+              onSelect={handleApptServiceChange}
+              selectedServices={apptData.service}
+              services={availableServices}
             />
           </div>
 
