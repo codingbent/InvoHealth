@@ -336,9 +336,7 @@ export default function PatientDetails() {
                                                           "en-IN",
                                                           {
                                                               dateStyle:
-                                                                  "medium",
-                                                              timeStyle:
-                                                                  "short",
+                                                                  "medium"
                                                           }
                                                       )
                                                     : "N/A"}
