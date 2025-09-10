@@ -16,6 +16,7 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
     method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "auth-token":localStorage.getItem("token")
             },
             body: JSON.stringify({
                 name,
