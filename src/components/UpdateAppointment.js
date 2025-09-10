@@ -1,34 +1,32 @@
 import { useState, useEffect } from "react";
 
 export default function UpdateAppointmentModal({ appointment, patientId, servicesList, onClose, onUpdate }) {
+  // Extract visit data
+  const visit = appointment; // pass the specific visit object from parent (appointment.visits[i])
   const [date, setDate] = useState(
-    appointment.date ? new Date(appointment.date).toISOString().slice(0, 10) : ""
+    visit.date ? new Date(visit.date).toISOString().slice(0, 10) : ""
   );
-  const [selectedServices, setSelectedServices] = useState(appointment.service || []);
+  const [selectedServices, setSelectedServices] = useState(visit.service || []);
   const [serviceAmounts, setServiceAmounts] = useState([]);
-  const [totalAmount, setTotalAmount] = useState(appointment.amount || 0);
+  const [totalAmount, setTotalAmount] = useState(visit.amount || 0);
 
-  // Initialize service amounts when modal opens
+  // Initialize amounts on mount
   useEffect(() => {
-    const amounts = (appointment.service || []).map((s) => {
-      if (typeof s === "object") return s.amount || 0;
-      const srv = servicesList.find((svc) => svc.name === s);
-      return srv ? srv.amount : 0;
-    });
+    const amounts = (visit.service || []).map((s) => s.amount || 0);
     setServiceAmounts(amounts);
     setTotalAmount(amounts.reduce((a, b) => a + b, 0));
-  }, [appointment, servicesList]);
+  }, [visit]);
 
   const handleCheckboxChange = (serviceName, checked) => {
     let updatedServices = [...selectedServices];
     let updatedAmounts = [...serviceAmounts];
 
     if (checked) {
-      updatedServices.push(serviceName);
-      const defaultAmount = servicesList.find(s => s.name === serviceName)?.amount || 0;
-      updatedAmounts.push(defaultAmount);
+      const serviceObj = servicesList.find(s => s.name === serviceName);
+      updatedServices.push({ name: serviceName, id: serviceObj?._id || null, amount: serviceObj?.amount || 0 });
+      updatedAmounts.push(serviceObj?.amount || 0);
     } else {
-      const index = updatedServices.indexOf(serviceName);
+      const index = updatedServices.findIndex(s => s.name === serviceName);
       if (index > -1) {
         updatedServices.splice(index, 1);
         updatedAmounts.splice(index, 1);
@@ -43,27 +41,39 @@ export default function UpdateAppointmentModal({ appointment, patientId, service
   const handleAmountChange = (index, value) => {
     const updatedAmounts = [...serviceAmounts];
     updatedAmounts[index] = Number(value);
+    const updatedServices = [...selectedServices];
+    updatedServices[index].amount = Number(value);
+
     setServiceAmounts(updatedAmounts);
+    setSelectedServices(updatedServices);
     setTotalAmount(updatedAmounts.reduce((a, b) => a + b, 0));
   };
 
   const handleUpdate = async () => {
-    const res = await fetch(`/api/auth/updateappointment/${patientId}/${appointment._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "auth-token": localStorage.getItem("token") },
-      body: JSON.stringify({
-        date,
-        service: selectedServices.map((name, i) => ({ name, amount: serviceAmounts[i] })),
-        amount: totalAmount
-      }),
-    });
+    try {
+      const res = await fetch(`/api/auth/updateappointment/${appointment.appointmentId}/${visit._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": localStorage.getItem("token")
+        },
+        body: JSON.stringify({
+          date,
+          service: selectedServices,
+          amount: totalAmount
+        }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      onUpdate(data);
-      onClose();
-    } else {
-      alert("Error: " + (data.message || "Update failed"));
+      const data = await res.json();
+      if (res.ok) {
+        onUpdate(data);
+        onClose();
+      } else {
+        alert("Error: " + (data.message || "Update failed"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong!");
     }
   };
 
@@ -83,8 +93,8 @@ export default function UpdateAppointmentModal({ appointment, patientId, service
         <label className="block mb-2">Services</label>
         <div className="mb-3 max-h-40 overflow-y-auto border p-2 rounded">
           {servicesList.map((srv) => {
-            const checked = selectedServices.includes(srv.name);
-            const index = selectedServices.indexOf(srv.name);
+            const checked = selectedServices.some(s => s.name === srv.name);
+            const index = selectedServices.findIndex(s => s.name === srv.name);
             return (
               <div key={srv._id} className="flex justify-between items-center mb-1">
                 <label>

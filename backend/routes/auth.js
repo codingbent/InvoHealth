@@ -9,6 +9,8 @@ const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 var fetchuser = require("../middleware/fetchuser");
 const JWT_SECRET = process.env.JWT_SECRET;
+const Appointment = require("../../models/Appointment"); // adjust path
+const authMiddleware = require("../../middleware/auth"); // if using auth
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
 
@@ -347,6 +349,46 @@ router.get("/patientdetails/:id", async (req, res) => {
 });
 
 // PUT /api/auth/updateappointment/:appointmentId
+// PUT /api/auth/updateappointment/:appointmentId
+router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (req, res) => {
+  const { appointmentId, visitId } = req.params;
+  const { date, service, amount } = req.body;
+
+  if (!date || !service || !Array.isArray(service) || service.length === 0) {
+    return res.status(400).json({ success: false, message: "Invalid data" });
+  }
+
+  try {
+    // Find appointment by ID
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Appointment not found" });
+    }
+
+    // Find the specific visit
+    const visit = appointment.visits.id(visitId);
+    if (!visit) {
+      return res.status(404).json({ success: false, message: "Visit not found" });
+    }
+
+    // Update visit fields
+    visit.date = new Date(date);
+    visit.service = service.map(s => ({
+      id: s.id || null,
+      name: s.name,
+      amount: s.amount || 0,
+    }));
+    visit.amount = amount || visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
+
+    await appointment.save();
+
+    res.json({ success: true, visit });
+  } catch (err) {
+    console.error("Error updating visit:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 router.post("/addappointment/:id", async (req, res) => {
     try {
         const { service, amount } = req.body;
