@@ -16,13 +16,12 @@ const AppointmentSchema = new Schema({
       },
       service: [
         {
-          type: String 
+          id: { type: Schema.Types.ObjectId, ref: "Service" },
+          name: String,
+          amount: Number
         }
       ],
-      amount: {
-        type: Number,
-        default: 0
-      }
+      amount: { type: Number, default: 0 }
     }
   ]
 });

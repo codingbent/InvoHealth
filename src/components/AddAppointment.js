@@ -102,7 +102,7 @@ const AddAppointment = (props) => {
             "auth-token": localStorage.getItem("token") || "",
           },
           body: JSON.stringify({
-            services: services.map((s) => ({
+            service: services.map((s) => ({
               id: s._id,
               name: s.name,
               amount: serviceAmounts[s._id] ?? s.amount ?? 0,
