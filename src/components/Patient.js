@@ -3,14 +3,27 @@ import AddServices from "./AddServices";
 import AddPatient from "./AddPatient";
 import PatientList from "./PatientList";
 import AddAppointment from "./AddAppointment";
+import PatientDetails from "./PatientDetails"; // Added import
 
 const Patient = (props) => {
   const { showAlert } = props;
   const [showAppointment, setShowAppointment] = useState(false);
+  const [showPatientDetails, setShowPatientDetails] = useState(false); // Added state
+  const [selectedPatientId, setSelectedPatientId] = useState(null); // Added state
 
   const updateclose = () => {
     setShowAppointment(false);
     localStorage.removeItem("patient");
+  };
+
+  const openPatientDetails = (id) => { // Added function
+    setSelectedPatientId(id);
+    setShowPatientDetails(true);
+  };
+
+  const closePatientDetails = () => { // Added function
+    setShowPatientDetails(false);
+    setSelectedPatientId(null);
   };
 
   return (
@@ -82,14 +95,23 @@ const Patient = (props) => {
 
       
         <div>
-          {!showAppointment && (
+          {!showAppointment && !showPatientDetails && (
             <div className="patient-list">
-              <PatientList />
+              <PatientList openPatientDetails={openPatientDetails}/> {/* Pass function */}
             </div>
           )}
           {showAppointment && (
             <div className="appointment container">
               <AddAppointment showAlert={props.showAlert}/>
+            </div>
+          )}
+          {showPatientDetails && selectedPatientId && (
+            <div className="patient-details container mt-3">
+              <PatientDetails
+                patientId={selectedPatientId}
+                showAlert={showAlert}
+                onClose={closePatientDetails}
+              />
             </div>
           )}
         </div>
