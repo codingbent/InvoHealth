@@ -253,21 +253,13 @@ export default function PatientDetails() {
                                 <div className="mb-3">
                                     <label className="form-label">Number</label>
                                     <input
-                                        type="number"
+                                        type="text"
                                         className="form-control"
                                         name="number"
                                         value={patient.number}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            // Only allow numbers and max 10 digits
-                                            if (val.length <= 10)
-                                                setPatient({
-                                                    ...patient,
-                                                    number: val,
-                                                });
-                                        }}
-                                        min={1000000000} // smallest 10-digit number
-                                        max={9999999999} // largest 10-digit number
+                                        minLength={10}
+                                        maxLength={10}
+                                        onChange={handleChange}
                                     />
                                 </div>
                                 <div className="mb-3">
