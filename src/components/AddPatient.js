@@ -92,10 +92,6 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
 
       const newPatientId = patientJson.patient._id; // assuming backend returns patient object
 
-        const API_BASE_URL = process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
       // 2️⃣ Create initial appointment for this patient
       const appointmentRes = await fetch(
         `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
