@@ -97,11 +97,21 @@ export default function PatientDetails() {
     });
 
     setApptServiceAmounts(serviceAmounts);
-    setApptData({
-      date: visit.date ? new Date(visit.date).toISOString().slice(0, 16) : "",
-      service: visit.service || [],
-      amount: serviceAmounts.reduce((a, b) => a + b, 0),
-    });
+    const toLocalDateTime = (dateStr) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const tzOffset = date.getTimezoneOffset() * 60000; // in ms
+  const localISO = new Date(date - tzOffset).toISOString().slice(0, 16);
+  return localISO;
+};
+
+// then in handleEditAppt:
+setApptData({
+  date: toLocalDateTime(visit.date),
+  service: visit.service || [],
+  amount: serviceAmounts.reduce((a, b) => a + b, 0),
+});
+
   };
 
   // Handle service selection in appointment
@@ -131,7 +141,7 @@ export default function PatientDetails() {
     if (!editingAppt) return;
     try {
       const response = await fetch(
-        `${API_BASE_URL}/updateappointment/${editingAppt.visits[0]._id}`,
+        `${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
