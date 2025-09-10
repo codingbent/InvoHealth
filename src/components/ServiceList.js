@@ -9,7 +9,7 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
 
   useEffect(() => {
     const fetchServices = async () => {
-      const response = await fetch(`${API_BASE_URL}`);
+      const response = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
       const json = await response.json();
       setServices(json);
     };
