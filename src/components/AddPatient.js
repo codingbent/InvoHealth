@@ -18,29 +18,30 @@ const AddPatient = (props) => {
 
   const { name, service, number, amount, age } = patient;
 
-const API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://gmsc-backend.onrender.com"
-  : "http://localhost:5001";
+  const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+      ? "https://gmsc-backend.onrender.com"
+      : "http://localhost:5001";
 
   // Fetch services from backend
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`);
-        const data = await res.json(); // [{name, amount}]
+        const data = await res.json();
         setAvailableServices(data);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching services:", err);
       }
     };
     fetchServices();
   }, []);
 
-  // Update serviceAmounts whenever selected services change
+  // Update service amounts when services change
   useEffect(() => {
     const newAmounts = service.map((s) => {
-      const obj = availableServices.find((svc) => svc.name === s);
-      return obj?.amount || 0;
+      const svc = availableServices.find((svc) => svc.name === s);
+      return svc?.amount || 0;
     });
     setServiceAmounts(newAmounts);
 
@@ -66,20 +67,25 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
     setPatient((prev) => ({ ...prev, amount: total }));
   };
 
-  const onChange = (e) => setPatient({ ...patient, [e.target.name]: e.target.value });
+  const onChange = (e) =>
+    setPatient({ ...patient, [e.target.name]: e.target.value });
 
-  
-  // Submit patient and create initial appointment
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // 1️⃣ Add patient
+      const token = localStorage.getItem("token");
+      if (!token) {
+        props.showAlert("You must be logged in", "danger");
+        return;
+      }
+
+      // 1️⃣ Add patient linked to logged-in doctor
       const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "auth-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjg4ZTU5ZGQzYjI3MTYwMGNlYmRiNmJhIn0sImlhdCI6MTc1NDE2MTcyMH0.1aKGE-xKtW21eqFWPvv1DdhFVddPH6StGyZpoOVye-U",
+          "auth-token": token,
         },
         body: JSON.stringify({ name, service, number, amount, age }),
       });
@@ -90,9 +96,9 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
         return;
       }
 
-      const newPatientId = patientJson.patient._id; // assuming backend returns patient object
+      const newPatientId = patientJson.patient._id;
 
-      // 2️⃣ Create initial appointment for this patient
+      // 2️⃣ Create initial appointment
       const appointmentRes = await fetch(
         `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
         {
@@ -101,14 +107,17 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
           body: JSON.stringify({
             service,
             amount,
-            date: appointmentDate, // use selected date or today
+            date: appointmentDate,
           }),
         }
       );
 
       const appointmentJson = await appointmentRes.json();
       if (appointmentJson.success) {
-        props.showAlert("Patient and appointment added successfully!", "success");
+        props.showAlert(
+          "Patient and appointment added successfully!",
+          "success"
+        );
       } else {
         props.showAlert(
           appointmentJson.error || "Patient added but appointment failed",
@@ -122,7 +131,7 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
       setServiceAmounts([]);
       document.querySelector("#patientModal .btn-close")?.click();
     } catch (err) {
-      console.error(err);
+      console.error("Server error:", err);
       props.showAlert("Server error", "danger");
     }
   };
@@ -131,7 +140,9 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
     <form onSubmit={handleSubmit}>
       <div className="modal-content">
         <div className="modal-header">
-          <h1 className="modal-title fs-5">Add Patient & Initial Appointment</h1>
+          <h1 className="modal-title fs-5">
+            Add Patient & Initial Appointment
+          </h1>
           <button type="button" className="btn-close" data-bs-dismiss="modal" />
         </div>
 
@@ -139,33 +150,44 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
           {/* Name */}
           <div className="mb-3">
             <label className="form-label">Name</label>
-            <input type="text" className="form-control" name="name" value={name} onChange={onChange} required />
+            <input
+              type="text"
+              className="form-control"
+              name="name"
+              value={name}
+              onChange={onChange}
+              required
+            />
           </div>
 
           {/* Services */}
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
-  onSelect={handleServiceSelect}
-  selectedServices={service}
-  services={availableServices} // pass the fetched services
-/>
-
+              onSelect={handleServiceSelect}
+              selectedServices={service}
+              services={availableServices}
+            />
           </div>
 
-          {/* Bill Details with editable amounts */}
+          {/* Bill Details */}
           {service.length > 0 && (
             <div className="mb-3">
               <label className="form-label">Bill Details</label>
               <ul className="list-group mb-2">
                 {service.map((s, index) => (
-                  <li key={s} className="list-group-item d-flex justify-content-between align-items-center">
+                  <li
+                    key={s}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
                     <span>{s}</span>
                     <input
                       type="number"
                       className="form-control w-25"
                       value={serviceAmounts[index]}
-                      onChange={(e) => handleServiceAmountChange(index, e.target.value)}
+                      onChange={(e) =>
+                        handleServiceAmountChange(index, e.target.value)
+                      }
                     />
                   </li>
                 ))}
@@ -176,12 +198,14 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
                 type="number"
                 className="form-control"
                 value={amount}
-                onChange={(e) => setPatient({ ...patient, amount: Number(e.target.value) })}
+                onChange={(e) =>
+                  setPatient({ ...patient, amount: Number(e.target.value) })
+                }
               />
             </div>
           )}
 
-          {/* Appointment date */}
+          {/* Appointment Date */}
           <div className="mb-3">
             <label className="form-label">Appointment Date</label>
             <input
@@ -195,18 +219,34 @@ const API_BASE_URL = process.env.NODE_ENV === "production"
           {/* Number */}
           <div className="mb-3">
             <label className="form-label">Number</label>
-            <input type="number" className="form-control" name="number" value={number} onChange={onChange} />
+            <input
+              type="number"
+              className="form-control"
+              name="number"
+              value={number}
+              onChange={onChange}
+            />
           </div>
 
           {/* Age */}
           <div className="mb-3">
             <label className="form-label">Age</label>
-            <input type="number" className="form-control" name="age" value={age} onChange={onChange} />
+            <input
+              type="number"
+              className="form-control"
+              name="age"
+              value={age}
+              onChange={onChange}
+            />
           </div>
         </div>
 
         <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
             Close
           </button>
           <button type="submit" className="btn btn-primary">
