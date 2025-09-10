@@ -34,9 +34,9 @@ export default function PatientDetails() {
     const fetchData = async () => {
       try {
         const [patientRes, appointmentsRes, servicesRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/patientdetails/${id}`),
-          fetch(`${API_BASE_URL}/appointments/${id}`),
-          fetch(`${API_BASE_URL}/fetchallservice`),
+          fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`),
+          fetch(`${API_BASE_URL}/api/auth/appointments/${id}`),
+          fetch(`${API_BASE_URL}/api/auth/fetchallservice`),
         ]);
 
         const patientData = await patientRes.json();
@@ -131,7 +131,7 @@ export default function PatientDetails() {
     if (!editingAppt) return;
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`,
+        `${API_BASE_URL}/updateappointment/${editingAppt.visits[0]._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
