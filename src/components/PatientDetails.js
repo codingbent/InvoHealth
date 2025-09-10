@@ -68,7 +68,7 @@ export default function PatientDetails() {
   // Save patient details
   const handleSave = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/updatepatientdetails/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/updatepatientdetails/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patient),
@@ -131,7 +131,7 @@ export default function PatientDetails() {
     if (!editingAppt) return;
     try {
       const response = await fetch(
-        `${API_BASE_URL}/updateappointment/${editingAppt.visits[0]._id}`,
+        `${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
