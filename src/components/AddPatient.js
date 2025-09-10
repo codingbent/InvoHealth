@@ -77,83 +77,89 @@ const AddPatient = (props) => {
   const onChange = (e) =>
     setPatient({ ...patient, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      // 1️⃣ Add patient
-      const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
+  try {
+    // 1️⃣ Add patient
+    const patientRes = await fetch(`${API_BASE_URL}/api/auth/addpatient`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "auth-token": localStorage.getItem("token"),
+      },
+      body: JSON.stringify({
+        name,
+        service: service.map((s, index) => ({
+          id: s._id,
+          name: s.name,
+          amount: serviceAmounts[index] ?? s.amount ?? 0,
+        })),
+        number,
+        amount,
+        age,
+      }),
+    });
+
+    const patientJson = await patientRes.json();
+    if (!patientJson.success) {
+      props.showAlert(patientJson.error || "Failed to add patient", "danger");
+      return;
+    }
+
+    const newPatientId = patientJson.patient._id;
+
+    // 2️⃣ Create initial appointment
+    const appointmentRes = await fetch(
+      `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "auth-token": localStorage.getItem("token"),
         },
         body: JSON.stringify({
-          name,
           service: service.map((s, index) => ({
             id: s._id,
             name: s.name,
             amount: serviceAmounts[index] ?? s.amount ?? 0,
           })),
-          number,
           amount,
-          age,
+          date: appointmentDate,
         }),
-      });
-
-      const patientJson = await patientRes.json();
-      if (!patientJson.success) {
-        props.showAlert(patientJson.error || "Failed to add patient", "danger");
-        return;
       }
+    );
 
-      const newPatientId = patientJson.patient._id;
-
-      // 2️⃣ Create initial appointment
-      const appointmentRes = await fetch(
-        `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token": localStorage.getItem("token"),
-          },
-          body: JSON.stringify({
-            service: service.map((s, index) => ({
-              id: s._id,
-              name: s.name,
-              amount: serviceAmounts[index] ?? s.amount ?? 0,
-            })),
-            amount,
-            date: appointmentDate,
-          }),
-        }
+    const appointmentJson = await appointmentRes.json();
+    if (appointmentJson.success) {
+      props.showAlert(
+        "Patient and appointment added successfully!",
+        "success"
       );
 
-      const appointmentJson = await appointmentRes.json();
-      if (appointmentJson.success) {
-        props.showAlert(
-          "Patient and appointment added successfully!",
-          "success"
-        );
-        const closeBtn = document.querySelector("#addPatientModal .btn-close");
-      if (closeBtn) closeBtn.click();
-      } else {
-        props.showAlert(
-          appointmentJson.error || "Patient added but appointment failed",
-          "warning"
-        );
+      // ✅ Programmatically close the modal using Bootstrap API
+      const modalEl = document.getElementById("addPatientModal");
+      if (modalEl) {
+        const modalInstance = window.bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
       }
-
-      // Reset form
-      setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
-      setServiceAmounts([]);
-      setAppointmentDate(new Date().toISOString().slice(0, 10));
-    } catch (err) {
-      console.error(err);
-      props.showAlert("Server error", "danger");
+    } else {
+      props.showAlert(
+        appointmentJson.error || "Patient added but appointment failed",
+        "warning"
+      );
     }
-  };
+
+    // Reset form
+    setPatient({ name: "", service: [], number: "", amount: 0, age: "" });
+    setServiceAmounts([]);
+    setAppointmentDate(new Date().toISOString().slice(0, 10));
+  } catch (err) {
+    console.error(err);
+    props.showAlert("Server error", "danger");
+  }
+};
+
 
   return (
     <div className="modal fade" id="addPatientModal" tabIndex="-1" aria-hidden="true">
