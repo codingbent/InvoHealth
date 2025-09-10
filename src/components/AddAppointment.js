@@ -10,10 +10,9 @@ const AddAppointment = (props) => {
       : null
   );
 
-  const [services, setServices] = useState([]); // selected services (objects)
+  const [services, setServices] = useState([]); // array of service objects
   const [serviceAmounts, setServiceAmounts] = useState({}); // { serviceId: amount }
   const [amount, setAmount] = useState(0);
-
   const [searchText, setSearchText] = useState("");
 
   const API_BASE_URL =
@@ -21,24 +20,27 @@ const AddAppointment = (props) => {
       ? "https://gmsc-backend.onrender.com"
       : "http://localhost:5001";
 
-  // ✅ Fetch all patients
+  // Fetch patients
   useEffect(() => {
-    const list = async () => {
-      const response = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "auth-token": localStorage.getItem("token") || "",
-        },
-      });
-      const json = await response.json();
-      setPatientsList(json);
-      setFilteredPatients(json);
+    const fetchPatients = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
+          headers: {
+            "Content-Type": "application/json",
+            "auth-token": localStorage.getItem("token") || "",
+          },
+        });
+        const data = await res.json();
+        setPatientsList(data);
+        setFilteredPatients(data);
+      } catch (err) {
+        console.error("Error fetching patients:", err);
+      }
     };
-    list();
+    fetchPatients();
   }, []);
 
-  // ✅ Filter patients as user types
+  // Filter patients on search
   useEffect(() => {
     const filtered = patientsList.filter((p) =>
       p.name.toLowerCase().includes(searchText.toLowerCase())
@@ -46,7 +48,7 @@ const AddAppointment = (props) => {
     setFilteredPatients(filtered);
   }, [searchText, patientsList]);
 
-  // ✅ Recalculate total whenever services or serviceAmounts change
+  // Recalculate total amount when services or amounts change
   useEffect(() => {
     const total = services.reduce(
       (acc, s) => acc + (serviceAmounts[s._id] ?? s.amount ?? 0),
@@ -55,16 +57,25 @@ const AddAppointment = (props) => {
     setAmount(total);
   }, [services, serviceAmounts]);
 
-  const handleSelect = (patient) => {
+  const handleSelectPatient = (patient) => {
     setSelectedPatient(patient);
     localStorage.setItem("patient", JSON.stringify(patient));
     setSearchText("");
   };
 
-  const handleServiceSelect = (service, checked) => {
+  const handleServiceSelect = (serviceObj, checked) => {
     setServices((prev) =>
-      checked ? [...prev, service] : prev.filter((s) => s._id !== service._id)
+      checked ? [...prev, serviceObj] : prev.filter((s) => s._id !== serviceObj._id)
     );
+    // Reset amount for deselected service
+    setServiceAmounts((prev) => {
+      if (!checked) {
+        const newAmounts = { ...prev };
+        delete newAmounts[serviceObj._id];
+        return newAmounts;
+      }
+      return prev;
+    });
   };
 
   const handleServiceAmountChange = (id, value) => {
@@ -80,8 +91,9 @@ const AddAppointment = (props) => {
       alert("Please select a patient first");
       return;
     }
+
     try {
-      const response = await fetch(
+      const res = await fetch(
         `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
         {
           method: "POST",
@@ -93,15 +105,16 @@ const AddAppointment = (props) => {
             services: services.map((s) => ({
               id: s._id,
               name: s.name,
-              amount: serviceAmounts[s._id] ?? s.amount,
+              amount: serviceAmounts[s._id] ?? s.amount ?? 0,
             })),
             amount,
           }),
         }
       );
 
-      const result = await response.json();
-      if (response.ok) {
+      const result = await res.json();
+
+      if (res.ok && result.success) {
         props.showAlert("Appointment added successfully!", "success");
         setServices([]);
         setServiceAmounts({});
@@ -109,17 +122,17 @@ const AddAppointment = (props) => {
         setSelectedPatient(null);
         localStorage.removeItem("patient");
       } else {
-        alert("Error: " + (result.message || "Failed to add appointment"));
+        props.showAlert(result.error || "Failed to add appointment", "danger");
       }
     } catch (err) {
       console.error(err);
-      alert("Server error");
+      props.showAlert("Server error", "danger");
     }
   };
 
   return (
     <>
-      {/* Patient Search & Select */}
+      {/* Patient search */}
       <div className="mb-3">
         <label htmlFor="patientSearch" className="form-label">
           Patient Name
@@ -139,7 +152,7 @@ const AddAppointment = (props) => {
                 key={p._id}
                 className="list-group-item list-group-item-action"
                 style={{ cursor: "pointer" }}
-                onClick={() => handleSelect(p)}
+                onClick={() => handleSelectPatient(p)}
               >
                 {p.name} - {p.number}
               </li>
@@ -167,12 +180,11 @@ const AddAppointment = (props) => {
             />
           </div>
 
-          {/* Bill Details with editable amounts */}
           {services.length > 0 && (
             <div className="mb-3">
               <label className="form-label">Bill Details</label>
               <ul className="list-group mb-2">
-                {Array.isArray(services) && services.map((s) => (
+                {services.map((s) => (
                   <li
                     key={s._id}
                     className="list-group-item d-flex justify-content-between align-items-center"
@@ -181,7 +193,7 @@ const AddAppointment = (props) => {
                     <input
                       type="number"
                       className="form-control w-25"
-                      value={serviceAmounts[s._id] ?? s.amount}
+                      value={serviceAmounts[s._id] ?? s.amount ?? 0}
                       onChange={(e) =>
                         handleServiceAmountChange(s._id, e.target.value)
                       }
