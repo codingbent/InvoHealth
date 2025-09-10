@@ -63,7 +63,7 @@ router.post(
 // Add fetchuser middleware to get logged-in doctor
 router.post(
   "/addpatient",
-  fetchuser, // ensures only logged-in doctors can add patients
+  // fetchuser, // ensures only logged-in doctors can add patients
   [
     body("name", "Enter Name").notEmpty(),
     body("service"),

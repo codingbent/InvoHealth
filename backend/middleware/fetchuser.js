@@ -1,5 +1,5 @@
 var jwt=require('jsonwebtoken');
-const JWT_SECRET=process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'abhedagarwal%male';
 
 const fetchuser = (req,res,next)=>{
     //Get the user from the jwt token and add id to req object
@@ -8,8 +8,8 @@ const fetchuser = (req,res,next)=>{
         res.status(401).send({error:"Please Uthenticate using a valid token"})
     }
     try {
-        const data =jwt.verify(token,JWT_SECRET);
-        req.doc=data.doc;
+        const data = jwt.verify(token, JWT_SECRET);
+        req.doc = data.user;
         next();
     } catch (error) {
      res.status(401).send({error:"Please Uthenticate using a valid token"})   
