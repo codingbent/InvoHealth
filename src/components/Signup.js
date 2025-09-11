@@ -1,50 +1,56 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-const  Signup=(props) =>{
-  
-  const [credentials,setcredentials]=useState({name:"",email:"",password:"",cpassword:""});
-  let navigate=useNavigate();
-  const handlesubmit=async (e)=>{
-    e.preventDefault();
-    const {name,email,password}=credentials
-    
-const API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://gmsc-backend.onrender.com"
-  : "http://localhost:5001";
+const Signup = (props) => {
+    const [credentials, setcredentials] = useState({
+        name: "",
+        email: "",
+        password: "",
+        cpassword: "",
+    });
+    let navigate = useNavigate();
+    const handlesubmit = async (e) => {
+        e.preventDefault();
+        const { name, email, password, cpassword } = credentials;
 
-    const response=await fetch(`${API_BASE_URL}/api/auth/createdoc`,{
-    method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "auth-token":localStorage.getItem("token")
-            },
-            body: JSON.stringify({
-                name,
-                email,
-                password,
-            })
-          })
-          const json =await response.json()
-          //console.log(json);
-          
-          if(json.success){
-            localStorage.setItem('token',json.authtoken)
-            localStorage.setItem('name',name)
-            navigate("/")
-            props.showAlert("Successfully Signed in","success")
-          }
-          else{
-      props.showAlert("Invalid Credentials","danger")
-    }
-}
-const onChange = (e) => {
+        if (password !== cpassword) {
+            props.showAlert("Passwords do not match", "danger");
+            return;
+        }
+
+        const API_BASE_URL =
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001";
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password }),
+        });
+
+        const json = await response.json();
+
+        if (json.success) {
+            localStorage.setItem("token", json.authtoken);
+            localStorage.setItem("name", name);
+            navigate("/");
+            props.showAlert("Successfully Signed up", "success");
+        } else {
+            props.showAlert(json.error || "Invalid input", "danger");
+        }
+    };
+
+    const onChange = (e) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
     return (
         <div className="container mt-5">
             <form onSubmit={handlesubmit}>
-              <div className="mb-3">
-                    <label htmlFor="exampleFormControlInput1" className="form-label">
+                <div className="mb-3">
+                    <label
+                        htmlFor="exampleFormControlInput1"
+                        className="form-label"
+                    >
                         Name
                     </label>
                     <input
@@ -58,7 +64,10 @@ const onChange = (e) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label htmlFor="exampleFormControlInput2" className="form-label">
+                    <label
+                        htmlFor="exampleFormControlInput2"
+                        className="form-label"
+                    >
                         Email address
                     </label>
                     <input
@@ -100,10 +109,12 @@ const onChange = (e) => {
                     />
                 </div>
                 <div className="mb-3">
-                  <button type="submit" className="btn btn-primary">Sign Up</button>
+                    <button type="submit" className="btn btn-primary">
+                        Sign Up
+                    </button>
                 </div>
             </form>
         </div>
     );
-}
+};
 export default Signup;

@@ -32,7 +32,7 @@ router.post(
             if (doc) {
                 return res
                     .status(400)
-                    .json({ success, error: "Doctor already exists" });
+                    .json({ success: false, error: "Doctor already exists" });
             }
 
             const salt = await bcrypt.genSalt(10);
@@ -51,7 +51,7 @@ router.post(
             res.json({ success, authtoken });
         } catch (error) {
             console.error(error.message);
-            res.status(500).json({ success, error: "Internal server error" });
+            res.status(500).json({ success: false, error: "Internal server error" });
         }
     }
 );
