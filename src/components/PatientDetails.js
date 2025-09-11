@@ -41,11 +41,10 @@ export default function PatientDetails() {
 
     // Convert IST input back to UTC for backend storage
     const fromISTToUTC = (istDate) => {
-    if (!istDate) return null;
-    const [year, month, day] = istDate.split("-").map(Number);
-    return new Date(Date.UTC(year, month - 1, day)); // 00:00 UTC
-};
-
+        if (!istDate) return null;
+        const [year, month, day] = istDate.split("-").map(Number);
+        return new Date(Date.UTC(year, month - 1, day)); // 00:00 UTC
+    };
 
     // Fetch patient, appointments, and services
     const fetchData = async () => {
@@ -119,53 +118,62 @@ export default function PatientDetails() {
         }
     };
 
-const handleEditAppt = (appt) => {
-    const visit = appt.visits?.[0] || {};
-    setEditingAppt(appt);
+    const handleEditAppt = (appt) => {
+        const visit = appt.visits?.[0] || {};
+        setEditingAppt(appt);
 
-    const serviceObjs = (visit.service || []).map((s) =>
-        typeof s === "object" ? s : availableServices.find(svc => svc._id === s) || { name: s, amount: 0 }
-    );
+        const serviceObjs = (visit.service || []).map((s) =>
+            typeof s === "object"
+                ? s
+                : availableServices.find((svc) => svc._id === s) || {
+                      name: s,
+                      amount: 0,
+                  }
+        );
 
-    const amounts = serviceObjs.map(s => s.amount || 0);
+        const amounts = serviceObjs.map((s) => s.amount || 0);
 
-    setApptServiceAmounts(amounts);
-    setApptData({
-        date: toISTDateTime(visit.date),
-        service: serviceObjs, // store objects, not just names
-        amount: amounts.reduce((a,b)=>a+b, 0)
-    });
-};
+        setApptServiceAmounts(amounts);
+        setApptData({
+            date: toISTDateTime(visit.date),
+            service: serviceObjs, // store objects, not just names
+            amount: amounts.reduce((a, b) => a + b, 0),
+        });
+    };
 
+    const handleApptServiceChange = (serviceObj, checked) => {
+        setApptData((prev) => {
+            let updatedServices = [...prev.service];
+            let updatedAmounts = [...apptServiceAmounts];
 
-const handleApptServiceChange = (serviceObj, checked) => {
-    setApptData(prev => {
-        let updatedServices = [...prev.service];
-        let updatedAmounts = [...apptServiceAmounts];
-
-        if (checked) {
-            updatedServices.push(serviceObj);
-            updatedAmounts.push(serviceObj.amount || 0);
-        } else {
-            const index = updatedServices.findIndex(s => s._id === serviceObj._id);
-            if (index > -1) {
-                updatedServices.splice(index, 1);
-                updatedAmounts.splice(index, 1);
+            if (checked) {
+                updatedServices.push(serviceObj);
+                updatedAmounts.push(serviceObj.amount || 0);
+            } else {
+                const index = updatedServices.findIndex(
+                    (s) => s._id === serviceObj._id
+                );
+                if (index > -1) {
+                    updatedServices.splice(index, 1);
+                    updatedAmounts.splice(index, 1);
+                }
             }
-        }
 
-        const total = updatedAmounts.reduce((a, b) => a + b, 0);
-        setApptServiceAmounts(updatedAmounts);
-        return { ...prev, service: updatedServices, amount: total };
-    });
-};
+            const total = updatedAmounts.reduce((a, b) => a + b, 0);
+            setApptServiceAmounts(updatedAmounts);
+            return { ...prev, service: updatedServices, amount: total };
+        });
+    };
 
     const handleUpdateAppt = async () => {
         if (!editingAppt) return;
         try {
             const token = localStorage.getItem("token");
+            const appointmentId = editingAppt._id; // main appointment ID
+            const visitId = editingAppt.visits[0]._id; // visit ID being edited
+
             const response = await fetch(
-                `${API_BASE_URL}/api/auth/updateappointment/${editingAppt.visits[0]._id}`,
+                `${API_BASE_URL}/api/auth/updateappointment/${appointmentId}/${visitId}`,
                 {
                     method: "PUT",
                     headers: {
@@ -248,22 +256,22 @@ const handleApptServiceChange = (serviceObj, checked) => {
                                 <div className="mb-3">
                                     <label className="form-label">Number</label>
                                     <input
-                                      type="text"
-                                      className="form-control"
-                                      name="number"
-                                      value={patient.number}
-                                      minLength={10}
-                                      maxLength={10}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (/^\d*$/.test(val)) {  // Only allow digits
-                                          handleChange(e);         // Call your existing handler
-                                        }
-                                      }}
-                                      placeholder="Enter 10-digit number"
-                                      required
+                                        type="text"
+                                        className="form-control"
+                                        name="number"
+                                        value={patient.number}
+                                        minLength={10}
+                                        maxLength={10}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (/^\d*$/.test(val)) {
+                                                // Only allow digits
+                                                handleChange(e); // Call your existing handler
+                                            }
+                                        }}
+                                        placeholder="Enter 10-digit number"
+                                        required
                                     />
-
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Age</label>
@@ -331,7 +339,7 @@ const handleApptServiceChange = (serviceObj, checked) => {
                                                           "en-IN",
                                                           {
                                                               dateStyle:
-                                                                  "medium"
+                                                                  "medium",
                                                           }
                                                       )
                                                     : "N/A"}
@@ -433,47 +441,94 @@ const handleApptServiceChange = (serviceObj, checked) => {
                                 </div>
 
                                 {apptData.service.length > 0 && (
-                                  <div className="mb-3">
-                                    <label className="form-label">Bill Details</label>
-                                    <ul className="list-group mb-2">
-                                      {apptData.service.map((s, index) => (
-                                        <li
-                                          key={s.id || s._id || index}
-                                          className="list-group-item d-flex justify-content-between align-items-center"
-                                        >
-                                          <span>{s.name}</span>
-                                          <input
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Bill Details
+                                        </label>
+                                        <ul className="list-group mb-2">
+                                            {apptData.service.map(
+                                                (s, index) => (
+                                                    <li
+                                                        key={
+                                                            s.id ||
+                                                            s._id ||
+                                                            index
+                                                        }
+                                                        className="list-group-item d-flex justify-content-between align-items-center"
+                                                    >
+                                                        <span>{s.name}</span>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control w-25"
+                                                            value={
+                                                                apptServiceAmounts[
+                                                                    index
+                                                                ] ??
+                                                                s.amount ??
+                                                                0
+                                                            }
+                                                            onChange={(e) => {
+                                                                const newAmounts =
+                                                                    [
+                                                                        ...apptServiceAmounts,
+                                                                    ];
+                                                                newAmounts[
+                                                                    index
+                                                                ] = Number(
+                                                                    e.target
+                                                                        .value
+                                                                );
+                                                                setApptServiceAmounts(
+                                                                    newAmounts
+                                                                );
+                                                                // also update apptData.service amounts
+                                                                const updatedServices =
+                                                                    [
+                                                                        ...apptData.service,
+                                                                    ];
+                                                                updatedServices[
+                                                                    index
+                                                                ].amount =
+                                                                    Number(
+                                                                        e.target
+                                                                            .value
+                                                                    );
+                                                                const total =
+                                                                    updatedServices.reduce(
+                                                                        (
+                                                                            a,
+                                                                            b
+                                                                        ) =>
+                                                                            a +
+                                                                            (b.amount ||
+                                                                                0),
+                                                                        0
+                                                                    );
+                                                                setApptData(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        service:
+                                                                            updatedServices,
+                                                                        amount: total,
+                                                                    })
+                                                                );
+                                                            }}
+                                                        />
+                                                    </li>
+                                                )
+                                            )}
+                                        </ul>
+                                        <label className="form-label">
+                                            Total Amount
+                                        </label>
+                                        <input
                                             type="number"
-                                            className="form-control w-25"
-                                            value={apptServiceAmounts[index] ?? s.amount ?? 0}
-                                            onChange={(e) => {
-                                              const newAmounts = [...apptServiceAmounts];
-                                              newAmounts[index] = Number(e.target.value);
-                                              setApptServiceAmounts(newAmounts);
-                                              // also update apptData.service amounts
-                                              const updatedServices = [...apptData.service];
-                                              updatedServices[index].amount = Number(e.target.value);
-                                              const total = updatedServices.reduce((a, b) => a + (b.amount || 0), 0);
-                                              setApptData((prev) => ({
-                                                ...prev,
-                                                service: updatedServices,
-                                                amount: total,
-                                              }));
-                                            }}
-                                          />
-                                        </li>
-                                      ))}
-                                    </ul>
-                                    <label className="form-label">Total Amount</label>
-                                    <input
-                                      type="number"
-                                      className="form-control"
-                                      value={apptData.amount}
-                                      readOnly
-                                    />
-                                  </div>
+                                            className="form-control"
+                                            value={apptData.amount}
+                                            readOnly
+                                        />
+                                    </div>
                                 )}
-
                             </form>
                         </div>
                         <div className="modal-footer">
