@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; // note the import
-import font from "./fonts/DejaVuSans.ttf"; // example font that supports ₹
 
 export default function PatientDetails() {
     const API_BASE_URL =
@@ -233,9 +232,6 @@ export default function PatientDetails() {
 
     const generateInvoice = (visit, details) => {
         const doc = new jsPDF();
-        doc.addFileToVFS("DejaVuSans.ttf", font);
-        doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
-        doc.setFont("DejaVu");
         const pageWidth = doc.internal.pageSize.getWidth();
         let y = 20;
 
