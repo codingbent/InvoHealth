@@ -177,33 +177,34 @@ router.put("/updateservice/:id", async (req, res) => {
 //fetch all patients
 
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
-    try {
-        // Only fetch patients created by the logged-in doctor
-        const patients = await Patient.find({ doctor: req.doc.id });
+  try {
+    const patients = await Patient.find({ doctor: req.doc.id });
 
-        // For each patient, get last appointment date
-        const patientsWithLast = await Promise.all(
-            patients.map(async (p) => {
-                const appointment = await Appointment.findOne({
-                    patient: p._id,
-                });
-                let lastDate = null;
-                if (appointment && appointment.visits.length > 0) {
-                    lastDate =
-                        appointment.visits[appointment.visits.length - 1].date;
-                }
-                return {
-                    ...p.toObject(),
-                    lastAppointment: lastDate,
-                };
-            })
-        );
+    const patientsWithLast = await Promise.all(
+      patients.map(async (p) => {
+        const appointment = await Appointment.findOne({ patient: p._id });
+        let lastDate = null;
+        let lastPaymentType = null;
 
-        res.json(patientsWithLast);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server error");
-    }
+        if (appointment && appointment.visits.length > 0) {
+          const lastVisit = appointment.visits[appointment.visits.length - 1];
+          lastDate = lastVisit.date;
+          lastPaymentType = lastVisit.payment_type; // <-- add this
+        }
+
+        return {
+          ...p.toObject(),
+          lastAppointment: lastDate,
+          lastPaymentType, // <-- return it
+        };
+      })
+    );
+
+    res.json(patientsWithLast);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
 });
 
 //
@@ -358,7 +359,7 @@ router.post("/addappointment/:id", async (req, res) => {
                         service,
                         amount,
                     },
-                    payment_type
+                    paymentType
                 },
             },
             { upsert: true, new: true } // Create if not exists
@@ -394,26 +395,24 @@ router.get("/patientdetails/:id", async (req, res) => {
 // PUT /api/auth/updateappointment/:appointmentId
 router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (req, res) => {
   const { appointmentId, visitId } = req.params;
-  const { date, service, amount } = req.body;
+  const { date, service, amount, paymentType } = req.body;
 
   if (!date || !service || !Array.isArray(service) || service.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid data" });
   }
 
   try {
-    // Find appointment by ID
     const appointment = await Appointment.findById(appointmentId);
     if (!appointment) {
       return res.status(404).json({ success: false, message: "Appointment not found" });
     }
 
-    // Find the specific visit
     const visit = appointment.visits.id(visitId);
     if (!visit) {
       return res.status(404).json({ success: false, message: "Visit not found" });
     }
 
-    // Update visit fields
+    // Update fields
     visit.date = new Date(date);
     visit.service = service.map(s => ({
       id: s.id || null,
@@ -422,12 +421,17 @@ router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (
     }));
     visit.amount = amount || visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
 
+    // ✅ Handle paymentType safely
+    if (paymentType && ["Cash", "Card", "UPI", "Other"].includes(paymentType)) {
+      visit.paymentType = paymentType;
+    }
+
     await appointment.save();
 
     res.json({ success: true, visit });
   } catch (err) {
-    console.error("Error updating visit:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Error updating visit:", err); // ✅ full error log
+    res.status(500).json({ success: false, message: err.message || "Server error" });
   }
 });
 

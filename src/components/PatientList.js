@@ -215,7 +215,7 @@ export default function PatientList() {
                       >
                         <td>{p.name}</td>
                         <td>{p.number}</td>
-                        <td>{p.paymentType || "N/A"}</td>
+                        <td>{p.lastPaymentType || "N/A"}</td>
                         <td className="text-center">
                           <button
                             className="btn btn-danger btn-sm"
