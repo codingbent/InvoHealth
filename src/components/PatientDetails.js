@@ -231,12 +231,53 @@ export default function PatientDetails() {
     const generateInvoice = (visit) => {
         const doc = new jsPDF();
 
+        const firmName = "Gurudev Multispeciality Center";
+        const addressLines = [
+            "94, Nehru Park Colony",
+            "Near Soodh Dharam Kanta",
+            "Prem Nagar, Bareilly",
+        ];
+
+        const doctorName = "Dr DK Agarwal, MDS (KGMU)";
+        const experience = "Experience: 22+ years";
+
+        const invoiceNumber = "INV-" + Math.floor(Math.random() * 1000000);
+
+        let y = 20;
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // --------------------- Header ---------------------
+        // Left: Firm Name + Address
         doc.setFontSize(16);
-        doc.text("Invoice", 105, 20, null, null, "center");
+        doc.text(firmName, 20, y);
+        y += 8;
         doc.setFontSize(12);
-        doc.text(`Patient Name: ${details.name}`, 20, 40);
-        doc.text(`Phone: ${details.number}`, 20, 50);
-        doc.text(`Age: ${details.age}`, 20, 60);
+        addressLines.forEach((line) => {
+            doc.text(line, 20, y);
+            y += 6;
+        });
+
+        // Right: Doctor Name + Degree + Experience
+        y = 20; // same top
+        const rightX = pageWidth - 20;
+        doc.setFontSize(14);
+        doc.text(doctorName, rightX, y, { align: "right" });
+        y += 6;
+        doc.setFontSize(12);
+        doc.text(experience, rightX, y, { align: "right" });
+
+        // --------------------- Invoice Number ---------------------
+        y += 12;
+        doc.text(`Invoice Number: ${invoiceNumber}`, 20, y);
+        y += 8;
+
+        // --------------------- Patient Details ---------------------
+        doc.text(`Patient Name: ${details.name}`, 20, y);
+        y += 6;
+        doc.text(`Phone: ${details.number}`, 20, y);
+        y += 6;
+        doc.text(`Age: ${details.age}`, 20, y);
+        y += 6;
         doc.text(
             `Appointment Date: ${new Date(visit.date).toLocaleDateString(
                 "en-IN",
@@ -245,27 +286,32 @@ export default function PatientDetails() {
                 }
             )}`,
             20,
-            70
+            y
         );
+        y += 10;
 
-        doc.text("Services", 20, 90);
-        doc.text("Amount", 150, 90);
+        // --------------------- Services Table ---------------------
+        doc.setFontSize(12);
+        doc.text("Services", 20, y);
+        doc.text("Amount (₹)", pageWidth - 20, y, { align: "right" });
+        y += 8;
 
-        let y = 100;
         let total = 0;
-
         (visit.service || []).forEach((s) => {
             const name = typeof s === "object" ? s.name : s;
             const amount = typeof s === "object" ? s.amount : Number(s);
             total += amount;
             doc.text(name, 20, y);
-            doc.text(amount.toString(), 150, y, { align: "right" });
-            y += 10;
+            doc.text(amount.toString(), pageWidth - 20, y, { align: "right" });
+            y += 8;
         });
 
-        doc.text(`Total: ₹${total}`, 150, y + 10, { align: "right" });
-        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y + 10);
+        y += 4;
+        doc.text(`Total: ₹${total}`, pageWidth - 20, y, { align: "right" });
+        y += 8;
+        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y);
 
+        // --------------------- Save PDF ---------------------
         doc.save(
             `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
         );
