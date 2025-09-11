@@ -235,7 +235,7 @@ export default function PatientDetails() {
         const pageWidth = doc.internal.pageSize.getWidth();
         let y = 20;
 
-        // ----- Header: Firm Name & Address -----
+        // Header left & right
         doc.setFontSize(16);
         doc.text("Gurudev Multispeciality Center", 20, y);
         y += 8;
@@ -248,8 +248,6 @@ export default function PatientDetails() {
             doc.text(line, 20, y);
             y += 6;
         });
-
-        // ----- Doctor Details (right aligned) -----
         let rightY = 20;
         doc.setFontSize(14);
         doc.text("Dr DK Agarwal, MDS (KGMU)", pageWidth - 20, rightY, {
@@ -261,8 +259,8 @@ export default function PatientDetails() {
             align: "right",
         });
 
+        // Invoice & patient
         y += 6;
-        // ----- Invoice & Patient Details -----
         doc.setFontSize(12);
         doc.text(
             `Invoice Number: INV-${Math.floor(Math.random() * 1000000)}`,
@@ -279,20 +277,19 @@ export default function PatientDetails() {
         doc.text(
             `Appointment Date: ${new Date(visit.date).toLocaleDateString(
                 "en-IN",
-                {
-                    dateStyle: "medium",
-                }
+                { dateStyle: "medium" }
             )}`,
             20,
             y
         );
         y += 12;
 
-        // ----- Services Table using autoTable -----
+        // Table
         const serviceData = (visit.service || []).map((s) => [
             typeof s === "object" ? s.name : s,
             typeof s === "object" ? s.amount : Number(s),
         ]);
+
         doc.autoTable({
             startY: y,
             head: [["Service", "Amount (₹)"]],
@@ -302,19 +299,19 @@ export default function PatientDetails() {
             styles: { fontSize: 12 },
         });
 
-        // ----- Total & Payment Type -----
-        const finalY = doc.lastAutoTable.finalY + 8; // below the table
+        const finalY = doc.lastAutoTable?.finalY
+            ? doc.lastAutoTable.finalY + 8
+            : y + 8;
+
         const total = serviceData.reduce(
             (sum, item) => sum + Number(item[1]),
             0
         );
-        doc.setFontSize(12);
         doc.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
             align: "right",
         });
         doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, finalY);
 
-        // ----- Save PDF -----
         doc.save(
             `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
         );
@@ -415,9 +412,12 @@ export default function PatientDetails() {
                                                     Update
                                                 </button>
                                                 <button
-                                                    className="btn btn-sm btn-success"
+                                                    className="btn btn-success"
                                                     onClick={() =>
-                                                        generateInvoice(visit)
+                                                        generateInvoice(
+                                                            appointment,
+                                                            details
+                                                        )
                                                     }
                                                 >
                                                     Generate Invoice
