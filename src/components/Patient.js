@@ -93,6 +93,28 @@ const Patient = (props) => {
         )}
       </div>
 
+      {/* Edit Service button */}
+<button
+  type="button"
+  className="btn btn-primary"
+  data-bs-toggle="modal"
+  data-bs-target="#editServiceModal"
+>
+  Edit Service
+</button>
+<div
+  className="modal fade"
+  id="editServiceModal"
+  tabIndex="-1"
+  aria-labelledby="editServiceModalLabel"
+  aria-hidden="true"
+>
+  <div className="modal-dialog">
+    <EditService showAlert={showAlert} />
+  </div>
+</div>
+
+
       
         <div>
           {!showAppointment && !showPatientDetails && (

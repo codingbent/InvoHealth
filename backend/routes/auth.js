@@ -140,10 +140,8 @@ router.post(
   }
 );
 
-// Fetch all services
 
 // Fetch all services for the logged-in doctor
-// routes/service.js
 router.get("/fetchallservice", fetchuser, async (req, res) => {
   try {
     const services = await Service.find({ doctor: req.doc.id });
@@ -154,6 +152,26 @@ router.get("/fetchallservice", fetchuser, async (req, res) => {
   }
 });
 
+// Update a service
+router.put("/updateservice/:id", async (req, res) => {
+  try {
+    const { name, amount } = req.body;
+    const service = await Service.findById(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    service.name = name || service.name;
+    service.amount = amount || service.amount;
+
+    await service.save();
+    res.json({ success: true, service });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
 
 
 //fetch all patients
