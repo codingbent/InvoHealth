@@ -182,9 +182,10 @@ export default function PatientDetails() {
                     },
                     body: JSON.stringify({
                         date: fromISTToUTC(apptData.date),
-                        service: apptData.service.map((name, i) => ({
-                            name,
-                            amount: apptServiceAmounts[i],
+                        service: apptData.service.map((s, i) => ({
+                          id: s._id || s.id || null,   // send both _id/id if available
+                          name: s.name,
+                          amount: apptServiceAmounts[i] ?? s.amount ?? 0,
                         })),
                         amount: apptData.amount,
                     }),
