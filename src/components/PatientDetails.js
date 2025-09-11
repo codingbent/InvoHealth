@@ -387,7 +387,7 @@ export default function PatientDetails() {
                                                               "object"
                                                                   ? s.amount
                                                                   : Number(s)),
-                                                          0
+                                                          0 
                                                       )
                                                     : typeof visit.service ===
                                                       "object"
