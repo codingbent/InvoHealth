@@ -174,9 +174,9 @@ export default function PatientList() {
                 <table className="table table-striped table-bordered align-middle">
                   <thead className="table-light">
                     <tr>
-                      <th>Name</th>
-                      <th style={{ width: "120px" }}>Number</th>
-                      <th style={{ width: "120px" }}>Action</th> {/* fixed width for alignment */}
+                      <th style={{width:"40%"}}>Name</th>
+                      <th style={{ width: "30%" }}>Number</th>
+                      <th style={{ width: "30%" }}>Action</th> {/* fixed width for alignment */}
                     </tr>
                   </thead>
                   <tbody>
