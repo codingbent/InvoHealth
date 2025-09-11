@@ -171,33 +171,30 @@ export default function PatientList() {
                     : new Date(date).toLocaleDateString()}
                 </h5>
 
-                <table className="table">
-                  <thead>
+                <table className="table table-striped table-bordered align-middle">
+                  <thead className="table-light">
                     <tr>
                       <th>Name</th>
                       <th>Number</th>
-                      <th>Actions</th>
+                      <th style={{ width: "120px" }}>Action</th> {/* fixed width for alignment */}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredGroup.map((p) => (
-                      <tr key={p._id}>
-                        <td
-                          style={{ cursor: "pointer" }}
-                          onClick={() => navigate(`/patient/${p._id}`)}
-                        >
-                          {p.name}
-                        </td>
-                        <td
-                          style={{ cursor: "pointer" }}
-                          onClick={() => navigate(`/patient/${p._id}`)}
-                        >
-                          {p.number}
-                        </td>
-                        <td>
+                      <tr
+                        key={p._id}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/patient/${p._id}`)}
+                      >
+                        <td>{p.name}</td>
+                        <td>{p.number}</td>
+                        <td className="text-center">
                           <button
                             className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(p._id)}
+                            onClick={(e) => {
+                              e.stopPropagation(); // prevent row click
+                              handleDelete(p._id);
+                            }}
                           >
                             Delete
                           </button>
