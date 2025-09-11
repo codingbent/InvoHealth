@@ -10,10 +10,7 @@ const AppointmentSchema = new Schema({
   },
   visits: [
     {
-      date: {
-        type: Date,
-        default: Date.now
-      },
+      date: { type: Date, default: Date.now },
       service: [
         {
           id: { type: Schema.Types.ObjectId, ref: "Service" },
@@ -25,7 +22,8 @@ const AppointmentSchema = new Schema({
       paymentType: {
         type: String,
         enum: ["Cash", "Card", "UPI", "Other"],
-      }
+      },
+      invoiceNumber: { type: Number, default: null },
     }
   ]
 });

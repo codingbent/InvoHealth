@@ -435,6 +435,40 @@ router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (
   }
 });
 
+router.post("/generate-invoice/:appointmentId/:visitId", async (req, res) => {
+  try {
+    const { appointmentId, visitId } = req.params;
+
+    // Find current max invoice number across all appointments
+    const lastInvoice = await Appointment.findOne(
+      { "visits.invoiceNumber": { $ne: null } },
+      { "visits.$": 1 }
+    ).sort({ "visits.invoiceNumber": -1 });
+
+    let newInvoiceNumber = 1;
+    if (lastInvoice && lastInvoice.visits[0].invoiceNumber) {
+      newInvoiceNumber = lastInvoice.visits[0].invoiceNumber + 1;
+    }
+
+    // Update the specific visit with new invoice number
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: appointmentId, "visits._id": visitId },
+      { $set: { "visits.$.invoiceNumber": newInvoiceNumber } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      invoiceNumber: newInvoiceNumber,
+      appointment,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 router.post("/addappointment/:id", async (req, res) => {
     try {
         const { service, amount } = req.body;
