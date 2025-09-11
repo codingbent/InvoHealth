@@ -27,6 +27,7 @@ export default function PatientDetails() {
         date: "",
         service: [],
         amount: 0,
+        paymentType: "", // new field
     });
     const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
 
@@ -152,6 +153,7 @@ export default function PatientDetails() {
             date: toISTDateTime(visit.date),
             service: serviceObjs,
             amount: amounts.reduce((a, b) => a + b, 0),
+            paymentType: visit.paymentType || "",
         });
     };
 
@@ -213,6 +215,7 @@ export default function PatientDetails() {
                             amount: apptServiceAmounts[i] ?? s.amount ?? 0,
                         })),
                         amount: apptData.amount,
+                        paymentType: apptData.paymentType,
                     }),
                 }
             );
@@ -343,6 +346,7 @@ export default function PatientDetails() {
                                 <th>Date</th>
                                 <th>Services</th>
                                 <th>Amount</th>
+                                <th>Payment Type</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -387,14 +391,16 @@ export default function PatientDetails() {
                                                               "object"
                                                                   ? s.amount
                                                                   : Number(s)),
-                                                          0 
+                                                          0
                                                       )
                                                     : typeof visit.service ===
                                                       "object"
                                                     ? visit.service.amount
                                                     : visit.service || 0}
                                             </td>
-
+                                            <td>
+                                                {visit.paymentType || "N/A"}
+                                            </td>
                                             <td>
                                                 <button
                                                     className="btn btn-sm btn-warning me-2"
@@ -556,6 +562,29 @@ export default function PatientDetails() {
                                         />
                                     </div>
                                 )}
+
+                                {/* Payment Type */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Payment Type
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        value={apptData.paymentType}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                paymentType: e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="">Select Payment Type</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Card">Card</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
                             </form>
                         </div>
                         <div className="modal-footer">

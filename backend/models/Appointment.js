@@ -21,7 +21,12 @@ const AppointmentSchema = new Schema({
           amount: Number
         }
       ],
-      amount: { type: Number, default: 0 }
+      amount: { type: Number, default: 0 },
+      payment_type: {
+        type: String,
+        enum: ["cash", "card", "upi", "other"], // ✅ options
+        default: "cash"
+      }
     }
   ]
 });

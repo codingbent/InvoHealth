@@ -358,6 +358,7 @@ router.post("/addappointment/:id", async (req, res) => {
                         service,
                         amount,
                     },
+                    payment_type
                 },
             },
             { upsert: true, new: true } // Create if not exists

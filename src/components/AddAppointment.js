@@ -4,24 +4,22 @@ import ServiceList from "./ServiceList";
 const AddAppointment = (props) => {
   const [patientsList, setPatientsList] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
-  const [availableServices, setAvailableServices] = useState([]); 
+  const [services, setServices] = useState([]);
+  const [serviceAmounts, setServiceAmounts] = useState({});
+  const [amount, setAmount] = useState(0);
+  const [searchText, setSearchText] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(
     localStorage.getItem("patient")
       ? JSON.parse(localStorage.getItem("patient"))
       : null
   );
-
-  const [services, setServices] = useState([]); // array of service objects
-  const [serviceAmounts, setServiceAmounts] = useState({}); // { serviceId: amount }
-  const [amount, setAmount] = useState(0);
-  const [searchText, setSearchText] = useState("");
+  const [paymentType, setPaymentType] = useState("cash"); // ✅
 
   const API_BASE_URL =
     process.env.NODE_ENV === "production"
       ? "https://gmsc-backend.onrender.com"
       : "http://localhost:5001";
 
-  // Fetch patients
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -41,7 +39,6 @@ const AddAppointment = (props) => {
     fetchPatients();
   }, []);
 
-  // Filter patients on search
   useEffect(() => {
     const filtered = patientsList.filter((p) =>
       p.name.toLowerCase().includes(searchText.toLowerCase())
@@ -49,7 +46,6 @@ const AddAppointment = (props) => {
     setFilteredPatients(filtered);
   }, [searchText, patientsList]);
 
-  // Recalculate total amount when services or amounts change
   useEffect(() => {
     const total = services.reduce(
       (acc, s) => acc + (serviceAmounts[s._id] ?? s.amount ?? 0),
@@ -62,21 +58,6 @@ const AddAppointment = (props) => {
     setSelectedPatient(patient);
     localStorage.setItem("patient", JSON.stringify(patient));
     setSearchText("");
-  };
-
-  const handleServiceSelect = (serviceObj, checked) => {
-    setServices((prev) =>
-      checked ? [...prev, serviceObj] : prev.filter((s) => s._id !== serviceObj._id)
-    );
-    // Reset amount for deselected service
-    setServiceAmounts((prev) => {
-      if (!checked) {
-        const newAmounts = { ...prev };
-        delete newAmounts[serviceObj._id];
-        return newAmounts;
-      }
-      return prev;
-    });
   };
 
   const handleServiceAmountChange = (id, value) => {
@@ -109,6 +90,7 @@ const AddAppointment = (props) => {
               amount: serviceAmounts[s._id] ?? s.amount ?? 0,
             })),
             amount,
+            payment_type: paymentType, // ✅ include
           }),
         }
       );
@@ -122,6 +104,7 @@ const AddAppointment = (props) => {
         setAmount(0);
         setSelectedPatient(null);
         localStorage.removeItem("patient");
+        setPaymentType("cash");
       } else {
         props.showAlert(result.error || "Failed to add appointment", "danger");
       }
@@ -170,20 +153,19 @@ const AddAppointment = (props) => {
         )}
       </div>
 
-      {/* Appointment form */}
       {selectedPatient && (
         <form onSubmit={handleAddAppointment}>
           <div className="mb-3">
             <label className="form-label">Services</label>
             <ServiceList
               onSelect={(serviceObj, checked) => {
-                // Update selected services
-                setServices(prev =>
-                  checked ? [...prev, serviceObj] : prev.filter(s => s._id !== serviceObj._id)
+                setServices((prev) =>
+                  checked
+                    ? [...prev, serviceObj]
+                    : prev.filter((s) => s._id !== serviceObj._id)
                 );
               }}
               selectedServices={services}
-              // services={availableServices}
             />
           </div>
 
@@ -208,16 +190,25 @@ const AddAppointment = (props) => {
                   </li>
                 ))}
               </ul>
-
               <label className="form-label">Total Amount</label>
-              <input
-                type="number"
-                className="form-control"
-                value={amount}
-                readOnly
-              />
+              <input type="number" className="form-control" value={amount} readOnly />
             </div>
           )}
+
+          {/* Payment Type */}
+          <div className="mb-3">
+            <label className="form-label">Payment Type</label>
+            <select
+              className="form-control"
+              value={paymentType}
+              onChange={(e) => setPaymentType(e.target.value)}
+            >
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="upi">UPI</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
 
           <button type="submit" className="btn btn-primary">
             Save Appointment

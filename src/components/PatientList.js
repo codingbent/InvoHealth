@@ -8,6 +8,7 @@ export default function PatientList() {
   const [services, setServices] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("");
+  const [selectedPaymentType, setSelectedPaymentType] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
   const API_BASE_URL =
@@ -31,7 +32,6 @@ export default function PatientList() {
       const data = await response.json();
       if (data.success) {
         alert("Patient deleted successfully!");
-        // Refresh list
         fetchPatients();
       } else {
         alert(data.message || "Failed to delete patient");
@@ -43,37 +43,34 @@ export default function PatientList() {
   };
 
   // fetch patients
- // fetch patients
-const fetchPatients = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "auth-token": localStorage.getItem("token"),
-      },
-    });
+  const fetchPatients = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": localStorage.getItem("token"),
+        },
+      });
 
-    const patients = await response.json();
+      const patients = await response.json();
 
-    // Group patients by lastAppointment date
-    const grouped = patients.reduce((acc, p) => {
-      const dateKey = p.lastAppointment
-        ? new Date(p.lastAppointment).toISOString().split("T")[0] // YYYY-MM-DD
-        : "No Visits";
+      const grouped = patients.reduce((acc, p) => {
+        const dateKey = p.lastAppointment
+          ? new Date(p.lastAppointment).toISOString().split("T")[0]
+          : "No Visits";
 
-      if (!acc[dateKey]) acc[dateKey] = [];
-      acc[dateKey].push(p);
-      return acc;
-    }, {});
+        if (!acc[dateKey]) acc[dateKey] = [];
+        acc[dateKey].push(p);
+        return acc;
+      }, {});
 
-    setPatientsByDate(grouped);
-  } catch (err) {
-    console.error("Error fetching patients:", err);
-    setPatientsByDate({});
-  }
-};
-
+      setPatientsByDate(grouped);
+    } catch (err) {
+      console.error("Error fetching patients:", err);
+      setPatientsByDate({});
+    }
+  };
 
   // fetch services
   const fetchServices = async () => {
@@ -123,7 +120,12 @@ const fetchPatients = async () => {
           return false;
         });
 
-      return matchSearch && matchService;
+      const matchPayment =
+        !selectedPaymentType ||
+        (p.paymentType &&
+          p.paymentType.toLowerCase() === selectedPaymentType.toLowerCase());
+
+      return matchSearch && matchService && matchPayment;
     });
   };
 
@@ -152,6 +154,18 @@ const fetchPatients = async () => {
                 {s.name}
               </option>
             ))}
+        </select>
+
+        {/* 💳 Filter by Payment Type */}
+        <select
+          className="form-select mb-3"
+          value={selectedPaymentType}
+          onChange={(e) => setSelectedPaymentType(e.target.value)}
+        >
+          <option value="">All Payment Types</option>
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="upi">UPI</option>
         </select>
 
         {/* 👥 Patients grouped by last visit */}
@@ -186,9 +200,10 @@ const fetchPatients = async () => {
                 <table className="table table-striped table-bordered align-middle">
                   <thead className="table-light">
                     <tr>
-                      <th style={{width:"40%"}}>Name</th>
-                      <th style={{ width: "30%" }}>Number</th>
-                      <th style={{ width: "30%" }}>Action</th> {/* fixed width for alignment */}
+                      <th style={{ width: "25%" }}>Name</th>
+                      <th style={{ width: "20%" }}>Number</th>
+                      <th style={{ width: "20%" }}>Payment</th>
+                      <th style={{ width: "35%" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -200,11 +215,12 @@ const fetchPatients = async () => {
                       >
                         <td>{p.name}</td>
                         <td>{p.number}</td>
+                        <td>{p.paymentType || "N/A"}</td>
                         <td className="text-center">
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={(e) => {
-                              e.stopPropagation(); // prevent row click
+                              e.stopPropagation();
                               handleDelete(p._id);
                             }}
                           >
