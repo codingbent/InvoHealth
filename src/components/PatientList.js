@@ -175,7 +175,7 @@ export default function PatientList() {
                   <thead className="table-light">
                     <tr>
                       <th>Name</th>
-                      <th>Number</th>
+                      <th style={{ width: "120px" }}>Number</th>
                       <th style={{ width: "120px" }}>Action</th> {/* fixed width for alignment */}
                     </tr>
                   </thead>
