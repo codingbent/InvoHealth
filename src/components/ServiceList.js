@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 export default function ServiceList({ onSelect, selectedServices = [], services = [] }) {
   const [localSelected, setLocalSelected] = useState([]);
 
-  // Initialize localSelected when selectedServices changes
- useEffect(() => {
+  // Initialize localSelected whenever selectedServices changes
+  useEffect(() => {
     const normalized = (selectedServices || []).map((s) => ({
-      id: s._id || s.id, // ensure always `id`
+      _id: s._id || s.id,
+      id: s._id || s.id,
       name: s.name,
       amount: s.amount || 0,
     }));
@@ -17,29 +18,27 @@ export default function ServiceList({ onSelect, selectedServices = [], services 
     let updated = [...localSelected];
 
     if (checked) {
-      if (!updated.some((s) => s.id === service._id)) {
-        updated.push({ id: service._id, name: service.name, amount: service.amount || 0 });
+      if (!updated.some((s) => s.id === (service._id || service.id))) {
+        updated.push({
+          id: service._id || service.id,
+          _id: service._id,
+          name: service.name,
+          amount: service.amount || 0,
+        });
       }
     } else {
-      updated = updated.filter((s) => s.id !== service._id);
+      updated = updated.filter((s) => s.id !== (service._id || service.id));
     }
 
     setLocalSelected(updated);
-    onSelect(updated);
-  };
-
-  const handleAmountChange = (index, value) => {
-    const updated = [...localSelected];
-    updated[index].amount = Number(value);
-    setLocalSelected(updated);
-    onSelect(updated);
+    onSelect(service, checked); // pass single service and checked
   };
 
   return (
     <div>
       {services.map((service) => {
-        const isChecked = selectedServices.some(
-          (s) => s._id === service._id || s.id === service._id
+        const isChecked = localSelected.some(
+          (s) => s.id === (service._id || service.id)
         );
 
         return (
@@ -48,10 +47,10 @@ export default function ServiceList({ onSelect, selectedServices = [], services 
               type="checkbox"
               className="form-check-input"
               checked={isChecked}
-              onChange={(e) => onSelect(service, e.target.checked)}
+              onChange={(e) => handleCheckboxChange(service, e.target.checked)}
             />
             <label className="form-check-label">
-              {service.name} ({service.amount})
+              {service.name} ({service.amount || 0})
             </label>
           </div>
         );
