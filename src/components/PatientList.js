@@ -118,9 +118,14 @@ export default function PatientList() {
             return new Date(b) - new Date(a);
           })
           .map((date) => {
-            const filteredGroup = applyFilters(
-              Array.isArray(patientsByDate[date]) ? patientsByDate[date] : []
-            );
+            let group = Array.isArray(patientsByDate[date]) ? patientsByDate[date] : [];
+            
+            // 🆕 Sort "No Visits" group by createdAt (latest first)
+            if (date === "No Visits") {
+              group = [...group].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            }
+
+            const filteredGroup = applyFilters(group);
             if (filteredGroup.length === 0) return null;
 
             return (
