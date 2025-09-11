@@ -250,7 +250,13 @@ export default function PatientDetails() {
         });
         let rightY = 20;
         doc.setFontSize(14);
-        doc.text("Dr DK Agarwal, MDS (KGMU)", pageWidth - 20, rightY, {
+        doc.setFontSize(14);
+        doc.text("Dr DK Agarwal", pageWidth - 20, rightY, { align: "right" });
+        rightY += 6;
+        doc.setFontSize(12);
+        doc.text("MDS (KGMU)", pageWidth - 20, rightY, { align: "right" });
+        rightY += 6;
+        doc.text("Experience: 22+ years", pageWidth - 20, rightY, {
             align: "right",
         });
         rightY += 6;
@@ -283,6 +289,8 @@ export default function PatientDetails() {
             y
         );
         y += 12;
+        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y);
+        y += 8; // some space before the table
 
         // Table
         const serviceData = (visit.service || []).map((s) => [
@@ -310,7 +318,6 @@ export default function PatientDetails() {
         doc.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
             align: "right",
         });
-        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, finalY);
 
         doc.save(
             `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
