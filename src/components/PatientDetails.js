@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; // note the import
+import font from "./fonts/DejaVuSans.ttf"; // example font that supports ₹
 
 export default function PatientDetails() {
     const API_BASE_URL =
@@ -232,6 +233,9 @@ export default function PatientDetails() {
 
     const generateInvoice = (visit, details) => {
         const doc = new jsPDF();
+        doc.addFileToVFS("DejaVuSans.ttf", font);
+        doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
+        doc.setFont("DejaVu");
         const pageWidth = doc.internal.pageSize.getWidth();
         let y = 20;
 
@@ -250,7 +254,6 @@ export default function PatientDetails() {
         });
         let rightY = 20;
         doc.setFontSize(14);
-        doc.setFontSize(14);
         doc.text("Dr DK Agarwal", pageWidth - 20, rightY, { align: "right" });
         rightY += 6;
         doc.setFontSize(12);
@@ -260,10 +263,27 @@ export default function PatientDetails() {
             align: "right",
         });
         rightY += 6;
-        doc.setFontSize(12);
-        doc.text("Experience: 22+ years", pageWidth - 20, rightY, {
+        doc.text(
+            "Timing: Mon-Sat 10:30-14:30, 18:30-21:00",
+            pageWidth - 20,
+            rightY,
+            { align: "right" }
+        );
+        rightY += 6;
+        doc.text("Sunday: By Call Appointment", pageWidth - 20, rightY, {
             align: "right",
         });
+        rightY += 6;
+        doc.text("Doctor Contact: +91 9758620799", pageWidth - 20, rightY, {
+            align: "right",
+        });
+        rightY += 6;
+        doc.text(
+            "Appointment Contact: +91 9359105500",
+            pageWidth - 20,
+            rightY,
+            { align: "right" }
+        );
 
         // Invoice & patient
         y += 6;
