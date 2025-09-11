@@ -4,6 +4,7 @@ import AddPatient from "./AddPatient";
 import PatientList from "./PatientList";
 import AddAppointment from "./AddAppointment";
 import PatientDetails from "./PatientDetails"; // Added import
+import EditService from "./EditService";
 
 const Patient = (props) => {
   const { showAlert } = props;
