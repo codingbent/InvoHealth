@@ -39,7 +39,7 @@ export default function ServiceList({ onSelect, selectedServices = [], services 
     <div>
       {services.map((service) => {
         const isChecked = selectedServices.some(
-          (s) => s._id === service._id || s.name === service.name
+          (s) => s._id === service._id || s.id === service._id
         );
 
         return (
