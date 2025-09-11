@@ -43,25 +43,37 @@ export default function PatientList() {
   };
 
   // fetch patients
-  const fetchPatients = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/auth/fetchpatientsbylastvisit`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "auth-token": localStorage.getItem("token"),
-          },
-        }
-      );
-      const json = await response.json();
-      setPatientsByDate(json || {});
-    } catch (err) {
-      console.error("Error fetching patients:", err);
-      setPatientsByDate({});
-    }
-  };
+ // fetch patients
+const fetchPatients = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/fetchallpatients`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "auth-token": localStorage.getItem("token"),
+      },
+    });
+
+    const patients = await response.json();
+
+    // Group patients by lastAppointment date
+    const grouped = patients.reduce((acc, p) => {
+      const dateKey = p.lastAppointment
+        ? new Date(p.lastAppointment).toISOString().split("T")[0] // YYYY-MM-DD
+        : "No Visits";
+
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(p);
+      return acc;
+    }, {});
+
+    setPatientsByDate(grouped);
+  } catch (err) {
+    console.error("Error fetching patients:", err);
+    setPatientsByDate({});
+  }
+};
+
 
   // fetch services
   const fetchServices = async () => {
