@@ -415,7 +415,7 @@ export default function PatientDetails() {
                                                     className="btn btn-success"
                                                     onClick={() =>
                                                         generateInvoice(
-                                                            appointment,
+                                                            visit,
                                                             details
                                                         )
                                                     }
