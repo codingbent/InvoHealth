@@ -68,20 +68,26 @@ export default function PatientList() {
 
   // 🔎 Filter patients inside each group (search + service only)
   const applyFilters = (patients) => {
-    return patients.filter((p) => {
-      const matchSearch =
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.number?.toLowerCase().includes(searchTerm.toLowerCase());
+  return patients.filter((p) => {
+    const matchSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.number?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchService =
-        !selectedService ||
-        p.service?.some(
-          (s) => s.toLowerCase() === selectedService.toLowerCase()
-        );
+    const matchService =
+      !selectedService ||
+      p.service?.some((s) => {
+        if (typeof s === "string") {
+          return s.toLowerCase() === selectedService.toLowerCase();
+        }
+        if (typeof s === "object" && s.name) {
+          return s.name.toLowerCase() === selectedService.toLowerCase();
+        }
+        return false;
+      });
 
-      return matchSearch && matchService;
-    });
-  };
+    return matchSearch && matchService;
+  });
+};
 
   return (
     <>
