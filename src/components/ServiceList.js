@@ -4,8 +4,13 @@ export default function ServiceList({ onSelect, selectedServices = [], services 
   const [localSelected, setLocalSelected] = useState([]);
 
   // Initialize localSelected when selectedServices changes
-  useEffect(() => {
-    setLocalSelected(selectedServices);
+ useEffect(() => {
+    const normalized = (selectedServices || []).map((s) => ({
+      id: s._id || s.id, // ensure always `id`
+      name: s.name,
+      amount: s.amount || 0,
+    }));
+    setLocalSelected(normalized);
   }, [selectedServices]);
 
   const handleCheckboxChange = (service, checked) => {
