@@ -380,19 +380,21 @@ export default function PatientDetails() {
                                             </td>
                                             <td>
                                                 {Array.isArray(visit.service)
-                                                    ? visit.service
-                                                          .map((s) =>
-                                                              typeof s ===
+                                                    ? visit.service.reduce(
+                                                          (total, s) =>
+                                                              total +
+                                                              (typeof s ===
                                                               "object"
                                                                   ? s.amount
-                                                                  : s
-                                                          )
-                                                          .join(", ")
+                                                                  : Number(s)),
+                                                          0
+                                                      )
                                                     : typeof visit.service ===
                                                       "object"
                                                     ? visit.service.amount
-                                                    : visit.service || "N/A"}
+                                                    : visit.service || 0}
                                             </td>
+
                                             <td>
                                                 <button
                                                     className="btn btn-sm btn-warning me-2"
