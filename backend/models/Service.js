@@ -9,6 +9,7 @@ const ServiceSchema = new Schema({
   amount: {
     type: Number,
     required: false,
+    default: 0,
   },
   doctor: {
     type: mongoose.Schema.Types.ObjectId,
