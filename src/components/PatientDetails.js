@@ -433,73 +433,47 @@ const handleApptServiceChange = (serviceObj, checked) => {
                                 </div>
 
                                 {apptData.service.length > 0 && (
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Bill Details
-                                        </label>
-                                        <ul className="list-group mb-2">
-                                            {apptData.service.map(
-                                                (s, index) => (
-                                                    <li
-                                                        key={s}
-                                                        className="list-group-item d-flex justify-content-between align-items-center"
-                                                    >
-                                                        <span>{s}</span>
-                                                        <input
-                                                            type="number"
-                                                            className="form-control w-25"
-                                                            value={
-                                                                apptServiceAmounts[
-                                                                    index
-                                                                ] ?? 0
-                                                            }
-                                                            onChange={(e) => {
-                                                                const newAmounts =
-                                                                    [
-                                                                        ...apptServiceAmounts,
-                                                                    ];
-                                                                newAmounts[
-                                                                    index
-                                                                ] = Number(
-                                                                    e.target
-                                                                        .value
-                                                                );
-                                                                setApptServiceAmounts(
-                                                                    newAmounts
-                                                                );
-                                                                const total =
-                                                                    newAmounts.reduce(
-                                                                        (
-                                                                            a,
-                                                                            b
-                                                                        ) =>
-                                                                            a +
-                                                                            b,
-                                                                        0
-                                                                    );
-                                                                setApptData(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        amount: total,
-                                                                    })
-                                                                );
-                                                            }}
-                                                        />
-                                                    </li>
-                                                )
-                                            )}
-                                        </ul>
-                                        <label className="form-label">
-                                            Total Amount
-                                        </label>
-                                        <input
+                                  <div className="mb-3">
+                                    <label className="form-label">Bill Details</label>
+                                    <ul className="list-group mb-2">
+                                      {apptData.service.map((s, index) => (
+                                        <li
+                                          key={s.id || s._id || index}
+                                          className="list-group-item d-flex justify-content-between align-items-center"
+                                        >
+                                          <span>{s.name}</span>
+                                          <input
                                             type="number"
-                                            className="form-control"
-                                            value={apptData.amount}
-                                            readOnly
-                                        />
-                                    </div>
+                                            className="form-control w-25"
+                                            value={apptServiceAmounts[index] ?? s.amount ?? 0}
+                                            onChange={(e) => {
+                                              const newAmounts = [...apptServiceAmounts];
+                                              newAmounts[index] = Number(e.target.value);
+                                              setApptServiceAmounts(newAmounts);
+                                              // also update apptData.service amounts
+                                              const updatedServices = [...apptData.service];
+                                              updatedServices[index].amount = Number(e.target.value);
+                                              const total = updatedServices.reduce((a, b) => a + (b.amount || 0), 0);
+                                              setApptData((prev) => ({
+                                                ...prev,
+                                                service: updatedServices,
+                                                amount: total,
+                                              }));
+                                            }}
+                                          />
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    <label className="form-label">Total Amount</label>
+                                    <input
+                                      type="number"
+                                      className="form-control"
+                                      value={apptData.amount}
+                                      readOnly
+                                    />
+                                  </div>
                                 )}
+
                             </form>
                         </div>
                         <div className="modal-footer">
