@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
+import jsPDF from "jspdf";
 
 export default function PatientDetails() {
     const API_BASE_URL =
@@ -27,7 +28,7 @@ export default function PatientDetails() {
         date: "",
         service: [],
         amount: 0,
-        paymentType: "", // new field
+        paymentType: "",
     });
     const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
 
@@ -37,17 +38,15 @@ export default function PatientDetails() {
         const date = new Date(dateStr);
         const istOffset = 5.5 * 60; // IST +5:30 in minutes
         const istDate = new Date(date.getTime() + istOffset * 60000);
-        return istDate.toISOString().slice(0, 10); // YYYY-MM-DD
+        return istDate.toISOString().slice(0, 10);
     };
 
-    // Convert IST input back to UTC for backend storage
     const fromISTToUTC = (istDate) => {
         if (!istDate) return null;
         const [year, month, day] = istDate.split("-").map(Number);
-        return new Date(Date.UTC(year, month - 1, day)); // 00:00 UTC
+        return new Date(Date.UTC(year, month - 1, day));
     };
 
-    // Fetch all services
     const fetchServices = async () => {
         try {
             const token = localStorage.getItem("token");
@@ -64,7 +63,6 @@ export default function PatientDetails() {
         }
     };
 
-    // Fetch patient and appointments
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -163,7 +161,6 @@ export default function PatientDetails() {
             let updatedAmounts = [...apptServiceAmounts];
 
             if (checked) {
-                // Add if not already present
                 const exists = updatedServices.find(
                     (s) =>
                         (s._id || s.id || s.name) ===
@@ -174,7 +171,6 @@ export default function PatientDetails() {
                     updatedAmounts.push(serviceObj.amount || 0);
                 }
             } else {
-                // Remove
                 const index = updatedServices.findIndex(
                     (s) =>
                         (s._id || s.id || s.name) ===
@@ -222,13 +218,57 @@ export default function PatientDetails() {
             const data = await response.json();
             if (data.success) {
                 alert("Appointment updated successfully!");
-                fetchData(); // Refresh everything
+                fetchData();
             } else {
                 alert("Update failed: " + data.message);
             }
         } catch (err) {
             console.error("Error updating appointment:", err);
         }
+    };
+
+    // --------------------- Generate Invoice ---------------------
+    const generateInvoice = (visit) => {
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text("Invoice", 105, 20, null, null, "center");
+        doc.setFontSize(12);
+        doc.text(`Patient Name: ${details.name}`, 20, 40);
+        doc.text(`Phone: ${details.number}`, 20, 50);
+        doc.text(`Age: ${details.age}`, 20, 60);
+        doc.text(
+            `Appointment Date: ${new Date(visit.date).toLocaleDateString(
+                "en-IN",
+                {
+                    dateStyle: "medium",
+                }
+            )}`,
+            20,
+            70
+        );
+
+        doc.text("Services", 20, 90);
+        doc.text("Amount", 150, 90);
+
+        let y = 100;
+        let total = 0;
+
+        (visit.service || []).forEach((s) => {
+            const name = typeof s === "object" ? s.name : s;
+            const amount = typeof s === "object" ? s.amount : Number(s);
+            total += amount;
+            doc.text(name, 20, y);
+            doc.text(amount.toString(), 150, y, { align: "right" });
+            y += 10;
+        });
+
+        doc.text(`Total: ₹${total}`, 150, y + 10, { align: "right" });
+        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y + 10);
+
+        doc.save(
+            `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
+        );
     };
 
     if (loading) return <p>Loading patient details...</p>;
@@ -241,7 +281,6 @@ export default function PatientDetails() {
                 <h3>Age: {details?.age || ""}</h3>
             </div>
 
-            {/* Edit Patient Button */}
             <button
                 type="button"
                 className="btn btn-primary m-2"
@@ -251,90 +290,7 @@ export default function PatientDetails() {
                 Edit Details
             </button>
 
-            {/* Edit Patient Modal */}
-            <div
-                className="modal fade"
-                id="editPatientModal"
-                tabIndex="-1"
-                aria-hidden="true"
-            >
-                <div className="modal-dialog">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h1 className="modal-title fs-5">
-                                Edit Patient Details
-                            </h1>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            />
-                        </div>
-                        <div className="modal-body">
-                            <form>
-                                <div className="mb-3">
-                                    <label className="form-label">Name</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="name"
-                                        value={patient.name}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">Number</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="number"
-                                        value={patient.number}
-                                        minLength={10}
-                                        maxLength={10}
-                                        placeholder="Enter 10-digit number"
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (/^\d*$/.test(val))
-                                                handleChange(e);
-                                        }}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">Age</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        name="age"
-                                        value={patient.age}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                            </form>
-                        </div>
-                        <div className="modal-footer">
-                            <button
-                                type="button"
-                                className="btn btn-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Close
-                            </button>
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={handleSave}
-                                data-bs-dismiss="modal"
-                            >
-                                Save changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Appointments Table */}
+            {/* ---------------- Appointments Table ---------------- */}
             <div className="mt-4">
                 <h3>Previous Appointment Details</h3>
                 {appointments.length === 0 ? (
@@ -383,20 +339,14 @@ export default function PatientDetails() {
                                                     .join(", ") || "N/A"}
                                             </td>
                                             <td>
-                                                {Array.isArray(visit.service)
-                                                    ? visit.service.reduce(
-                                                          (total, s) =>
-                                                              total +
-                                                              (typeof s ===
-                                                              "object"
-                                                                  ? s.amount
-                                                                  : Number(s)),
-                                                          0
-                                                      )
-                                                    : typeof visit.service ===
-                                                      "object"
-                                                    ? visit.service.amount
-                                                    : visit.service || 0}
+                                                {(visit.service || []).reduce(
+                                                    (total, s) =>
+                                                        total +
+                                                        (typeof s === "object"
+                                                            ? s.amount
+                                                            : Number(s)),
+                                                    0
+                                                )}
                                             </td>
                                             <td>
                                                 {visit.paymentType || "N/A"}
@@ -415,8 +365,13 @@ export default function PatientDetails() {
                                                 >
                                                     Update
                                                 </button>
-                                                <button className="btn btn-sm btn-danger">
-                                                    Delete
+                                                <button
+                                                    className="btn btn-sm btn-success"
+                                                    onClick={() =>
+                                                        generateInvoice(visit)
+                                                    }
+                                                >
+                                                    Generate Invoice
                                                 </button>
                                             </td>
                                         </tr>
@@ -427,7 +382,7 @@ export default function PatientDetails() {
                 )}
             </div>
 
-            {/* Edit Appointment Modal */}
+            {/* ---------------- Edit Appointment Modal ---------------- */}
             <div
                 className="modal fade"
                 id="editAppointmentModal"
@@ -563,7 +518,6 @@ export default function PatientDetails() {
                                     </div>
                                 )}
 
-                                {/* Payment Type */}
                                 <div className="mb-3">
                                     <label className="form-label">
                                         Payment Type
@@ -578,7 +532,9 @@ export default function PatientDetails() {
                                             }))
                                         }
                                     >
-                                        <option value="">Select Payment Type</option>
+                                        <option value="">
+                                            Select Payment Type
+                                        </option>
                                         <option value="Cash">Cash</option>
                                         <option value="Card">Card</option>
                                         <option value="UPI">UPI</option>
@@ -599,6 +555,89 @@ export default function PatientDetails() {
                                 type="button"
                                 className="btn btn-primary"
                                 onClick={handleUpdateAppt}
+                                data-bs-dismiss="modal"
+                            >
+                                Save changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ---------------- Edit Patient Modal ---------------- */}
+            <div
+                className="modal fade"
+                id="editPatientModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5">
+                                Edit Patient Details
+                            </h1>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            />
+                        </div>
+                        <div className="modal-body">
+                            <form>
+                                <div className="mb-3">
+                                    <label className="form-label">Name</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="name"
+                                        value={patient.name}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Number</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="number"
+                                        value={patient.number}
+                                        minLength={10}
+                                        maxLength={10}
+                                        placeholder="Enter 10-digit number"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (/^\d*$/.test(val))
+                                                handleChange(e);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Age</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        name="age"
+                                        value={patient.age}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </form>
+                        </div>
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Close
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleSave}
                                 data-bs-dismiss="modal"
                             >
                                 Save changes
