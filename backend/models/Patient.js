@@ -1,37 +1,48 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const PatientSchema = new Schema({
     name: {
         type: String,
-        required: true
+        required: true,
     },
     service: {
         type: Array,
-        default: null
+        default: null,
     },
     number: {
         type: String,
-        default: "0000000000"
+        default: "0000000000",
+        required: false,
+        minlength: 10,
+        maxlength: 10,
+        validate: {
+            validator: function (v) {
+                // Allow empty string, but if not empty, must be 10 digits
+                return !v || /^\d{10}$/.test(v);
+            },
+            message: (props) =>
+                `${props.value} is not a valid 10-digit number!`,
+        },
     },
     amount: {
         type: Number,
-        default: 0
+        default: 0,
     },
-    age:{
-        type:Number,
-        required:false
+    age: {
+        type: Number,
+        required: false,
     },
-    date:{
-        type:Date,
-        default:Date.now
+    date: {
+        type: Date,
+        default: Date.now,
     },
     doctor: {
         type: Schema.Types.ObjectId,
-        ref: 'doc',
-        required: true
-    }
+        ref: "doc",
+        required: true,
+    },
 });
 
-const Patient = mongoose.model('Patient', PatientSchema);
+const Patient = mongoose.model("Patient", PatientSchema);
 module.exports = Patient;

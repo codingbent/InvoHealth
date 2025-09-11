@@ -106,6 +106,11 @@ export default function PatientDetails() {
         setPatient({ ...patient, [e.target.name]: e.target.value });
 
     const handleSave = async () => {
+        const num = patient.number;
+        if (!/^\d{10}$/.test(num)) {
+            alert("Please enter a valid 10-digit number.");
+            return;
+        }
         try {
             const token = localStorage.getItem("token");
             const response = await fetch(
