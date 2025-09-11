@@ -284,6 +284,31 @@ router.put(
     }
 );
 
+// delete patient by id
+router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
+  try {
+    const patientId = req.params.id;
+
+    // Check if patient exists
+    const patient = await Patient.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, message: "Patient not found" });
+    }
+
+    // Delete patient
+    await Patient.findByIdAndDelete(patientId);
+
+    // (Optional) also delete related appointments if needed
+    await Appointment.deleteMany({ patientId: patientId });
+
+    res.json({ success: true, message: "Patient deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting patient:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 // POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
@@ -347,7 +372,6 @@ router.get("/patientdetails/:id", async (req, res) => {
     }
 });
 
-// PUT /api/auth/updateappointment/:appointmentId
 // PUT /api/auth/updateappointment/:appointmentId
 router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (req, res) => {
   const { appointmentId, visitId } = req.params;
