@@ -421,7 +421,7 @@ export default function PatientDetails() {
                                                 {visit.paymentType || "N/A"}
                                             </td>
                                             <td>
-                                                <button
+                                                {/* <button
                                                     className="btn btn-sm btn-warning me-2"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#editAppointmentModal"
@@ -433,7 +433,7 @@ export default function PatientDetails() {
                                                     }
                                                 >
                                                     Update
-                                                </button>
+                                                </button> */}
                                                 <button
                                                     className="btn btn-success"
                                                     onClick={() =>
