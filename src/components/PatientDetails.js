@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
+import "jspdf-autotable"; // Make sure autobTable plugin is installed
 
 export default function PatientDetails() {
     const API_BASE_URL =
@@ -228,55 +229,52 @@ export default function PatientDetails() {
     };
 
     // --------------------- Generate Invoice ---------------------
-    const generateInvoice = (visit) => {
-        const doc = new jsPDF();
 
-        const firmName = "Gurudev Multispeciality Center";
-        const addressLines = [
+    const generateInvoice = (visit, details) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = 20;
+
+        // ----- Header: Firm Name & Address -----
+        doc.setFontSize(16);
+        doc.text("Gurudev Multispeciality Center", 20, y);
+        y += 8;
+        doc.setFontSize(12);
+        [
             "94, Nehru Park Colony",
             "Near Soodh Dharam Kanta",
             "Prem Nagar, Bareilly",
-        ];
-
-        const doctorName = "Dr DK Agarwal, MDS (KGMU)";
-        const experience = "Experience: 22+ years";
-
-        const invoiceNumber = "INV-" + Math.floor(Math.random() * 1000000);
-
-        let y = 20;
-        const pageWidth = doc.internal.pageSize.getWidth();
-
-        // --------------------- Header ---------------------
-        // Left: Firm Name + Address
-        doc.setFontSize(16);
-        doc.text(firmName, 20, y);
-        y += 8;
-        doc.setFontSize(12);
-        addressLines.forEach((line) => {
+        ].forEach((line) => {
             doc.text(line, 20, y);
             y += 6;
         });
 
-        // Right: Doctor Name + Degree + Experience
-        y = 20; // same top
-        const rightX = pageWidth - 20;
+        // ----- Doctor Details (right aligned) -----
+        let rightY = 20;
         doc.setFontSize(14);
-        doc.text(doctorName, rightX, y, { align: "right" });
-        y += 6;
+        doc.text("Dr DK Agarwal, MDS (KGMU)", pageWidth - 20, rightY, {
+            align: "right",
+        });
+        rightY += 6;
         doc.setFontSize(12);
-        doc.text(experience, rightX, y, { align: "right" });
+        doc.text("Experience: 22+ years", pageWidth - 20, rightY, {
+            align: "right",
+        });
 
-        // --------------------- Invoice Number ---------------------
-        y += 12;
-        doc.text(`Invoice Number: ${invoiceNumber}`, 20, y);
+        y += 6;
+        // ----- Invoice & Patient Details -----
+        doc.setFontSize(12);
+        doc.text(
+            `Invoice Number: INV-${Math.floor(Math.random() * 1000000)}`,
+            20,
+            y
+        );
         y += 8;
-
-        // --------------------- Patient Details ---------------------
         doc.text(`Patient Name: ${details.name}`, 20, y);
         y += 6;
         doc.text(`Phone: ${details.number}`, 20, y);
         y += 6;
-        doc.text(`Age: ${details.age}`, 20, y);
+        doc.text(`Age: ${details.age ?? "N/A"}`, 20, y);
         y += 6;
         doc.text(
             `Appointment Date: ${new Date(visit.date).toLocaleDateString(
@@ -288,30 +286,35 @@ export default function PatientDetails() {
             20,
             y
         );
-        y += 10;
+        y += 12;
 
-        // --------------------- Services Table ---------------------
-        doc.setFontSize(12);
-        doc.text("Services", 20, y);
-        doc.text("Amount (₹)", pageWidth - 20, y, { align: "right" });
-        y += 8;
-
-        let total = 0;
-        (visit.service || []).forEach((s) => {
-            const name = typeof s === "object" ? s.name : s;
-            const amount = typeof s === "object" ? s.amount : Number(s);
-            total += amount;
-            doc.text(name, 20, y);
-            doc.text(amount.toString(), pageWidth - 20, y, { align: "right" });
-            y += 8;
+        // ----- Services Table using autoTable -----
+        const serviceData = (visit.service || []).map((s) => [
+            typeof s === "object" ? s.name : s,
+            typeof s === "object" ? s.amount : Number(s),
+        ]);
+        doc.autoTable({
+            startY: y,
+            head: [["Service", "Amount (₹)"]],
+            body: serviceData,
+            theme: "grid",
+            headStyles: { fillColor: [230, 230, 230] },
+            styles: { fontSize: 12 },
         });
 
-        y += 4;
-        doc.text(`Total: ₹${total}`, pageWidth - 20, y, { align: "right" });
-        y += 8;
-        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y);
+        // ----- Total & Payment Type -----
+        const finalY = doc.lastAutoTable.finalY + 8; // below the table
+        const total = serviceData.reduce(
+            (sum, item) => sum + Number(item[1]),
+            0
+        );
+        doc.setFontSize(12);
+        doc.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
+            align: "right",
+        });
+        doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, finalY);
 
-        // --------------------- Save PDF ---------------------
+        // ----- Save PDF -----
         doc.save(
             `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
         );
