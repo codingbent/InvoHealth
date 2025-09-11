@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
-import "jspdf-autotable"; // Make sure autobTable plugin is installed
+import autoTable from "jspdf-autotable"; // note the import
 
 export default function PatientDetails() {
     const API_BASE_URL =
@@ -290,7 +290,7 @@ export default function PatientDetails() {
             typeof s === "object" ? s.amount : Number(s),
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: y,
             head: [["Service", "Amount (₹)"]],
             body: serviceData,
