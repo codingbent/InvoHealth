@@ -5,7 +5,7 @@ const AddPatient = (props) => {
     const [patient, setPatient] = useState({
         name: "",
         service: [],
-        number: "",
+        number: "0000000000",
         amount: 0,
         age: "",
     });
