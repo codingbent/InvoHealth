@@ -29,7 +29,7 @@ export default function PatientDetails() {
         date: "",
         service: [],
         amount: 0,
-        paymentType: "",
+        payment_type: "",
     });
     const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
 
@@ -157,7 +157,7 @@ export default function PatientDetails() {
             date: toISTDateTime(visit.date),
             service: serviceObjs,
             amount: amounts.reduce((a, b) => a + b, 0),
-            paymentType: visit.paymentType || "",
+            payment_type: visit.payment_type || "",
         });
     };
 
@@ -217,7 +217,7 @@ export default function PatientDetails() {
                             amount: apptServiceAmounts[i] ?? s.amount ?? 0,
                         })),
                         amount: apptData.amount,
-                        paymentType: apptData.paymentType,
+                        payment_type: apptData.payment_type,
                     }),
                 }
             );
@@ -328,7 +328,7 @@ export default function PatientDetails() {
                 y
             );
             y += 12;
-            doc.text(`Payment Type: ${visit.paymentType || "N/A"}`, 20, y);
+            doc.text(`Payment Type: ${visit.payment_type || "N/A"}`, 20, y);
             y += 8;
 
             // --- Table ---
@@ -448,7 +448,7 @@ export default function PatientDetails() {
                                                 )}
                                             </td>
                                             <td>
-                                                {visit.paymentType || "N/A"}
+                                                {visit.payment_type || "N/A"}
                                             </td>
                                             <td>
                                                 {/* <button
@@ -627,11 +627,11 @@ export default function PatientDetails() {
                                     </label>
                                     <select
                                         className="form-select"
-                                        value={apptData.paymentType}
+                                        value={apptData.payment_type}
                                         onChange={(e) =>
                                             setApptData((prev) => ({
                                                 ...prev,
-                                                paymentType: e.target.value,
+                                                payment_type: e.target.value,
                                             }))
                                         }
                                     >

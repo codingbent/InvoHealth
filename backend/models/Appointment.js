@@ -2,30 +2,32 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const AppointmentSchema = new Schema({
-  patient: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Patient",
-    required: true,
-    unique: true
-  },
-  visits: [
-    {
-      date: { type: Date, default: Date.now },
-      service: [
+    patient: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Patient",
+        required: true,
+        unique: true,
+    },
+    visits: [
         {
-          id: { type: Schema.Types.ObjectId, ref: "Service" },
-          name: String,
-          amount: Number
-        }
-      ],
-      amount: { type: Number, default: 0 },
-      paymentType: {
-        type: String,
-        enum: ["Cash", "Card", "UPI", "Other"],
-      },
-      invoiceNumber: { type: Number, default: null },
-    }
-  ]
+            date: { type: Date, default: Date.now },
+            service: [
+                {
+                    id: { type: Schema.Types.ObjectId, ref: "Service" },
+                    name: String,
+                    amount: Number,
+                    payment_type: {
+                        type: String,
+                        enum: ["Cash", "Card", "UPI", "Other"],
+                        default: "Cash"
+                    },
+                },
+            ],
+            amount: { type: Number, default: 0 },
+
+            invoiceNumber: { type: Number, default: null },
+        },
+    ],
 });
 
 const Appointment = mongoose.model("Appointment", AppointmentSchema);

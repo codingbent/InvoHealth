@@ -8,7 +8,7 @@ export default function PatientList() {
     const [services, setServices] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedService, setSelectedService] = useState("");
-    const [selectedPaymentType, setSelectedPaymentType] = useState("");
+    const [selectedpayment_type, setSelectedpayment_type] = useState("");
     const [selectedId, setSelectedId] = useState(null);
 
     const API_BASE_URL =
@@ -137,10 +137,10 @@ export default function PatientList() {
                 });
 
             const matchPayment =
-                !selectedPaymentType ||
-                (p.lastPaymentType &&
-                    p.lastPaymentType.toLowerCase() ===
-                        selectedPaymentType.toLowerCase());
+                !selectedpayment_type ||
+                (p.lastpayment_type &&
+                    p.lastpayment_type.toLowerCase() ===
+                        selectedpayment_type.toLowerCase());
 
             return matchSearch && matchService && matchPayment;
         });
@@ -176,8 +176,8 @@ export default function PatientList() {
                 {/* 💳 Filter by Payment Type */}
                 <select
                     className="form-select mb-3"
-                    value={selectedPaymentType}
-                    onChange={(e) => setSelectedPaymentType(e.target.value)}
+                    value={selectedpayment_type}
+                    onChange={(e) => setSelectedpayment_type(e.target.value)}
                 >
                     <option value="">All Payment Types</option>
                     <option value="cash">Cash</option>
@@ -249,7 +249,7 @@ export default function PatientList() {
                                                 <td>{p.name}</td>
                                                 <td>{p.number}</td>
                                                 <td>
-                                                    {p.lastPaymentType || "N/A"}
+                                                    {p.lastpayment_type || "N/A"}
                                                 </td>
                                                 <td className="text-center">
                                                     <button

@@ -14,7 +14,7 @@ const AddPatient = (props) => {
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
-    const [paymentType, setPaymentType] = useState("cash"); // ✅ new
+    const [payment_type, setpayment_type] = useState("cash"); // ✅ new
 
     const { name, service, number, amount, age } = patient;
 
@@ -132,7 +132,7 @@ const AddPatient = (props) => {
                         })),
                         amount,
                         date: appointmentDate,
-                        paymentType: paymentType, // ✅ include
+                        payment_type: payment_type, // ✅ include
                     }),
                 }
             );
@@ -161,7 +161,7 @@ const AddPatient = (props) => {
             });
             setServiceAmounts([]);
             setAppointmentDate(new Date().toISOString().slice(0, 10));
-            setPaymentType("cash");
+            setpayment_type("cash");
         } catch (err) {
             console.error(err);
             props.showAlert("Server error", "danger");
@@ -267,8 +267,8 @@ const AddPatient = (props) => {
                         <label className="form-label">Payment Type</label>
                         <select
                             className="form-control"
-                            value={paymentType}
-                            onChange={(e) => setPaymentType(e.target.value)}
+                            value={payment_type}
+                            onChange={(e) => setpayment_type(e.target.value)}
                         >
                             <option value="cash">Cash</option>
                             <option value="card">Card</option>

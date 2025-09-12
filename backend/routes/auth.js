@@ -184,18 +184,18 @@ router.get("/fetchallpatients", fetchuser, async (req, res) => {
       patients.map(async (p) => {
         const appointment = await Appointment.findOne({ patient: p._id });
         let lastDate = null;
-        let lastPaymentType = null;
+        let lastpayment_type = null;
 
         if (appointment && appointment.visits.length > 0) {
           const lastVisit = appointment.visits[appointment.visits.length - 1];
           lastDate = lastVisit.date;
-          lastPaymentType = lastVisit.payment_type; // <-- add this
+          lastpayment_type = lastVisit.payment_type; // <-- add this
         }
 
         return {
           ...p.toObject(),
           lastAppointment: lastDate,
-          lastPaymentType, // <-- return it
+          lastpayment_type, // <-- return it
         };
       })
     );
@@ -331,7 +331,7 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
 // POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount } = req.body;
+        const { service, amount,payment_type } = req.body;
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
@@ -358,8 +358,8 @@ router.post("/addappointment/:id", async (req, res) => {
                         date: istDate,
                         service,
                         amount,
+                        payment_type,
                     },
-                    paymentType
                 },
             },
             { upsert: true, new: true } // Create if not exists
@@ -395,7 +395,7 @@ router.get("/patientdetails/:id", async (req, res) => {
 // PUT /api/auth/updateappointment/:appointmentId
 router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (req, res) => {
   const { appointmentId, visitId } = req.params;
-  const { date, service, amount, paymentType } = req.body;
+  const { date, service, amount, payment_type } = req.body;
 
   if (!date || !service || !Array.isArray(service) || service.length === 0) {
     return res.status(400).json({ success: false, message: "Invalid data" });
@@ -421,9 +421,9 @@ router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (
     }));
     visit.amount = amount || visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
 
-    // ✅ Handle paymentType safely
-    if (paymentType && ["Cash", "Card", "UPI", "Other"].includes(paymentType)) {
-      visit.paymentType = paymentType;
+    // ✅ Handle payment_type safely
+    if (payment_type && ["Cash", "Card", "UPI", "Other"].includes(payment_type)) {
+      visit.payment_type = payment_type;
     }
 
     await appointment.save();

@@ -13,7 +13,7 @@ const AddAppointment = (props) => {
             ? JSON.parse(localStorage.getItem("patient"))
             : null
     );
-    const [paymentType, setPaymentType] = useState("cash"); // ✅
+    const [payment_type, setpayment_type] = useState("cash"); // ✅
     const [allServices, setAllServices] = useState([]);
 
     const API_BASE_URL =
@@ -115,7 +115,7 @@ const AddAppointment = (props) => {
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         amount,
-                        payment_type: paymentType, // ✅ include
+                        payment_type: payment_type, // ✅ include
                     }),
                 }
             );
@@ -129,7 +129,7 @@ const AddAppointment = (props) => {
                 setAmount(0);
                 setSelectedPatient(null);
                 localStorage.removeItem("patient");
-                setPaymentType("cash");
+                setpayment_type("cash");
             } else {
                 props.showAlert(
                     result.error || "Failed to add appointment",
@@ -246,8 +246,8 @@ const AddAppointment = (props) => {
                         <label className="form-label">Payment Type</label>
                         <select
                             className="form-control"
-                            value={paymentType}
-                            onChange={(e) => setPaymentType(e.target.value)}
+                            value={payment_type}
+                            onChange={(e) => setpayment_type(e.target.value)}
                         >
                             <option value="cash">Cash</option>
                             <option value="card">Card</option>
