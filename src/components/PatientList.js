@@ -180,9 +180,9 @@ export default function PatientList() {
                     onChange={(e) => setSelectedpayment_type(e.target.value)}
                 >
                     <option value="">All Payment Types</option>
-                    <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="upi">UPI</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
                 </select>
 
                 {/* 👥 Patients grouped by last visit */}
