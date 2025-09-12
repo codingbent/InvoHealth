@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ServiceList from "./ServiceList";
+import { jwtDecode } from "jwt-decode";
 
 const AddPatient = (props) => {
     const [patient, setPatient] = useState({
@@ -40,9 +41,9 @@ const AddPatient = (props) => {
     }, []);
 
     useEffect(() => {
-        const newAmounts = service.map((s, index) => {
-            return serviceAmounts[index] ?? s.amount ?? 0;
-        });
+        const newAmounts = service.map(
+            (s, index) => serviceAmounts[index] ?? s.amount ?? 0
+        );
         const total = newAmounts.reduce((a, b) => a + b, 0);
         setPatient((prev) => ({ ...prev, amount: total }));
     }, [service, serviceAmounts]);
@@ -112,14 +113,22 @@ const AddPatient = (props) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // 2️⃣ Add initial appointment — backend will assign invoiceNumber automatically
+            // 2️⃣ Get doctor ID from token
+            const token = localStorage.getItem("token");
+            let doctorId = null;
+            if (token) {
+                const decoded = jwtDecode(token);
+                doctorId = decoded._id; // adjust if your token uses a different key
+            }
+
+            // 3️⃣ Add initial appointment
             const appointmentRes = await fetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token"),
+                        "auth-token": token,
                     },
                     body: JSON.stringify({
                         service: service.map((s, index) => ({
@@ -130,7 +139,7 @@ const AddPatient = (props) => {
                         amount,
                         date: appointmentDate,
                         payment_type,
-                        doctorId: selectedDoctorId,
+                        doctorId, // automatically assigned
                     }),
                 }
             );
