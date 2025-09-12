@@ -14,7 +14,7 @@ const AddPatient = (props) => {
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
-    const [payment_type, setpayment_type] = useState("Cash"); // ✅ new
+    const [payment_type, setPaymentType] = useState("Cash");
 
     const { name, service, number, amount, age } = patient;
 
@@ -28,11 +28,7 @@ const AddPatient = (props) => {
             try {
                 const res = await fetch(
                     `${API_BASE_URL}/api/auth/fetchallservice`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token"),
-                        },
-                    }
+                    { headers: { "auth-token": localStorage.getItem("token") } }
                 );
                 const data = await res.json();
                 setAvailableServices(data);
@@ -82,6 +78,7 @@ const AddPatient = (props) => {
         e.preventDefault();
 
         try {
+            // 1️⃣ Add patient
             const patientRes = await fetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
@@ -115,7 +112,7 @@ const AddPatient = (props) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // create appointment
+            // 2️⃣ Add initial appointment — backend will assign invoiceNumber automatically
             const appointmentRes = await fetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
@@ -132,7 +129,7 @@ const AddPatient = (props) => {
                         })),
                         amount,
                         date: appointmentDate,
-                        payment_type: payment_type, // ✅ include
+                        payment_type,
                     }),
                 }
             );
@@ -152,6 +149,7 @@ const AddPatient = (props) => {
                 );
             }
 
+            // Reset form
             setPatient({
                 name: "",
                 service: [],
@@ -161,7 +159,7 @@ const AddPatient = (props) => {
             });
             setServiceAmounts([]);
             setAppointmentDate(new Date().toISOString().slice(0, 10));
-            setpayment_type("Cash");
+            setPaymentType("Cash");
         } catch (err) {
             console.error(err);
             props.showAlert("Server error", "danger");
@@ -241,12 +239,7 @@ const AddPatient = (props) => {
                                 type="number"
                                 className="form-control"
                                 value={amount}
-                                onChange={(e) =>
-                                    setPatient({
-                                        ...patient,
-                                        amount: Number(e.target.value),
-                                    })
-                                }
+                                readOnly
                             />
                         </div>
                     )}
@@ -268,7 +261,7 @@ const AddPatient = (props) => {
                         <select
                             className="form-control"
                             value={payment_type}
-                            onChange={(e) => setpayment_type(e.target.value)}
+                            onChange={(e) => setPaymentType(e.target.value)}
                         >
                             <option value="Cash">Cash</option>
                             <option value="Card">Card</option>

@@ -30,32 +30,35 @@ const AppointmentSchema = new Schema({
     ],
 });
 
-// Pre-save middleware: assign invoiceNumber for **new Appointment**
+// Pre-save middleware: assign invoiceNumber only if missing
 AppointmentSchema.pre("save", async function (next) {
-    if (this.isNew && this.visits.length > 0) {
-        try {
-            const counter = await Counter.findByIdAndUpdate(
-                "invoiceNumber",
-                { $inc: { seq: 1 } },
-                { new: true, upsert: true }
-            );
-            this.visits[0].invoiceNumber = counter.seq;
-        } catch (err) {
-            console.error("Error assigning invoice number:", err);
-            return next(err);
+    try {
+        if (this.visits && this.visits.length > 0) {
+            for (let visit of this.visits) {
+                if (!visit.invoiceNumber) {
+                    const counter = await Counter.findByIdAndUpdate(
+                        "invoiceNumber",
+                        { $inc: { seq: 1 } },
+                        { new: true, upsert: true }
+                    );
+                    visit.invoiceNumber = counter.seq;
+                }
+            }
         }
+        next();
+    } catch (err) {
+        console.error("Error assigning invoice number:", err);
+        next(err);
     }
-    next();
 });
 
-// Static method to add a visit to existing appointment
+// Static method to add a new visit
 AppointmentSchema.statics.addVisit = async function (
     patientId,
     service,
     amount,
     payment_type
 ) {
-    // Convert current time to IST
     const now = new Date();
     const istOffset = 5.5 * 60; // IST in minutes
     const istDate = new Date(now.getTime() + istOffset * 60000);
@@ -75,7 +78,7 @@ AppointmentSchema.statics.addVisit = async function (
         invoiceNumber: counter.seq,
     };
 
-    // Add visit to existing appointment (or create if not exists)
+    // Add visit to existing appointment (or create new appointment if not exists)
     const appointment = await this.findOneAndUpdate(
         { patient: patientId },
         { $push: { visits: newVisit } },
