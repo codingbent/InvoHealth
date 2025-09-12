@@ -6,10 +6,12 @@ const PatientSchema = new Schema({
         type: String,
         required: true,
     },
-    service: {
-        type: Array,
-        default: null,
-    },
+    service: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "service",
+        },
+    ],
     number: {
         type: String,
         default: "0000000000",

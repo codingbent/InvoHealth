@@ -122,14 +122,19 @@ export default function PatientList() {
             const matchService =
                 !selectedService ||
                 p.service?.some((s) => {
-                    if (typeof s === "string") {
+                    if (!s) return false;
+
+                    // string service
+                    if (typeof s === "string")
                         return (
                             s.toLowerCase() === selectedService.toLowerCase()
                         );
-                    }
-                    if (typeof s === "object" && s.name) {
+
+                    // object service
+                    if (typeof s === "object") {
+                        const serviceName = s.name || s.service_name || "";
                         return (
-                            s.name.toLowerCase() ===
+                            serviceName.toLowerCase() ===
                             selectedService.toLowerCase()
                         );
                     }
@@ -249,7 +254,8 @@ export default function PatientList() {
                                                 <td>{p.name}</td>
                                                 <td>{p.number}</td>
                                                 <td>
-                                                    {p.lastpayment_type || "N/A"}
+                                                    {p.lastpayment_type ||
+                                                        "N/A"}
                                                 </td>
                                                 <td className="text-center">
                                                     <button
