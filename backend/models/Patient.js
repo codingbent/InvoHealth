@@ -8,8 +8,9 @@ const PatientSchema = new Schema({
     },
     service: [
         {
-            type: Schema.Types.ObjectId,
-            ref: "service",
+            id: { type: Schema.Types.ObjectId, ref: "service" },
+            name: String,
+            amount: Number,
         },
     ],
     number: {

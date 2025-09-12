@@ -4,6 +4,7 @@ const Doc = require("../models/Doc");
 const Patient = require("../models/Patient");
 const Service = require("../models/Service");
 const Appointment = require("../models/Appointment");
+const Counter = require("../models/Counter"); 
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
@@ -357,20 +358,27 @@ router.post("/addappointment/:id", async (req, res) => {
         const istOffset = 5.5 * 60; // IST offset in minutes
         const istDate = new Date(now.getTime() + istOffset * 60000);
 
-        // Find appointment record for this patient and add new visit
+        // 1️⃣ Get the next invoice number
+        const counter = await Counter.findByIdAndUpdate(
+            "invoiceNumber",
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+
+        // 2️⃣ Create the new visit with invoice number
+        const newVisit = {
+            date: istDate,
+            service,
+            amount,
+            payment_type,
+            invoiceNumber: counter.seq, // ✅ assign here
+        };
+
+        // 3️⃣ Add the visit
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
-            {
-                $push: {
-                    visits: {
-                        date: istDate,
-                        service,
-                        amount,
-                        payment_type: req.body.payment_type,
-                    },
-                },
-            },
-            { upsert: true, new: true } // Create if not exists
+            { $push: { visits: newVisit } },
+            { upsert: true, new: true }
         );
 
         res.status(201).json({

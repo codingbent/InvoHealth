@@ -19,7 +19,7 @@ function App() {
         });
         setTimeout(() => {
             setalert(null);
-        }, 2000);
+        }, 10000);
     };
     return (
         <>
