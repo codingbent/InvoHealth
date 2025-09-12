@@ -234,30 +234,9 @@ export default function PatientDetails() {
     };
 
     // --------------------- Generate Invoice ---------------------
-
-    const generateInvoice = async (appointmentId, visit, details) => {
+    const generateInvoice = (appointmentId, visit, details) => {
         try {
-            let invoiceNumber = visit.invoiceNumber;
-
-            // ✅ Fetch invoice number from backend if not assigned yet
-            if (!invoiceNumber) {
-                const token = localStorage.getItem("token");
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/generate-invoice/${appointmentId}/${visit._id}`,
-                    {
-                        method: "POST",
-                        headers: { "auth-token": token },
-                    }
-                );
-                const data = await res.json();
-                if (data.success) {
-                    invoiceNumber = data.invoiceNumber;
-                    visit.invoiceNumber = invoiceNumber; // update locally
-                } else {
-                    alert("Failed to generate invoice number");
-                    return;
-                }
-            }
+            const invoiceNumber = visit.invoiceNumber || "N/A";
 
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
