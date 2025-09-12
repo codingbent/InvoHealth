@@ -13,7 +13,7 @@ const AddAppointment = (props) => {
             ? JSON.parse(localStorage.getItem("patient"))
             : null
     );
-    const [payment_type, setpayment_type] = useState("cash"); // ✅
+    const [payment_type, setpayment_type] = useState("Cash"); // ✅
     const [allServices, setAllServices] = useState([]);
 
     const API_BASE_URL =
@@ -129,7 +129,7 @@ const AddAppointment = (props) => {
                 setAmount(0);
                 setSelectedPatient(null);
                 localStorage.removeItem("patient");
-                setpayment_type("cash");
+                setpayment_type("Cash");
             } else {
                 props.showAlert(
                     result.error || "Failed to add appointment",
@@ -249,10 +249,10 @@ const AddAppointment = (props) => {
                             value={payment_type}
                             onChange={(e) => setpayment_type(e.target.value)}
                         >
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="upi">UPI</option>
-                            <option value="other">Other</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
 

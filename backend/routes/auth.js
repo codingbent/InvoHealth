@@ -51,7 +51,10 @@ router.post(
             res.json({ success, authtoken });
         } catch (error) {
             console.error(error.message);
-            res.status(500).json({ success: false, error: "Internal server error" });
+            res.status(500).json({
+                success: false,
+                error: "Internal server error",
+            });
         }
     }
 );
@@ -92,11 +95,11 @@ router.post(
             success = true;
             res.json({ success, patient });
         } catch (err) {
-    console.error("AddPatient error:", err); // full error object with stack
-    res.status(500).json({
-        success,
-        error: err.message, // send actual reason back to frontend
-    });
+            console.error("AddPatient error:", err); // full error object with stack
+            res.status(500).json({
+                success,
+                error: err.message, // send actual reason back to frontend
+            });
         }
     }
 );
@@ -104,107 +107,113 @@ router.post(
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 
 router.post(
-  "/createservice",
-  fetchuser,
-  [
-    body("name").notEmpty(),
-    body("amount").isNumeric(),
-  ],
-  async (req, res) => {
-    try {
-      // 🔑 Use req.doc.id (from fetchuser), not req.doc
-      const existingService = await Service.findOne({
-        name: req.body.name,
-        doctor: req.doc.id, // consistent with schema
-      });
+    "/createservice",
+    fetchuser,
+    [body("name").notEmpty(), body("amount").isNumeric()],
+    async (req, res) => {
+        try {
+            // 🔑 Use req.doc.id (from fetchuser), not req.doc
+            const existingService = await Service.findOne({
+                name: req.body.name,
+                doctor: req.doc.id, // consistent with schema
+            });
 
-      if (existingService) {
-        return res
-          .status(400)
-          .json({ success: false, error: "Service already exists for this doctor" });
-      }
+            if (existingService) {
+                return res
+                    .status(400)
+                    .json({
+                        success: false,
+                        error: "Service already exists for this doctor",
+                    });
+            }
 
-      const service = await Service.create({
-        name: req.body.name,
-        amount: req.body.amount,
-        doctor: req.doc.id, // consistent with schema
-      });
+            const service = await Service.create({
+                name: req.body.name,
+                amount: req.body.amount,
+                doctor: req.doc.id, // consistent with schema
+            });
 
-      res
-        .status(200)
-        .json({ success: true, status: "Added successfully", service });
-    } catch (error) {
-      console.error(error.message);
-      res.status(500).json({ success: false, error: "Internal server error" });
+            res.status(200).json({
+                success: true,
+                status: "Added successfully",
+                service,
+            });
+        } catch (error) {
+            console.error(error.message);
+            res.status(500).json({
+                success: false,
+                error: "Internal server error",
+            });
+        }
     }
-  }
 );
-
 
 // Fetch all services for the logged-in doctor
 router.get("/fetchallservice", fetchuser, async (req, res) => {
-  try {
-    const services = await Service.find({ doctor: req.doc.id });
-    res.json(services);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ error: "Server error" });
-  }
+    try {
+        const services = await Service.find({ doctor: req.doc.id });
+        res.json(services);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 // Update a service
 router.put("/updateservice/:id", async (req, res) => {
-  try {
-    const { name, amount } = req.body;
-    const service = await Service.findById(req.params.id);
+    try {
+        const { name, amount } = req.body;
+        const service = await Service.findById(req.params.id);
 
-    if (!service) {
-      return res.status(404).json({ error: "Service not found" });
+        if (!service) {
+            return res.status(404).json({ error: "Service not found" });
+        }
+
+        service.name = name || service.name;
+        service.amount = amount || service.amount;
+
+        await service.save();
+        res.json({ success: true, service });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
     }
-
-    service.name = name || service.name;
-    service.amount = amount || service.amount;
-
-    await service.save();
-    res.json({ success: true, service });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
-  }
 });
-
 
 //fetch all patients
 
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
-  try {
-    const patients = await Patient.find({ doctor: req.doc.id });
+    try {
+        const patients = await Patient.find({ doctor: req.doc.id });
 
-    const patientsWithLast = await Promise.all(
-      patients.map(async (p) => {
-        const appointment = await Appointment.findOne({ patient: p._id });
-        let lastDate = null;
-        let lastpayment_type = null;
+        const patientsWithLast = await Promise.all(
+            patients.map(async (p) => {
+                const appointment = await Appointment.findOne({
+                    patient: p._id,
+                });
+                let lastDate = null;
+                let lastpayment_type = null;
 
-        if (appointment && appointment.visits.length > 0) {
-          const lastVisit = appointment.visits[appointment.visits.length - 1];
-          lastDate = lastVisit.date;
-          lastpayment_type = lastVisit.payment_type; // <-- add this
-        }
+                if (appointment && appointment.visits.length > 0) {
+                    const lastVisit =
+                        appointment.visits[appointment.visits.length - 1];
+                    lastDate = lastVisit.date;
+                    lastpayment_type = lastVisit.payment_type; // <-- add this
+                }
 
-        return {
-          ...p.toObject(),
-          lastAppointment: lastDate,
-          lastpayment_type, // <-- return it
-        };
-      })
-    );
+                return {
+                    ...p.toObject(),
+                    lastAppointment: lastDate,
+                    lastpayment_type, // <-- return it
+                };
+            })
+        );
 
-    res.json(patientsWithLast);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
-  }
+        res.json(patientsWithLast);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
+    }
 });
 
 //
@@ -305,33 +314,34 @@ router.put(
 
 // delete patient by id
 router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
-  try {
-    const patientId = req.params.id;
+    try {
+        const patientId = req.params.id;
 
-    // Check if patient exists
-    const patient = await Patient.findById(patientId);
-    if (!patient) {
-      return res.status(404).json({ success: false, message: "Patient not found" });
+        // Check if patient exists
+        const patient = await Patient.findById(patientId);
+        if (!patient) {
+            return res
+                .status(404)
+                .json({ success: false, message: "Patient not found" });
+        }
+
+        // Delete patient
+        await Patient.findByIdAndDelete(patientId);
+
+        // (Optional) also delete related appointments if needed
+        await Appointment.deleteMany({ patientId: patientId });
+
+        res.json({ success: true, message: "Patient deleted successfully" });
+    } catch (err) {
+        console.error("Error deleting patient:", err.message);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-
-    // Delete patient
-    await Patient.findByIdAndDelete(patientId);
-
-    // (Optional) also delete related appointments if needed
-    await Appointment.deleteMany({ patientId: patientId });
-
-    res.json({ success: true, message: "Patient deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting patient:", err.message);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
 });
-
 
 // POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount,payment_type } = req.body;
+        const { service, amount, payment_type } = req.body;
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
@@ -358,7 +368,7 @@ router.post("/addappointment/:id", async (req, res) => {
                         date: istDate,
                         service,
                         amount,
-                        payment_type,
+                        payment_type: req.body.payment_type,
                     },
                 },
             },
@@ -393,81 +403,103 @@ router.get("/patientdetails/:id", async (req, res) => {
 });
 
 // PUT /api/auth/updateappointment/:appointmentId
-router.put("/updateappointment/:appointmentId/:visitId", authMiddleware, async (req, res) => {
-  const { appointmentId, visitId } = req.params;
-  const { date, service, amount, payment_type } = req.body;
+router.put(
+    "/updateappointment/:appointmentId/:visitId",
+    authMiddleware,
+    async (req, res) => {
+        const { appointmentId, visitId } = req.params;
+        const { date, service, amount, payment_type } = req.body;
 
-  if (!date || !service || !Array.isArray(service) || service.length === 0) {
-    return res.status(400).json({ success: false, message: "Invalid data" });
-  }
+        if (
+            !date ||
+            !service ||
+            !Array.isArray(service) ||
+            service.length === 0
+        ) {
+            return res
+                .status(400)
+                .json({ success: false, message: "Invalid data" });
+        }
 
-  try {
-    const appointment = await Appointment.findById(appointmentId);
-    if (!appointment) {
-      return res.status(404).json({ success: false, message: "Appointment not found" });
+        try {
+            const appointment = await Appointment.findById(appointmentId);
+            if (!appointment) {
+                return res
+                    .status(404)
+                    .json({ success: false, message: "Appointment not found" });
+            }
+
+            const visit = appointment.visits.id(visitId);
+            if (!visit) {
+                return res
+                    .status(404)
+                    .json({ success: false, message: "Visit not found" });
+            }
+
+            // Update fields
+            visit.date = new Date(date);
+            visit.service = service.map((s) => ({
+                id: s.id || null,
+                name: s.name,
+                amount: s.amount || 0,
+            }));
+            visit.amount =
+                amount ||
+                visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
+
+            // ✅ Handle payment_type safely
+            if (
+                payment_type &&
+                ["Cash", "Card", "UPI", "Other"].includes(payment_type)
+            ) {
+                visit.payment_type = payment_type;
+            }
+
+            await appointment.save();
+
+            res.json({ success: true, visit });
+        } catch (err) {
+            console.error("Error updating visit:", err); // ✅ full error log
+            res.status(500).json({
+                success: false,
+                message: err.message || "Server error",
+            });
+        }
     }
-
-    const visit = appointment.visits.id(visitId);
-    if (!visit) {
-      return res.status(404).json({ success: false, message: "Visit not found" });
-    }
-
-    // Update fields
-    visit.date = new Date(date);
-    visit.service = service.map(s => ({
-      id: s.id || null,
-      name: s.name,
-      amount: s.amount || 0,
-    }));
-    visit.amount = amount || visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
-
-    // ✅ Handle payment_type safely
-    if (payment_type && ["Cash", "Card", "UPI", "Other"].includes(payment_type)) {
-      visit.payment_type = payment_type;
-    }
-
-    await appointment.save();
-
-    res.json({ success: true, visit });
-  } catch (err) {
-    console.error("Error updating visit:", err); // ✅ full error log
-    res.status(500).json({ success: false, message: err.message || "Server error" });
-  }
-});
+);
 
 router.post("/generate-invoice/:appointmentId/:visitId", async (req, res) => {
-  try {
-    const { appointmentId, visitId } = req.params;
+    try {
+        const { appointmentId, visitId } = req.params;
 
-    // Find current max invoice number across all appointments
-    const lastInvoice = await Appointment.findOne(
-      { "visits.invoiceNumber": { $ne: null } },
-      { "visits.$": 1 }
-    ).sort({ "visits.invoiceNumber": -1 });
+        // Find current max invoice number across all appointments
+        const lastInvoice = await Appointment.findOne(
+            { "visits.invoiceNumber": { $ne: null } },
+            { "visits.$": 1 }
+        ).sort({ "visits.invoiceNumber": -1 });
 
-    let newInvoiceNumber = 1;
-    if (lastInvoice && lastInvoice.visits[0].invoiceNumber) {
-      newInvoiceNumber = lastInvoice.visits[0].invoiceNumber + 1;
+        let newInvoiceNumber = 1;
+        if (lastInvoice && lastInvoice.visits[0].invoiceNumber) {
+            newInvoiceNumber = lastInvoice.visits[0].invoiceNumber + 1;
+        }
+
+        // Update the specific visit with new invoice number
+        const appointment = await Appointment.findOneAndUpdate(
+            { _id: appointmentId, "visits._id": visitId },
+            { $set: { "visits.$.invoiceNumber": newInvoiceNumber } },
+            { new: true }
+        );
+
+        res.json({
+            success: true,
+            invoiceNumber: newInvoiceNumber,
+            appointment,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-
-    // Update the specific visit with new invoice number
-    const appointment = await Appointment.findOneAndUpdate(
-      { _id: appointmentId, "visits._id": visitId },
-      { $set: { "visits.$.invoiceNumber": newInvoiceNumber } },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      invoiceNumber: newInvoiceNumber,
-      appointment,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
 });
-
 
 router.post("/addappointment/:id", async (req, res) => {
     try {

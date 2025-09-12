@@ -16,15 +16,14 @@ const AppointmentSchema = new Schema({
                     id: { type: Schema.Types.ObjectId, ref: "Service" },
                     name: String,
                     amount: Number,
-                    payment_type: {
-                        type: String,
-                        enum: ["Cash", "Card", "UPI", "Other"],
-                        default: "Cash"
-                    },
                 },
             ],
             amount: { type: Number, default: 0 },
-
+            payment_type: {
+                type: String,
+                enum: ["Cash", "Card", "UPI", "Other"],
+                default: "Cash",
+            },
             invoiceNumber: { type: Number, default: null },
         },
     ],
