@@ -132,7 +132,7 @@ const AddPatient = (props) => {
                         })),
                         amount,
                         date: appointmentDate,
-                        payment_type: paymentType, // ✅ include
+                        paymentType: paymentType, // ✅ include
                     }),
                 }
             );
