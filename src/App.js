@@ -9,7 +9,6 @@ import Navbar from "./components/Navbar";
 import Alert from "./components/Alert";
 import PatientDetails from "./components/PatientDetails";
 
-
 function App() {
     const [alert, setalert] = useState(null);
     const showAlert = (message, type) => {

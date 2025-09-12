@@ -4,23 +4,21 @@ const AddServices = (props) => {
     const [service, setService] = useState({ name: "", amount: "" });
     const { name, amount } = service;
 
-const API_BASE_URL = process.env.NODE_ENV === "production"
-  ? "https://gmsc-backend.onrender.com"
-  : "http://localhost:5001";
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
 
     const handlesubmit = async (e) => {
         e.preventDefault();
-        const response = await fetch(
-            `${API_BASE_URL}/api/auth/createservice`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-type": "application/json",
-                    "auth-token":localStorage.getItem("token")
-                },
-                body: JSON.stringify({ name, amount }),
-            }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/auth/createservice`, {
+            method: "POST",
+            headers: {
+                "Content-type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify({ name, amount }),
+        });
         const json = await response.json();
         //console.log(json);
         if (json.success) {

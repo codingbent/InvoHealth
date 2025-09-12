@@ -4,7 +4,7 @@ const Doc = require("../models/Doc");
 const Patient = require("../models/Patient");
 const Service = require("../models/Service");
 const Appointment = require("../models/Appointment");
-const Counter = require("../models/Counter"); 
+const Counter = require("../models/Counter");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
@@ -340,7 +340,7 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
 // POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount, payment_type } = req.body;
+        const { service, amount, payment_type, doctorId } = req.body; // doctorId must be passed from frontend
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
@@ -353,31 +353,35 @@ router.post("/addappointment/:id", async (req, res) => {
             return res.status(400).json({ message: "Amount is required" });
         }
 
+        if (!doctorId) {
+            return res.status(400).json({ message: "Doctor ID is required" });
+        }
+
         // Convert current time to IST
         const now = new Date();
-        const istOffset = 5.5 * 60; // IST offset in minutes
+        const istOffset = 5.5 * 60;
         const istDate = new Date(now.getTime() + istOffset * 60000);
 
-        // 1️⃣ Get the next invoice number
+        // 1️⃣ Get next invoice number **for this doctor**
         const counter = await Counter.findByIdAndUpdate(
-            "invoiceNumber",
+            doctorId, // use doctor ID as _id
             { $inc: { seq: 1 } },
             { new: true, upsert: true }
         );
 
-        // 2️⃣ Create the new visit with invoice number
+        // 2️⃣ Create new visit
         const newVisit = {
             date: istDate,
             service,
             amount,
             payment_type,
-            invoiceNumber: counter.seq, // ✅ assign here
+            invoiceNumber: counter.seq,
         };
 
-        // 3️⃣ Add the visit
+        // 3️⃣ Add the visit to patient appointment
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
-            { $push: { visits: newVisit } },
+            { $push: { visits: newVisit }, $set: { doctor: doctorId } }, // ensure doctor is saved
             { upsert: true, new: true }
         );
 

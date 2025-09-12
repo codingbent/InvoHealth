@@ -189,7 +189,7 @@ const AddAppointment = (props) => {
                     <div className="mb-3">
                         <label className="form-label">Services</label>
                         <ServiceList
-                        services={allServices}
+                            services={allServices}
                             onSelect={(serviceObj, checked) => {
                                 setServices((prev) =>
                                     checked

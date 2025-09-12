@@ -4,11 +4,12 @@ const Counter = require("./Counter");
 
 const AppointmentSchema = new Schema({
     patient: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: "Patient",
         required: true,
         unique: true,
     },
+    doctor: { type: Schema.Types.ObjectId, ref: "Doc", required: true }, // track doctor
     visits: [
         {
             date: { type: Date, default: Date.now },
@@ -30,58 +31,40 @@ const AppointmentSchema = new Schema({
     ],
 });
 
-// Pre-save middleware: assign invoiceNumber only if missing
-AppointmentSchema.pre("save", async function (next) {
-    try {
-        if (this.visits && this.visits.length > 0) {
-            for (let visit of this.visits) {
-                if (!visit.invoiceNumber) {
-                    const counter = await Counter.findByIdAndUpdate(
-                        "invoiceNumber",
-                        { $inc: { seq: 1 } },
-                        { new: true, upsert: true }
-                    );
-                    visit.invoiceNumber = counter.seq;
-                }
-            }
-        }
-        next();
-    } catch (err) {
-        console.error("Error assigning invoice number:", err);
-        next(err);
-    }
-});
+// Helper to get next invoice number for a doctor
+async function getNextInvoiceNumber(doctorId) {
+    const counter = await Counter.findByIdAndUpdate(
+        doctorId, // using doctorId as _id
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+    return counter.seq;
+}
 
-// Static method to add a new visit
+// Static method to add visit
 AppointmentSchema.statics.addVisit = async function (
     patientId,
+    doctorId,
     service,
     amount,
     payment_type
 ) {
     const now = new Date();
-    const istOffset = 5.5 * 60; // IST in minutes
-    const istDate = new Date(now.getTime() + istOffset * 60000);
 
-    // Get next invoice number
-    const counter = await Counter.findByIdAndUpdate(
-        "invoiceNumber",
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-    );
+    // Get invoice number **for this doctor**
+    const invoiceNumber = await getNextInvoiceNumber(doctorId);
 
     const newVisit = {
-        date: istDate,
+        date: now,
         service,
         amount,
         payment_type,
-        invoiceNumber: counter.seq,
+        invoiceNumber,
     };
 
-    // Add visit to existing appointment (or create new appointment if not exists)
     const appointment = await this.findOneAndUpdate(
         { patient: patientId },
-        { $push: { visits: newVisit } },
+        { $push: { visits: newVisit }, $set: { doctor: doctorId } },
         { upsert: true, new: true }
     );
 
