@@ -130,6 +130,7 @@ const AddPatient = (props) => {
                         amount,
                         date: appointmentDate,
                         payment_type,
+                        doctorId: selectedDoctorId,
                     }),
                 }
             );
