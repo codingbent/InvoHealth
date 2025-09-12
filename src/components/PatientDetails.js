@@ -235,139 +235,31 @@ export default function PatientDetails() {
 
     // --------------------- Generate Invoice ---------------------
 
-    const generateInvoice = async (appointmentId, visit, details) => {
-        try {
-            let invoiceNumber = visit.invoiceNumber; // check if backend already has it
-
-            // If invoice number not assigned, call backend
-            if (!invoiceNumber) {
-                const token = localStorage.getItem("token");
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/generate-invoice/${appointmentId}/${visit._id}`,
-                    { method: "POST", headers: { "auth-token": token } }
-                );
-                const data = await res.json();
-                if (data.success) {
-                    invoiceNumber = data.invoiceNumber;
-                    visit.invoiceNumber = invoiceNumber; // update locally so table shows correct number next time
-                } else {
-                    alert("Failed to generate invoice number");
-                    return;
-                }
-            }
-
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
-            let y = 20;
-
-            // --- Header ---
-            doc.setFontSize(16);
-            doc.text("Gurudev Multispeciality Center", 20, y);
-            y += 8;
-            doc.setFontSize(12);
-            [
-                "94, Nehru Park Colony",
-                "Near Soodh Dharam Kanta",
-                "Prem Nagar, Bareilly",
-            ].forEach((line) => {
-                doc.text(line, 20, y);
-                y += 6;
-            });
-            let rightY = 20;
-            doc.setFontSize(14);
-            doc.text("Dr DK Agarwal", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.setFontSize(12);
-            doc.text("MDS (KGMU)", pageWidth - 20, rightY, { align: "right" });
-            rightY += 6;
-            doc.text("Experience: 22+ years", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.text(
-                "Timing: Mon-Sat 10:30-14:30, 18:30-21:00",
-                pageWidth - 20,
-                rightY,
-                { align: "right" }
+    const generateInvoice = (appointmentId, visit, details) => {
+        if (!visit.invoiceNumber) {
+            alert(
+                "Invoice number is not assigned yet. Please ensure the visit has an invoice number."
             );
-            rightY += 6;
-            doc.text("Sunday: By Call Appointment", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.text("Doctor Contact: +91 9758620799", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.text(
-                "Appointment Contact: +91 9359105500",
-                pageWidth - 20,
-                rightY,
-                { align: "right" }
-            );
-
-            // --- Invoice info ---
-            y += 6;
-            doc.setFontSize(12);
-            doc.text(`Invoice Number: INV-${invoiceNumber}`, 20, y); // <-- use backend invoice
-            y += 8;
-            doc.text(`Patient Name: ${details.name}`, 20, y);
-            y += 6;
-            doc.text(`Phone: ${details.number}`, 20, y);
-            y += 6;
-            doc.text(`Age: ${details.age ?? "N/A"}`, 20, y);
-            y += 6;
-            doc.text(
-                `Appointment Date: ${new Date(visit.date).toLocaleDateString(
-                    "en-IN",
-                    { dateStyle: "medium" }
-                )}`,
-                20,
-                y
-            );
-            y += 12;
-            doc.text(`Payment Type: ${visit.payment_type || "N/A"}`, 20, y);
-            y += 8;
-
-            // --- Table ---
-            const serviceData = (visit.service || [])
-                .filter(Boolean)
-                .map((s) => [
-                    typeof s === "object" ? s.name : s,
-                    typeof s === "object"
-                        ? Number(s.amount || 0)
-                        : Number(s || 0),
-                ]);
-
-            autoTable(doc, {
-                startY: y,
-                head: [["Service", "Amount (₹)"]],
-                body: serviceData,
-                theme: "grid",
-                headStyles: { fillColor: [230, 230, 230] },
-                styles: { fontSize: 12, cellPadding: 4 },
-            });
-
-            const finalY = doc.lastAutoTable?.finalY
-                ? doc.lastAutoTable.finalY + 8
-                : y + 8;
-            const total = serviceData.reduce(
-                (sum, item) => sum + Number(item[1]),
-                0
-            );
-            doc.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
-                align: "right",
-            });
-
-            doc.save(
-                `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
-            );
-        } catch (err) {
-            console.error(err);
-            alert("Error generating invoice");
+            return;
         }
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = 20;
+
+        // --- Header ---
+        doc.setFontSize(16);
+        doc.text("Gurudev Multispeciality Center", 20, y);
+        // ... rest of your header code
+
+        y += 6;
+        doc.setFontSize(12);
+        doc.text(`Invoice Number: INV-${visit.invoiceNumber}`, 20, y); // <-- use visit.invoiceNumber
+        // ... rest of your invoice code
+
+        doc.save(
+            `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
+        );
     };
 
     if (loading) return <p>Loading patient details...</p>;

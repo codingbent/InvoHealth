@@ -119,12 +119,10 @@ router.post(
             });
 
             if (existingService) {
-                return res
-                    .status(400)
-                    .json({
-                        success: false,
-                        error: "Service already exists for this doctor",
-                    });
+                return res.status(400).json({
+                    success: false,
+                    error: "Service already exists for this doctor",
+                });
             }
 
             const service = await Service.create({
@@ -468,42 +466,10 @@ router.put(
     }
 );
 
-router.post("/generate-invoice/:appointmentId/:visitId", async (req, res) => {
-    try {
-        const { appointmentId, visitId } = req.params;
-
-        // Find current max invoice number across all appointments
-        const lastInvoice = await Appointment.findOne(
-            { "visits.invoiceNumber": { $ne: null } },
-            { "visits.$": 1 }
-        ).sort({ "visits.invoiceNumber": -1 });
-
-        let newInvoiceNumber = 1;
-        if (lastInvoice && lastInvoice.visits[0].invoiceNumber) {
-            newInvoiceNumber = lastInvoice.visits[0].invoiceNumber + 1;
-        }
-
-        // Update the specific visit with new invoice number
-        const appointment = await Appointment.findOneAndUpdate(
-            { _id: appointmentId, "visits._id": visitId },
-            { $set: { "visits.$.invoiceNumber": newInvoiceNumber } },
-            { new: true }
-        );
-
-        res.json({
-            success: true,
-            invoiceNumber: newInvoiceNumber,
-            appointment,
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-});
-
+// POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount } = req.body;
+        const { service, amount, payment_type } = req.body;
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
@@ -521,19 +487,27 @@ router.post("/addappointment/:id", async (req, res) => {
         const istOffset = 5.5 * 60; // IST offset in minutes
         const istDate = new Date(now.getTime() + istOffset * 60000);
 
-        // Find appointment record for this patient and add new visit
+        // ✅ Get next invoice number from Counter
+        const counter = await Counter.findByIdAndUpdate(
+            "invoiceNumber",
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+
+        // Prepare new visit with invoiceNumber
+        const newVisit = {
+            date: istDate,
+            service,
+            amount,
+            payment_type,
+            invoiceNumber: counter.seq, // automatically assigned
+        };
+
+        // Add visit to Appointment (create if not exists)
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
-            {
-                $push: {
-                    visits: {
-                        date: istDate,
-                        service,
-                        amount,
-                    },
-                },
-            },
-            { upsert: true, new: true } // Create if not exists
+            { $push: { visits: newVisit } },
+            { upsert: true, new: true }
         );
 
         res.status(201).json({
