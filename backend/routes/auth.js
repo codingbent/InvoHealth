@@ -92,11 +92,11 @@ router.post(
             success = true;
             res.json({ success, patient });
         } catch (err) {
-            console.error(err.message);
-            res.status(500).json({
-                success,
-                error: "Server error, try again later",
-            });
+    console.error("AddPatient error:", err); // full error object with stack
+    res.status(500).json({
+        success,
+        error: err.message, // send actual reason back to frontend
+    });
         }
     }
 );
