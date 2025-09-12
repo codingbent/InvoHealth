@@ -344,29 +344,44 @@ router.post("/addappointment/:id", async (req, res) => {
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
-            return res.status(400).json({ message: "Service must be an array" });
+            return res
+                .status(400)
+                .json({ message: "Service must be an array" });
         }
-
         if (amount == null) {
             return res.status(400).json({ message: "Amount is required" });
         }
 
-        // ✅ If doctorId is not passed, try to get it from patient
+        // Determine doctor ID
         let finalDoctorId = doctorId;
         if (!finalDoctorId) {
             const patient = await Patient.findById(patientId);
-            if (!patient) return res.status(404).json({ message: "Patient not found" });
-            if (!patient.doctor) return res.status(400).json({ message: "Doctor ID is required" });
+            if (!patient)
+                return res.status(404).json({ message: "Patient not found" });
+            if (!patient.doctor)
+                return res
+                    .status(400)
+                    .json({ message: "Doctor ID is required" });
             finalDoctorId = patient.doctor;
         }
 
-        // Use schema static method to add visit
+        // Generate per-doctor invoice number
+        const counterId = `invoice_${finalDoctorId}`;
+        const counter = await Counter.findByIdAndUpdate(
+            counterId,
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        const invoiceNumber = counter.seq;
+
+        // Add visit/appointment using static method
         const appointment = await Appointment.addVisit(
             patientId,
             finalDoctorId,
             service,
             amount,
-            payment_type
+            payment_type,
+            invoiceNumber // Pass the per-doctor invoice number
         );
 
         res.status(201).json({
