@@ -340,49 +340,33 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
 // POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount, payment_type, doctorId } = req.body; // doctorId must be passed from frontend
+        const { service, amount, payment_type, doctorId } = req.body;
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
-            return res
-                .status(400)
-                .json({ message: "Service must be an array" });
+            return res.status(400).json({ message: "Service must be an array" });
         }
 
         if (amount == null) {
             return res.status(400).json({ message: "Amount is required" });
         }
 
-        if (!doctorId) {
-            return res.status(400).json({ message: "Doctor ID is required" });
+        // ✅ If doctorId is not passed, try to get it from patient
+        let finalDoctorId = doctorId;
+        if (!finalDoctorId) {
+            const patient = await Patient.findById(patientId);
+            if (!patient) return res.status(404).json({ message: "Patient not found" });
+            if (!patient.doctor) return res.status(400).json({ message: "Doctor ID is required" });
+            finalDoctorId = patient.doctor;
         }
 
-        // Convert current time to IST
-        const now = new Date();
-        const istOffset = 5.5 * 60;
-        const istDate = new Date(now.getTime() + istOffset * 60000);
-
-        // 1️⃣ Get next invoice number **for this doctor**
-        const counter = await Counter.findByIdAndUpdate(
-            doctorId, // use doctor ID as _id
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
-
-        // 2️⃣ Create new visit
-        const newVisit = {
-            date: istDate,
+        // Use schema static method to add visit
+        const appointment = await Appointment.addVisit(
+            patientId,
+            finalDoctorId,
             service,
             amount,
-            payment_type,
-            invoiceNumber: counter.seq,
-        };
-
-        // 3️⃣ Add the visit to patient appointment
-        const appointment = await Appointment.findOneAndUpdate(
-            { patient: patientId },
-            { $push: { visits: newVisit }, $set: { doctor: doctorId } }, // ensure doctor is saved
-            { upsert: true, new: true }
+            payment_type
         );
 
         res.status(201).json({
@@ -391,7 +375,7 @@ router.post("/addappointment/:id", async (req, res) => {
             appointment,
         });
     } catch (err) {
-        console.error(err.message);
+        console.error("Add Appointment Error:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
