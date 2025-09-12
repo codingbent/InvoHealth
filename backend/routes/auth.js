@@ -466,7 +466,6 @@ router.put(
     }
 );
 
-// POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
         const { service, amount, payment_type } = req.body;
@@ -482,32 +481,11 @@ router.post("/addappointment/:id", async (req, res) => {
             return res.status(400).json({ message: "Amount is required" });
         }
 
-        // Convert current time to IST
-        const now = new Date();
-        const istOffset = 5.5 * 60; // IST offset in minutes
-        const istDate = new Date(now.getTime() + istOffset * 60000);
-
-        // ✅ Get next invoice number from Counter
-        const counter = await Counter.findByIdAndUpdate(
-            "invoiceNumber",
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
-
-        // Prepare new visit with invoiceNumber
-        const newVisit = {
-            date: istDate,
+        const appointment = await Appointment.addVisit(
+            patientId,
             service,
             amount,
-            payment_type,
-            invoiceNumber: counter.seq, // automatically assigned
-        };
-
-        // Add visit to Appointment (create if not exists)
-        const appointment = await Appointment.findOneAndUpdate(
-            { patient: patientId },
-            { $push: { visits: newVisit } },
-            { upsert: true, new: true }
+            payment_type
         );
 
         res.status(201).json({
@@ -516,7 +494,7 @@ router.post("/addappointment/:id", async (req, res) => {
             appointment,
         });
     } catch (err) {
-        console.error(err.message);
+        console.error(err);
         res.status(500).json({ message: "Server error" });
     }
 });
