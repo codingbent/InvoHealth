@@ -18,12 +18,12 @@ const Signup = (props) => {
         pincode: "",
         gstNumber: "",
         experience: "",
-        timings: [],
+        timings: [], // updated timings format
     });
 
     let navigate = useNavigate();
 
-    // Handle slot add/remove
+    // Handle timing add/remove/update
     const addDay = () => {
         setcredentials({
             ...credentials,
@@ -61,9 +61,14 @@ const Signup = (props) => {
         setcredentials({ ...credentials, timings: updated });
     };
 
+    const updateNote = (dayIndex, value) => {
+        const updated = [...credentials.timings];
+        updated[dayIndex].note = value;
+        setcredentials({ ...credentials, timings: updated });
+    };
+
     const handlesubmit = async (e) => {
         e.preventDefault();
-
         const { name, email, password, cpassword } = credentials;
 
         if (password !== cpassword) {
@@ -76,65 +81,21 @@ const Signup = (props) => {
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001";
 
-        // Prepare payload for API
-        const payload = {
-            name: credentials.name,
-            email: credentials.email,
-            password: credentials.password,
-            clinicName: credentials.clinicName,
-            phone: credentials.phone,
-            secondaryPhone: credentials.secondaryPhone || "",
-            address: {
-                street: credentials.street,
-                street2: credentials.street2 || "",
-                street3: credentials.street3 || "",
-                city: credentials.city,
-                state: credentials.state,
-                pincode: credentials.pincode,
-            },
-            gstNumber: credentials.gstNumber || "",
-            experience: credentials.experience || "",
-            timings: credentials.timings || [],
-        };
+        const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(credentials),
+        });
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: credentials.name,
-                    email: credentials.email,
-                    password: credentials.password,
-                    clinicName: credentials.clinicName,
-                    phone: credentials.phone,
-                    secondaryPhone: credentials.secondaryPhone,
-                    gstNumber: credentials.gstNumber,
-                    experience: credentials.experience,
-                    timings: credentials.timings,
-                    address: {
-                        street: credentials.street,
-                        street2: credentials.street2,
-                        street3: credentials.street3,
-                        city: credentials.city,
-                        state: credentials.state,
-                        pincode: credentials.pincode,
-                    },
-                }),
-            });
+        const json = await response.json();
 
-            const json = await response.json();
-
-            if (json.success) {
-                localStorage.setItem("token", json.authtoken);
-                localStorage.setItem("name", name);
-                navigate("/");
-                props.showAlert("Successfully Signed up", "success");
-            } else {
-                props.showAlert(json.error || "Invalid input", "danger");
-            }
-        } catch (err) {
-            console.error(err);
-            props.showAlert("Server error", "danger");
+        if (json.success) {
+            localStorage.setItem("token", json.authtoken);
+            localStorage.setItem("name", name);
+            navigate("/");
+            props.showAlert("Successfully Signed up", "success");
+        } else {
+            props.showAlert(json.error || "Invalid input", "danger");
         }
     };
 
@@ -303,15 +264,17 @@ const Signup = (props) => {
                     <h5>Doctor Timings</h5>
                     {credentials.timings.map((day, dayIndex) => (
                         <div key={dayIndex} className="border p-3 mb-2 rounded">
-                            <div className="d-flex justify-content-between align-items-center">
+                            {/* Day */}
+                            <div className="d-flex justify-content-between align-items-center mb-2">
                                 <input
                                     type="text"
-                                    className="form-control mb-2"
+                                    className="form-control"
                                     placeholder="Day (e.g. Monday)"
                                     value={day.day}
                                     onChange={(e) =>
                                         updateDay(dayIndex, e.target.value)
                                     }
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -321,37 +284,29 @@ const Signup = (props) => {
                                     Remove Day
                                 </button>
                             </div>
+
+                            {/* Slots */}
                             {day.slots.map((slot, slotIndex) => (
                                 <div
                                     key={slotIndex}
                                     className="d-flex mb-2 align-items-center"
                                 >
                                     <input
-                                        type="time"
-                                        className="form-control me-2"
-                                        value={slot.start}
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Slot (e.g. 10:00-12:00)"
+                                        value={slot}
                                         onChange={(e) =>
-                                            updateSlot(dayIndex, slotIndex, {
-                                                ...slot,
-                                                start: e.target.value,
-                                            })
-                                        }
-                                    />
-                                    <span className="mx-1">to</span>
-                                    <input
-                                        type="time"
-                                        className="form-control me-2"
-                                        value={slot.end}
-                                        onChange={(e) =>
-                                            updateSlot(dayIndex, slotIndex, {
-                                                ...slot,
-                                                end: e.target.value,
-                                            })
+                                            updateSlot(
+                                                dayIndex,
+                                                slotIndex,
+                                                e.target.value
+                                            )
                                         }
                                     />
                                     <button
                                         type="button"
-                                        className="btn btn-danger btn-sm"
+                                        className="btn btn-danger btn-sm ms-2"
                                         onClick={() =>
                                             removeSlot(dayIndex, slotIndex)
                                         }
@@ -361,6 +316,7 @@ const Signup = (props) => {
                                 </div>
                             ))}
 
+                            {/* Add Slot */}
                             <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
@@ -368,8 +324,20 @@ const Signup = (props) => {
                             >
                                 Add Slot
                             </button>
+
+                            {/* Optional Note */}
+                            <input
+                                type="text"
+                                className="form-control mt-2"
+                                placeholder="Optional note (e.g. On Call)"
+                                value={day.note || ""}
+                                onChange={(e) =>
+                                    updateNote(dayIndex, e.target.value)
+                                }
+                            />
                         </div>
                     ))}
+
                     <button
                         type="button"
                         className="btn btn-primary"

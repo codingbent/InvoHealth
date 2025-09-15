@@ -21,16 +21,12 @@ router.post(
         body("password").isLength({ min: 5 }),
         body("clinicName").notEmpty(),
         body("phone").isLength({ min: 10 }),
-        body("experience").notEmpty(),
         body("address.line1").notEmpty(),
         body("address.city").notEmpty(),
         body("address.state").notEmpty(),
         body("address.pincode").isLength({ min: 4 }),
+        body("experience").notEmpty(),
         body("timings").isArray(),
-        body("timings.*.day").notEmpty(),
-        body("timings.*.slots").isArray(),
-        body("timings.*.slots.*.start").notEmpty(),
-        body("timings.*.slots.*.end").notEmpty(),
     ],
     async (req, res) => {
         let success = false;
@@ -40,20 +36,18 @@ router.post(
         }
 
         try {
-            const existingDoc = await Doc.findOne({ email: req.body.email });
-            if (existingDoc) {
+            let doc = await Doc.findOne({ email: req.body.email });
+            if (doc) {
                 return res
                     .status(400)
-                    .json({
-                        success,
-                        error: "Doctor with this email already exists",
-                    });
+                    .json({ success: false, error: "Doctor already exists" });
             }
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-            const doc = await Doc.create({
+            // Create doctor
+            doc = await Doc.create({
                 name: req.body.name,
                 email: req.body.email,
                 password: hashedPassword,
@@ -63,7 +57,11 @@ router.post(
                 address: req.body.address,
                 gstNumber: req.body.gstNumber || "",
                 experience: req.body.experience,
-                timings: req.body.timings,
+                timings: req.body.timings.map((t) => ({
+                    day: t.day,
+                    slots: t.slots || [],
+                    note: t.note || "",
+                })),
             });
 
             const payload = { doc: { id: doc.id } };
@@ -71,11 +69,11 @@ router.post(
 
             success = true;
             res.json({ success, authtoken });
-        } catch (err) {
-            console.error(err.message);
+        } catch (error) {
+            console.error(error.message);
             res.status(500).json({
                 success: false,
-                error: "Internal Server Error",
+                error: "Internal server error",
             });
         }
     }
