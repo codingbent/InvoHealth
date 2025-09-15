@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router-dom";
+
 const Signup = (props) => {
     const [credentials, setcredentials] = useState({
         name: "",
@@ -64,7 +66,7 @@ const Signup = (props) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
     return (
-        <div className="container mt-5">
+        <div className="container mt-3">
             <form onSubmit={handlesubmit}>
                 <div className="mb-3">
                     <label
@@ -206,6 +208,12 @@ const Signup = (props) => {
                         Sign Up
                     </button>
                 </div>
+                <p className="text-center">
+                    Already have an account?{" "}
+                    <Link to="/login" className="text-primary">
+                        Login
+                    </Link>
+                </p>
             </form>
         </div>
     );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom"; // ⬅️ Add this
 import AddServices from "./AddServices";
 import AddPatient from "./AddPatient";
 import PatientList from "./PatientList";
@@ -142,7 +143,12 @@ const Patient = (props) => {
                     </div>
                 </>
             ) : (
-                <h1>Login to see Patient</h1>
+                <div className="text-center mt-5">
+                    <h3 className="mb-3">Login to see Patients</h3>
+                    <Link to="/login" className="btn btn-primary">
+                        Go to Login
+                    </Link>
+                </div>
             )}
         </>
     );
