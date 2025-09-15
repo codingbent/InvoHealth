@@ -293,10 +293,10 @@ export default function PatientDetails() {
                 align: "right",
             });
             rightY += 6;
-            if (doctor.experience) {
+            if (doctor.degree) {
                 docPdf.setFontSize(12);
                 docPdf.text(
-                    `Experience: ${doctor.experience}`,
+                    `${doctor.degree}`,
                     pageWidth - 20,
                     rightY,
                     {
