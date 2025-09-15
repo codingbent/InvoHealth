@@ -293,15 +293,13 @@ export default function PatientDetails() {
                 align: "right",
             });
             rightY += 6;
-            if (doctor.degree) {
+            if (doctor.Degree && doctor.Degree.length > 0) {
                 docPdf.setFontSize(12);
                 docPdf.text(
-                    `${doctor.degree}`,
+                    `Degree: ${doctor.Degree.join(", ")}`,
                     pageWidth - 20,
                     rightY,
-                    {
-                        align: "right",
-                    }
+                    { align: "right" }
                 );
                 rightY += 6;
             }
