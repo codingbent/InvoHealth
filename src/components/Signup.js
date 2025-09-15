@@ -116,6 +116,8 @@ const Signup = (props) => {
             props.showAlert("Successfully Signed up", "success");
         } else {
             props.showAlert(json.error || "Invalid input", "danger");
+            console.log(json);
+            
         }
     };
 
