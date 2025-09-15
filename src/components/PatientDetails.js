@@ -293,7 +293,18 @@ export default function PatientDetails() {
                 align: "right",
             });
             rightY += 6;
-            docPdf.setFontSize(12);
+            if (doctor.experience) {
+                docPdf.setFontSize(12);
+                docPdf.text(
+                    `Experience: ${doctor.experience}`,
+                    pageWidth - 20,
+                    rightY,
+                    {
+                        align: "right",
+                    }
+                );
+                rightY += 6;
+            }
             docPdf.text(`Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
                 align: "right",
             });
