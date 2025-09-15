@@ -18,7 +18,7 @@ const Signup = (props) => {
         pincode: "",
         gstNumber: "",
         experience: "",
-        timings: [], // updated timings format
+        timings: [], // user types "10:00-12:00" etc.
     });
 
     let navigate = useNavigate();
@@ -67,6 +67,20 @@ const Signup = (props) => {
         setcredentials({ ...credentials, timings: updated });
     };
 
+    // Convert slot string "10:00-12:00" to {start, end}
+    const formatTimingsForBackend = () => {
+        return credentials.timings.map((day) => ({
+            day: day.day,
+            slots: day.slots
+                .filter(Boolean) // ignore empty strings
+                .map((slot) => {
+                    const [start, end] = slot.split("-").map((s) => s.trim());
+                    return { start, end };
+                }),
+            note: day.note || "",
+        }));
+    };
+
     const handlesubmit = async (e) => {
         e.preventDefault();
         const { name, email, password, cpassword } = credentials;
@@ -81,10 +95,16 @@ const Signup = (props) => {
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001";
 
+        // Prepare body with formatted timings
+        const bodyToSend = {
+            ...credentials,
+            timings: formatTimingsForBackend(),
+        };
+
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(credentials),
+            body: JSON.stringify(bodyToSend),
         });
 
         const json = await response.json();
@@ -264,7 +284,6 @@ const Signup = (props) => {
                     <h5>Doctor Timings</h5>
                     {credentials.timings.map((day, dayIndex) => (
                         <div key={dayIndex} className="border p-3 mb-2 rounded">
-                            {/* Day */}
                             <div className="d-flex justify-content-between align-items-center mb-2">
                                 <input
                                     type="text"
@@ -285,7 +304,6 @@ const Signup = (props) => {
                                 </button>
                             </div>
 
-                            {/* Slots */}
                             {day.slots.map((slot, slotIndex) => (
                                 <div
                                     key={slotIndex}
@@ -316,7 +334,6 @@ const Signup = (props) => {
                                 </div>
                             ))}
 
-                            {/* Add Slot */}
                             <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
@@ -325,7 +342,6 @@ const Signup = (props) => {
                                 Add Slot
                             </button>
 
-                            {/* Optional Note */}
                             <input
                                 type="text"
                                 className="form-control mt-2"
@@ -347,7 +363,6 @@ const Signup = (props) => {
                     </button>
                 </div>
 
-                {/* Submit */}
                 <div className="mb-3">
                     <button type="submit" className="btn btn-success">
                         Sign Up
