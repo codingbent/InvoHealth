@@ -12,7 +12,7 @@ export default function Navbar(props) {
             <nav className="navbar navbar-expand-lg bg-body-tertiary">
                 <div className="container-fluid">
                     <Link className="navbar-brand" to="/">
-                        GMSC
+                        InvoHealth
                     </Link>
                     <button
                         className="navbar-toggler"
