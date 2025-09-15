@@ -98,6 +98,14 @@ const Signup = (props) => {
         // Prepare body with formatted timings
         const bodyToSend = {
             ...credentials,
+            address: {
+                line1: credentials.street,
+                line2: credentials.street2,
+                line3: credentials.street3,
+                city: credentials.city,
+                state: credentials.state,
+                pincode: credentials.pincode,
+            },
             timings: formatTimingsForBackend(),
         };
 
@@ -117,7 +125,6 @@ const Signup = (props) => {
         } else {
             props.showAlert(json.error || "Invalid input", "danger");
             console.log(json);
-            
         }
     };
 
