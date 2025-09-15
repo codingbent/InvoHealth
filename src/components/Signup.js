@@ -19,7 +19,7 @@ const Signup = (props) => {
         gstNumber: "",
         experience: "",
         timings: [], // user types "10:00-12:00" etc.,
-        degree: [],
+        degree: "",
     });
 
     let navigate = useNavigate();
@@ -384,19 +384,11 @@ const Signup = (props) => {
                         id="degree"
                         name="degree"
                         placeholder="Enter degrees, comma separated"
-                        value={
-                            Array.isArray(credentials.degree)
-                                ? credentials.degree.join(", ")
-                                : credentials.degree || ""
-                        }
+                        value={credentials.degree || ""}
                         onChange={(e) =>
                             setcredentials({
                                 ...credentials,
-                                degree: e.target.value
-                                    ? e.target.value
-                                          .split(",")
-                                          .map((d) => d.trim())
-                                    : [],
+                                degree: e.target.value, // store as string directly
                             })
                         }
                         required
