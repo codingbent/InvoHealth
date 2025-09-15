@@ -63,6 +63,7 @@ const Signup = (props) => {
 
     const handlesubmit = async (e) => {
         e.preventDefault();
+
         const { name, email, password, cpassword } = credentials;
 
         if (password !== cpassword) {
@@ -75,21 +76,65 @@ const Signup = (props) => {
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001";
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(credentials),
-        });
+        // Prepare payload for API
+        const payload = {
+            name: credentials.name,
+            email: credentials.email,
+            password: credentials.password,
+            clinicName: credentials.clinicName,
+            phone: credentials.phone,
+            secondaryPhone: credentials.secondaryPhone || "",
+            address: {
+                street: credentials.street,
+                street2: credentials.street2 || "",
+                street3: credentials.street3 || "",
+                city: credentials.city,
+                state: credentials.state,
+                pincode: credentials.pincode,
+            },
+            gstNumber: credentials.gstNumber || "",
+            experience: credentials.experience || "",
+            timings: credentials.timings || [],
+        };
 
-        const json = await response.json();
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: credentials.name,
+                    email: credentials.email,
+                    password: credentials.password,
+                    clinicName: credentials.clinicName,
+                    phone: credentials.phone,
+                    secondaryPhone: credentials.secondaryPhone,
+                    gstNumber: credentials.gstNumber,
+                    experience: credentials.experience,
+                    timings: credentials.timings,
+                    address: {
+                        street: credentials.street,
+                        street2: credentials.street2,
+                        street3: credentials.street3,
+                        city: credentials.city,
+                        state: credentials.state,
+                        pincode: credentials.pincode,
+                    },
+                }),
+            });
 
-        if (json.success) {
-            localStorage.setItem("token", json.authtoken);
-            localStorage.setItem("name", name);
-            navigate("/");
-            props.showAlert("Successfully Signed up", "success");
-        } else {
-            props.showAlert(json.error || "Invalid input", "danger");
+            const json = await response.json();
+
+            if (json.success) {
+                localStorage.setItem("token", json.authtoken);
+                localStorage.setItem("name", name);
+                navigate("/");
+                props.showAlert("Successfully Signed up", "success");
+            } else {
+                props.showAlert(json.error || "Invalid input", "danger");
+            }
+        } catch (err) {
+            console.error(err);
+            props.showAlert("Server error", "danger");
         }
     };
 

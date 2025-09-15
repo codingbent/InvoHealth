@@ -13,7 +13,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const authMiddleware = require("../middleware/fetchuser"); // if using auth
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
-
 router.post(
     "/createdoc",
     [
@@ -22,15 +21,16 @@ router.post(
         body("password").isLength({ min: 5 }),
         body("clinicName").notEmpty(),
         body("phone").isLength({ min: 10 }),
-        body("address.street").notEmpty(),
+        body("experience").notEmpty(),
+        body("address.line1").notEmpty(),
         body("address.city").notEmpty(),
         body("address.state").notEmpty(),
         body("address.pincode").isLength({ min: 4 }),
-        // Optional validations
-        body("secondaryPhone").optional().isLength({ min: 10 }),
-        body("experience").optional().isString(),
-        body("timings").optional().isArray(),
-        body("gstNumber").optional().isString(),
+        body("timings").isArray(),
+        body("timings.*.day").notEmpty(),
+        body("timings.*.slots").isArray(),
+        body("timings.*.slots.*.start").notEmpty(),
+        body("timings.*.slots.*.end").notEmpty(),
     ],
     async (req, res) => {
         let success = false;
@@ -40,35 +40,30 @@ router.post(
         }
 
         try {
-            let doc = await Doc.findOne({ email: req.body.email });
-            if (doc) {
+            const existingDoc = await Doc.findOne({ email: req.body.email });
+            if (existingDoc) {
                 return res
                     .status(400)
-                    .json({ success: false, error: "Doctor already exists" });
+                    .json({
+                        success,
+                        error: "Doctor with this email already exists",
+                    });
             }
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-            // Create the doctor with new fields
-            doc = await Doc.create({
+            const doc = await Doc.create({
                 name: req.body.name,
                 email: req.body.email,
                 password: hashedPassword,
                 clinicName: req.body.clinicName,
                 phone: req.body.phone,
-                secondaryPhone: req.body.secondaryPhone || "",
-                address: {
-                    street: req.body.address.street,
-                    street2: req.body.address.street2 || "",
-                    street3: req.body.address.street3 || "",
-                    city: req.body.address.city,
-                    state: req.body.address.state,
-                    pincode: req.body.address.pincode,
-                },
+                appointmentPhone: req.body.appointmentPhone || "",
+                address: req.body.address,
                 gstNumber: req.body.gstNumber || "",
-                experience: req.body.experience || "",
-                timings: req.body.timings || [],
+                experience: req.body.experience,
+                timings: req.body.timings,
             });
 
             const payload = { doc: { id: doc.id } };
@@ -76,11 +71,11 @@ router.post(
 
             success = true;
             res.json({ success, authtoken });
-        } catch (error) {
-            console.error(error.message);
+        } catch (err) {
+            console.error(err.message);
             res.status(500).json({
                 success: false,
-                error: "Internal server error",
+                error: "Internal Server Error",
             });
         }
     }
