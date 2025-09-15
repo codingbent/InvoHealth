@@ -129,11 +129,6 @@ const Signup = (props) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <button type="submit" className="btn btn-primary">
-                        Sign Up
-                    </button>
-                </div>
-                <div className="mb-3">
                     <label className="form-label">Clinic / Hospital Name</label>
                     <input
                         type="text"
@@ -205,6 +200,11 @@ const Signup = (props) => {
                         name="gstNumber"
                         onChange={onChange}
                     />
+                </div>
+                <div className="mb-3">
+                    <button type="submit" className="btn btn-primary">
+                        Sign Up
+                    </button>
                 </div>
             </form>
         </div>
