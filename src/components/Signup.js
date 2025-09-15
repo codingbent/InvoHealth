@@ -19,7 +19,7 @@ const Signup = (props) => {
         gstNumber: "",
         experience: "",
         timings: [], // user types "10:00-12:00" etc.,
-        degree:[]
+        degree: [],
     });
 
     let navigate = useNavigate();
@@ -108,7 +108,7 @@ const Signup = (props) => {
                 pincode: credentials.pincode,
             },
             timings: formatTimingsForBackend(),
-            degree: credentials.degree.split(",").map(d => d.trim())
+            degree: credentials.degree.split(",").map((d) => d.trim()),
         };
 
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
@@ -383,12 +383,16 @@ const Signup = (props) => {
                         className="form-control"
                         id="degree"
                         name="degree"
-                        placeholder="Enter Your degree"
-                        value={credentials.degree || ""}
+                        placeholder="Enter degrees, comma separated"
+                        value={credentials.degree?.join(", ") || ""}
                         onChange={(e) =>
                             setcredentials({
                                 ...credentials,
-                                degree: e.target.value,
+                                degree: e.target.value
+                                    ? e.target.value
+                                          .split(",")
+                                          .map((d) => d.trim())
+                                    : [],
                             })
                         }
                         required
