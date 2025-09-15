@@ -285,48 +285,24 @@ const Signup = (props) => {
                                 </button>
                             </div>
 
-                            {/* Slots with start/end times */}
+                            {/* Slots */}
                             {day.slots.map((slot, slotIndex) => (
                                 <div
                                     key={slotIndex}
-                                    className="d-flex mb-2 align-items-center gap-2"
+                                    className="d-flex mb-2 align-items-center"
                                 >
                                     <input
-                                        type="time"
+                                        type="text"
                                         className="form-control"
-                                        value={slot.start || ""}
-                                        onChange={(e) => {
-                                            const updated = [
-                                                ...credentials.timings,
-                                            ];
-                                            updated[dayIndex].slots[
-                                                slotIndex
-                                            ].start = e.target.value;
-                                            setcredentials({
-                                                ...credentials,
-                                                timings: updated,
-                                            });
-                                        }}
-                                        required
-                                    />
-                                    <span>to</span>
-                                    <input
-                                        type="time"
-                                        className="form-control"
-                                        value={slot.end || ""}
-                                        onChange={(e) => {
-                                            const updated = [
-                                                ...credentials.timings,
-                                            ];
-                                            updated[dayIndex].slots[
-                                                slotIndex
-                                            ].end = e.target.value;
-                                            setcredentials({
-                                                ...credentials,
-                                                timings: updated,
-                                            });
-                                        }}
-                                        required
+                                        placeholder="Slot (e.g. 10:00-12:00)"
+                                        value={slot}
+                                        onChange={(e) =>
+                                            updateSlot(
+                                                dayIndex,
+                                                slotIndex,
+                                                e.target.value
+                                            )
+                                        }
                                     />
                                     <button
                                         type="button"
@@ -344,17 +320,7 @@ const Signup = (props) => {
                             <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
-                                onClick={() => {
-                                    const updated = [...credentials.timings];
-                                    updated[dayIndex].slots.push({
-                                        start: "",
-                                        end: "",
-                                    });
-                                    setcredentials({
-                                        ...credentials,
-                                        timings: updated,
-                                    });
-                                }}
+                                onClick={() => addSlot(dayIndex)}
                             >
                                 Add Slot
                             </button>
