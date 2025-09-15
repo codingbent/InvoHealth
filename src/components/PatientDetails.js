@@ -270,9 +270,9 @@ export default function PatientDetails() {
             docPdf.setFontSize(12);
             // Include extended address
             const addressLines = [
-                doctor.address.street,
-                doctor.address.street2,
-                doctor.address.street3,
+                doctor.address.line1,
+                doctor.address.line2,
+                doctor.address.line3,
                 `${doctor.address.city}, ${doctor.address.state}`,
                 `Pincode: ${doctor.address.pincode}`,
             ].filter(Boolean); // remove empty lines
