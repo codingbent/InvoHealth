@@ -572,4 +572,18 @@ router.post(
         }
     }
 );
+
+router.get("/getdoc", fetchuser, async (req, res) => {
+    try {
+        const doc = await Doc.findById(req.doc.id).select("-password");
+        if (!doc) {
+            return res.status(404).json({ success: false, error: "Doctor not found" });
+        }
+        res.json({ success: true, doctor: doc });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
 module.exports = router;

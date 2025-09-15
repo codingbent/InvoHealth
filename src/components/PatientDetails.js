@@ -22,7 +22,22 @@ export default function PatientDetails() {
     const [appointments, setAppointments] = useState([]);
     const [availableServices, setAvailableServices] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [doctor, setDoctor] = useState(null);
 
+    const fetchDoctor = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
+                headers: { "auth-token": token },
+            });
+            const data = await res.json();
+            if (data.success) {
+                setDoctor(data.doctor);
+            }
+        } catch (err) {
+            console.error("Error fetching doctor:", err);
+        }
+    };
     // Appointment edit state
     const [editingAppt, setEditingAppt] = useState(null);
     const [apptData, setApptData] = useState({
@@ -100,6 +115,7 @@ export default function PatientDetails() {
 
     useEffect(() => {
         fetchData();
+        fetchDoctor();
     }, [id]);
 
     const handleChange = (e) =>
@@ -236,85 +252,67 @@ export default function PatientDetails() {
     // --------------------- Generate Invoice ---------------------
     const generateInvoice = (appointmentId, visit, details) => {
         try {
-            const invoiceNumber = visit.invoiceNumber || "N/A";
+            if (!doctor) {
+                alert("Doctor details not loaded yet!");
+                return;
+            }
 
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
+            const invoiceNumber = visit.invoiceNumber || "N/A";
+            const docPdf = new jsPDF();
+            const pageWidth = docPdf.internal.pageSize.getWidth();
             let y = 20;
 
-            // --- Header Left ---
-            doc.setFontSize(16);
-            doc.text("Gurudev Multispeciality Center", 20, y);
+            // --- Clinic Info (Left) ---
+            docPdf.setFontSize(16);
+            docPdf.text(doctor.clinicName, 20, y);
             y += 8;
-            doc.setFontSize(12);
+            docPdf.setFontSize(12);
             [
-                "94, Nehru Park Colony",
-                "Near Soodh Dharam Kanta",
-                "Prem Nagar, Bareilly",
+                doctor.address.street,
+                `${doctor.address.city}, ${doctor.address.state}`,
+                `Pincode: ${doctor.address.pincode}`,
             ].forEach((line) => {
-                doc.text(line, 20, y);
+                docPdf.text(line, 20, y);
                 y += 6;
             });
+            if (doctor.gstNumber) {
+                docPdf.text(`GST: ${doctor.gstNumber}`, 20, y);
+                y += 6;
+            }
 
-            // --- Header Right ---
+            // --- Doctor Info (Right) ---
             let rightY = 20;
-            doc.setFontSize(14);
-            doc.text("Dr DK Agarwal", pageWidth - 20, rightY, {
+            docPdf.setFontSize(14);
+            docPdf.text(doctor.name, pageWidth - 20, rightY, {
                 align: "right",
             });
             rightY += 6;
-            doc.setFontSize(12);
-            doc.text("MDS (KGMU)", pageWidth - 20, rightY, { align: "right" });
-            rightY += 6;
-            doc.text("Experience: 22+ years", pageWidth - 20, rightY, {
+            docPdf.setFontSize(12);
+            docPdf.text(`Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
                 align: "right",
             });
-            rightY += 6;
-            doc.text(
-                "Timing: Mon-Sat 10:30-14:30, 18:30-21:00",
-                pageWidth - 20,
-                rightY,
-                { align: "right" }
-            );
-            rightY += 6;
-            doc.text("Sunday: By Call Appointment", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.text("Doctor Contact: +91 9758620799", pageWidth - 20, rightY, {
-                align: "right",
-            });
-            rightY += 6;
-            doc.text(
-                "Appointment Contact: +91 9359105500",
-                pageWidth - 20,
-                rightY,
-                { align: "right" }
-            );
 
-            // --- Invoice Info ---
+            // --- Patient & Invoice Info ---
             y += 6;
-            doc.setFontSize(12);
-            doc.text(`Invoice Number: INV-${invoiceNumber}`, 20, y);
+            docPdf.setFontSize(12);
+            docPdf.text(`Invoice Number: INV-${invoiceNumber}`, 20, y);
             y += 8;
-            doc.text(`Patient Name: ${details.name}`, 20, y);
+            docPdf.text(`Patient Name: ${details.name}`, 20, y);
             y += 6;
-            doc.text(`Phone: ${details.number}`, 20, y);
+            docPdf.text(`Phone: ${details.number}`, 20, y);
             y += 6;
-            doc.text(`Age: ${details.age ?? "N/A"}`, 20, y);
+            docPdf.text(`Age: ${details.age ?? "N/A"}`, 20, y);
             y += 6;
-            doc.text(
+            docPdf.text(
                 `Appointment Date: ${new Date(visit.date).toLocaleDateString(
                     "en-IN",
-                    {
-                        dateStyle: "medium",
-                    }
+                    { dateStyle: "medium" }
                 )}`,
                 20,
                 y
             );
             y += 12;
-            doc.text(`Payment Type: ${visit.payment_type || "N/A"}`, 20, y);
+            docPdf.text(`Payment Type: ${visit.payment_type || "N/A"}`, 20, y);
             y += 8;
 
             // --- Services Table ---
@@ -327,7 +325,7 @@ export default function PatientDetails() {
                         : Number(s || 0),
                 ]);
 
-            autoTable(doc, {
+            autoTable(docPdf, {
                 startY: y,
                 head: [["Service", "Amount (₹)"]],
                 body: serviceData,
@@ -336,19 +334,19 @@ export default function PatientDetails() {
                 styles: { fontSize: 12, cellPadding: 4 },
             });
 
-            const finalY = doc.lastAutoTable?.finalY
-                ? doc.lastAutoTable.finalY + 8
+            const finalY = docPdf.lastAutoTable?.finalY
+                ? docPdf.lastAutoTable.finalY + 8
                 : y + 8;
             const total = serviceData.reduce(
                 (sum, item) => sum + Number(item[1]),
                 0
             );
-            doc.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
+            docPdf.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
                 align: "right",
             });
 
             // --- Save PDF ---
-            doc.save(
+            docPdf.save(
                 `Invoice_${details.name}_${new Date().toLocaleDateString()}.pdf`
             );
         } catch (err) {
