@@ -266,15 +266,21 @@ export default function PatientDetails() {
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, 20, y);
             y += 8;
+
             docPdf.setFontSize(12);
-            [
+            // Include extended address
+            const addressLines = [
                 doctor.address.street,
+                doctor.address.street2,
+                doctor.address.street3,
                 `${doctor.address.city}, ${doctor.address.state}`,
                 `Pincode: ${doctor.address.pincode}`,
-            ].forEach((line) => {
+            ].filter(Boolean); // remove empty lines
+            addressLines.forEach((line) => {
                 docPdf.text(line, 20, y);
                 y += 6;
             });
+
             if (doctor.gstNumber) {
                 docPdf.text(`GST: ${doctor.gstNumber}`, 20, y);
                 y += 6;
@@ -291,6 +297,38 @@ export default function PatientDetails() {
             docPdf.text(`Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
                 align: "right",
             });
+            rightY += 6;
+            if (doctor.secondaryPhone) {
+                docPdf.text(
+                    `Secondary: ${doctor.secondaryPhone}`,
+                    pageWidth - 20,
+                    rightY,
+                    {
+                        align: "right",
+                    }
+                );
+                rightY += 6;
+            }
+            if (doctor.experience) {
+                docPdf.text(
+                    `Experience: ${doctor.experience}`,
+                    pageWidth - 20,
+                    rightY,
+                    {
+                        align: "right",
+                    }
+                );
+                rightY += 6;
+            }
+            if (doctor.timings?.length) {
+                const timingText = doctor.timings
+                    .map((t) => `${t.day}: ${t.slots.join(", ")}`)
+                    .join(" | ");
+                docPdf.text(`Timings: ${timingText}`, pageWidth - 20, rightY, {
+                    align: "right",
+                });
+                rightY += 6;
+            }
 
             // --- Patient & Invoice Info ---
             y += 6;
@@ -306,7 +344,9 @@ export default function PatientDetails() {
             docPdf.text(
                 `Appointment Date: ${new Date(visit.date).toLocaleDateString(
                     "en-IN",
-                    { dateStyle: "medium" }
+                    {
+                        dateStyle: "medium",
+                    }
                 )}`,
                 20,
                 y

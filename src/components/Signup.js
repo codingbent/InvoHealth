@@ -9,13 +9,58 @@ const Signup = (props) => {
         cpassword: "",
         clinicName: "",
         phone: "",
+        secondaryPhone: "",
         street: "",
+        street2: "",
+        street3: "",
         city: "",
         state: "",
         pincode: "",
         gstNumber: "",
+        experience: "",
+        timings: [],
     });
+
     let navigate = useNavigate();
+
+    // Handle slot add/remove
+    const addDay = () => {
+        setcredentials({
+            ...credentials,
+            timings: [...credentials.timings, { day: "", slots: [""] }],
+        });
+    };
+
+    const updateDay = (index, value) => {
+        const updated = [...credentials.timings];
+        updated[index].day = value;
+        setcredentials({ ...credentials, timings: updated });
+    };
+
+    const updateSlot = (dayIndex, slotIndex, value) => {
+        const updated = [...credentials.timings];
+        updated[dayIndex].slots[slotIndex] = value;
+        setcredentials({ ...credentials, timings: updated });
+    };
+
+    const addSlot = (dayIndex) => {
+        const updated = [...credentials.timings];
+        updated[dayIndex].slots.push("");
+        setcredentials({ ...credentials, timings: updated });
+    };
+
+    const removeDay = (index) => {
+        const updated = [...credentials.timings];
+        updated.splice(index, 1);
+        setcredentials({ ...credentials, timings: updated });
+    };
+
+    const removeSlot = (dayIndex, slotIndex) => {
+        const updated = [...credentials.timings];
+        updated[dayIndex].slots.splice(slotIndex, 1);
+        setcredentials({ ...credentials, timings: updated });
+    };
+
     const handlesubmit = async (e) => {
         e.preventDefault();
         const { name, email, password, cpassword } = credentials;
@@ -33,20 +78,7 @@ const Signup = (props) => {
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                name,
-                email,
-                password,
-                clinicName: credentials.clinicName,
-                phone: credentials.phone,
-                address: {
-                    street: credentials.street,
-                    city: credentials.city,
-                    state: credentials.state,
-                    pincode: credentials.pincode,
-                },
-                gstNumber: credentials.gstNumber,
-            }),
+            body: JSON.stringify(credentials),
         });
 
         const json = await response.json();
@@ -64,71 +96,59 @@ const Signup = (props) => {
     const onChange = (e) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
+
     return (
         <div className="container mt-3">
             <form onSubmit={handlesubmit}>
+                {/* Name */}
                 <div className="mb-3">
-                    <label
-                        htmlFor="exampleFormControlInput1"
-                        className="form-label"
-                    >
-                        Name
-                    </label>
+                    <label className="form-label">Full Name</label>
                     <input
                         type="text"
                         className="form-control"
-                        id="exampleFormControlInput1"
-                        placeholder="Full Name"
                         name="name"
                         required
                         onChange={onChange}
                     />
                 </div>
+
+                {/* Email */}
                 <div className="mb-3">
-                    <label
-                        htmlFor="exampleFormControlInput2"
-                        className="form-label"
-                    >
-                        Email address
-                    </label>
+                    <label className="form-label">Email address</label>
                     <input
                         type="email"
                         className="form-control"
-                        id="exampleFormControlInput2"
-                        placeholder="name@example.com"
                         name="email"
                         required
                         onChange={onChange}
                     />
                 </div>
+
+                {/* Password */}
                 <div className="mb-3">
-                    <label htmlFor="inputPassword5" className="form-label">
-                        Password
-                    </label>
+                    <label className="form-label">Password</label>
                     <input
                         type="password"
-                        id="inputPassword5"
                         className="form-control"
-                        aria-describedby="passwordHelpBlock"
                         name="password"
                         required
                         onChange={onChange}
                     />
                 </div>
+
+                {/* Confirm Password */}
                 <div className="mb-3">
-                    <label htmlFor="inputPassword" className="form-label">
-                        Confirm Password
-                    </label>
+                    <label className="form-label">Confirm Password</label>
                     <input
                         type="password"
-                        id="inputPassword"
                         className="form-control"
-                        aria-describedby="passwordHelpBlock"
                         name="cpassword"
                         required
                         onChange={onChange}
                     />
                 </div>
+
+                {/* Clinic Name */}
                 <div className="mb-3">
                     <label className="form-label">Clinic / Hospital Name</label>
                     <input
@@ -140,8 +160,9 @@ const Signup = (props) => {
                     />
                 </div>
 
+                {/* Phone Numbers */}
                 <div className="mb-3">
-                    <label className="form-label">Phone</label>
+                    <label className="form-label">Primary Phone</label>
                     <input
                         type="text"
                         className="form-control"
@@ -150,49 +171,66 @@ const Signup = (props) => {
                         onChange={onChange}
                     />
                 </div>
+                <div className="mb-3">
+                    <label className="form-label">Secondary Phone</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="secondaryPhone"
+                        onChange={onChange}
+                    />
+                </div>
 
+                {/* Address */}
                 <h5>Address</h5>
-                <div className="mb-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Street"
-                        name="street"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
-                <div className="mb-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="City"
-                        name="city"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
-                <div className="mb-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="State"
-                        name="state"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
-                <div className="mb-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Pincode"
-                        name="pincode"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Address Line 1 (required)"
+                    name="street"
+                    required
+                    onChange={onChange}
+                />
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Address Line 2 (optional)"
+                    name="street2"
+                    onChange={onChange}
+                />
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Address Line 3 (optional)"
+                    name="street3"
+                    onChange={onChange}
+                />
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="City"
+                    name="city"
+                    required
+                    onChange={onChange}
+                />
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="State"
+                    name="state"
+                    required
+                    onChange={onChange}
+                />
+                <input
+                    type="text"
+                    className="form-control mb-3"
+                    placeholder="Pincode"
+                    name="pincode"
+                    required
+                    onChange={onChange}
+                />
 
+                {/* GST */}
                 <div className="mb-3">
                     <label className="form-label">GST Number (optional)</label>
                     <input
@@ -202,11 +240,93 @@ const Signup = (props) => {
                         onChange={onChange}
                     />
                 </div>
+
+                {/* Experience */}
                 <div className="mb-3">
-                    <button type="submit" className="btn btn-primary">
+                    <label className="form-label">Experience</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="e.g. 10 years in Orthopedics"
+                        name="experience"
+                        onChange={onChange}
+                    />
+                </div>
+
+                {/* Timings UI */}
+                <div className="mb-3">
+                    <h5>Doctor Timings</h5>
+                    {credentials.timings.map((day, dayIndex) => (
+                        <div key={dayIndex} className="border p-3 mb-2 rounded">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <input
+                                    type="text"
+                                    className="form-control mb-2"
+                                    placeholder="Day (e.g. Monday)"
+                                    value={day.day}
+                                    onChange={(e) =>
+                                        updateDay(dayIndex, e.target.value)
+                                    }
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm ms-2"
+                                    onClick={() => removeDay(dayIndex)}
+                                >
+                                    Remove Day
+                                </button>
+                            </div>
+                            {day.slots.map((slot, slotIndex) => (
+                                <div key={slotIndex} className="d-flex mb-2">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Slot (e.g. 10:00-14:00)"
+                                        value={slot}
+                                        onChange={(e) =>
+                                            updateSlot(
+                                                dayIndex,
+                                                slotIndex,
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger btn-sm ms-2"
+                                        onClick={() =>
+                                            removeSlot(dayIndex, slotIndex)
+                                        }
+                                    >
+                                        X
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => addSlot(dayIndex)}
+                            >
+                                Add Slot
+                            </button>
+                        </div>
+                    ))}
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={addDay}
+                    >
+                        + Add Day
+                    </button>
+                </div>
+
+                {/* Submit */}
+                <div className="mb-3">
+                    <button type="submit" className="btn btn-success">
                         Sign Up
                     </button>
                 </div>
+
                 <p className="text">
                     Already have an account?{" "}
                     <Link to="/login" className="text-primary">
@@ -217,4 +337,5 @@ const Signup = (props) => {
         </div>
     );
 };
+
 export default Signup;
