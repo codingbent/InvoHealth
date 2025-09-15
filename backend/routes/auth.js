@@ -46,7 +46,7 @@ router.post(
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
+            let degrees = Array.isArray(req.body.degree) ? req.body.degree : [req.body.degree];
             // Create doctor
             doc = await Doc.create({
                 name: req.body.name,
@@ -63,7 +63,7 @@ router.post(
                     slots: t.slots || [],
                     note: t.note || "",
                 })),
-                degree:req.body.degree,
+                  degree: degrees.map(d => d.toString()),
             });
 
             const payload = { doc: { id: doc.id } };

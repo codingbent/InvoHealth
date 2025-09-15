@@ -384,7 +384,11 @@ const Signup = (props) => {
                         id="degree"
                         name="degree"
                         placeholder="Enter degrees, comma separated"
-                        value={credentials.degree?.join(", ") || ""}
+                        value={
+                            Array.isArray(credentials.degree)
+                                ? credentials.degree.join(", ")
+                                : credentials.degree || ""
+                        }
                         onChange={(e) =>
                             setcredentials({
                                 ...credentials,

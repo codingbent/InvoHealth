@@ -296,7 +296,7 @@ export default function PatientDetails() {
             if (doctor.degree && doctor.degree.length > 0) {
                 docPdf.setFontSize(12);
                 docPdf.text(
-                    `${doctor.degree.join(", ")}`,
+                    (doctor.degree || []).join(", "),
                     pageWidth - 20,
                     rightY,
                     { align: "right" }
