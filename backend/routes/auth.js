@@ -27,6 +27,7 @@ router.post(
         body("address.pincode").isLength({ min: 4 }),
         body("experience").notEmpty(),
         body("timings").isArray(),
+        body("degree").notEmpty(),
     ],
     async (req, res) => {
         let success = false;
@@ -62,6 +63,7 @@ router.post(
                     slots: t.slots || [],
                     note: t.note || "",
                 })),
+                degree:req.body.degree,
             });
 
             const payload = { doc: { id: doc.id } };

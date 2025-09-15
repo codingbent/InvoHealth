@@ -1,3 +1,4 @@
+const { type } = require("@testing-library/user-event/dist/type");
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
@@ -42,7 +43,10 @@ const DocSchema = new Schema({
         type: String, // e.g., "22+ years"
         required: true,
     },
-
+    Degree:{
+        type:Array,
+        required:true
+    },
     timings: [TimingSchema], // Each day with multiple string slots
 });
 
