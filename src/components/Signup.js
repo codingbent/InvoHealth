@@ -322,23 +322,36 @@ const Signup = (props) => {
                                 </button>
                             </div>
                             {day.slots.map((slot, slotIndex) => (
-                                <div key={slotIndex} className="d-flex mb-2">
+                                <div
+                                    key={slotIndex}
+                                    className="d-flex mb-2 align-items-center"
+                                >
                                     <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Slot (e.g. 10:00-14:00)"
-                                        value={slot}
+                                        type="time"
+                                        className="form-control me-2"
+                                        value={slot.start}
                                         onChange={(e) =>
-                                            updateSlot(
-                                                dayIndex,
-                                                slotIndex,
-                                                e.target.value
-                                            )
+                                            updateSlot(dayIndex, slotIndex, {
+                                                ...slot,
+                                                start: e.target.value,
+                                            })
+                                        }
+                                    />
+                                    <span className="mx-1">to</span>
+                                    <input
+                                        type="time"
+                                        className="form-control me-2"
+                                        value={slot.end}
+                                        onChange={(e) =>
+                                            updateSlot(dayIndex, slotIndex, {
+                                                ...slot,
+                                                end: e.target.value,
+                                            })
                                         }
                                     />
                                     <button
                                         type="button"
-                                        className="btn btn-danger btn-sm ms-2"
+                                        className="btn btn-danger btn-sm"
                                         onClick={() =>
                                             removeSlot(dayIndex, slotIndex)
                                         }
@@ -347,6 +360,7 @@ const Signup = (props) => {
                                     </button>
                                 </div>
                             ))}
+
                             <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
