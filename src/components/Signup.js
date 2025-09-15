@@ -19,7 +19,7 @@ const Signup = (props) => {
         gstNumber: "",
         experience: "",
         timings: [], // user types "10:00-12:00" etc.,
-        degree,
+        degree:[]
     });
 
     let navigate = useNavigate();
