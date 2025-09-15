@@ -6,6 +6,13 @@ const Signup = (props) => {
         email: "",
         password: "",
         cpassword: "",
+        clinicName: "",
+        phone: "",
+        street: "",
+        city: "",
+        state: "",
+        pincode: "",
+        gstNumber: "",
     });
     let navigate = useNavigate();
     const handlesubmit = async (e) => {
@@ -25,7 +32,20 @@ const Signup = (props) => {
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({
+                name,
+                email,
+                password,
+                clinicName: credentials.clinicName,
+                phone: credentials.phone,
+                address: {
+                    street: credentials.street,
+                    city: credentials.city,
+                    state: credentials.state,
+                    pincode: credentials.pincode,
+                },
+                gstNumber: credentials.gstNumber,
+            }),
         });
 
         const json = await response.json();
@@ -112,6 +132,79 @@ const Signup = (props) => {
                     <button type="submit" className="btn btn-primary">
                         Sign Up
                     </button>
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">Clinic / Hospital Name</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="clinicName"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Phone</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="phone"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+
+                <h5>Address</h5>
+                <div className="mb-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Street"
+                        name="street"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+                <div className="mb-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="City"
+                        name="city"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+                <div className="mb-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="State"
+                        name="state"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+                <div className="mb-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Pincode"
+                        name="pincode"
+                        required
+                        onChange={onChange}
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">GST Number (optional)</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="gstNumber"
+                        onChange={onChange}
+                    />
                 </div>
             </form>
         </div>

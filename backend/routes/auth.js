@@ -20,6 +20,12 @@ router.post(
         body("name").isLength({ min: 3 }),
         body("email").isEmail(),
         body("password").isLength({ min: 5 }),
+        body("clinicName").notEmpty(),
+        body("phone").isLength({ min: 10 }),
+        body("address.street").notEmpty(),
+        body("address.city").notEmpty(),
+        body("address.state").notEmpty(),
+        body("address.pincode").isLength({ min: 4 }),
     ],
     async (req, res) => {
         let success = false;
@@ -31,9 +37,7 @@ router.post(
         try {
             let doc = await Doc.findOne({ email: req.body.email });
             if (doc) {
-                return res
-                    .status(400)
-                    .json({ success: false, error: "Doctor already exists" });
+                return res.status(400).json({ success: false, error: "Doctor already exists" });
             }
 
             const salt = await bcrypt.genSalt(10);
@@ -43,6 +47,10 @@ router.post(
                 name: req.body.name,
                 email: req.body.email,
                 password: hashedPassword,
+                clinicName: req.body.clinicName,
+                phone: req.body.phone,
+                address: req.body.address,
+                gstNumber: req.body.gstNumber || "",
             });
 
             const payload = { doc: { id: doc.id } };
@@ -52,10 +60,7 @@ router.post(
             res.json({ success, authtoken });
         } catch (error) {
             console.error(error.message);
-            res.status(500).json({
-                success: false,
-                error: "Internal server error",
-            });
+            res.status(500).json({ success: false, error: "Internal server error" });
         }
     }
 );
