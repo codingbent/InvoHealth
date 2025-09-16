@@ -404,7 +404,7 @@ const Signup = (props) => {
                         }
                         required
                     />
-                    <div className="inputFields"></div>
+                    <div id="inputFields"></div>
                     <button type="button" onClick={handleadddegree}>Add Degree</button>
                 </div>
 
