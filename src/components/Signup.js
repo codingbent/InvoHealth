@@ -118,7 +118,6 @@ const Signup = (props) => {
         });
 
         const json = await response.json();
-        console.log(document.querySelector("name").value);
 
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
@@ -153,21 +152,23 @@ const Signup = (props) => {
     };
 
     const handleDegreeChange = (index, value) => {
-    const updated = [...credentials.degrees];
-    updated[index] = value;
-    setcredentials({ ...credentials, degrees: updated });
-};
+        const updated = [...credentials.degrees];
+        updated[index] = value;
+        setcredentials({ ...credentials, degrees: updated });
+    };
 
-const addDegreeField = () => {
-    setcredentials({ ...credentials, degrees: [...credentials.degrees, ""] });
-};
+    const addDegreeField = () => {
+        setcredentials({
+            ...credentials,
+            degrees: [...credentials.degrees, ""],
+        });
+    };
 
-const removeDegreeField = (index) => {
-    const updated = [...credentials.degrees];
-    updated.splice(index, 1);
-    setcredentials({ ...credentials, degrees: updated });
-};
-
+    const removeDegreeField = (index) => {
+        const updated = [...credentials.degrees];
+        updated.splice(index, 1);
+        setcredentials({ ...credentials, degrees: updated });
+    };
 
     return (
         <div className="container mt-3">
