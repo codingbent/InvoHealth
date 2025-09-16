@@ -42,8 +42,8 @@ const DocSchema = new Schema({
         type: String, // e.g., "22+ years"
         required: true,
     },
-    Degree:{
-        type:Array,
+    degree:{
+        type: Array,
         required:true
     },
     timings: [TimingSchema], // Each day with multiple string slots
