@@ -295,17 +295,19 @@ export default function PatientDetails() {
             rightY += 6;
             if (doctor.degree && doctor.degree.length > 0) {
                 docPdf.setFontSize(12);
-                docPdf.text(
-                    doctor.degree.join(", "),
-                    pageWidth - 20,
-                    rightY,
-                    { align: "right" }
-                );
+                docPdf.text(doctor.degree.join(", "), pageWidth - 20, rightY, {
+                    align: "right",
+                });
                 rightY += 6;
             }
-            docPdf.text(`Doctor Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
-                align: "right",
-            });
+            docPdf.text(
+                `Doctor Contact: ${doctor.phone}`,
+                pageWidth - 20,
+                rightY,
+                {
+                    align: "right",
+                }
+            );
             rightY += 6;
             if (doctor.secondaryPhone) {
                 docPdf.text(
@@ -331,7 +333,15 @@ export default function PatientDetails() {
             }
             if (doctor.timings?.length) {
                 const timingText = doctor.timings
-                    .map((t) => `${t.day}: ${t.slots.join(", ")}`)
+                    .map((t) => {
+                        const dayText = t.days?.length
+                            ? t.days.join(", ")
+                            : "Any Day";
+                        const slotsText = t.slots
+                            .map((s) => `${s.start}-${s.end}`)
+                            .join(", ");
+                        return `${dayText}: ${slotsText}`;
+                    })
                     .join(" | ");
                 docPdf.text(`Timings: ${timingText}`, pageWidth - 20, rightY, {
                     align: "right",
