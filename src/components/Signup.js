@@ -144,7 +144,7 @@ const Signup = (props) => {
             iFeild.classList.add("form-control");
             iFeild.setAttribute("name","degree")
             wrapper.appendChild(iFeild);
-            wra.classList.add("pt-2");
+            wrapper.classList.add("pt-2");
             divEle.appendChild(wrapper);
             console.log(document.querySelector("name").value);
     }
