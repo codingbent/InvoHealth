@@ -146,7 +146,7 @@ const Signup = (props) => {
             wrapper.appendChild(iFeild);
             wrapper.classList.add("pt-2");
             divEle.appendChild(wrapper);
-            console.log(document.querySelector("name").value);
+            console.log(document.querySelector("[name='degree']").value);
     }
 
     
