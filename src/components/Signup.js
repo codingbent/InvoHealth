@@ -235,7 +235,7 @@ const Signup = (props) => {
 
                 {/* Phone Numbers */}
                 <div className="mb-3">
-                    <label className="form-label">Primary Phone</label>
+                    <label className="form-label">Doctor Contact</label>
                     <input
                         type="text"
                         className="form-control"
@@ -245,7 +245,7 @@ const Signup = (props) => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Secondary Phone</label>
+                    <label className="form-label">Appointment Contact</label>
                     <input
                         type="text"
                         className="form-control"

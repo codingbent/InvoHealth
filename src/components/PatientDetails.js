@@ -293,23 +293,23 @@ export default function PatientDetails() {
                 align: "right",
             });
             rightY += 6;
-            if (doctor.degree) {
+            if (doctor.degree && doctor.degree.length > 0) {
                 docPdf.setFontSize(12);
                 docPdf.text(
-                    doctor.degree, // just use the string
+                    doctor.degree.join(", "),
                     pageWidth - 20,
                     rightY,
                     { align: "right" }
                 );
                 rightY += 6;
             }
-            docPdf.text(`Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
+            docPdf.text(`Doctor Contact: ${doctor.phone}`, pageWidth - 20, rightY, {
                 align: "right",
             });
             rightY += 6;
             if (doctor.secondaryPhone) {
                 docPdf.text(
-                    `Secondary: ${doctor.secondaryPhone}`,
+                    `Appointment Contact: ${doctor.secondaryPhone}`,
                     pageWidth - 20,
                     rightY,
                     {
