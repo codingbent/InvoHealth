@@ -139,11 +139,14 @@ const Signup = (props) => {
             const wrapper = document.createElement("div");
             const iFeild = document.createElement("input");
             iFeild.setAttribute("type", "text");
-            iFeild.setAttribute("placeholder", "Enter value");
-            iFeild.classList.add("input-field");
+            iFeild.setAttribute("placeholder", "Enter degree");
+            iFeild.classList.add("form-control");
+            iFeild.setAttribute("name","degree")
             wrapper.appendChild(iFeild);
             divEle.appendChild(wrapper);
     }
+
+    
 
     return (
         <div className="container mt-3">
@@ -405,7 +408,7 @@ const Signup = (props) => {
                         required
                     />
                     <div id="inputFields"></div>
-                    <button type="button" onClick={handleadddegree}>Add Degree</button>
+                    <button type="button" className="btn btn-primary" onClick={handleadddegree}>Add Degree</button>
                 </div>
 
                 <div className="mb-3">
