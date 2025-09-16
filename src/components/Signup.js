@@ -26,15 +26,15 @@ const Signup = (props) => {
 
     // Convert slot string "10:00-12:00" to {start, end}
     const formatTimingsForBackend = () => {
-        return credentials.timings.map((day) => ({
-            day: day.day,
-            slots: day.slots
-                .filter(Boolean) // ignore empty strings
-                .map((slot) => {
-                    const [start, end] = slot.split("-").map((s) => s.trim());
-                    return { start, end };
-                }),
-            note: day.note || "",
+        return credentials.timings.map((entry) => ({
+            days: entry.days, // now supports multiple days like ["Mon", "Tue"]
+            slots: entry.slots
+                .filter((slot) => slot.start && slot.end) // only keep valid slots
+                .map((slot) => ({
+                    start: slot.start,
+                    end: slot.end,
+                })),
+            note: entry.note || "",
         }));
     };
 
