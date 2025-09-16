@@ -19,7 +19,7 @@ const Signup = (props) => {
         gstNumber: "",
         experience: "",
         timings: [], // user types "10:00-12:00" etc.,
-        degree: "",
+        degrees: [""],
     });
 
     let navigate = useNavigate();
@@ -108,7 +108,7 @@ const Signup = (props) => {
                 pincode: credentials.pincode,
             },
             timings: formatTimingsForBackend(),
-            degree: credentials.degree.split(",").map((d) => d.trim()),
+            degree: credentials.degrees.filter((d) => d.trim() !== ""),
         };
 
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
@@ -151,6 +151,23 @@ const Signup = (props) => {
             console.log(input.value);
         });
     };
+
+    const handleDegreeChange = (index, value) => {
+    const updated = [...credentials.degrees];
+    updated[index] = value;
+    setcredentials({ ...credentials, degrees: updated });
+};
+
+const addDegreeField = () => {
+    setcredentials({ ...credentials, degrees: [...credentials.degrees, ""] });
+};
+
+const removeDegreeField = (index) => {
+    const updated = [...credentials.degrees];
+    updated.splice(index, 1);
+    setcredentials({ ...credentials, degrees: updated });
+};
+
 
     return (
         <div className="container mt-3">
@@ -393,31 +410,35 @@ const Signup = (props) => {
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label" htmlFor="degree">
-                        Degree(s)
-                    </label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        id="degree"
-                        name="degree"
-                        placeholder="Enter degrees, comma separated"
-                        value={credentials.degree || ""}
-                        onChange={(e) =>
-                            setcredentials({
-                                ...credentials,
-                                degree: e.target.value, // store as string directly
-                            })
-                        }
-                        required
-                    />
-                    <div id="inputFields"></div>
+                    <label className="form-label">Degree(s)</label>
+                    {credentials.degrees.map((degree, index) => (
+                        <div key={index} className="d-flex mb-2">
+                            <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Enter degree"
+                                value={degree}
+                                onChange={(e) =>
+                                    handleDegreeChange(index, e.target.value)
+                                }
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="btn btn-danger ms-2"
+                                onClick={() => removeDegreeField(index)}
+                                disabled={credentials.degrees.length === 1}
+                            >
+                                X
+                            </button>
+                        </div>
+                    ))}
                     <button
                         type="button"
                         className="btn btn-primary mt-2"
-                        onClick={handleadddegree}
+                        onClick={addDegreeField}
                     >
-                        Add Degree
+                        + Add Degree
                     </button>
                 </div>
 
