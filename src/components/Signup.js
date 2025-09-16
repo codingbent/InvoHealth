@@ -134,6 +134,17 @@ const Signup = (props) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
+    const handleadddegree=()=>{
+        const divEle = document.getElementById("inputFields");
+            const wrapper = document.createElement("div");
+            const iFeild = document.createElement("input");
+            iFeild.setAttribute("type", "text");
+            iFeild.setAttribute("placeholder", "Enter value");
+            iFeild.classList.add("input-field");
+            wrapper.appendChild(iFeild);
+            divEle.appendChild(wrapper);
+    }
+
     return (
         <div className="container mt-3">
             <form onSubmit={handlesubmit}>
@@ -393,6 +404,8 @@ const Signup = (props) => {
                         }
                         required
                     />
+                    <input className="inputFields"></input>
+                    <button type="button" onClick={handleadddegree}>Add Degree</button>
                 </div>
 
                 <div className="mb-3">

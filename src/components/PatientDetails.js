@@ -320,7 +320,7 @@ export default function PatientDetails() {
             }
             if (doctor.experience) {
                 docPdf.text(
-                    `Experience: ${doctor.experience}`,
+                    `Experience: ${doctor.experience}+ Years`,
                     pageWidth - 20,
                     rightY,
                     {
