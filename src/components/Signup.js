@@ -119,7 +119,7 @@ const Signup = (props) => {
 
         const json = await response.json();
         console.log(document.querySelector("name").value);
-        
+
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", name);
@@ -135,21 +135,22 @@ const Signup = (props) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
-    const handleadddegree=()=>{
+    const handleadddegree = () => {
         const divEle = document.getElementById("inputFields");
-            const wrapper = document.createElement("div");
-            const iFeild = document.createElement("input");
-            iFeild.setAttribute("type", "text");
-            iFeild.setAttribute("placeholder", "Enter degree");
-            iFeild.classList.add("form-control");
-            iFeild.setAttribute("name","degree")
-            wrapper.appendChild(iFeild);
-            wrapper.classList.add("pt-2");
-            divEle.appendChild(wrapper);
-            console.log(document.querySelector("[name='degree']").value);
-    }
-
-    
+        const wrapper = document.createElement("div");
+        const iFeild = document.createElement("input");
+        iFeild.setAttribute("type", "text");
+        iFeild.setAttribute("placeholder", "Enter degree");
+        iFeild.classList.add("form-control");
+        iFeild.setAttribute("name", "degree");
+        wrapper.appendChild(iFeild);
+        wrapper.classList.add("pt-2");
+        divEle.appendChild(wrapper);
+        const allDegrees = document.querySelectorAll("input[name='degree']");
+        allDegrees.forEach((input) => {
+            console.log(input.value);
+        });
+    };
 
     return (
         <div className="container mt-3">
@@ -411,7 +412,13 @@ const Signup = (props) => {
                         required
                     />
                     <div id="inputFields"></div>
-                    <button type="button" className="btn btn-primary mt-2" onClick={handleadddegree}>Add Degree</button>
+                    <button
+                        type="button"
+                        className="btn btn-primary mt-2"
+                        onClick={handleadddegree}
+                    >
+                        Add Degree
+                    </button>
                 </div>
 
                 <div className="mb-3">
