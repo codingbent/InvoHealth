@@ -24,8 +24,6 @@ const Signup = (props) => {
 
     let navigate = useNavigate();
 
-
-
     // Convert slot string "10:00-12:00" to {start, end}
     const formatTimingsForBackend = () => {
         return credentials.timings.map((day) => ({
@@ -387,19 +385,32 @@ const Signup = (props) => {
                                     key={slotIndex}
                                     className="d-flex mb-2 align-items-center"
                                 >
+                                    <label className="me-2">From:</label>
                                     <input
-                                        type="text"
+                                        type="time"
                                         className="form-control"
-                                        placeholder="Slot (e.g. 10:00-12:00)"
-                                        value={slot}
+                                        value={slot.start || ""}
                                         onChange={(e) =>
-                                            updateSlot(
-                                                entryIndex,
-                                                slotIndex,
-                                                e.target.value
-                                            )
+                                            updateSlot(entryIndex, slotIndex, {
+                                                ...slot,
+                                                start: e.target.value,
+                                            })
                                         }
                                     />
+
+                                    <label className="ms-3 me-2">To:</label>
+                                    <input
+                                        type="time"
+                                        className="form-control"
+                                        value={slot.end || ""}
+                                        onChange={(e) =>
+                                            updateSlot(entryIndex, slotIndex, {
+                                                ...slot,
+                                                end: e.target.value,
+                                            })
+                                        }
+                                    />
+
                                     <button
                                         type="button"
                                         className="btn btn-danger btn-sm ms-2"
