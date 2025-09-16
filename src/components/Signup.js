@@ -141,6 +141,7 @@ const Signup = (props) => {
             iFeild.setAttribute("type", "text");
             iFeild.setAttribute("placeholder", "Enter degree");
             iFeild.classList.add("form-control");
+            iFeild.classList.add("pt-2");
             iFeild.setAttribute("name","degree")
             wrapper.appendChild(iFeild);
             divEle.appendChild(wrapper);
@@ -408,7 +409,7 @@ const Signup = (props) => {
                         required
                     />
                     <div id="inputFields"></div>
-                    <button type="button" className="btn btn-primary" onClick={handleadddegree}>Add Degree</button>
+                    <button type="button" className="btn btn-primary mt-2" onClick={handleadddegree}>Add Degree</button>
                 </div>
 
                 <div className="mb-3">
