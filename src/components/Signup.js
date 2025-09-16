@@ -118,7 +118,8 @@ const Signup = (props) => {
         });
 
         const json = await response.json();
-
+        console.log(document.querySelector("name").value);
+        
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", name);
@@ -141,9 +142,9 @@ const Signup = (props) => {
             iFeild.setAttribute("type", "text");
             iFeild.setAttribute("placeholder", "Enter degree");
             iFeild.classList.add("form-control");
-            iFeild.classList.add("pt-2");
             iFeild.setAttribute("name","degree")
             wrapper.appendChild(iFeild);
+            wrapper.classList.add("pt-2");
             divEle.appendChild(wrapper);
     }
 
