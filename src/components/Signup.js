@@ -328,87 +328,87 @@ const Signup = (props) => {
 
                 {/* Timings UI */}
                 <div className="mb-3">
-                    <h5>Doctor Timings</h5>
-                    {credentials.timings.map((day, dayIndex) => (
-                        <div key={dayIndex} className="border p-3 mb-2 rounded">
-                            <div className="d-flex justify-content-between align-items-center mb-2">
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="Day (e.g. Monday)"
-                                    value={day.day}
-                                    onChange={(e) =>
-                                        updateDay(dayIndex, e.target.value)
-                                    }
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    className="btn btn-danger btn-sm ms-2"
-                                    onClick={() => removeDay(dayIndex)}
-                                >
-                                    Remove Day
-                                </button>
-                            </div>
+  <h5>Doctor Timings</h5>
 
-                            {day.slots.map((slot, slotIndex) => (
-                                <div
-                                    key={slotIndex}
-                                    className="d-flex mb-2 align-items-center"
-                                >
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Slot (e.g. 10:00-12:00)"
-                                        value={slot}
-                                        onChange={(e) =>
-                                            updateSlot(
-                                                dayIndex,
-                                                slotIndex,
-                                                e.target.value
-                                            )
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-danger btn-sm ms-2"
-                                        onClick={() =>
-                                            removeSlot(dayIndex, slotIndex)
-                                        }
-                                    >
-                                        X
-                                    </button>
-                                </div>
-                            ))}
+  {credentials.timings.map((day, dayIndex) => (
+    <div key={dayIndex} className="border p-3 mb-2 rounded">
 
-                            <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => addSlot(dayIndex)}
-                            >
-                                Add Slot
-                            </button>
+      {/* Row of day buttons */}
+      <div className="d-flex flex-wrap mb-3">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+          <button
+            type="button"
+            key={d}
+            className={`btn btn-sm me-2 mb-2 ${
+              credentials.timings[dayIndex].day === d
+                ? "btn-primary"
+                : "btn-outline-primary"
+            }`}
+            onClick={() => updateDay(dayIndex, d)}
+          >
+            {d}
+          </button>
+        ))}
+      </div>
 
-                            <input
-                                type="text"
-                                className="form-control mt-2"
-                                placeholder="Optional note (e.g. On Call)"
-                                value={day.note || ""}
-                                onChange={(e) =>
-                                    updateNote(dayIndex, e.target.value)
-                                }
-                            />
-                        </div>
-                    ))}
+      {/* Slots for this day */}
+      {day.slots.map((slot, slotIndex) => (
+        <div key={slotIndex} className="d-flex mb-2 align-items-center">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Slot (e.g. 10:00-12:00)"
+            value={slot}
+            onChange={(e) => updateSlot(dayIndex, slotIndex, e.target.value)}
+          />
+          <button
+            type="button"
+            className="btn btn-danger btn-sm ms-2"
+            onClick={() => removeSlot(dayIndex, slotIndex)}
+          >
+            X
+          </button>
+        </div>
+      ))}
 
-                    <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={addDay}
-                    >
-                        + Add Day
-                    </button>
-                </div>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        onClick={() => addSlot(dayIndex)}
+      >
+        + Add Slot
+      </button>
+
+      <input
+        type="text"
+        className="form-control mt-2"
+        placeholder="Optional note (e.g. On Call)"
+        value={day.note || ""}
+        onChange={(e) => updateNote(dayIndex, e.target.value)}
+      />
+
+      <div className="text-end mt-2">
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          onClick={() => removeDay(dayIndex)}
+        >
+          Remove Day
+        </button>
+      </div>
+    </div>
+  ))}
+
+  {/* Add new day row */}
+  <button
+    type="button"
+    className="btn btn-primary"
+    onClick={addDay}
+  >
+    + Add Another Day
+  </button>
+</div>
+
 
                 <div className="mb-3">
                     <label className="form-label">Degree(s)</label>
