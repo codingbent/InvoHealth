@@ -128,6 +128,28 @@ router.post(
     }
 );
 
+// routes/auth.js//searchpatient
+router.post("/searchpatient", fetchDoctor, async (req, res) => {
+    try {
+        const { number, doctorId } = req.body;
+
+        // Option 1 (global patients)
+        const patient = await Patient.findOne({ number });
+
+        // Option 2 (per-doctor patients)
+        // const patient = await Patient.findOne({ number, doctor: doctorId });
+
+        if (patient) {
+            return res.json({ exists: true, patient });
+        } else {
+            return res.json({ exists: false });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 
 router.post(
