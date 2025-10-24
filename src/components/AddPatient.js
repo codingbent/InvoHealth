@@ -79,14 +79,42 @@ const AddPatient = (props) => {
         e.preventDefault();
 
         try {
-            // 1️⃣ Add patient
+            const token = localStorage.getItem("token");
+            const decoded = jwtDecode(token);
+            const doctorId = decoded._id;
+
+            // 🟢 Step 1: Check if patient already exists
+            const checkRes = await fetch(
+                `${API_BASE_URL}/api/auth/searchpatient`, // <-- new route
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": token,
+                    },
+                    body: JSON.stringify({
+                        number, // or name/email if you prefer
+                        doctorId, // for per-doctor patient lists
+                    }),
+                }
+            );
+
+            const checkJson = await checkRes.json();
+            if (checkJson.exists) {
+                props.showAlert(
+                    `Patient already exists: ${checkJson.patient.name}`,
+                    "warning"
+                );
+            }
+
+            // 🟢 Step 2: Add new patient (if not found)
             const patientRes = await fetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token"),
+                        "auth-token": token,
                     },
                     body: JSON.stringify({
                         name,
@@ -113,15 +141,7 @@ const AddPatient = (props) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // 2️⃣ Get doctor ID from token
-            const token = localStorage.getItem("token");
-            let doctorId = null;
-            if (token) {
-                const decoded = jwtDecode(token);
-                doctorId = decoded._id; // adjust if your token uses a different key
-            }
-
-            // 3️⃣ Add initial appointment
+            // 🟢 Step 3: Create appointment for new patient
             const appointmentRes = await fetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
@@ -139,7 +159,7 @@ const AddPatient = (props) => {
                         amount,
                         date: appointmentDate,
                         payment_type,
-                        doctorId, // automatically assigned
+                        doctorId,
                     }),
                 }
             );
@@ -159,7 +179,7 @@ const AddPatient = (props) => {
                 );
             }
 
-            // Reset form
+            // 🧹 Reset form
             setPatient({
                 name: "",
                 service: [],
