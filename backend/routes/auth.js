@@ -125,6 +125,20 @@ router.post(
                 error: err.message, // send actual reason back to frontend
             });
         }
+        const existing = await Patient.findOne({
+            doctor: req.doctor.id,
+            $or: [
+                { name: req.body.name.trim() },
+                { number: req.body.number.trim() },
+            ],
+        });
+
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                error: "Patient already exists with this name or number",
+            });
+        }
     }
 );
 
@@ -133,16 +147,23 @@ router.post("/searchpatient", async (req, res) => {
     try {
         const { name, number, doctorId } = req.body;
 
-        // For global patients
-        // const patient = await Patient.findOne({
-        //     $or: [{ name }, { number }]
-        // });
+        // Convert to ObjectId to match schema
+        const docObjectId = new mongoose.Types.ObjectId(doctorId);
 
-        // For per-doctor patients (recommended)
-        const patient = await Patient.findOne({
-            doctor: doctorId,
-            $or: [{ name: name.trim() }, { number: number.trim() }],
-        });
+        // Build flexible query
+        const query = {
+            doctor: docObjectId,
+            $or: [],
+        };
+
+        if (name && name.trim()) query.$or.push({ name: name.trim() });
+        if (number && number.trim()) query.$or.push({ number: number.trim() });
+
+        if (query.$or.length === 0) {
+            return res.status(400).json({ error: "Missing search fields" });
+        }
+
+        const patient = await Patient.findOne(query);
 
         if (patient) {
             return res.json({ exists: true, patient });
