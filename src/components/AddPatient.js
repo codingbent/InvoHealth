@@ -105,6 +105,7 @@ const AddPatient = (props) => {
                     `Patient already exists: ${checkJson.patient.name}`,
                     "warning"
                 );
+                return;
             }
 
             // 🟢 Step 2: Add new patient (if not found)

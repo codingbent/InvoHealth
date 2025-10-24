@@ -128,16 +128,21 @@ router.post(
     }
 );
 
-// routes/auth.js//searchpatient
-router.post("/searchpatient", fetchuser, async (req, res) => {
+// routes/auth.js//searchpatien
+router.post("/searchpatient", async (req, res) => {
     try {
-        const { number, doctorId } = req.body;
+        const { name, number, doctorId } = req.body;
 
-        // Option 1 (global patients)
-        const patient = await Patient.findOne({ number });
+        // For global patients
+        // const patient = await Patient.findOne({
+        //     $or: [{ name }, { number }]
+        // });
 
-        // Option 2 (per-doctor patients)
-        // const patient = await Patient.findOne({ number, doctor: doctorId });
+        // For per-doctor patients (recommended)
+        const patient = await Patient.findOne({
+            doctor: doctorId,
+            $or: [{ name: name.trim() }, { number: number.trim() }],
+        });
 
         if (patient) {
             return res.json({ exists: true, patient });
