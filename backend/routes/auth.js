@@ -129,7 +129,7 @@ router.post(
 );
 
 // routes/auth.js//searchpatient
-router.post("/searchpatient", fetchDoctor, async (req, res) => {
+router.post("/searchpatient", fetchuser, async (req, res) => {
     try {
         const { number, doctorId } = req.body;
 
