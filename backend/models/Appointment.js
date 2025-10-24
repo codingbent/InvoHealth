@@ -33,8 +33,8 @@ const AppointmentSchema = new Schema({
 
 // Helper to get next invoice number for a doctor
 async function getNextInvoiceNumber(doctorId) {
-    const counter = await Counter.findByIdAndUpdate(
-        `invoice_${doctorId}`,
+    const counter = await Counter.findOneAndUpdate(
+        { _id: `invoice_${doctorId}` },
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
     );
