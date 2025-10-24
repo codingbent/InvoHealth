@@ -331,22 +331,39 @@ export default function PatientDetails() {
                 );
                 rightY += 6;
             }
-            if (doctor.timings?.length) {
-                const timingText = doctor.timings
-                    .map((t) => {
-                        const dayText = t.days?.length
-                            ? t.days.join(", ")
-                            : "Any Day";
-                        const slotsText = t.slots
-                            .map((s) => `${s.start}-${s.end}`)
-                            .join(", ");
-                        return `${dayText}: ${slotsText}`;
-                    })
-                    .join(" | ");
-                docPdf.text(`Timings: ${timingText}`, pageWidth - 20, rightY, {
+            if (doctor.email === "drdkagarwal9999@gmail.com") {
+                // Hardcoded timings for Dr. D.K. Agarwal
+                docPdf.text(
+                    "Mon–Sat: 11:00–15:00, 18:30–21:00",
+                    pageWidth - 20,
+                    rightY,
+                    {
+                        align: "right",
+                    }
+                );
+                rightY += 6;
+
+                docPdf.text("Sunday: On calls only", pageWidth - 20, rightY, {
                     align: "right",
                 });
                 rightY += 6;
+            } else if (doctor.timings?.length) {
+                // Dynamic timings for other doctors
+                // const timingText = doctor.timings
+                //     .map((t) => {
+                //         const dayText = t.days?.length
+                //             ? t.days.join(", ")
+                //             : "Any Day";
+                //         const slotsText = t.slots
+                //             .map((s) => `${s.start}-${s.end}`)
+                //             .join(", ");
+                //         return `${dayText}: ${slotsText}`;
+                //     })
+                //     .join(" | ");
+                // docPdf.text(`Timings: ${timingText}`, pageWidth - 20, rightY, {
+                //     align: "right",
+                // });
+                // rightY += 6;
             }
 
             // --- Patient & Invoice Info ---
