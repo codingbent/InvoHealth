@@ -164,7 +164,7 @@ const AddPatient = (props) => {
                 name: "",
                 service: [],
                 number: "",
-                amount: 0,
+                amount: 0.0,
                 age: "",
             });
             setServiceAmounts([]);
