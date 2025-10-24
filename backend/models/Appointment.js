@@ -26,7 +26,7 @@ const AppointmentSchema = new Schema({
                 enum: ["Cash", "Card", "UPI", "Other"],
                 default: "Cash",
             },
-            invoiceNumber: { type: Number, default: null },
+            invoiceNumber: { type: Number, default: 1 },
         },
     ],
 });
