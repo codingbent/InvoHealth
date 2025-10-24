@@ -93,6 +93,7 @@ const AddPatient = (props) => {
                         "auth-token": token,
                     },
                     body: JSON.stringify({
+                        name,
                         number, // or name/email if you prefer
                         doctorId, // for per-doctor patient lists
                     }),
