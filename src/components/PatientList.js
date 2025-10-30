@@ -1,22 +1,89 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PatientDetails from "./PatientDetails";
 
-export default function AppointmentReport() {
-    const [visits, setVisits] = useState([]);
+export default function PatientList() {
+    const navigate = useNavigate();
+    const [patientsByDate, setPatientsByDate] = useState({});
+    const [services, setServices] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedPayment, setSelectedPayment] = useState("");
-    const [loading, setLoading] = useState(true);
+    const [selectedService, setSelectedService] = useState("");
+    const [selectedpayment_type, setSelectedpayment_type] = useState("");
+    const [selectedId, setSelectedId] = useState(null);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // 🔄 Fetch all appointment visits
-    const fetchVisits = async () => {
+    // 🗑️ Delete patient
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this patient?"))
+            return;
+
         try {
-            setLoading(true);
             const response = await fetch(
-                `${API_BASE_URL}/api/report/fetch-all-visits`,
+                `${API_BASE_URL}/api/auth/deletepatient/${id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                }
+            );
+
+            const data = await response.json();
+            if (data.success) {
+                alert("Patient deleted successfully!");
+                fetchPatients();
+            } else {
+                alert(data.message || "Failed to delete patient");
+            }
+        } catch (err) {
+            console.error("Error deleting patient:", err);
+            alert("Server error while deleting patient");
+        }
+    };
+
+    // fetch patients
+    const fetchPatients = async () => {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/fetchallpatients`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                }
+            );
+
+            const patients = await response.json();
+
+            const grouped = patients.reduce((acc, p) => {
+                const dateKey = p.lastAppointment
+                    ? new Date(p.lastAppointment).toISOString().split("T")[0]
+                    : "No Visits";
+
+                if (!acc[dateKey]) acc[dateKey] = [];
+                acc[dateKey].push(p);
+                return acc;
+            }, {});
+
+            setPatientsByDate(grouped);
+        } catch (err) {
+            console.error("Error fetching patients:", err);
+            setPatientsByDate({});
+        }
+    };
+
+    // fetch services
+    const fetchServices = async () => {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/fetchallservice`,
                 {
                     method: "GET",
                     headers: {
@@ -28,99 +95,189 @@ export default function AppointmentReport() {
 
             const data = await response.json();
             if (Array.isArray(data)) {
-                setVisits(data);
+                setServices(data);
             } else {
-                console.error("Unexpected response:", data);
-                setVisits([]);
+                console.error("Expected array, got:", data);
+                setServices([]);
             }
         } catch (err) {
-            console.error("Error fetching visits:", err);
-            setVisits([]);
-        } finally {
-            setLoading(false);
+            console.error("Error fetching services:", err);
+            setServices([]);
         }
     };
 
     useEffect(() => {
-        fetchVisits();
+        fetchPatients();
+        fetchServices();
     }, [API_BASE_URL]);
 
-    // 🔎 Apply filters
-    const filteredVisits = visits.filter((v) => {
-        const matchSearch =
-            v.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.doctorName?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchPayment =
-            !selectedPayment ||
-            v.paymentType?.toLowerCase() === selectedPayment.toLowerCase();
-        return matchSearch && matchPayment;
-    });
+    // 🔎 Filter patients
+    // 🔎 Filter patients
+    const applyFilters = (patients) => {
+        return patients.filter((p) => {
+            const matchSearch =
+                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.number?.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchService =
+                !selectedService ||
+                p.service?.some((s) => {
+                    if (!s) return false;
+
+                    // string service
+                    if (typeof s === "string")
+                        return (
+                            s.toLowerCase() === selectedService.toLowerCase()
+                        );
+
+                    // object service
+                    if (typeof s === "object") {
+                        const serviceName = s.name || s.service_name || "";
+                        return (
+                            serviceName.toLowerCase() ===
+                            selectedService.toLowerCase()
+                        );
+                    }
+                    return false;
+                });
+
+            const matchPayment =
+                !selectedpayment_type ||
+                (p.lastpayment_type &&
+                    p.lastpayment_type.toLowerCase() ===
+                        selectedpayment_type.toLowerCase());
+
+            return matchSearch && matchService && matchPayment;
+        });
+    };
 
     return (
-        <div className="container mt-3">
-            <h4 className="mb-3 text-center">📅 Appointment Report</h4>
+        <>
+            <div className="container mt-3">
+                {/* 🔎 Search */}
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Search by name or phone"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
 
-            {/* 🔍 Search by patient or doctor */}
-            <input
-                type="text"
-                className="form-control mb-2"
-                placeholder="Search by patient or doctor"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
-
-            {/* 💳 Filter by Payment Type */}
-            <select
-                className="form-select mb-3"
-                value={selectedPayment}
-                onChange={(e) => setSelectedPayment(e.target.value)}
-            >
-                <option value="">All Payment Types</option>
-                <option value="Cash">Cash</option>
-                <option value="Card">Card</option>
-                <option value="UPI">UPI</option>
-                <option value="Other">Other</option>
-            </select>
-
-            {loading ? (
-                <p className="text-center">Loading appointments...</p>
-            ) : filteredVisits.length === 0 ? (
-                <p className="text-center">No records found.</p>
-            ) : (
-                <table className="table table-bordered table-striped align-middle">
-                    <thead className="table-light">
-                        <tr>
-                            <th>Patient</th>
-                            <th>Doctor</th>
-                            <th>Date</th>
-                            <th>Payment Type</th>
-                            <th>Invoice No</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredVisits.map((v, i) => (
-                            <tr key={i}>
-                                <td>{v.patientName}</td>
-                                <td>{v.doctorName}</td>
-                                <td>
-                                    {new Date(v.date).toLocaleDateString(
-                                        "en-IN",
-                                        {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                        }
-                                    )}
-                                </td>
-                                <td>{v.paymentType}</td>
-                                <td>{v.invoiceNumber}</td>
-                                <td>₹{v.amount}</td>
-                            </tr>
+                {/* 🏥 Filter by Service */}
+                <select
+                    className="form-select mb-2"
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                >
+                    <option value="">All Services</option>
+                    {Array.isArray(services) &&
+                        services.map((s) => (
+                            <option key={s._id} value={s.name}>
+                                {s.name}
+                            </option>
                         ))}
-                    </tbody>
-                </table>
-            )}
-        </div>
+                </select>
+
+                {/* 💳 Filter by Payment Type */}
+                <select
+                    className="form-select mb-3"
+                    value={selectedpayment_type}
+                    onChange={(e) => setSelectedpayment_type(e.target.value)}
+                >
+                    <option value="">All Payment Types</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                </select>
+
+                {/* 👥 Patients grouped by last visit */}
+                {Object.keys(patientsByDate)
+                    .sort((a, b) => {
+                        if (a === "No Visits") return 1;
+                        if (b === "No Visits") return -1;
+                        return new Date(b) - new Date(a);
+                    })
+                    .map((date) => {
+                        let group = Array.isArray(patientsByDate[date])
+                            ? patientsByDate[date]
+                            : [];
+
+                        group = [...group].sort((a, b) => {
+                            const dateA = new Date(
+                                a.lastVisitDate || a.createdAt
+                            );
+                            const dateB = new Date(
+                                b.lastVisitDate || b.createdAt
+                            );
+                            return dateB - dateA;
+                        });
+
+                        const filteredGroup = applyFilters(group);
+                        if (filteredGroup.length === 0) return null;
+
+                        return (
+                            <div key={date} className="mb-4">
+                                <h5 className="bg-light p-2 rounded">
+                                    {date === "No Visits"
+                                        ? "No Visits Yet"
+                                        : new Date(date).toLocaleDateString()}
+                                </h5>
+
+                                <table className="table table-striped table-bordered align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th style={{ width: "25%" }}>
+                                                Name
+                                            </th>
+                                            <th style={{ width: "20%" }}>
+                                                Number
+                                            </th>
+                                            <th style={{ width: "20%" }}>
+                                                Payment
+                                            </th>
+                                            <th style={{ width: "35%" }}>
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredGroup.map((p) => (
+                                            <tr
+                                                key={p._id}
+                                                style={{ cursor: "pointer" }}
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/patient/${p._id}`
+                                                    )
+                                                }
+                                            >
+                                                <td>{p.name}</td>
+                                                <td>{p.number}</td>
+                                                <td>
+                                                    {p.lastpayment_type ||
+                                                        "N/A"}
+                                                </td>
+                                                <td className="text-center">
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(p._id);
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
+            </div>
+
+            {selectedId && <PatientDetails id={selectedId} />}
+        </>
     );
 }
