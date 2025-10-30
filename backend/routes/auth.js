@@ -533,6 +533,16 @@ router.post("/addappointment/:id", async (req, res) => {
     }
 });
 
+router.post("/fetchallappointment",async(req,res)=>{
+  try {
+    const appointments = await Appointment.find(); // assuming Appointment model exists
+    res.status(200).json(appointments);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.get("/appointments/:patientId", async (req, res) => {
     try {
         const appointments = await Appointment.find({

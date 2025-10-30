@@ -6,6 +6,7 @@ import PatientList from "./PatientList";
 import AddAppointment from "./AddAppointment";
 import PatientDetails from "./PatientDetails"; // Added import
 import EditService from "./EditService";
+import AppointmentRecord from "./AppointmentRecord";
 
 const Patient = (props) => {
     const { showAlert } = props;
@@ -104,6 +105,8 @@ const Patient = (props) => {
                         >
                             Edit Service
                         </button>
+
+                        <AppointmentRecord/>
                         <div
                             className="modal fade"
                             id="editServiceModal"
