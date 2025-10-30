@@ -1,6 +1,7 @@
 // GET /api/report/fetch-all-visits
 const express = require("express");
 const router = express.Router();
+const Appointment = require("../models/Appointment");
 router.get("/fetch-all-visits", async (req, res) => {
   try {
     const appointments = await Appointment.find()
