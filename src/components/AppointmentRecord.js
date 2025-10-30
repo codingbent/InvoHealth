@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
 
-export default function AppointmentReport() {
-    const [visits, setVisits] = useState([]);
+export default function AppointmentRecord() {
+    const [visitsByDate, setVisitsByDate] = useState({});
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedPayment, setSelectedPayment] = useState("");
-    const [loading, setLoading] = useState(true);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // 🔄 Fetch all appointment visits
-    const fetchVisits = async () => {
+    // Fetch all visits (each visit = one record)
+    const fetchAllVisits = async () => {
         try {
-            setLoading(true);
             const response = await fetch(
                 `${API_BASE_URL}/api/report/fetch-all-visits`,
                 {
@@ -27,49 +25,57 @@ export default function AppointmentReport() {
             );
 
             const data = await response.json();
-            if (Array.isArray(data)) {
-                setVisits(data);
-            } else {
-                console.error("Unexpected response:", data);
-                setVisits([]);
-            }
+            if (!Array.isArray(data)) return;
+
+            // group by date
+            const grouped = data.reduce((acc, v) => {
+                const dateKey = new Date(v.date)
+                    .toISOString()
+                    .split("T")[0];
+                if (!acc[dateKey]) acc[dateKey] = [];
+                acc[dateKey].push(v);
+                return acc;
+            }, {});
+
+            setVisitsByDate(grouped);
         } catch (err) {
             console.error("Error fetching visits:", err);
-            setVisits([]);
-        } finally {
-            setLoading(false);
+            setVisitsByDate({});
         }
     };
 
     useEffect(() => {
-        fetchVisits();
-    }, [API_BASE_URL]);
+        fetchAllVisits();
+    }, []);
 
-    // 🔎 Apply filters
-    const filteredVisits = visits.filter((v) => {
-        const matchSearch =
-            v.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.doctorName?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchPayment =
-            !selectedPayment ||
-            v.paymentType?.toLowerCase() === selectedPayment.toLowerCase();
-        return matchSearch && matchPayment;
-    });
+    // 🔍 Filter
+    const applyFilters = (visits) => {
+        return visits.filter((v) => {
+            const matchSearch =
+                v.patientName
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                v.number?.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchPayment =
+                !selectedPayment ||
+                v.paymentType?.toLowerCase() ===
+                    selectedPayment.toLowerCase();
+            return matchSearch && matchPayment;
+        });
+    };
 
     return (
         <div className="container mt-3">
-            <h4 className="mb-3 text-center">📅 Appointment Report</h4>
+            <h4 className="mb-3 text-center">🩺 All Appointment Visits</h4>
 
-            {/* 🔍 Search by patient or doctor */}
             <input
                 type="text"
                 className="form-control mb-2"
-                placeholder="Search by patient or doctor"
+                placeholder="Search by name or number"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
 
-            {/* 💳 Filter by Payment Type */}
             <select
                 className="form-select mb-3"
                 value={selectedPayment}
@@ -82,45 +88,45 @@ export default function AppointmentReport() {
                 <option value="Other">Other</option>
             </select>
 
-            {loading ? (
-                <p className="text-center">Loading appointments...</p>
-            ) : filteredVisits.length === 0 ? (
-                <p className="text-center">No records found.</p>
-            ) : (
-                <table className="table table-bordered table-striped align-middle">
-                    <thead className="table-light">
-                        <tr>
-                            <th>Patient</th>
-                            <th>Doctor</th>
-                            <th>Date</th>
-                            <th>Payment Type</th>
-                            <th>Invoice No</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredVisits.map((v, i) => (
-                            <tr key={i}>
-                                <td>{v.patientName}</td>
-                                <td>{v.doctorName}</td>
-                                <td>
-                                    {new Date(v.date).toLocaleDateString(
-                                        "en-IN",
-                                        {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                        }
-                                    )}
-                                </td>
-                                <td>{v.paymentType}</td>
-                                <td>{v.invoiceNumber}</td>
-                                <td>₹{v.amount}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+            {Object.keys(visitsByDate)
+                .sort((a, b) => new Date(b) - new Date(a))
+                .map((date) => {
+                    const group = applyFilters(visitsByDate[date]);
+                    if (group.length === 0) return null;
+
+                    return (
+                        <div key={date} className="mb-4">
+                            <h5 className="bg-light p-2 rounded">
+                                {new Date(date).toLocaleDateString()}
+                            </h5>
+
+                            <table className="table table-striped table-bordered align-middle">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Number</th>
+                                        <th>Doctor</th>
+                                        <th>Payment</th>
+                                        <th>Invoice</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {group.map((v, i) => (
+                                        <tr key={i}>
+                                            <td>{v.patientName}</td>
+                                            <td>{v.number}</td>
+                                            <td>{v.doctorName}</td>
+                                            <td>{v.paymentType}</td>
+                                            <td>{v.invoiceNumber}</td>
+                                            <td>₹{v.amount}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                })}
         </div>
     );
 }
