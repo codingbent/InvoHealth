@@ -106,7 +106,7 @@ const Patient = (props) => {
                             Edit Service
                         </button>
 
-                        <AppointmentRecord/>
+                        {/* <AppointmentRecord/> */}
                         <div
                             className="modal fade"
                             id="editServiceModal"
