@@ -14,18 +14,18 @@ const SlotSchema = new Schema({
 });
 
 // Timing schema
-const TimingSchema = new Schema({
-    days: [
-        {
-            type: String, // e.g., "Mon", "Tue", "Wed"
-            required: true,
-        },
-    ],
-    slots: [SlotSchema], // Multiple start–end slots per timing group
-    note: {
-        type: String, // e.g., "By Call Appointment"
-    },
-});
+// const TimingSchema = new Schema({
+//     days: [
+//         {
+//             type: String, // e.g., "Mon", "Tue", "Wed"
+//             required: true,
+//         },
+//     ],
+//     slots: [SlotSchema], // Multiple start–end slots per timing group
+//     note: {
+//         type: String, // e.g., "By Call Appointment"
+//     },
+// });
 
 const DocSchema = new Schema({
     name: { type: String, required: true },
@@ -58,7 +58,7 @@ const DocSchema = new Schema({
         required: true,
     },
 
-    timings: [TimingSchema], // New structure
+    // timings: [TimingSchema], // New structure
 });
 
 const Doc = mongoose.model("doc", DocSchema);
