@@ -2,16 +2,16 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 // Slot schema
-const SlotSchema = new Schema({
-    start: {
-        type: String, // e.g., "10:00"
-        required: true,
-    },
-    end: {
-        type: String, // e.g., "12:00"
-        required: true,
-    },
-});
+// const SlotSchema = new Schema({
+//     start: {
+//         type: String, // e.g., "10:00"
+//         required: true,
+//     },
+//     end: {
+//         type: String, // e.g., "12:00"
+//         required: true,
+//     },
+// });
 
 // Timing schema
 // const TimingSchema = new Schema({

@@ -26,7 +26,7 @@ router.post(
         body("address.state").notEmpty(),
         body("address.pincode").isLength({ min: 4 }),
         body("experience").notEmpty(),
-        body("timings").isArray(),
+        // body("timings").isArray(),
         body("degree").isArray(),
     ],
     async (req, res) => {
@@ -60,11 +60,11 @@ router.post(
                 address: req.body.address,
                 gstNumber: req.body.gstNumber || "",
                 experience: req.body.experience,
-                timings: req.body.timings.map((t) => ({
-                    day: t.day,
-                    slots: t.slots || [],
-                    note: t.note || "",
-                })),
+                // timings: req.body.timings.map((t) => ({
+                //     day: t.day,
+                //     slots: t.slots || [],
+                //     note: t.note || "",
+                // })),
                 degree: req.body.degree,
             });
 
