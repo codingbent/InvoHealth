@@ -18,25 +18,25 @@ const Signup = (props) => {
         pincode: "",
         gstNumber: "",
         experience: "",
-        timings: [], // user types "10:00-12:00" etc.,
+        // timings: [], // user types "10:00-12:00" etc.,
         degrees: [""],
     });
 
     let navigate = useNavigate();
 
     // Convert slot string "10:00-12:00" to {start, end}
-    const formatTimingsForBackend = () => {
-        return credentials.timings.map((entry) => ({
-            days: entry.days, // now supports multiple days like ["Mon", "Tue"]
-            slots: entry.slots
-                .filter((slot) => slot.start && slot.end) // only keep valid slots
-                .map((slot) => ({
-                    start: slot.start,
-                    end: slot.end,
-                })),
-            note: entry.note || "",
-        }));
-    };
+    // const formatTimingsForBackend = () => {
+    //     return credentials.timings.map((entry) => ({
+    //         days: entry.days, // now supports multiple days like ["Mon", "Tue"]
+    //         slots: entry.slots
+    //             .filter((slot) => slot.start && slot.end) // only keep valid slots
+    //             .map((slot) => ({
+    //                 start: slot.start,
+    //                 end: slot.end,
+    //             })),
+    //         note: entry.note || "",
+    //     }));
+    // };
 
     const handlesubmit = async (e) => {
         e.preventDefault();
@@ -63,7 +63,7 @@ const Signup = (props) => {
                 state: credentials.state,
                 pincode: credentials.pincode,
             },
-            timings: formatTimingsForBackend(),
+            // timings: formatTimingsForBackend(),
             degree: credentials.degrees.filter((d) => d.trim() !== ""),
         };
 
@@ -126,67 +126,67 @@ const Signup = (props) => {
         setcredentials({ ...credentials, degrees: updated });
     };
 
-    const toggleDay = (entryIndex, day) => {
-        setcredentials((prev) => {
-            const updated = [...prev.timings];
-            if (updated[entryIndex].days.includes(day)) {
-                updated[entryIndex].days = updated[entryIndex].days.filter(
-                    (d) => d !== day
-                );
-            } else {
-                updated[entryIndex].days.push(day);
-            }
-            return { ...prev, timings: updated };
-        });
-    };
+    // const toggleDay = (entryIndex, day) => {
+    //     setcredentials((prev) => {
+    //         const updated = [...prev.timings];
+    //         if (updated[entryIndex].days.includes(day)) {
+    //             updated[entryIndex].days = updated[entryIndex].days.filter(
+    //                 (d) => d !== day
+    //             );
+    //         } else {
+    //             updated[entryIndex].days.push(day);
+    //         }
+    //         return { ...prev, timings: updated };
+    //     });
+    // };
 
-    const addEntry = () => {
-        setcredentials((prev) => ({
-            ...prev,
-            timings: [...prev.timings, { days: [], slots: [], note: "" }],
-        }));
-    };
+    // const addEntry = () => {
+    //     setcredentials((prev) => ({
+    //         ...prev,
+    //         timings: [...prev.timings, { days: [], slots: [], note: "" }],
+    //     }));
+    // };
 
-    const removeEntry = (entryIndex) => {
-        setcredentials((prev) => ({
-            ...prev,
-            timings: prev.timings.filter((_, i) => i !== entryIndex),
-        }));
-    };
+    // const removeEntry = (entryIndex) => {
+    //     setcredentials((prev) => ({
+    //         ...prev,
+    //         timings: prev.timings.filter((_, i) => i !== entryIndex),
+    //     }));
+    // };
 
-    const addSlot = (entryIndex) => {
-        setcredentials((prev) => {
-            const updated = [...prev.timings];
-            updated[entryIndex].slots.push("");
-            return { ...prev, timings: updated };
-        });
-    };
+    // const addSlot = (entryIndex) => {
+    //     setcredentials((prev) => {
+    //         const updated = [...prev.timings];
+    //         updated[entryIndex].slots.push("");
+    //         return { ...prev, timings: updated };
+    //     });
+    // };
 
-    const updateSlot = (entryIndex, slotIndex, value) => {
-        setcredentials((prev) => {
-            const updated = [...prev.timings];
-            updated[entryIndex].slots[slotIndex] = value;
-            return { ...prev, timings: updated };
-        });
-    };
+    // const updateSlot = (entryIndex, slotIndex, value) => {
+    //     setcredentials((prev) => {
+    //         const updated = [...prev.timings];
+    //         updated[entryIndex].slots[slotIndex] = value;
+    //         return { ...prev, timings: updated };
+    //     });
+    // };
 
-    const removeSlot = (entryIndex, slotIndex) => {
-        setcredentials((prev) => {
-            const updated = [...prev.timings];
-            updated[entryIndex].slots = updated[entryIndex].slots.filter(
-                (_, i) => i !== slotIndex
-            );
-            return { ...prev, timings: updated };
-        });
-    };
+    // const removeSlot = (entryIndex, slotIndex) => {
+    //     setcredentials((prev) => {
+    //         const updated = [...prev.timings];
+    //         updated[entryIndex].slots = updated[entryIndex].slots.filter(
+    //             (_, i) => i !== slotIndex
+    //         );
+    //         return { ...prev, timings: updated };
+    //     });
+    // };
 
-    const updateNote = (entryIndex, value) => {
-        setcredentials((prev) => {
-            const updated = [...prev.timings];
-            updated[entryIndex].note = value;
-            return { ...prev, timings: updated };
-        });
-    };
+    // const updateNote = (entryIndex, value) => {
+    //     setcredentials((prev) => {
+    //         const updated = [...prev.timings];
+    //         updated[entryIndex].note = value;
+    //         return { ...prev, timings: updated };
+    //     });
+    // };
 
     return (
         <div className="container mt-3">
@@ -345,16 +345,16 @@ const Signup = (props) => {
                 </div>
 
                 {/* Timings UI */}
-                <div className="mb-3">
-                    <h5>Doctor Timings</h5>
+                {/* <div className="mb-3"> */}
+                    {/* <h5>Doctor Timings</h5> */}
 
-                    {credentials.timings.map((entry, entryIndex) => (
-                        <div
-                            key={entryIndex}
-                            className="border p-3 mb-2 rounded"
-                        >
+                    {/* {credentials.timings.map((entry, entryIndex) => ( */}
+                        {/* <div */}
+                            {/* key={entryIndex}
+                            className="border p-3 mb-2 rounded" */}
+                        {/* > */}
                             {/* Multi-select days */}
-                            <div className="d-flex flex-wrap mb-3">
+                            {/* <div className="d-flex flex-wrap mb-3">
                                 {[
                                     "Mon",
                                     "Tue",
@@ -377,10 +377,10 @@ const Signup = (props) => {
                                         {d}
                                     </button>
                                 ))}
-                            </div>
+                            </div> */}
 
                             {/* Slots for this set of days */}
-                            {entry.slots.map((slot, slotIndex) => (
+                            {/* {entry.slots.map((slot, slotIndex) => (
                                 <div
                                     key={slotIndex}
                                     className="d-flex mb-2 align-items-center"
@@ -421,17 +421,17 @@ const Signup = (props) => {
                                         X
                                     </button>
                                 </div>
-                            ))}
+                            ))} */}
 
-                            <button
+                            {/* <button
                                 type="button"
                                 className="btn btn-secondary btn-sm"
                                 onClick={() => addSlot(entryIndex)}
                             >
                                 + Add Slot
-                            </button>
+                            </button> */}
 
-                            <input
+                            {/* <input
                                 type="text"
                                 className="form-control mt-2"
                                 placeholder="Optional note (e.g. On Call)"
@@ -439,9 +439,9 @@ const Signup = (props) => {
                                 onChange={(e) =>
                                     updateNote(entryIndex, e.target.value)
                                 }
-                            />
+                            /> */}
 
-                            <div className="text-end mt-2">
+                            {/* <div className="text-end mt-2">
                                 <button
                                     type="button"
                                     className="btn btn-danger btn-sm"
@@ -449,19 +449,18 @@ const Signup = (props) => {
                                 >
                                     Remove
                                 </button>
-                            </div>
-                        </div>
-                    ))}
+                            </div> */}
+                        {/* </div> */}
 
                     {/* Add new set of days */}
-                    <button
+                    {/* <button
                         type="button"
                         className="btn btn-primary"
                         onClick={addEntry}
                     >
                         + Add Another Timing Group
-                    </button>
-                </div>
+                    </button> */}
+                {/* </div> */}
 
                 <div className="mb-3">
                     <label className="form-label">Degree(s)</label>
