@@ -110,7 +110,7 @@ const Patient = (props) => {
                     {/* ACTION BUTTON */}
                     <div className="w-100 d-flex justify-content-center mt-3" id="actionsWrapper">
                         <button
-                            className="btn btn-primary actions-button w-25"
+                            className="btn btn-primary actions-button w-100"
                             onClick={showActionSheet}
                         >
                             Actions
