@@ -5,64 +5,91 @@ export default function About() {
                 <h2 className="text-center mb-3">About InvoHealth</h2>
 
                 <p className="lead text-center text-muted">
-                    A simple, fast and secure clinic management & invoicing system.
+                    A simple and lightweight record-keeping system for personal clinic use.
                 </p>
 
                 <hr />
 
                 <h4>📌 What is InvoHealth?</h4>
                 <p>
-                    InvoHealth is a lightweight and easy-to-use clinic management platform
-                    designed for doctors who want a fast and reliable system to manage:
+                    InvoHealth is a basic clinic management and invoicing application developed 
+                    for personal and educational purposes. It helps maintain:
                 </p>
                 <ul>
                     <li>✔ Patient records</li>
-                    <li>✔ Appointments & visit history</li>
-                    <li>✔ Services and billing</li>
-                    <li>✔ Auto-generated invoices (PDF)</li>
-                    <li>✔ Secure Excel exports</li>
+                    <li>✔ Appointment & visit history</li>
+                    <li>✔ Services and billing amounts</li>
+                    <li>✔ Auto-generated PDF invoices</li>
+                    <li>✔ Downloadable Excel records</li>
                 </ul>
 
                 <hr />
 
-                <h4>🎯 Our Mission</h4>
+                <h4>🎯 Purpose of This Software</h4>
                 <p>
-                    To provide doctors and clinics a powerful yet simple digital tool that 
-                    helps them save time, reduce paperwork, and deliver a better experience 
-                    to their patients.
+                    This system was built specifically for a single private clinic (my father's clinic) 
+                    to make daily management easier. It is NOT intended for hospitals, 
+                    commercial distribution, or multi-doctor setups.
                 </p>
+
+                <div className="alert alert-warning mt-3">
+                    <strong>⚠ Disclaimer:</strong>  
+                    This application is strictly for <strong>personal and educational use</strong>.  
+                    It does NOT meet medical record standards (HIPAA, etc.) and should NOT be used 
+                    for storing sensitive patient data in a professional/public environment.
+                </div>
 
                 <hr />
 
-                <h4>🚀 Key Features</h4>
+                <h4>🧾 ITR & Accounting Support</h4>
+                <p>
+                    InvoHealth provides simple downloadable reports (Excel + PDF invoices), which can 
+                    be used as a reference for:
+                </p>
                 <ul>
-                    <li>➤ Add, edit and manage patient profiles</li>
-                    <li>➤ Track appointments and visits by date</li>
-                    <li>➤ Auto-calculate invoices with services & pricing</li>
-                    <li>➤ Professionally formatted PDF invoice generator</li>
-                    <li>➤ Download filtered patient reports in Excel</li>
-                    <li>➤ Mobile-first modern UI</li>
+                    <li>• Tracking monthly/annual clinic income</li>
+                    <li>• Reviewing total consultations and services provided</li>
+                    <li>• Supporting calculations during income tax return (ITR) filing</li>
+                </ul>
+
+                <div className="alert alert-info mt-2">
+                    <strong>Note:</strong>  
+                    While InvoHealth helps maintain clean and organized records that can assist 
+                    during ITR filing, it is <strong>not an official accounting or GST tool</strong>.  
+                    Final tax calculations should be reviewed by a CA or tax professional.
+                </div>
+
+                <hr />
+
+                <h4>🚀 Features</h4>
+                <ul>
+                    <li>➤ Add, view, and update patient profiles</li>
+                    <li>➤ Manage appointments and billing</li>
+                    <li>➤ Generate professional PDF invoices</li>
+                    <li>➤ Export filtered records for reporting</li>
+                    <li>➤ Works smoothly on both mobile and desktop</li>
                 </ul>
 
                 <hr />
 
-                <h4>🔐 Security & Privacy</h4>
+                <h4>🔐 Security Note</h4>
                 <p>
-                    Your data is stored securely, protected with authentication, and never shared 
-                    with any external system. Only the logged-in doctor can access the clinic records.
+                    The system uses a token-based login for basic security.  
+                    However, it is <strong>not designed for large-scale sensitive medical data storage</strong>.
                 </p>
 
                 <hr />
 
-                <h4>👨‍⚕️ About the Developer</h4>
+                <h4>👨‍💻 Developer Note</h4>
                 <p>
-                    This application is built and optimized to help clinics go digital effortlessly.
-                    For support or custom enhancements, please reach out anytime.
+                    InvoHealth was developed by Abhed Agarwal as a personal project to help his father 
+                    manage clinic operations more efficiently.  
+                    If you wish to add new features or customize the system, feel free to reach out.
                 </p>
 
                 <div className="text-center mt-4">
                     <small className="text-muted">
-                        © {new Date().getFullYear()} InvoHealth — All Rights Reserved.
+                        © {new Date().getFullYear()} InvoHealth — Personal & Educational Use Only.
                     </small>
                 </div>
             </div>
