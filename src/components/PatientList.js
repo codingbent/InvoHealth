@@ -196,12 +196,12 @@ export default function PatientList() {
     return (
         <>
             <div className="container mt-3">
-                <button
+                {/* <button
                     className="btn btn-primary"
                     onClick={downloadFilteredExcel}
                 >
                     📥 Download Filtered Excel
-                </button>
+                </button> */}
 
                 {/* Search */}
                 <input
