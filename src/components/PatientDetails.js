@@ -12,7 +12,16 @@ export default function PatientDetails() {
 
     const { id } = useParams();
     const [details, setDetails] = useState(null);
+    const [editingAppt, setEditingAppt] = useState(null);
 
+    const [apptData, setApptData] = useState({
+        date: "",
+        service: [],
+        amount: 0,
+        payment_type: "",
+    });
+
+    const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
     const [patient, setPatient] = useState({
         name: "",
         service: [],
