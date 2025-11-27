@@ -361,62 +361,62 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
 });
 
 // POST /api/auth/addappointment/:id
-router.post("/addappointment/:id", async (req, res) => {
-    try {
-        const { service, amount, payment_type, doctorId } = req.body;
-        const patientId = req.params.id;
+// router.post("/addappointment/:id", async (req, res) => {
+//     try {
+//         const { service, amount, payment_type, doctorId } = req.body;
+//         const patientId = req.params.id;
 
-        if (!service || !Array.isArray(service)) {
-            return res
-                .status(400)
-                .json({ message: "Service must be an array" });
-        }
-        if (amount == null) {
-            return res.status(400).json({ message: "Amount is required" });
-        }
+//         if (!service || !Array.isArray(service)) {
+//             return res
+//                 .status(400)
+//                 .json({ message: "Service must be an array" });
+//         }
+//         if (amount == null) {
+//             return res.status(400).json({ message: "Amount is required" });
+//         }
 
-        // Determine doctor ID
-        let finalDoctorId = doctorId;
-        if (!finalDoctorId) {
-            const patient = await Patient.findById(patientId);
-            if (!patient)
-                return res.status(404).json({ message: "Patient not found" });
-            if (!patient.doctor)
-                return res
-                    .status(400)
-                    .json({ message: "Doctor ID is required" });
-            finalDoctorId = patient.doctor;
-        }
+//         // Determine doctor ID
+//         let finalDoctorId = doctorId;
+//         if (!finalDoctorId) {
+//             const patient = await Patient.findById(patientId);
+//             if (!patient)
+//                 return res.status(404).json({ message: "Patient not found" });
+//             if (!patient.doctor)
+//                 return res
+//                     .status(400)
+//                     .json({ message: "Doctor ID is required" });
+//             finalDoctorId = patient.doctor;
+//         }
 
-        // Generate per-doctor invoice number
-        const counterId = `invoice_${finalDoctorId}`;
-        const counter = await Counter.findByIdAndUpdate(
-            counterId,
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
-        const invoiceNumber = counter.seq;
+//         // Generate per-doctor invoice number
+//         const counterId = `invoice_${finalDoctorId}`;
+//         const counter = await Counter.findByIdAndUpdate(
+//             counterId,
+//             { $inc: { seq: 1 } },
+//             { new: true, upsert: true }
+//         );
+//         const invoiceNumber = counter.seq;
 
-        // Add visit/appointment using static method
-        const appointment = await Appointment.addVisit(
-            patientId,
-            finalDoctorId,
-            service,
-            amount,
-            payment_type,
-            invoiceNumber // Pass the per-doctor invoice number
-        );
+//         // Add visit/appointment using static method
+//         const appointment = await Appointment.addVisit(
+//             patientId,
+//             finalDoctorId,
+//             service,
+//             amount,
+//             payment_type,
+//             invoiceNumber // Pass the per-doctor invoice number
+//         );
 
-        res.status(201).json({
-            success: true,
-            message: "Appointment added successfully",
-            appointment,
-        });
-    } catch (err) {
-        console.error("Add Appointment Error:", err);
-        res.status(500).json({ message: "Server error" });
-    }
-});
+//         res.status(201).json({
+//             success: true,
+//             message: "Appointment added successfully",
+//             appointment,
+//         });
+//     } catch (err) {
+//         console.error("Add Appointment Error:", err);
+//         res.status(500).json({ message: "Server error" });
+//     }
+// });
 
 // GET /api/auth/patientdetails/:id
 router.get("/patientdetails/:id", async (req, res) => {
@@ -500,38 +500,38 @@ router.put(
     }
 );
 
-router.post("/addappointment/:id", async (req, res) => {
-    try {
-        const { service, amount, payment_type } = req.body;
-        const patientId = req.params.id;
+// router.post("/addappointment/:id", async (req, res) => {
+//     try {
+//         const { service, amount, payment_type } = req.body;
+//         const patientId = req.params.id;
 
-        if (!service || !Array.isArray(service)) {
-            return res
-                .status(400)
-                .json({ message: "Service must be an array" });
-        }
+//         if (!service || !Array.isArray(service)) {
+//             return res
+//                 .status(400)
+//                 .json({ message: "Service must be an array" });
+//         }
 
-        if (amount == null) {
-            return res.status(400).json({ message: "Amount is required" });
-        }
+//         if (amount == null) {
+//             return res.status(400).json({ message: "Amount is required" });
+//         }
 
-        const appointment = await Appointment.addVisit(
-            patientId,
-            service,
-            amount,
-            payment_type
-        );
+//         const appointment = await Appointment.addVisit(
+//             patientId,
+//             service,
+//             amount,
+//             payment_type
+//         );
 
-        res.status(201).json({
-            success: true,
-            message: "Appointment added successfully",
-            appointment,
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
-    }
-});
+//         res.status(201).json({
+//             success: true,
+//             message: "Appointment added successfully",
+//             appointment,
+//         });
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ message: "Server error" });
+//     }
+// });
 
 router.get("/appointments/:patientId", async (req, res) => {
     try {
@@ -609,32 +609,32 @@ router.get("/getdoc", fetchuser, async (req, res) => {
 });
 
 
-router.get("/fetch-all-visits", fetchuser, async (req, res) => {
-    try {
-        const appointments = await Appointment.find({ doctor: req.doc.id })
-            .populate("patient", "name number")
-            .populate("doctor", "name");
+// router.get("/fetch-all-visits", fetchuser, async (req, res) => {
+//     try {
+//         const appointments = await Appointment.find({ doctor: req.doc.id })
+//             .populate("patient", "name number")
+//             .populate("doctor", "name");
 
-        const allVisits = appointments.flatMap((a) =>
-            a.visits.map((v) => ({
-                appointmentId: a._id,
-                patientName: a.patient?.name || "Unknown",
-                number: a.patient?.number || "N/A",
-                doctorName: a.doctor?.name || "Unknown",
-                date: v.date,
-                paymentType: v.payment_type,
-                invoiceNumber: v.invoiceNumber,
-                amount: v.amount,
-            }))
-        );
+//         const allVisits = appointments.flatMap((a) =>
+//             a.visits.map((v) => ({
+//                 appointmentId: a._id,
+//                 patientName: a.patient?.name || "Unknown",
+//                 number: a.patient?.number || "N/A",
+//                 doctorName: a.doctor?.name || "Unknown",
+//                 date: v.date,
+//                 paymentType: v.payment_type,
+//                 invoiceNumber: v.invoiceNumber,
+//                 amount: v.amount,
+//             }))
+//         );
 
-        allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
+//         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        res.status(200).json(allVisits);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
-    }
-});
+//         res.status(200).json(allVisits);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Server error" });
+//     }
+// });
 
 module.exports = router;

@@ -122,9 +122,16 @@ const Patient = (props) => {
 
                     <div>
                         {!showAppointment && !showPatientDetails && (
-                            <div className="record-list">
-                                <AppointmentRecord />
-                            </div>
+                            <>
+                                <div className="patient-list">
+                                    <PatientList
+                                        openPatientDetails={openPatientDetails}
+                                    />{" "}
+                                </div>
+                                <div className="record-list">
+                                    <AppointmentRecord />
+                                </div>
+                            </>
                         )}
                         {showAppointment && (
                             <div className="appointment container">
