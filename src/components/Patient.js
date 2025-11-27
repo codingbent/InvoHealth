@@ -154,7 +154,7 @@ const Patient = (props) => {
                             </div>
                         </div>
                         <button
-                            className="btn btn-success mb-3 me-2"
+                            className="btn btn-primary"
                             onClick={downloadExcelSecure}
                         >
                             Download Excel (secure)

@@ -197,7 +197,7 @@ export default function PatientList() {
         <>
             <div className="container mt-3">
                 <button
-                    className="btn btn-success mb-3"
+                    className="btn btn-primary"
                     onClick={downloadFilteredExcel}
                 >
                     📥 Download Filtered Excel
