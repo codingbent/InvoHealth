@@ -122,11 +122,8 @@ const Patient = (props) => {
 
                     <div>
                         {!showAppointment && !showPatientDetails && (
-                            <div className="patient-list">
-                                <PatientList
-                                    openPatientDetails={openPatientDetails}
-                                />{" "}
-                                {/* Pass function */}
+                            <div className="record-list">
+                                <AppointmentRecord />
                             </div>
                         )}
                         {showAppointment && (
