@@ -584,6 +584,20 @@ router.get("/getdoc", fetchuser, async (req, res) => {
     }
 });
 
+router.put("/updatedoc", fetchuser, async (req, res) => {
+    try {
+        const updated = await Doc.findByIdAndUpdate(
+            req.doc.id,
+            { $set: req.body },
+            { new: true }
+        );
+
+        return res.json({ success: true, doctor: updated });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.put("/edit-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
     try {
         const { appointmentId, visitId } = req.params;
