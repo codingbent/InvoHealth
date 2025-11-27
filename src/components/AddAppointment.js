@@ -8,13 +8,20 @@ const AddAppointment = (props) => {
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [amount, setAmount] = useState(0);
     const [searchText, setSearchText] = useState("");
+
     const [selectedPatient, setSelectedPatient] = useState(
         localStorage.getItem("patient")
             ? JSON.parse(localStorage.getItem("patient"))
             : null
     );
-    const [payment_type, setpayment_type] = useState("Cash"); // ✅
+
+    const [payment_type, setpayment_type] = useState("Cash");
     const [allServices, setAllServices] = useState([]);
+
+    // ✅ New: Appointment Date
+    const [appointmentDate, setAppointmentDate] = useState(
+        new Date().toISOString().slice(0, 10)
+    );
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -94,6 +101,7 @@ const AddAppointment = (props) => {
 
     const handleAddAppointment = async (e) => {
         e.preventDefault();
+
         if (!selectedPatient) {
             alert("Please select a patient first");
             return;
@@ -115,7 +123,8 @@ const AddAppointment = (props) => {
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         amount,
-                        payment_type: payment_type, // ✅ include
+                        payment_type,
+                        date: appointmentDate, // ✅ Added here!
                     }),
                 }
             );
@@ -130,6 +139,7 @@ const AddAppointment = (props) => {
                 setSelectedPatient(null);
                 localStorage.removeItem("patient");
                 setpayment_type("Cash");
+                setAppointmentDate(new Date().toISOString().slice(0, 10)); // Reset
             } else {
                 props.showAlert(
                     result.error || "Failed to add appointment",
@@ -186,6 +196,17 @@ const AddAppointment = (props) => {
 
             {selectedPatient && (
                 <form onSubmit={handleAddAppointment}>
+                    {/* Appointment Date */}
+                    <div className="mb-3">
+                        <label className="form-label">Appointment Date</label>
+                        <input
+                            type="date"
+                            className="form-control"
+                            value={appointmentDate}
+                            onChange={(e) => setAppointmentDate(e.target.value)}
+                        />
+                    </div>
+
                     <div className="mb-3">
                         <label className="form-label">Services</label>
                         <ServiceList
@@ -231,6 +252,7 @@ const AddAppointment = (props) => {
                                     </li>
                                 ))}
                             </ul>
+
                             <label className="form-label">Total Amount</label>
                             <input
                                 type="number"
