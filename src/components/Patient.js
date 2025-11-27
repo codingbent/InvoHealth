@@ -74,73 +74,75 @@ const Patient = (props) => {
         <>
             {localStorage.getItem("token") != null ? (
                 <>
-                    <div className="mt-3 d-flex justify-content-center">
-                        <div
-                            className="dropdown w-100"
-                            style={{ maxWidth: "400px" }}
-                        >
-                            <button
-                                className="btn btn-primary dropdown-toggle w-100"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                            >
-                                Actions
-                            </button>
+                    <div className="container mb-3 mt-3">
+                        <div className="d-flex justify-content-between align-items-center flex-wrap">
+                            <div className="col-12 col-md-4 mx-auto mb-2">
+                                <button
+                                    className="btn btn-primary w-100"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Actions ▾
+                                </button>
+                                <ul className="dropdown-menu w-100">
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#patientModal"
+                                        >
+                                            Add Patient
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#serviceModal"
+                                        >
+                                            Add Service
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() =>
+                                                setShowAppointment(true)
+                                            }
+                                        >
+                                            Add Appointment
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editServiceModal"
+                                        >
+                                            Edit Service
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={downloadFilteredExcel}
+                                        >
+                                            Download Excel (secure)
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
 
-                            <ul className="dropdown-menu w-100">
-                                {/* Add Patient */}
-                                <li>
-                                    <button
-                                        className="dropdown-item"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#patientModal"
-                                    >
-                                        Add Patient
-                                    </button>
-                                </li>
-
-                                {/* Add Service */}
-                                <li>
-                                    <button
-                                        className="dropdown-item"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#serviceModal"
-                                    >
-                                        Add Service
-                                    </button>
-                                </li>
-
-                                {/* Add Appointment */}
-                                <li>
-                                    <button
-                                        className="dropdown-item"
-                                        onClick={() => setShowAppointment(true)}
-                                    >
-                                        Add Appointment
-                                    </button>
-                                </li>
-
-                                {/* Edit Service */}
-                                <li>
-                                    <button
-                                        className="dropdown-item"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editServiceModal"
-                                    >
-                                        Edit Service
-                                    </button>
-                                </li>
-
-                                {/* Download Excel */}
-                                <li>
-                                    <button
-                                        className="dropdown-item"
-                                        onClick={downloadExcelSecure}
-                                    >
-                                        Download Excel (secure)
-                                    </button>
-                                </li>
-                            </ul>
+                            {/* FILTER BUTTON (float right on desktop, full width on mobile) */}
+                            <div className="col-12 col-md-3 mb-2 text-md-end">
+                                <button
+                                    className="btn btn-outline-primary w-100 w-md-auto"
+                                    data-bs-toggle="offcanvas"
+                                    data-bs-target="#filterPanel"
+                                >
+                                    Filters
+                                </button>
+                            </div>
                         </div>
                     </div>
 
