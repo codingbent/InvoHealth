@@ -15,10 +15,9 @@ function App() {
             msg: message,
             type: type,
         });
-        setTimeout(() => {
-            setalert(null);
-        }, 10000);
+        setTimeout(() => setalert(null), 10000);
     };
+
     return (
         <>
             <BrowserRouter>
@@ -26,7 +25,10 @@ function App() {
                 <Alert alert={alert} />
                 <Routes>
                     <Route path="/" element={<Home showAlert={showAlert} />} />
-                    <Route path="/patient/:id" element={<PatientDetails />} />
+                    <Route
+                        path="/patient/:id"
+                        element={<PatientDetails showAlert={showAlert} />}
+                    />
                     <Route
                         path="/login"
                         element={<Login showAlert={showAlert} />}

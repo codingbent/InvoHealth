@@ -360,16 +360,13 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/auth/addappointment/:id
 router.post("/addappointment/:id", async (req, res) => {
     try {
         const { service, amount, payment_type, doctorId } = req.body;
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
-            return res
-                .status(400)
-                .json({ message: "Service must be an array" });
+            return res.status(400).json({ message: "Service must be an array" });
         }
         if (amount == null) {
             return res.status(400).json({ message: "Amount is required" });
@@ -382,9 +379,7 @@ router.post("/addappointment/:id", async (req, res) => {
             if (!patient)
                 return res.status(404).json({ message: "Patient not found" });
             if (!patient.doctor)
-                return res
-                    .status(400)
-                    .json({ message: "Doctor ID is required" });
+                return res.status(400).json({ message: "Doctor ID is required" });
             finalDoctorId = patient.doctor;
         }
 
@@ -397,14 +392,13 @@ router.post("/addappointment/:id", async (req, res) => {
         );
         const invoiceNumber = counter.seq;
 
-        // Add visit/appointment using static method
         const appointment = await Appointment.addVisit(
             patientId,
             finalDoctorId,
             service,
             amount,
             payment_type,
-            invoiceNumber // Pass the per-doctor invoice number
+            invoiceNumber
         );
 
         res.status(201).json({
@@ -417,6 +411,7 @@ router.post("/addappointment/:id", async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
+
 
 // GET /api/auth/patientdetails/:id
 router.get("/patientdetails/:id", async (req, res) => {

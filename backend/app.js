@@ -2,13 +2,16 @@ require("dotenv").config();
 const connectToMongo = require("./db");
 const express = require("express");
 const cors = require("cors");
-const appointmentReport = require("./routes/appointmentReport");
 
 connectToMongo();
+
 const app = express();
 const port = process.env.PORT || 5001;
 
-const allowedOrigins = ["https://invohealth.vercel.app", "http://localhost:3000"];
+const allowedOrigins = [
+    "https://invohealth.vercel.app",
+    "http://localhost:3000",
+];
 
 app.use(
     cors({
