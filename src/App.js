@@ -7,6 +7,8 @@ import Signup from "./components/Signup";
 import Navbar from "./components/Navbar";
 import Alert from "./components/Alert";
 import PatientDetails from "./components/PatientDetails";
+import DoctorProfile from "./components/DoctorProfile";
+
 
 function App() {
     const [alert, setalert] = useState(null);
@@ -37,6 +39,8 @@ function App() {
                         path="/signup"
                         element={<Signup showAlert={showAlert} />}
                     />
+                    <Route path="/profile" element={<DoctorProfile />} />
+
                 </Routes>
             </BrowserRouter>
         </>
