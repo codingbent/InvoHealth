@@ -327,12 +327,21 @@ export default function PatientDetails() {
             // --------------------------------------------------
 
             docPdf.setFontSize(12);
-            docPdf.text(
-                "Doctor's Signature / Stamp",
-                pageWidth - margin,
-                pageHeight - 20,
-                { align: "right" }
-            );
+
+            // Doctor Name (1st line)
+            docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
+                align: "right",
+            });
+
+            // Degrees (2nd line, supports multiple degrees)
+            if (doctor.degree && doctor.degree.length > 0) {
+                docPdf.text(
+                    doctor.degree.join(", "),
+                    pageWidth - margin,
+                    pageHeight - 18,
+                    { align: "right" }
+                );
+            }
 
             // --------------------------------------------------
             // SAVE PDF
