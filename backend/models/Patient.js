@@ -36,6 +36,11 @@ const PatientSchema = new Schema({
         type: Number,
         required: false,
     },
+    gender:{
+        type:String,
+        enum: ["Male", "Female", "Other"],
+        required:false
+    },
     date: {
         type: Date,
         default: Date.now,

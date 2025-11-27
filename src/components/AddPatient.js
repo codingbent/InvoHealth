@@ -2,28 +2,32 @@ import { useState, useEffect } from "react";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 
-const AddPatient = (props) => {
+const AddPatient = ({ showAlert }) => {
     const [patient, setPatient] = useState({
         name: "",
         service: [],
         number: "0000000000",
         amount: 0,
         age: "",
+        gender: "Male",
     });
+
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState([]);
+
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
     const [payment_type, setPaymentType] = useState("Cash");
 
-    const { name, service, number, amount, age } = patient;
+    const { name, service, number, amount, age, gender } = patient;
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
+    // Fetch services
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -40,6 +44,7 @@ const AddPatient = (props) => {
         fetchServices();
     }, []);
 
+    // Calculate amount
     useEffect(() => {
         const newAmounts = service.map(
             (s, index) => serviceAmounts[index] ?? s.amount ?? 0
@@ -67,9 +72,6 @@ const AddPatient = (props) => {
         const newAmounts = [...serviceAmounts];
         newAmounts[index] = Number(value);
         setServiceAmounts(newAmounts);
-
-        const total = newAmounts.reduce((a, b) => a + b, 0);
-        setPatient((prev) => ({ ...prev, amount: total }));
     };
 
     const onChange = (e) =>
@@ -79,7 +81,7 @@ const AddPatient = (props) => {
         e.preventDefault();
 
         try {
-            // 1️⃣ Add patient
+            // Create patient first
             const patientRes = await fetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
@@ -90,6 +92,7 @@ const AddPatient = (props) => {
                     },
                     body: JSON.stringify({
                         name,
+                        gender,
                         service: service.map((s, index) => ({
                             id: s._id,
                             name: s.name,
@@ -104,7 +107,7 @@ const AddPatient = (props) => {
 
             const patientJson = await patientRes.json();
             if (!patientJson.success) {
-                props.showAlert(
+                showAlert(
                     patientJson.error || "Failed to add patient",
                     "danger"
                 );
@@ -113,15 +116,11 @@ const AddPatient = (props) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // 2️⃣ Get doctor ID from token
+            // Add initial appointment
             const token = localStorage.getItem("token");
-            let doctorId = null;
-            if (token) {
-                const decoded = jwtDecode(token);
-                doctorId = decoded._id; // adjust if your token uses a different key
-            }
+            const decoded = jwtDecode(token);
+            const doctorId = decoded.doc?.id;
 
-            // 3️⃣ Add initial appointment
             const appointmentRes = await fetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
@@ -139,40 +138,34 @@ const AddPatient = (props) => {
                         amount,
                         date: appointmentDate,
                         payment_type,
-                        doctorId, // automatically assigned
+                        doctorId,
                     }),
                 }
             );
 
             const appointmentJson = await appointmentRes.json();
             if (appointmentJson.success) {
-                props.showAlert(
-                    "Patient and appointment added successfully!",
-                    "success"
-                );
+                showAlert("Patient and appointment added!", "success");
                 document.querySelector("#patientModal .btn-close").click();
             } else {
-                props.showAlert(
-                    appointmentJson.error ||
-                        "Patient added but appointment failed",
-                    "warning"
-                );
+                showAlert("Patient added but appointment failed", "warning");
             }
 
             // Reset form
             setPatient({
                 name: "",
                 service: [],
-                number: "",
+                number: "0000000000",
                 amount: 0,
                 age: "",
+                gender: "Other",
             });
             setServiceAmounts([]);
             setAppointmentDate(new Date().toISOString().slice(0, 10));
             setPaymentType("Cash");
         } catch (err) {
             console.error(err);
-            props.showAlert("Server error", "danger");
+            showAlert("Server error", "danger");
         }
     };
 
@@ -186,7 +179,6 @@ const AddPatient = (props) => {
                     <button
                         type="button"
                         className="btn-close"
-                        id="#addPatientModal"
                         data-bs-dismiss="modal"
                     />
                 </div>
@@ -205,6 +197,21 @@ const AddPatient = (props) => {
                         />
                     </div>
 
+                    {/* Gender */}
+                    <div className="mb-3">
+                        <label className="form-label">Gender</label>
+                        <select
+                            className="form-control"
+                            name="gender"
+                            value={gender}
+                            onChange={onChange}
+                        >
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
                     {/* Services */}
                     <div className="mb-3">
                         <label className="form-label">Services</label>
@@ -215,15 +222,15 @@ const AddPatient = (props) => {
                         />
                     </div>
 
-                    {/* Bill details */}
+                    {/* Bill */}
                     {service.length > 0 && (
-                        <div className="mb-3">
+                        <>
                             <label className="form-label">Bill Details</label>
                             <ul className="list-group mb-2">
                                 {service.map((s, index) => (
                                     <li
                                         key={s._id}
-                                        className="list-group-item d-flex justify-content-between align-items-center"
+                                        className="list-group-item d-flex justify-content-between"
                                     >
                                         <span>{s.name}</span>
                                         <input
@@ -231,8 +238,7 @@ const AddPatient = (props) => {
                                             className="form-control w-25"
                                             value={
                                                 serviceAmounts[index] ??
-                                                s.amount ??
-                                                0
+                                                s.amount
                                             }
                                             onChange={(e) =>
                                                 handleServiceAmountChange(
@@ -244,6 +250,7 @@ const AddPatient = (props) => {
                                     </li>
                                 ))}
                             </ul>
+
                             <label className="form-label">Total Amount</label>
                             <input
                                 type="number"
@@ -251,7 +258,7 @@ const AddPatient = (props) => {
                                 value={amount}
                                 readOnly
                             />
-                        </div>
+                        </>
                     )}
 
                     {/* Appointment Date */}
@@ -260,7 +267,7 @@ const AddPatient = (props) => {
                         <input
                             type="date"
                             className="form-control"
-                            value={appointmentDate.slice(0, 10)}
+                            value={appointmentDate}
                             onChange={(e) => setAppointmentDate(e.target.value)}
                         />
                     </div>
@@ -282,7 +289,7 @@ const AddPatient = (props) => {
 
                     {/* Number */}
                     <div className="mb-3">
-                        <label className="form-label">Number</label>
+                        <label className="form-label">Mobile Number</label>
                         <input
                             type="number"
                             className="form-control"
@@ -309,7 +316,6 @@ const AddPatient = (props) => {
                     <button
                         type="button"
                         className="btn btn-secondary"
-                        id="#addPatientModal"
                         data-bs-dismiss="modal"
                     >
                         Close

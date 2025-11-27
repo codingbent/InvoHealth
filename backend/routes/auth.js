@@ -13,8 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const authMiddleware = require("../middleware/fetchuser"); // if using auth
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
-router.post(
-    "/createdoc",
+router.post("/createdoc",
     [
         body("name").isLength({ min: 3 }),
         body("email").isEmail(),
@@ -84,9 +83,7 @@ router.post(
 );
 
 // Creating a Patient using : POST "/API/AUTH" Doesn't require auth
-// Add fetchuser middleware to get logged-in doctor
-router.post(
-    "/addpatient",
+router.post("/addpatient",
     fetchuser,
     [
         body("name", "Enter Name").notEmpty(),
@@ -97,6 +94,12 @@ router.post(
             .optional({ checkFalsy: true })
             .isNumeric()
             .withMessage("Age must be a number"),
+
+        // 👉 Gender validation (optional but allowed)
+        body("gender")
+            .optional()
+            .isIn(["Male", "Female", "Other"])
+            .withMessage("Gender must be Male, Female, or Other"),
     ],
     async (req, res) => {
         let success = false;
@@ -113,25 +116,24 @@ router.post(
                 number: req.body.number,
                 amount: req.body.amount,
                 age: req.body.age,
+                gender: req.body.gender, // ✅ Save gender
                 doctor: doctorId,
             });
 
             success = true;
             res.json({ success, patient });
         } catch (err) {
-            console.error("AddPatient error:", err); // full error object with stack
+            console.error("AddPatient error:", err);
             res.status(500).json({
                 success,
-                error: err.message, // send actual reason back to frontend
+                error: err.message,
             });
         }
     }
 );
-
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 
-router.post(
-    "/createservice",
+router.post("/createservice",
     fetchuser,
     [body("name").notEmpty(), body("amount").isNumeric()],
     async (req, res) => {
@@ -282,17 +284,22 @@ router.get("/fetchpatientsbylastvisit", async (req, res) => {
 
 //update patient details
 
-router.put(
-    "/updatepatientdetails/:id",
+router.put("/updatepatientdetails/:id",
     [
         body("name", "Enter Name").notEmpty(),
         body("service").optional(),
         body("number").optional(),
         body("amount").optional(),
         body("age")
-            .optional({ checkFalsy: true }) // allows empty string or missing field
+            .optional({ checkFalsy: true })
             .isNumeric()
             .withMessage("Age must be a number"),
+
+        // 👉 Gender field validation
+        body("gender")
+            .optional()
+            .isIn(["Male", "Female", "Other"])
+            .withMessage("Gender must be Male, Female, or Other"),
     ],
     async (req, res) => {
         try {
@@ -302,8 +309,10 @@ router.put(
                 return res.status(400).json({ errors: errors.array() });
             }
 
-            // Build update object
-            const { name, service, number, amount, age } = req.body;
+            // Extract fields
+            const { name, service, number, amount, age, gender } = req.body;
+
+            // Build update object dynamically
             const updateFields = {};
             if (name) updateFields.name = name;
             if (service) updateFields.service = service;
@@ -311,11 +320,14 @@ router.put(
             if (amount) updateFields.amount = amount;
             if (age) updateFields.age = age;
 
+            // 👉 Add gender
+            if (gender) updateFields.gender = gender;
+
             // Update patient
             const patient = await Patient.findByIdAndUpdate(
                 req.params.id,
                 { $set: updateFields },
-                { new: true } // return updated document
+                { new: true }
             );
 
             if (!patient) {
@@ -366,7 +378,9 @@ router.post("/addappointment/:id", async (req, res) => {
         const patientId = req.params.id;
 
         if (!service || !Array.isArray(service)) {
-            return res.status(400).json({ message: "Service must be an array" });
+            return res
+                .status(400)
+                .json({ message: "Service must be an array" });
         }
         if (amount == null) {
             return res.status(400).json({ message: "Amount is required" });
@@ -379,7 +393,9 @@ router.post("/addappointment/:id", async (req, res) => {
             if (!patient)
                 return res.status(404).json({ message: "Patient not found" });
             if (!patient.doctor)
-                return res.status(400).json({ message: "Doctor ID is required" });
+                return res
+                    .status(400)
+                    .json({ message: "Doctor ID is required" });
             finalDoctorId = patient.doctor;
         }
 
@@ -413,7 +429,6 @@ router.post("/addappointment/:id", async (req, res) => {
     }
 });
 
-
 // GET /api/auth/patientdetails/:id
 router.get("/patientdetails/:id", async (req, res) => {
     try {
@@ -431,8 +446,7 @@ router.get("/patientdetails/:id", async (req, res) => {
 });
 
 // PUT /api/auth/updateappointment/:appointmentId
-router.put(
-    "/updateappointment/:appointmentId/:visitId",
+router.put("/updateappointment/:appointmentId/:visitId",
     authMiddleware,
     async (req, res) => {
         const { appointmentId, visitId } = req.params;
@@ -496,39 +510,6 @@ router.put(
     }
 );
 
-// router.post("/addappointment/:id", async (req, res) => {
-//     try {
-//         const { service, amount, payment_type } = req.body;
-//         const patientId = req.params.id;
-
-//         if (!service || !Array.isArray(service)) {
-//             return res
-//                 .status(400)
-//                 .json({ message: "Service must be an array" });
-//         }
-
-//         if (amount == null) {
-//             return res.status(400).json({ message: "Amount is required" });
-//         }
-
-//         const appointment = await Appointment.addVisit(
-//             patientId,
-//             service,
-//             amount,
-//             payment_type
-//         );
-
-//         res.status(201).json({
-//             success: true,
-//             message: "Appointment added successfully",
-//             appointment,
-//         });
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: "Server error" });
-//     }
-// });
-
 router.get("/appointments/:patientId", async (req, res) => {
     try {
         const appointments = await Appointment.find({
@@ -540,8 +521,7 @@ router.get("/appointments/:patientId", async (req, res) => {
     }
 });
 
-router.post(
-    "/login",
+router.post("/login",
     [body("email").isEmail(), body("password", "Enter password").exists()],
     async (req, res) => {
         let success = false;
@@ -604,32 +584,5 @@ router.get("/getdoc", fetchuser, async (req, res) => {
     }
 });
 
-// router.get("/fetch-all-visits", fetchuser, async (req, res) => {
-//     try {
-//         const appointments = await Appointment.find({ doctor: req.doc.id })
-//             .populate("patient", "name number")
-//             .populate("doctor", "name");
-
-//         const allVisits = appointments.flatMap((a) =>
-//             a.visits.map((v) => ({
-//                 appointmentId: a._id,
-//                 patientName: a.patient?.name || "Unknown",
-//                 number: a.patient?.number || "N/A",
-//                 doctorName: a.doctor?.name || "Unknown",
-//                 date: v.date,
-//                 paymentType: v.payment_type,
-//                 invoiceNumber: v.invoiceNumber,
-//                 amount: v.amount,
-//             }))
-//         );
-
-//         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-//         res.status(200).json(allVisits);
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Server error" });
-//     }
-// });
 
 module.exports = router;

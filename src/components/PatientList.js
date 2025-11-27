@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientDetails from "./PatientDetails";
-import * as XLSX from "xlsx"; // <-- added
+import * as XLSX from "xlsx";
 
 export default function PatientList() {
     const navigate = useNavigate();
     const [patientsByDate, setPatientsByDate] = useState({});
     const [services, setServices] = useState([]);
+
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedService, setSelectedService] = useState("");
     const [selectedpayment_type, setSelectedpayment_type] = useState("");
+
+    const [selectedGender, setSelectedGender] = useState(""); // ✅ GENDER FILTER HERE
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -109,8 +112,9 @@ export default function PatientList() {
         fetchServices();
     }, [API_BASE_URL]);
 
-
-    // FILTER LOGIC
+    // ==========================
+    // APPLY FILTER LOGIC
+    // ==========================
     const applyFilters = (patients) => {
         return patients.filter((p) => {
             const matchSearch =
@@ -122,7 +126,9 @@ export default function PatientList() {
                 p.service?.some((s) => {
                     if (!s) return false;
                     if (typeof s === "string")
-                        return s.toLowerCase() === selectedService.toLowerCase();
+                        return (
+                            s.toLowerCase() === selectedService.toLowerCase()
+                        );
 
                     if (typeof s === "object") {
                         const serviceName = s.name || s.service_name || "";
@@ -140,13 +146,18 @@ export default function PatientList() {
                     p.lastpayment_type.toLowerCase() ===
                         selectedpayment_type.toLowerCase());
 
-            return matchSearch && matchService && matchPayment;
+            const matchGender =
+                !selectedGender ||
+                (p.gender &&
+                    p.gender.toLowerCase() === selectedGender.toLowerCase());
+
+            return matchSearch && matchService && matchPayment && matchGender; // ✅ Added gender check
         });
     };
 
-    // =============================
+    // ==========================
     // 📥 DOWNLOAD FILTERED EXCEL
-    // =============================
+    // ==========================
     const downloadFilteredExcel = () => {
         let finalRows = [];
 
@@ -164,6 +175,7 @@ export default function PatientList() {
                                 : new Date(dateKey).toLocaleDateString(),
                         Name: p.name,
                         Number: p.number,
+                        Gender: p.gender || "N/A", // ✅ Gender added to Excel
                         Payment: p.lastpayment_type || "N/A",
                     });
                 });
@@ -184,10 +196,6 @@ export default function PatientList() {
     return (
         <>
             <div className="container mt-3">
-
-                {/* ==================== */}
-                {/* DOWNLOAD BUTTON */}
-                {/* ==================== */}
                 <button
                     className="btn btn-success mb-3"
                     onClick={downloadFilteredExcel}
@@ -204,7 +212,19 @@ export default function PatientList() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
 
-                {/* Filter by Service */}
+                {/* Gender filter */}
+                <select
+                    className="form-select mb-2"
+                    value={selectedGender}
+                    onChange={(e) => setSelectedGender(e.target.value)}
+                >
+                    <option value="">All Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+
+                {/* Service filter */}
                 <select
                     className="form-select mb-2"
                     value={selectedService}
@@ -234,12 +254,8 @@ export default function PatientList() {
                 {Object.keys(patientsByDate)
                     .sort((a, b) => new Date(b) - new Date(a))
                     .map((date) => {
-                        let group = Array.isArray(patientsByDate[date])
-                            ? patientsByDate[date]
-                            : [];
-
-                        const filteredGroup = applyFilters(group);
-                        if (filteredGroup.length === 0) return null;
+                        const group = applyFilters(patientsByDate[date] || []);
+                        if (group.length === 0) return null;
 
                         return (
                             <div key={date} className="mb-4">
@@ -254,23 +270,31 @@ export default function PatientList() {
                                         <tr>
                                             <th>Name</th>
                                             <th>Number</th>
+                                            <th>Gender</th> {/* NEW COLUMN */}
                                             <th>Payment</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
 
                                     <tbody>
-                                        {filteredGroup.map((p) => (
+                                        {group.map((p) => (
                                             <tr
                                                 key={p._id}
                                                 style={{ cursor: "pointer" }}
                                                 onClick={() =>
-                                                    navigate(`/patient/${p._id}`)
+                                                    navigate(
+                                                        `/patient/${p._id}`
+                                                    )
                                                 }
                                             >
                                                 <td>{p.name}</td>
                                                 <td>{p.number}</td>
-                                                <td>{p.lastpayment_type || "N/A"}</td>
+                                                <td>{p.gender || "N/A"}</td>
+                                                <td>
+                                                    {p.lastpayment_type ||
+                                                        "N/A"}
+                                                </td>
+
                                                 <td>
                                                     <button
                                                         className="btn btn-danger btn-sm"
