@@ -37,6 +37,7 @@
   }
 }
 
+/* ACTION SHEET UI */
 .actions-button {
     border-radius: 25px;
     font-weight: 600;
@@ -79,9 +80,10 @@
     font-weight: bold !important;
 }
 
-.dropdown,
-.dropdown-menu,
-.dropdown-toggle {
+/* Only disable dropdown inside Actions button */
+#actionsWrapper .dropdown,
+#actionsWrapper .dropdown-menu,
+#actionsWrapper .dropdown-toggle {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
