@@ -291,7 +291,7 @@ export default function PatientDetails() {
             const tableStartY = Math.max(leftY, rightY) + 10;
 
             autoTable(docPdf, {
-                startY: tableStart,
+                startY: tableStartY,
                 head: [["Service", "Amount (₹)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
