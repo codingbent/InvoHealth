@@ -129,13 +129,14 @@ const Patient = (props) => {
                 <>
                     <div className="container mb-3 mt-3">
                         <div className="d-flex justify-content-between align-items-center flex-wrap">
-                            <div className="col-12 col-md-4 mx-auto mb-2">
+                            <div className="col-12 col-md-4 mx-auto mb-2 dropdown">
                                 <button
-                                    className="btn btn-primary w-100"
+                                    className="btn btn-primary dropdown-toggle w-100"
+                                    type="button"
                                     data-bs-toggle="dropdown"
                                     aria-expanded="false"
                                 >
-                                    Actions ▾
+                                    Actions
                                 </button>
                                 <ul className="dropdown-menu w-100">
                                     <li>
@@ -147,6 +148,7 @@ const Patient = (props) => {
                                             Add Patient
                                         </button>
                                     </li>
+
                                     <li>
                                         <button
                                             className="dropdown-item"
@@ -156,6 +158,7 @@ const Patient = (props) => {
                                             Add Service
                                         </button>
                                     </li>
+
                                     <li>
                                         <button
                                             className="dropdown-item"
@@ -166,6 +169,7 @@ const Patient = (props) => {
                                             Add Appointment
                                         </button>
                                     </li>
+
                                     <li>
                                         <button
                                             className="dropdown-item"
@@ -175,6 +179,7 @@ const Patient = (props) => {
                                             Edit Service
                                         </button>
                                     </li>
+
                                     <li>
                                         <button
                                             className="dropdown-item"

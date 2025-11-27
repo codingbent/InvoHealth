@@ -193,7 +193,7 @@ export default function PatientList() {
                 {/* ----------- FILTER BUTTON ---------- */}
                 <div className="d-flex mb-3">
                     <button
-                        className="btn btn-outline-primary w-100"
+                        className="btn btn-outline-primary w-25"
                         data-bs-toggle="offcanvas"
                         data-bs-target="#filterPanel"
                     >
