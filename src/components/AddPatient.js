@@ -260,7 +260,7 @@ const AddPatient = (props) => {
                         <input
                             type="date"
                             className="form-control"
-                            value={appointmentDate}
+                            value={appointmentDate.slice(0, 10)}
                             onChange={(e) => setAppointmentDate(e.target.value)}
                         />
                     </div>

@@ -60,7 +60,8 @@ AppointmentSchema.statics.addVisit = async function (
     payment_type,
     date
 ) {
-    const visitDate = date ? new Date(date) : new Date();
+    const parsed = Date.parse(date);
+    const visitDate = isNaN(parsed) ? new Date() : new Date(parsed);
 
     // Get invoice number **for this doctor**
     const invoiceNumber = await getNextInvoiceNumber(doctorId);
