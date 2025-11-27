@@ -188,21 +188,29 @@ export default function PatientDetails() {
             const margin = 20;
             const invoiceNumber = visit.invoiceNumber || "N/A";
             const docPdf = new jsPDF();
+
             const pageWidth = docPdf.internal.pageSize.getWidth();
+            const pageHeight = docPdf.internal.pageSize.getHeight();
 
             let leftY = 20;
             let rightY = 20;
 
-            // =============== LEFT SECTION =============== //
-            docPdf.setFontSize(18);
+            // --------------------------------------------------
+            // LEFT SECTION (Doctor & Patient Info)
+            // --------------------------------------------------
+
+            // Clinic Name
+            docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
             leftY += 10;
 
+            // Doctor Name
             docPdf.setFontSize(14);
             docPdf.text(doctor.name, margin, leftY);
             leftY += 8;
 
-            docPdf.setFontSize(12);
+            // Degree
+            docPdf.setFontSize(11);
             if (doctor.degree?.length) {
                 docPdf.text(
                     `Degree: ${doctor.degree.join(", ")}`,
@@ -212,20 +220,17 @@ export default function PatientDetails() {
                 leftY += 6;
             }
 
-            if (doctor.registrationNumber) {
-                docPdf.text(
-                    `Reg No: ${doctor.registrationNumber}`,
-                    margin,
-                    leftY
-                );
+            // Registration Number
+            if (doctor.regNumber) {
+                docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
                 leftY += 6;
             }
 
-            // Invoice No Below Doctor Information
+            // Invoice Number
             docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
-            leftY += 10;
+            leftY += 8;
 
-            // Patient Name, Age, Gender
+            // Patient Info
             docPdf.text(
                 `Patient: ${details.name} | Age: ${
                     details.age || "N/A"
@@ -235,21 +240,23 @@ export default function PatientDetails() {
             );
             leftY += 10;
 
-            // =============== RIGHT SECTION =============== //
-            docPdf.setFontSize(12);
+            // --------------------------------------------------
+            // RIGHT SECTION (Address + Phone + Date)
+            // --------------------------------------------------
+
+            docPdf.setFontSize(10.5);
 
             if (doctor.address.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 6;
+                rightY += 5;
             }
-
             if (doctor.address.line2) {
                 docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 6;
+                rightY += 5;
             }
 
             docPdf.text(
@@ -258,9 +265,8 @@ export default function PatientDetails() {
                 rightY,
                 { align: "right" }
             );
-            rightY += 6;
+            rightY += 5;
 
-            // ⭐ ADD DOCTOR PHONE NUMBER HERE
             if (doctor.phone) {
                 docPdf.text(
                     `Phone: ${doctor.phone}`,
@@ -268,10 +274,9 @@ export default function PatientDetails() {
                     rightY,
                     { align: "right" }
                 );
-                rightY += 6;
+                rightY += 5;
             }
 
-            // Date
             docPdf.text(
                 `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
                 pageWidth - margin,
@@ -279,42 +284,47 @@ export default function PatientDetails() {
                 { align: "right" }
             );
 
-            // Move table start a bit lower
-            const tableStart = Math.max(leftY, rightY) + 10;
+            // --------------------------------------------------
+            // TABLE
+            // --------------------------------------------------
 
-            // =============== SERVICES TABLE =============== //
+            const tableStartY = Math.max(leftY, rightY) + 10;
+
             autoTable(docPdf, {
-                startY: tableStart,
+                startY: tableStartY,
                 head: [["Service", "Amount (₹)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
                     typeof s === "object" ? s.amount : Number(s),
                 ]),
                 theme: "grid",
+                styles: { fontSize: 11, cellPadding: 3 },
                 headStyles: { fillColor: [230, 230, 230] },
-                styles: { fontSize: 12, cellPadding: 4 },
             });
 
-            const afterTable = docPdf.lastAutoTable.finalY + 10;
+            const afterTableY = docPdf.lastAutoTable.finalY + 8;
 
-            // CALCULATE TOTAL
+            // --------------------------------------------------
+            // FOOTER TEXT (RECEIVED MESSAGE)
+            // --------------------------------------------------
+
+            docPdf.setFontSize(11);
+
             const total = (visit.service || []).reduce(
                 (sum, s) =>
                     sum + (typeof s === "object" ? s.amount : Number(s)),
                 0
             );
 
-            // =============== RECEIVED MESSAGE =============== //
-            docPdf.setFontSize(12);
             docPdf.text(
                 `Received with thanks from ${details.name} the sum of rupees ${total} on account of consultation/services.`,
                 margin,
-                afterTable
+                afterTableY
             );
 
-            // =============== STAMP SPACE (BOTTOM RIGHT) =============== //
-            docPdf.setFontSize(12);
-            const pageHeight = docPdf.internal.pageSize.getHeight();
+            // --------------------------------------------------
+            // FIXED STAMP AREA AT BOTTOM RIGHT (ALWAYS)
+            // --------------------------------------------------
 
             docPdf.setFontSize(12);
             docPdf.text(
@@ -323,6 +333,10 @@ export default function PatientDetails() {
                 pageHeight - 20,
                 { align: "right" }
             );
+
+            // --------------------------------------------------
+            // SAVE PDF
+            // --------------------------------------------------
 
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
