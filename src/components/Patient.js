@@ -1,38 +1,38 @@
 import { useState } from "react";
-import { Link } from "react-router-dom"; // ⬅️ Add this
+import { Link } from "react-router-dom";
 import AddServices from "./AddServices";
 import AddPatient from "./AddPatient";
 import PatientList from "./PatientList";
 import AddAppointment from "./AddAppointment";
-import PatientDetails from "./PatientDetails"; // Added import
+import PatientDetails from "./PatientDetails";
 import EditService from "./EditService";
-import AppointmentRecord from "./AppointmentRecord";
 
 const Patient = (props) => {
     const { showAlert } = props;
     const [showAppointment, setShowAppointment] = useState(false);
-    const [showPatientDetails, setShowPatientDetails] = useState(false); // Added state
-    const [selectedPatientId, setSelectedPatientId] = useState(null); // Added state
+    const [showPatientDetails, setShowPatientDetails] = useState(false);
+    const [selectedPatientId, setSelectedPatientId] = useState(null);
+
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
+
     const updateclose = () => {
         setShowAppointment(false);
         localStorage.removeItem("patient");
     };
 
     const openPatientDetails = (id) => {
-        // Added function
         setSelectedPatientId(id);
         setShowPatientDetails(true);
     };
 
     const closePatientDetails = () => {
-        // Added function
         setShowPatientDetails(false);
         setSelectedPatientId(null);
     };
+
     const downloadExcelSecure = async () => {
         try {
             const token = localStorage.getItem("token");
@@ -47,7 +47,6 @@ const Patient = (props) => {
             );
 
             if (!res.ok) {
-                // try to read json error
                 const txt = await res.text();
                 throw new Error(`Download failed: ${res.status} ${txt}`);
             }
@@ -70,7 +69,10 @@ const Patient = (props) => {
         }
     };
 
+    // 🔥 Bootstrap modal opener (works 100%)
     const openModal = (id) => {
+        document.getElementById("actionSheet").classList.remove("open");
+
         const modalEl = document.getElementById(id);
         const modal = new window.bootstrap.Modal(modalEl);
         modal.show();
@@ -80,8 +82,10 @@ const Patient = (props) => {
         <>
             {localStorage.getItem("token") != null ? (
                 <>
+
+                    {/* ================= PREMIUM ACTION BUTTON ================= */}
                     <button
-                        className="btn btn-primary actions-button w-100"
+                        className="btn btn-primary actions-button w-100 mt-3"
                         onClick={() =>
                             document
                                 .getElementById("actionSheet")
@@ -91,19 +95,31 @@ const Patient = (props) => {
                         Actions ▾
                     </button>
 
+                    {/* ================= ACTION SHEET PANEL ================= */}
                     <div id="actionSheet" className="action-sheet">
                         <button onClick={() => openModal("patientModal")}>
                             ➕ Add Patient
                         </button>
+
                         <button onClick={() => openModal("serviceModal")}>
                             🧾 Add Service
                         </button>
-                        <button onClick={() => setShowAppointment(true)}>
+
+                        <button
+                            onClick={() => {
+                                document
+                                    .getElementById("actionSheet")
+                                    .classList.remove("open");
+                                setShowAppointment(true);
+                            }}
+                        >
                             📅 Add Appointment
                         </button>
+
                         <button onClick={() => openModal("editServiceModal")}>
                             ✏️ Edit Service
                         </button>
+
                         <button onClick={downloadExcelSecure}>
                             ⬇️ Download Excel
                         </button>
@@ -120,21 +136,66 @@ const Patient = (props) => {
                         </button>
                     </div>
 
+                    {/* ================= MODALS (WORKING) ================= */}
+
+                    {/* Add Patient Modal */}
+                    <div
+                        className="modal fade"
+                        id="patientModal"
+                        tabIndex="-1"
+                        aria-hidden="true"
+                    >
+                        <div className="modal-dialog">
+                            <AddPatient showAlert={showAlert} />
+                        </div>
+                    </div>
+
+                    {/* Add Service Modal */}
+                    <div
+                        className="modal fade"
+                        id="serviceModal"
+                        tabIndex="-1"
+                        aria-hidden="true"
+                    >
+                        <div className="modal-dialog">
+                            <AddServices showAlert={showAlert} />
+                        </div>
+                    </div>
+
+                    {/* Edit Service Modal */}
+                    <div
+                        className="modal fade"
+                        id="editServiceModal"
+                        tabIndex="-1"
+                        aria-hidden="true"
+                    >
+                        <div className="modal-dialog">
+                            <EditService showAlert={showAlert} />
+                        </div>
+                    </div>
+
+                    {/* ================= MAIN PAGE ================= */}
                     <div>
                         {!showAppointment && !showPatientDetails && (
-                            <>
-                                <div className="patient-list">
-                                    <PatientList
-                                        openPatientDetails={openPatientDetails}
-                                    />{" "}
-                                </div>
-                            </>
+                            <div className="patient-list">
+                                <PatientList
+                                    openPatientDetails={openPatientDetails}
+                                />
+                            </div>
                         )}
+
                         {showAppointment && (
                             <div className="appointment container">
                                 <AddAppointment showAlert={props.showAlert} />
+                                <button
+                                    className="btn btn-secondary mt-2"
+                                    onClick={updateclose}
+                                >
+                                    Close
+                                </button>
                             </div>
                         )}
+
                         {showPatientDetails && selectedPatientId && (
                             <div className="patient-details container mt-3">
                                 <PatientDetails
