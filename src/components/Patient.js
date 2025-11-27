@@ -108,7 +108,7 @@ const Patient = (props) => {
             {localStorage.getItem("token") ? (
                 <>
                     {/* ACTION BUTTON */}
-                    <div className="w-100 d-flex justify-content-center mt-3" id="actionsWrapper">
+                    <div className="w-75 d-flex justify-content-center mt-3 mb-3" id="actionsWrapper">
                         <button
                             className="btn btn-primary actions-button w-100"
                             onClick={showActionSheet}
