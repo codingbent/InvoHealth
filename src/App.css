@@ -59,6 +59,9 @@
 .action-sheet.open {
     bottom: 0;
 }
+.action-sheet.hidden {
+    display: none !important;
+}
 
 .action-sheet button {
     border: none;

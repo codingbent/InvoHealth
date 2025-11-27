@@ -36,15 +36,10 @@ const Patient = (props) => {
     const downloadExcelSecure = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(
-                `${API_BASE_URL}/api/report/download-excel`,
-                {
-                    method: "GET",
-                    headers: {
-                        "auth-token": token,
-                    },
-                }
-            );
+            const res = await fetch(`${API_BASE_URL}/api/report/download-excel`, {
+                method: "GET",
+                headers: { "auth-token": token },
+            });
 
             if (!res.ok) {
                 const txt = await res.text();
@@ -54,14 +49,17 @@ const Patient = (props) => {
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
+
             const filename =
                 res.headers.get("content-disposition")?.split("filename=")[1] ||
                 "visit-records.xlsx";
+
             a.href = url;
             a.download = filename.replace(/"/g, "");
             document.body.appendChild(a);
             a.click();
             a.remove();
+
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error("Download error:", err);
@@ -69,136 +67,109 @@ const Patient = (props) => {
         }
     };
 
-    // 🔥 Bootstrap modal opener (works 100%)
+    // ========== OPEN MODAL (close sheet first) ==========
     const openModal = (id) => {
         const sheet = document.getElementById("actionSheet");
 
+        // close sheet smoothly
         sheet.classList.remove("open");
         document.body.classList.remove("freeze-scroll");
 
-        const modal = new window.bootstrap.Modal(document.getElementById(id));
+        // hide sheet after animation
+        setTimeout(() => sheet.classList.add("hidden"), 350);
+
+        // show modal
+        const modalEl = document.getElementById(id);
+        const modal = new window.bootstrap.Modal(modalEl);
         modal.show();
+    };
+
+    // ========== SHOW ACTION SHEET ==========
+    const showActionSheet = () => {
+        const sheet = document.getElementById("actionSheet");
+        sheet.classList.remove("hidden");
+        sheet.classList.add("open");
+        document.body.classList.add("freeze-scroll");
+    };
+
+    // ========== HIDE ACTION SHEET ==========
+    const hideActionSheet = () => {
+        const sheet = document.getElementById("actionSheet");
+        sheet.classList.remove("open");
+        document.body.classList.remove("freeze-scroll");
+
+        setTimeout(() => {
+            sheet.classList.add("hidden");
+        }, 350);
     };
 
     return (
         <>
-            {localStorage.getItem("token") != null ? (
+            {localStorage.getItem("token") ? (
                 <>
-                    {/* ================= PREMIUM ACTION BUTTON ================= */}
-                    <div
-                        className="w-100 d-flex justify-content-center mt-3"
-                        id="actionsWrapper"
-                    >
+                    {/* ACTION BUTTON */}
+                    <div className="w-100 d-flex justify-content-center mt-3" id="actionsWrapper">
                         <button
-                            className="btn btn-primary actions-button w-100"
-                            onClick={() => {
-                                document
-                                    .getElementById("actionSheet")
-                                    .classList.add("open");
-                                document.body.classList.add("freeze-scroll");
-                            }}
+                            className="btn btn-primary actions-button w-25"
+                            onClick={showActionSheet}
                         >
                             Actions
                         </button>
                     </div>
 
-                    {/* ================= ACTION SHEET PANEL ================= */}
-                    <div id="actionSheet" className="action-sheet">
-                        <button onClick={() => openModal("patientModal")}>
-                            ➕ Add Patient
-                        </button>
-
-                        <button onClick={() => openModal("serviceModal")}>
-                            🧾 Add Service
-                        </button>
+                    {/* ACTION SHEET */}
+                    <div id="actionSheet" className="action-sheet hidden">
+                        <button onClick={() => openModal("patientModal")}>➕ Add Patient</button>
+                        <button onClick={() => openModal("serviceModal")}>🧾 Add Service</button>
 
                         <button
                             onClick={() => {
-                                document
-                                    .getElementById("actionSheet")
-                                    .classList.remove("open");
+                                hideActionSheet();
                                 setShowAppointment(true);
                             }}
                         >
                             📅 Add Appointment
                         </button>
 
-                        <button onClick={() => openModal("editServiceModal")}>
-                            ✏️ Edit Service
-                        </button>
+                        <button onClick={() => openModal("editServiceModal")}>✏️ Edit Service</button>
+                        <button onClick={downloadExcelSecure}>⬇️ Download Excel</button>
 
-                        <button onClick={downloadExcelSecure}>
-                            ⬇️ Download Excel
-                        </button>
-
-                        <button
-                            className="action-sheet-close"
-                            onClick={() => {
-                                document
-                                    .getElementById("actionSheet")
-                                    .classList.remove("open");
-                                document.body.classList.remove("freeze-scroll");
-                            }}
-                        >
+                        <button className="action-sheet-close" onClick={hideActionSheet}>
                             Close
                         </button>
                     </div>
 
-                    {/* ================= MODALS (WORKING) ================= */}
-
-                    {/* Add Patient Modal */}
-                    <div
-                        className="modal fade"
-                        id="patientModal"
-                        tabIndex="-1"
-                        aria-hidden="true"
-                    >
+                    {/* MODALS */}
+                    <div className="modal fade" id="patientModal" tabIndex="-1">
                         <div className="modal-dialog">
                             <AddPatient showAlert={showAlert} />
                         </div>
                     </div>
 
-                    {/* Add Service Modal */}
-                    <div
-                        className="modal fade"
-                        id="serviceModal"
-                        tabIndex="-1"
-                        aria-hidden="true"
-                    >
+                    <div className="modal fade" id="serviceModal" tabIndex="-1">
                         <div className="modal-dialog">
                             <AddServices showAlert={showAlert} />
                         </div>
                     </div>
 
-                    {/* Edit Service Modal */}
-                    <div
-                        className="modal fade"
-                        id="editServiceModal"
-                        tabIndex="-1"
-                        aria-hidden="true"
-                    >
+                    <div className="modal fade" id="editServiceModal" tabIndex="-1">
                         <div className="modal-dialog">
                             <EditService showAlert={showAlert} />
                         </div>
                     </div>
 
-                    {/* ================= MAIN PAGE ================= */}
+                    {/* MAIN PAGE */}
                     <div>
                         {!showAppointment && !showPatientDetails && (
                             <div className="patient-list">
-                                <PatientList
-                                    openPatientDetails={openPatientDetails}
-                                />
+                                <PatientList openPatientDetails={openPatientDetails} />
                             </div>
                         )}
 
                         {showAppointment && (
                             <div className="appointment container">
                                 <AddAppointment showAlert={props.showAlert} />
-                                <button
-                                    className="btn btn-secondary mt-2"
-                                    onClick={updateclose}
-                                >
+                                <button className="btn btn-secondary mt-2" onClick={updateclose}>
                                     Close
                                 </button>
                             </div>
