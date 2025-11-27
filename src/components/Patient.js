@@ -13,7 +13,10 @@ const Patient = (props) => {
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false); // Added state
     const [selectedPatientId, setSelectedPatientId] = useState(null); // Added state
-
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     const updateclose = () => {
         setShowAppointment(false);
         localStorage.removeItem("patient");
