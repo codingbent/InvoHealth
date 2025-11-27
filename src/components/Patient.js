@@ -83,16 +83,21 @@ const Patient = (props) => {
             {localStorage.getItem("token") != null ? (
                 <>
                     {/* ================= PREMIUM ACTION BUTTON ================= */}
-                    <button
-                        className="btn btn-primary actions-button w-100"
-                        onClick={() =>
-                            document
-                                .getElementById("actionSheet")
-                                .classList.add("open")
-                        }
+                    <div
+                        className="w-100 d-flex justify-content-center mt-3"
+                        id="actionsWrapper"
                     >
-                        Actions ▾
-                    </button>
+                        <button
+                            className="btn btn-primary actions-button w-100"
+                            onClick={() =>
+                                document
+                                    .getElementById("actionSheet")
+                                    .classList.add("open")
+                            }
+                        >
+                            Actions
+                        </button>
+                    </div>
 
                     {/* ================= ACTION SHEET PANEL ================= */}
                     <div id="actionSheet" className="action-sheet">
