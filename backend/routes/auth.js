@@ -584,5 +584,51 @@ router.get("/getdoc", fetchuser, async (req, res) => {
     }
 });
 
+router.put("/edit-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
+    try {
+        const { appointmentId, visitId } = req.params;
+        const { date, service, amount, payment_type } = req.body;
+
+        const appointment = await Appointment.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        const visit = appointment.visits.id(visitId);
+        if (!visit) return res.status(404).json({ message: "Visit not found" });
+
+        visit.date = date || visit.date;
+        visit.service = service || visit.service;
+        visit.amount = amount ?? visit.amount;
+        visit.payment_type = payment_type || visit.payment_type;
+
+        await appointment.save();
+
+        res.json({ success: true, message: "Invoice updated", visit });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.delete("/delete-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
+    try {
+        const { appointmentId, visitId } = req.params;
+
+        const appointment = await Appointment.findById(appointmentId);
+        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+        appointment.visits = appointment.visits.filter(
+            (v) => v._id.toString() !== visitId
+        );
+
+        await appointment.save();
+
+        res.json({ success: true, message: "Invoice deleted" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+
 
 module.exports = router;

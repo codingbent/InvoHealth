@@ -250,200 +250,355 @@ export default function PatientDetails() {
         }
     };
 
+    const editInvoice = (appointmentId, visit, details) => {
+        setEditingAppt({ ...visit, appointmentId });
+
+        setApptData({
+            date: visit.date?.slice(0, 10),
+            service: visit.service || [],
+            amount: visit.amount,
+            payment_type: visit.payment_type,
+        });
+
+        const serviceAmounts = (visit.service || []).map((s) => s.amount || 0);
+        setApptServiceAmounts(serviceAmounts);
+
+        // OPEN MODAL
+        document.getElementById("editAppointmentModalBtn").click();
+    };
+
+    const handleUpdateAppt = async () => {
+        try {
+            const token = localStorage.getItem("token");
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": token,
+                    },
+                    body: JSON.stringify({
+                        date: apptData.date,
+                        service: apptData.service,
+                        amount: apptData.amount,
+                        payment_type: apptData.payment_type,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert("Invoice updated successfully!");
+                fetchData();
+            } else {
+                alert("Update failed: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const deleteInvoice = async (appointmentId, visit) => {
+        if (!window.confirm("Delete this invoice?")) return;
+
+        try {
+            const token = localStorage.getItem("token");
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "auth-token": token,
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert("Invoice deleted!");
+                fetchData();
+            } else {
+                alert("Delete failed: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     if (loading) return <p>Loading patient details...</p>;
 
     return (
-        <div className="container">
-            <div className="m-2">
-                <h3>Name: {details?.name}</h3>
-                <h3>Number: {details?.number}</h3>
-                <h3>Age: {details?.age}</h3>
-                <h3>Gender: {details?.gender || "N/A"}</h3> {/* ✅ SHOW GENDER */}
-            </div>
-
+        <>
             <button
-                className="btn btn-primary m-2"
+                id="editAppointmentModalBtn"
+                style={{ display: "none" }}
                 data-bs-toggle="modal"
-                data-bs-target="#editPatientModal"
-            >
-                Edit Details
-            </button>
+                data-bs-target="#editAppointmentModal"
+            ></button>
+            <div className="container">
+                <div className="m-2">
+                    <h3>Name: {details?.name}</h3>
+                    <h3>Number: {details?.number}</h3>
+                    <h3>Age: {details?.age}</h3>
+                    <h3>Gender: {details?.gender || "N/A"}</h3>{" "}
+                    {/* ✅ SHOW GENDER */}
+                </div>
 
-            {/* ----------------------------------------------------------
+                <button
+                    className="btn btn-primary m-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editPatientModal"
+                >
+                    Edit Details
+                </button>
+
+                {/* ----------------------------------------------------------
                 PREVIOUS APPOINTMENTS TABLE
             ----------------------------------------------------------- */}
-            <div className="mt-4">
-                <h3>Previous Appointment Details</h3>
+                <div className="mt-4">
+                    <h3>Previous Appointment Details</h3>
 
-                {appointments.length === 0 ? (
-                    <p>No appointments found</p>
-                ) : (
-                    <table className="table table-bordered mt-2">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Services</th>
-                                <th>Amount</th>
-                                <th>Payment</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+                    {appointments.length === 0 ? (
+                        <p>No appointments found</p>
+                    ) : (
+                        <table className="table table-bordered mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Services</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
 
-                        <tbody>
-                            {appointments.map((appt) =>
-                                appt.visits
-                                    .slice()
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(b.date) -
-                                            new Date(a.date)
-                                    )
-                                    .map((visit) => (
-                                        <tr>
-                                            <td>
-                                                {new Date(
-                                                    visit.date
-                                                ).toLocaleDateString("en-IN")}
-                                            </td>
-                                            <td>
-                                                {(visit.service || [])
-                                                    .map((s) =>
-                                                        typeof s === "object"
-                                                            ? s.name
-                                                            : s
-                                                    )
-                                                    .join(", ")}
-                                            </td>
-                                            <td>
-                                                {(visit.service || []).reduce(
-                                                    (sum, s) =>
-                                                        sum +
-                                                        (typeof s === "object"
-                                                            ? s.amount
-                                                            : Number(s)),
-                                                    0
-                                                )}
-                                            </td>
-                                            <td>
-                                                {visit.payment_type || "N/A"}
-                                            </td>
-                                            <td>
-                                                <button
-                                                    className="btn btn-success"
-                                                    onClick={() =>
-                                                        generateInvoice(
-                                                            appt._id,
-                                                            visit,
-                                                            details
+                            <tbody>
+                                {appointments.map((appt) =>
+                                    appt.visits
+                                        .slice()
+                                        .sort(
+                                            (a, b) =>
+                                                new Date(b.date) -
+                                                new Date(a.date)
+                                        )
+                                        .map((visit) => (
+                                            <tr>
+                                                <td>
+                                                    {new Date(
+                                                        visit.date
+                                                    ).toLocaleDateString(
+                                                        "en-IN"
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {(visit.service || [])
+                                                        .map((s) =>
+                                                            typeof s ===
+                                                            "object"
+                                                                ? s.name
+                                                                : s
                                                         )
-                                                    }
-                                                >
-                                                    Invoice
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                                                        .join(", ")}
+                                                </td>
+                                                <td>
+                                                    {(
+                                                        visit.service || []
+                                                    ).reduce(
+                                                        (sum, s) =>
+                                                            sum +
+                                                            (typeof s ===
+                                                            "object"
+                                                                ? s.amount
+                                                                : Number(s)),
+                                                        0
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {visit.payment_type ||
+                                                        "N/A"}
+                                                </td>
+                                                <td>
+                                                    <div className="dropdown">
+                                                        <button
+                                                            className="btn btn-primary dropdown-toggle"
+                                                            type="button"
+                                                            data-bs-toggle="dropdown"
+                                                            aria-expanded="false"
+                                                        >
+                                                            Actions
+                                                        </button>
 
-            {/* ----------------------------------------------------------
+                                                        <ul className="dropdown-menu">
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() =>
+                                                                        generateInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Invoice
+                                                                </button>
+                                                            </li>
+
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() =>
+                                                                        editInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </li>
+
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item text-danger"
+                                                                    onClick={() =>
+                                                                        deleteInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* ----------------------------------------------------------
                 EDIT PATIENT DETAILS MODAL
             ----------------------------------------------------------- */}
-            <div
-                className="modal fade"
-                id="editPatientModal"
-                tabIndex="-1"
-                aria-hidden="true"
-            >
-                <div className="modal-dialog">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h1 className="modal-title fs-5">
-                                Edit Patient Details
-                            </h1>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            />
-                        </div>
+                <div
+                    className="modal fade"
+                    id="editPatientModal"
+                    tabIndex="-1"
+                    aria-hidden="true"
+                >
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h1 className="modal-title fs-5">
+                                    Edit Patient Details
+                                </h1>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    data-bs-dismiss="modal"
+                                />
+                            </div>
 
-                        <div className="modal-body">
-                            <form>
-                                <div className="mb-3">
-                                    <label className="form-label">Name</label>
-                                    <input
-                                        className="form-control"
-                                        name="name"
-                                        value={patient.name}
-                                        onChange={handleChange}
-                                    />
-                                </div>
+                            <div className="modal-body">
+                                <form>
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Name
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="name"
+                                            value={patient.name}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                                <div className="mb-3">
-                                    <label className="form-label">Number</label>
-                                    <input
-                                        className="form-control"
-                                        name="number"
-                                        value={patient.number}
-                                        onChange={(e) => {
-                                            if (/^\d*$/.test(e.target.value))
-                                                handleChange(e);
-                                        }}
-                                        maxLength={10}
-                                    />
-                                </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Number
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="number"
+                                            value={patient.number}
+                                            onChange={(e) => {
+                                                if (
+                                                    /^\d*$/.test(e.target.value)
+                                                )
+                                                    handleChange(e);
+                                            }}
+                                            maxLength={10}
+                                        />
+                                    </div>
 
-                                <div className="mb-3">
-                                    <label className="form-label">Age</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        name="age"
-                                        value={patient.age}
-                                        onChange={handleChange}
-                                    />
-                                </div>
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Age
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            name="age"
+                                            value={patient.age}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
 
-                                {/* ✅ GENDER DROPDOWN */}
-                                <div className="mb-3">
-                                    <label className="form-label">Gender</label>
-                                    <select
-                                        className="form-select"
-                                        name="gender"
-                                        value={patient.gender}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </form>
-                        </div>
+                                    {/* ✅ GENDER DROPDOWN */}
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Gender
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            name="gender"
+                                            value={patient.gender}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">
+                                                Select Gender
+                                            </option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">
+                                                Female
+                                            </option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
 
-                        <div className="modal-footer">
-                            <button
-                                className="btn btn-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Close
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                data-bs-dismiss="modal"
-                                onClick={handleSave}
-                            >
-                                Save Changes
-                            </button>
+                            <div className="modal-footer">
+                                <button
+                                    className="btn btn-secondary"
+                                    data-bs-dismiss="modal"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    data-bs-dismiss="modal"
+                                    onClick={handleSave}
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
