@@ -90,7 +90,7 @@ const Patient = (props) => {
                         id="actionsWrapper"
                     >
                         <button
-                            className="btn btn-primary actions-button w-25"
+                            className="btn btn-primary actions-button w-100"
                             onClick={() => {
                                 document
                                     .getElementById("actionSheet")
