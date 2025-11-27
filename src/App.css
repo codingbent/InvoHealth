@@ -78,3 +78,7 @@
     text-align: center !important;
     font-weight: bold !important;
 }
+
+.dropdown-menu {
+    display: none !important;
+}
