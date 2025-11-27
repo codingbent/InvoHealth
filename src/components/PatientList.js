@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientDetails from "./PatientDetails";
+import * as XLSX from "xlsx"; // <-- added
 
 export default function PatientList() {
     const navigate = useNavigate();
@@ -9,28 +10,13 @@ export default function PatientList() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedService, setSelectedService] = useState("");
     const [selectedpayment_type, setSelectedpayment_type] = useState("");
-    const [selectedId, setSelectedId] = useState(null);
-
-    const printRef = useRef(); // 🔥 PRINT REF
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // 🖨️ PRINT FUNCTION
-    const handlePrint = () => {
-        const printContents = printRef.current.innerHTML;
-        const originalContents = document.body.innerHTML;
-
-        document.body.innerHTML = printContents;
-        window.print();
-
-        document.body.innerHTML = originalContents;
-        window.location.reload();
-    };
-
-    // 🗑️ Delete patient
+    // Delete patient
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this patient?"))
             return;
@@ -60,7 +46,6 @@ export default function PatientList() {
         }
     };
 
-    // fetch patients
     const fetchPatients = async () => {
         try {
             const response = await fetch(
@@ -93,7 +78,6 @@ export default function PatientList() {
         }
     };
 
-    // fetch services
     const fetchServices = async () => {
         try {
             const response = await fetch(
@@ -125,7 +109,8 @@ export default function PatientList() {
         fetchServices();
     }, [API_BASE_URL]);
 
-    // 🔎 Filter patients
+
+    // FILTER LOGIC
     const applyFilters = (patients) => {
         return patients.filter((p) => {
             const matchSearch =
@@ -136,14 +121,9 @@ export default function PatientList() {
                 !selectedService ||
                 p.service?.some((s) => {
                     if (!s) return false;
-
-                    // string service
                     if (typeof s === "string")
-                        return (
-                            s.toLowerCase() === selectedService.toLowerCase()
-                        );
+                        return s.toLowerCase() === selectedService.toLowerCase();
 
-                    // object service
                     if (typeof s === "object") {
                         const serviceName = s.name || s.service_name || "";
                         return (
@@ -164,141 +144,152 @@ export default function PatientList() {
         });
     };
 
+    // =============================
+    // 📥 DOWNLOAD FILTERED EXCEL
+    // =============================
+    const downloadFilteredExcel = () => {
+        let finalRows = [];
+
+        Object.keys(patientsByDate)
+            .sort((a, b) => new Date(a) - new Date(b))
+            .forEach((dateKey) => {
+                const group = applyFilters(patientsByDate[dateKey] || []);
+                if (group.length === 0) return;
+
+                group.forEach((p) => {
+                    finalRows.push({
+                        Date:
+                            dateKey === "No Visits"
+                                ? "No Visits"
+                                : new Date(dateKey).toLocaleDateString(),
+                        Name: p.name,
+                        Number: p.number,
+                        Payment: p.lastpayment_type || "N/A",
+                    });
+                });
+            });
+
+        if (finalRows.length === 0) {
+            alert("No records to download.");
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(finalRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Patients");
+
+        XLSX.writeFile(workbook, "Filtered-Patients.xlsx");
+    };
+
     return (
         <>
             <div className="container mt-3">
-                {/* 🖨️ Print Button */}
-                <button className="btn btn-warning mb-3" onClick={handlePrint}>
-                    🖨️ Print Filtered List
+
+                {/* ==================== */}
+                {/* DOWNLOAD BUTTON */}
+                {/* ==================== */}
+                <button
+                    className="btn btn-success mb-3"
+                    onClick={downloadFilteredExcel}
+                >
+                    📥 Download Filtered Excel
                 </button>
 
-                {/* Filters + List */}
-                <div ref={printRef}>
-                    {/* 🔎 Search */}
-                    <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Search by name or phone"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                {/* Search */}
+                <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Search by name or phone"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
 
-                    {/* 🏥 Filter by Service */}
-                    <select
-                        className="form-select mb-2"
-                        value={selectedService}
-                        onChange={(e) => setSelectedService(e.target.value)}
-                    >
-                        <option value="">All Services</option>
-                        {Array.isArray(services) &&
-                            services.map((s) => (
-                                <option key={s._id} value={s.name}>
-                                    {s.name}
-                                </option>
-                            ))}
-                    </select>
+                {/* Filter by Service */}
+                <select
+                    className="form-select mb-2"
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                >
+                    <option value="">All Services</option>
+                    {services.map((s) => (
+                        <option key={s._id} value={s.name}>
+                            {s.name}
+                        </option>
+                    ))}
+                </select>
 
-                    {/* 💳 Filter by Payment Type */}
-                    <select
-                        className="form-select mb-3"
-                        value={selectedpayment_type}
-                        onChange={(e) =>
-                            setSelectedpayment_type(e.target.value)
-                        }
-                    >
-                        <option value="">All Payment Types</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Card">Card</option>
-                        <option value="UPI">UPI</option>
-                    </select>
+                {/* Payment filter */}
+                <select
+                    className="form-select mb-3"
+                    value={selectedpayment_type}
+                    onChange={(e) => setSelectedpayment_type(e.target.value)}
+                >
+                    <option value="">All Payment Types</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="UPI">UPI</option>
+                </select>
 
-                    {/* 👥 Patients grouped by last visit */}
-                    {Object.keys(patientsByDate)
-                        .sort((a, b) => {
-                            if (a === "No Visits") return 1;
-                            if (b === "No Visits") return -1;
-                            return new Date(b) - new Date(a);
-                        })
-                        .map((date) => {
-                            let group = Array.isArray(patientsByDate[date])
-                                ? patientsByDate[date]
-                                : [];
+                {/* GROUP BY DATE */}
+                {Object.keys(patientsByDate)
+                    .sort((a, b) => new Date(b) - new Date(a))
+                    .map((date) => {
+                        let group = Array.isArray(patientsByDate[date])
+                            ? patientsByDate[date]
+                            : [];
 
-                            group = [...group].sort((a, b) => {
-                                const dateA = new Date(
-                                    a.lastVisitDate || a.createdAt
-                                );
-                                const dateB = new Date(
-                                    b.lastVisitDate || b.createdAt
-                                );
-                                return dateB - dateA;
-                            });
+                        const filteredGroup = applyFilters(group);
+                        if (filteredGroup.length === 0) return null;
 
-                            const filteredGroup = applyFilters(group);
-                            if (filteredGroup.length === 0) return null;
+                        return (
+                            <div key={date} className="mb-4">
+                                <h5 className="bg-light p-2 rounded">
+                                    {date === "No Visits"
+                                        ? "No Visits Yet"
+                                        : new Date(date).toLocaleDateString()}
+                                </h5>
 
-                            return (
-                                <div key={date} className="mb-4">
-                                    <h5 className="bg-light p-2 rounded">
-                                        {date === "No Visits"
-                                            ? "No Visits Yet"
-                                            : new Date(
-                                                  date
-                                              ).toLocaleDateString()}
-                                    </h5>
+                                <table className="table table-striped table-bordered">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Number</th>
+                                            <th>Payment</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
 
-                                    <table className="table table-striped table-bordered align-middle">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Number</th>
-                                                <th>Payment</th>
-                                                <th>Action</th>
+                                    <tbody>
+                                        {filteredGroup.map((p) => (
+                                            <tr
+                                                key={p._id}
+                                                style={{ cursor: "pointer" }}
+                                                onClick={() =>
+                                                    navigate(`/patient/${p._id}`)
+                                                }
+                                            >
+                                                <td>{p.name}</td>
+                                                <td>{p.number}</td>
+                                                <td>{p.lastpayment_type || "N/A"}</td>
+                                                <td>
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDelete(p._id);
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredGroup.map((p) => (
-                                                <tr
-                                                    key={p._id}
-                                                    style={{
-                                                        cursor: "pointer",
-                                                    }}
-                                                    onClick={() =>
-                                                        navigate(
-                                                            `/patient/${p._id}`
-                                                        )
-                                                    }
-                                                >
-                                                    <td>{p.name}</td>
-                                                    <td>{p.number}</td>
-                                                    <td>
-                                                        {p.lastpayment_type ||
-                                                            "N/A"}
-                                                    </td>
-                                                    <td className="text-center">
-                                                        <button
-                                                            className="btn btn-danger btn-sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDelete(
-                                                                    p._id
-                                                                );
-                                                            }}
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })}
-                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
             </div>
-
-            {selectedId && <PatientDetails id={selectedId} />}
         </>
     );
 }
