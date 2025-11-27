@@ -70,6 +70,59 @@ const Patient = (props) => {
         }
     };
 
+    //     const downloadFilteredExcel = () => {
+    //     let finalRows = [];
+
+    //     // Sort dates ascending (oldest first)
+    //     const sortedDates = Object.keys(patientsByDate).sort((a, b) => {
+    //         if (a === "No Visits") return 1;
+    //         if (b === "No Visits") return -1;
+    //         return new Date(a) - new Date(b);
+    //     });
+
+    //     sortedDates.forEach((dateKey) => {
+    //         const group = applyFilters(patientsByDate[dateKey] || []);
+    //         if (group.length === 0) return;
+
+    //         group.forEach((p) => {
+    //             finalRows.push({
+    //                 Date:
+    //                     dateKey === "No Visits"
+    //                         ? "No Visits"
+    //                         : new Date(dateKey).toLocaleDateString("en-IN"),
+    //                 Name: p.name,
+    //                 Number: p.number,
+    //                 Gender: p.gender || "N/A",
+    //                 Payment: p.lastpayment_type || "N/A",
+    //             });
+    //         });
+    //     });
+
+    //     if (finalRows.length === 0) {
+    //         alert("No filtered data available to download.");
+    //         return;
+    //     }
+
+    //     // Create Excel worksheet
+    //     const worksheet = XLSX.utils.json_to_sheet(finalRows);
+
+    //     // Auto column sizing
+    //     const columnWidths = [
+    //         { wch: 12 }, // Date
+    //         { wch: 20 }, // Name
+    //         { wch: 14 }, // Number
+    //         { wch: 10 }, // Gender
+    //         { wch: 12 }, // Payment
+    //     ];
+    //     worksheet["!cols"] = columnWidths;
+
+    //     const workbook = XLSX.utils.book_new();
+    //     XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Patients");
+
+    //     // Download file
+    //     XLSX.writeFile(workbook, "Filtered-Patients.xlsx");
+    // };
+
     return (
         <>
             {localStorage.getItem("token") != null ? (
@@ -123,12 +176,12 @@ const Patient = (props) => {
                                         </button>
                                     </li>
                                     <li>
-                                        {/* <button
+                                        <button
                                             className="dropdown-item"
-                                            onClick={downloadFilteredExcel}
+                                            onClick={downloadExcelSecure}
                                         >
                                             Download Excel (secure)
-                                        </button> */}
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
