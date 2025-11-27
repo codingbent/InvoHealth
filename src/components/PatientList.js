@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PatientDetails from "./PatientDetails";
 import * as XLSX from "xlsx";
 
 export default function PatientList() {
@@ -8,24 +7,25 @@ export default function PatientList() {
     const [patientsByDate, setPatientsByDate] = useState({});
     const [services, setServices] = useState([]);
 
+    // FILTER STATES
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedService, setSelectedService] = useState("");
     const [selectedpayment_type, setSelectedpayment_type] = useState("");
-
-    const [selectedGender, setSelectedGender] = useState(""); // ✅ GENDER FILTER HERE
+    const [selectedGender, setSelectedGender] = useState("");
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
+    // =======================
     // Delete patient
+    // =======================
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this patient?"))
-            return;
+        if (!window.confirm("Are you sure?")) return;
 
         try {
-            const response = await fetch(
+            const res = await fetch(
                 `${API_BASE_URL}/api/auth/deletepatient/${id}`,
                 {
                     method: "DELETE",
@@ -36,25 +36,22 @@ export default function PatientList() {
                 }
             );
 
-            const data = await response.json();
-            if (data.success) {
-                alert("Patient deleted successfully!");
-                fetchPatients();
-            } else {
-                alert(data.message || "Failed to delete patient");
-            }
+            const data = await res.json();
+            if (data.success) fetchPatients();
+            else alert(data.message || "Failed to delete patient");
         } catch (err) {
-            console.error("Error deleting patient:", err);
-            alert("Server error while deleting patient");
+            console.error(err);
         }
     };
 
+    // =======================
+    // Fetch Patients
+    // =======================
     const fetchPatients = async () => {
         try {
-            const response = await fetch(
+            const res = await fetch(
                 `${API_BASE_URL}/api/auth/fetchallpatients`,
                 {
-                    method: "GET",
                     headers: {
                         "Content-Type": "application/json",
                         "auth-token": localStorage.getItem("token"),
@@ -62,7 +59,7 @@ export default function PatientList() {
                 }
             );
 
-            const patients = await response.json();
+            const patients = await res.json();
 
             const grouped = patients.reduce((acc, p) => {
                 const dateKey = p.lastAppointment
@@ -75,18 +72,19 @@ export default function PatientList() {
             }, {});
 
             setPatientsByDate(grouped);
-        } catch (err) {
-            console.error("Error fetching patients:", err);
+        } catch {
             setPatientsByDate({});
         }
     };
 
+    // =======================
+    // Fetch Services
+    // =======================
     const fetchServices = async () => {
         try {
-            const response = await fetch(
+            const res = await fetch(
                 `${API_BASE_URL}/api/auth/fetchallservice`,
                 {
-                    method: "GET",
                     headers: {
                         "Content-Type": "application/json",
                         "auth-token": localStorage.getItem("token"),
@@ -94,15 +92,9 @@ export default function PatientList() {
                 }
             );
 
-            const data = await response.json();
-            if (Array.isArray(data)) {
-                setServices(data);
-            } else {
-                console.error("Expected array, got:", data);
-                setServices([]);
-            }
-        } catch (err) {
-            console.error("Error fetching services:", err);
+            const data = await res.json();
+            if (Array.isArray(data)) setServices(data);
+        } catch {
             setServices([]);
         }
     };
@@ -110,54 +102,53 @@ export default function PatientList() {
     useEffect(() => {
         fetchPatients();
         fetchServices();
-    }, [API_BASE_URL]);
+    }, []);
 
-    // ==========================
-    // APPLY FILTER LOGIC
-    // ==========================
-    const applyFilters = (patients) => {
-        return patients.filter((p) => {
-            const matchSearch =
+    // =======================
+    // APPLY FILTERS
+    // =======================
+    const applyFilters = (patients) =>
+        patients.filter((p) => {
+            const searchMatch =
                 p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.number?.toLowerCase().includes(searchTerm.toLowerCase());
+                p.number?.includes(searchTerm);
 
-            const matchService =
+            const genderMatch =
+                !selectedGender ||
+                (p.gender || "").toLowerCase() === selectedGender.toLowerCase();
+
+            const serviceMatch =
                 !selectedService ||
                 p.service?.some((s) => {
-                    if (!s) return false;
-                    if (typeof s === "string")
-                        return (
-                            s.toLowerCase() === selectedService.toLowerCase()
-                        );
-
-                    if (typeof s === "object") {
-                        const serviceName = s.name || s.service_name || "";
-                        return (
-                            serviceName.toLowerCase() ===
-                            selectedService.toLowerCase()
-                        );
-                    }
-                    return false;
+                    const sName =
+                        typeof s === "object" ? s.name : (s || "").toString();
+                    return (
+                        sName.toLowerCase() === selectedService.toLowerCase()
+                    );
                 });
 
-            const matchPayment =
+            const paymentMatch =
                 !selectedpayment_type ||
-                (p.lastpayment_type &&
-                    p.lastpayment_type.toLowerCase() ===
-                        selectedpayment_type.toLowerCase());
+                (p.lastpayment_type || "").toLowerCase() ===
+                    selectedpayment_type.toLowerCase();
 
-            const matchGender =
-                !selectedGender ||
-                (p.gender &&
-                    p.gender.toLowerCase() === selectedGender.toLowerCase());
-
-            return matchSearch && matchService && matchPayment && matchGender; // ✅ Added gender check
+            return searchMatch && genderMatch && serviceMatch && paymentMatch;
         });
-    };
 
-    // ==========================
-    // 📥 DOWNLOAD FILTERED EXCEL
-    // ==========================
+    // =====================================================
+    //  MAKE FILTER SETTERS ACCESSIBLE TO OFFCANVAS
+    // =====================================================
+    useEffect(() => {
+        window.setSearchTerm = setSearchTerm;
+        window.setSelectedGender = setSelectedGender;
+        window.setSelectedService = setSelectedService;
+        window.setSelectedPaymentType = setSelectedpayment_type;
+        window.services = services;
+    }, [services]);
+
+    // =====================================================
+    // DOWNLOAD EXCEL (Filtered)
+    // =====================================================
     const downloadFilteredExcel = () => {
         let finalRows = [];
 
@@ -175,7 +166,7 @@ export default function PatientList() {
                                 : new Date(dateKey).toLocaleDateString(),
                         Name: p.name,
                         Number: p.number,
-                        Gender: p.gender || "N/A", // ✅ Gender added to Excel
+                        Gender: p.gender || "N/A",
                         Payment: p.lastpayment_type || "N/A",
                     });
                 });
@@ -193,64 +184,99 @@ export default function PatientList() {
         XLSX.writeFile(workbook, "Filtered-Patients.xlsx");
     };
 
+    // =====================================================
+    // UI RENDER
+    // =====================================================
     return (
         <>
             <div className="container mt-3">
-                {/* <button
-                    className="btn btn-primary"
-                    onClick={downloadFilteredExcel}
+                {/* ----------- FILTER BUTTON ---------- */}
+                <div className="d-flex mb-3">
+                    <button
+                        className="btn btn-outline-primary w-100"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#filterPanel"
+                    >
+                        Filters
+                    </button>
+                </div>
+
+                {/* =============== OFFCANVAS FILTER PANEL =============== */}
+                <div
+                    className="offcanvas offcanvas-end"
+                    tabIndex="-1"
+                    id="filterPanel"
                 >
-                    📥 Download Filtered Excel
-                </button> */}
+                    <div className="offcanvas-header">
+                        <h5>Filters</h5>
+                        <button
+                            type="button"
+                            className="btn-close"
+                            data-bs-dismiss="offcanvas"
+                        ></button>
+                    </div>
 
-                {/* Search */}
-                <input
-                    type="text"
-                    className="form-control mb-2"
-                    placeholder="Search by name or phone"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                    <div className="offcanvas-body">
+                        {/* SEARCH */}
+                        <label>Search</label>
+                        <input
+                            className="form-control mb-3"
+                            placeholder="Name or Phone"
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
 
-                {/* Gender filter */}
-                <select
-                    className="form-select mb-2"
-                    value={selectedGender}
-                    onChange={(e) => setSelectedGender(e.target.value)}
-                >
-                    <option value="">All Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                </select>
+                        {/* GENDER */}
+                        <label>Gender</label>
+                        <select
+                            className="form-select mb-3"
+                            onChange={(e) => setSelectedGender(e.target.value)}
+                        >
+                            <option value="">All Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
 
-                {/* Service filter */}
-                <select
-                    className="form-select mb-2"
-                    value={selectedService}
-                    onChange={(e) => setSelectedService(e.target.value)}
-                >
-                    <option value="">All Services</option>
-                    {services.map((s) => (
-                        <option key={s._id} value={s.name}>
-                            {s.name}
-                        </option>
-                    ))}
-                </select>
+                        {/* SERVICES */}
+                        <label>Services</label>
+                        <select
+                            className="form-select mb-3"
+                            onChange={(e) => setSelectedService(e.target.value)}
+                        >
+                            <option value="">All Services</option>
+                            {services.map((s) => (
+                                <option key={s._id} value={s.name}>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </select>
 
-                {/* Payment filter */}
-                <select
-                    className="form-select mb-3"
-                    value={selectedpayment_type}
-                    onChange={(e) => setSelectedpayment_type(e.target.value)}
-                >
-                    <option value="">All Payment Types</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Card">Card</option>
-                    <option value="UPI">UPI</option>
-                </select>
+                        {/* PAYMENT */}
+                        <label>Payment Type</label>
+                        <select
+                            className="form-select mb-3"
+                            onChange={(e) =>
+                                setSelectedpayment_type(e.target.value)
+                            }
+                        >
+                            <option value="">All Payment Types</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="UPI">UPI</option>
+                        </select>
 
-                {/* GROUP BY DATE */}
+                        <button
+                            className="btn btn-primary w-100"
+                            data-bs-dismiss="offcanvas"
+                        >
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+
+                {/* ===================================================
+                    PATIENT LIST
+                =================================================== */}
                 {Object.keys(patientsByDate)
                     .sort((a, b) => new Date(b) - new Date(a))
                     .map((date) => {
@@ -270,7 +296,7 @@ export default function PatientList() {
                                         <tr>
                                             <th>Name</th>
                                             <th>Number</th>
-                                            <th>Gender</th> {/* NEW COLUMN */}
+                                            <th>Gender</th>
                                             <th>Payment</th>
                                             <th>Action</th>
                                         </tr>
@@ -294,7 +320,6 @@ export default function PatientList() {
                                                     {p.lastpayment_type ||
                                                         "N/A"}
                                                 </td>
-
                                                 <td>
                                                     <button
                                                         className="btn btn-danger btn-sm"

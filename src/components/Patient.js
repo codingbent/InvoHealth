@@ -74,91 +74,74 @@ const Patient = (props) => {
         <>
             {localStorage.getItem("token") != null ? (
                 <>
-                    <div className="mt-3 d-grid gap-2 d-md-flex justify-content-md-center">
-                        {/* Modal for Adding patients */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#patientModal"
-                        >
-                            Add patient
-                        </button>
+                    <div className="mt-3 d-flex justify-content-center">
                         <div
-                            className="modal fade"
-                            id="patientModal"
-                            tabIndex="-1"
-                            aria-labelledby="patientModalLabel"
-                            aria-hidden="true"
+                            className="dropdown w-100"
+                            style={{ maxWidth: "400px" }}
                         >
-                            <div className="modal-dialog">
-                                <AddPatient showAlert={showAlert} />
-                            </div>
-                        </div>
-                        {/* Modal for Adding services */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#serviceModal"
-                        >
-                            Add Service
-                        </button>
-                        <div
-                            className="modal fade"
-                            id="serviceModal"
-                            tabIndex="-1"
-                            aria-labelledby="serviceModalLabel"
-                            aria-hidden="true"
-                        >
-                            <div className="modal-dialog">
-                                <AddServices showAlert={showAlert} />
-                            </div>
-                        </div>
-                        {/* Toggle appointment vs patient list */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => setShowAppointment(true)}
-                        >
-                            Add Appointment
-                        </button>
-                        {showAppointment && (
                             <button
+                                className="btn btn-primary dropdown-toggle w-100"
                                 type="button"
-                                className="btn btn-secondary ms-2"
-                                onClick={updateclose}
+                                data-bs-toggle="dropdown"
                             >
-                                Close
+                                Actions
                             </button>
-                        )}
-                        {/* Edit Service button */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editServiceModal"
-                        >
-                            Edit Service
-                        </button>
-                        {/* <AppointmentRecord/> */}
-                        <div
-                            className="modal fade"
-                            id="editServiceModal"
-                            tabIndex="-1"
-                            aria-labelledby="editServiceModalLabel"
-                            aria-hidden="true"
-                        >
-                            <div className="modal-dialog">
-                                <EditService showAlert={showAlert} />
-                            </div>
+
+                            <ul className="dropdown-menu w-100">
+                                {/* Add Patient */}
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#patientModal"
+                                    >
+                                        Add Patient
+                                    </button>
+                                </li>
+
+                                {/* Add Service */}
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#serviceModal"
+                                    >
+                                        Add Service
+                                    </button>
+                                </li>
+
+                                {/* Add Appointment */}
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={() => setShowAppointment(true)}
+                                    >
+                                        Add Appointment
+                                    </button>
+                                </li>
+
+                                {/* Edit Service */}
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editServiceModal"
+                                    >
+                                        Edit Service
+                                    </button>
+                                </li>
+
+                                {/* Download Excel */}
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={downloadExcelSecure}
+                                    >
+                                        Download Excel (secure)
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                        <button
-                            className="btn btn-primary"
-                            onClick={downloadExcelSecure}
-                        >
-                            Download Excel (secure)
-                        </button>
                     </div>
 
                     <div>
