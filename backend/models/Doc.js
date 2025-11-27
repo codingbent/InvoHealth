@@ -61,5 +61,5 @@ const DocSchema = new Schema({
     // timings: [TimingSchema], // New structure
 });
 
-const Doc = mongoose.model("doc", DocSchema);
+const Doc = mongoose.model("Doc", DocSchema);
 module.exports = Doc;

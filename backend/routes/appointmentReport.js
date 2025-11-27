@@ -3,6 +3,7 @@ const router = express.Router();
 const Appointment = require("../models/Appointment");
 const fetchuser = require("../middleware/fetchuser");
 const ExcelJS = require("exceljs");
+const Doc = require("../models/Doc");
 
 // GET: Excel download
 router.get("/download-excel", fetchuser, async (req, res) => {

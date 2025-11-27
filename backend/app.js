@@ -4,6 +4,11 @@ const express = require("express");
 const cors = require("cors");
 
 connectToMongo();
+require("./models/Doc");
+require("./models/Patient");
+require("./models/Service");
+require("./models/Appointment");
+console.log("Loaded models:", Object.keys(require("mongoose").models));
 
 const app = express();
 const port = process.env.PORT || 5001;
