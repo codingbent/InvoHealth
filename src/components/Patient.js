@@ -70,138 +70,95 @@ const Patient = (props) => {
         }
     };
 
-    //     const downloadFilteredExcel = () => {
-    //     let finalRows = [];
-
-    //     // Sort dates ascending (oldest first)
-    //     const sortedDates = Object.keys(patientsByDate).sort((a, b) => {
-    //         if (a === "No Visits") return 1;
-    //         if (b === "No Visits") return -1;
-    //         return new Date(a) - new Date(b);
-    //     });
-
-    //     sortedDates.forEach((dateKey) => {
-    //         const group = applyFilters(patientsByDate[dateKey] || []);
-    //         if (group.length === 0) return;
-
-    //         group.forEach((p) => {
-    //             finalRows.push({
-    //                 Date:
-    //                     dateKey === "No Visits"
-    //                         ? "No Visits"
-    //                         : new Date(dateKey).toLocaleDateString("en-IN"),
-    //                 Name: p.name,
-    //                 Number: p.number,
-    //                 Gender: p.gender || "N/A",
-    //                 Payment: p.lastpayment_type || "N/A",
-    //             });
-    //         });
-    //     });
-
-    //     if (finalRows.length === 0) {
-    //         alert("No filtered data available to download.");
-    //         return;
-    //     }
-
-    //     // Create Excel worksheet
-    //     const worksheet = XLSX.utils.json_to_sheet(finalRows);
-
-    //     // Auto column sizing
-    //     const columnWidths = [
-    //         { wch: 12 }, // Date
-    //         { wch: 20 }, // Name
-    //         { wch: 14 }, // Number
-    //         { wch: 10 }, // Gender
-    //         { wch: 12 }, // Payment
-    //     ];
-    //     worksheet["!cols"] = columnWidths;
-
-    //     const workbook = XLSX.utils.book_new();
-    //     XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Patients");
-
-    //     // Download file
-    //     XLSX.writeFile(workbook, "Filtered-Patients.xlsx");
-    // };
-
     return (
         <>
             {localStorage.getItem("token") != null ? (
                 <>
-                    <div className="container mb-3 mt-3">
-                        <div className="d-flex justify-content-between align-items-center flex-wrap">
-                            <div className="col-12 col-md-4 mx-auto mb-2 dropdown">
-                                <button
-                                    className="btn btn-primary dropdown-toggle w-100"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                >
-                                    Actions
-                                </button>
-                                <ul className="dropdown-menu w-100">
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#patientModal"
-                                        >
-                                            Add Patient
-                                        </button>
-                                    </li>
-
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#serviceModal"
-                                        >
-                                            Add Service
-                                        </button>
-                                    </li>
-
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={() =>
-                                                setShowAppointment(true)
-                                            }
-                                        >
-                                            Add Appointment
-                                        </button>
-                                    </li>
-
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editServiceModal"
-                                        >
-                                            Edit Service
-                                        </button>
-                                    </li>
-
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={downloadExcelSecure}
-                                        >
-                                            Download Excel (secure)
-                                        </button>
-                                    </li>
-                                </ul>
+                    <div className="mt-3 d-grid gap-2 d-md-flex justify-content-md-center">
+                        {/* Modal for Adding patients */}
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#patientModal"
+                        >
+                            Add patient
+                        </button>
+                        <div
+                            className="modal fade"
+                            id="patientModal"
+                            tabIndex="-1"
+                            aria-labelledby="patientModalLabel"
+                            aria-hidden="true"
+                        >
+                            <div className="modal-dialog">
+                                <AddPatient showAlert={showAlert} />
                             </div>
-
-                            {/* FILTER BUTTON (float right on desktop, full width on mobile) */}
-                            {/* <div className="col-12 col-md-3 mb-2 text-md-end">
-                                <button
-                                    className="btn btn-outline-primary w-100 w-md-auto"
-                                    data-bs-toggle="offcanvas"
-                                    data-bs-target="#filterPanel"
-                                >
-                                    Filters
-                                </button>
-                            </div> */}
                         </div>
+                        {/* Modal for Adding services */}
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#serviceModal"
+                        >
+                            Add Service
+                        </button>
+                        <div
+                            className="modal fade"
+                            id="serviceModal"
+                            tabIndex="-1"
+                            aria-labelledby="serviceModalLabel"
+                            aria-hidden="true"
+                        >
+                            <div className="modal-dialog">
+                                <AddServices showAlert={showAlert} />
+                            </div>
+                        </div>
+                        {/* Toggle appointment vs patient list */}
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => setShowAppointment(true)}
+                        >
+                            Add Appointment
+                        </button>
+                        {showAppointment && (
+                            <button
+                                type="button"
+                                className="btn btn-secondary ms-2"
+                                onClick={updateclose}
+                            >
+                                Close
+                            </button>
+                        )}
+                        {/* Edit Service button */}
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editServiceModal"
+                        >
+                            Edit Service
+                        </button>
+                        {/* <AppointmentRecord/> */}
+                        <div
+                            className="modal fade"
+                            id="editServiceModal"
+                            tabIndex="-1"
+                            aria-labelledby="editServiceModalLabel"
+                            aria-hidden="true"
+                        >
+                            <div className="modal-dialog">
+                                <EditService showAlert={showAlert} />
+                            </div>
+                        </div>
+                        <button
+                            className="btn btn-primary"
+                            onClick={downloadExcelSecure}
+                        >
+                            Download Excel (secure)
+                        </button>
                     </div>
 
                     <div>
