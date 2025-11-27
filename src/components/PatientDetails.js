@@ -185,74 +185,145 @@ export default function PatientDetails() {
                 return;
             }
 
+            const margin = 20;
             const invoiceNumber = visit.invoiceNumber || "N/A";
             const docPdf = new jsPDF();
             const pageWidth = docPdf.internal.pageSize.getWidth();
-            let y = 20;
 
-            docPdf.setFontSize(16);
-            docPdf.text(doctor.clinicName, 20, y);
-            y += 8;
+            let leftY = 20;
+            let rightY = 20;
+
+            // =============== LEFT SECTION =============== //
+            docPdf.setFontSize(18);
+            docPdf.text(doctor.clinicName, margin, leftY);
+            leftY += 10;
+
+            docPdf.setFontSize(14);
+            docPdf.text(doctor.name, margin, leftY);
+            leftY += 8;
 
             docPdf.setFontSize(12);
-            docPdf.text(doctor.address.line1, 20, y);
-            y += 6;
-            docPdf.text(
-                `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
-                20,
-                y
-            );
-            y += 6;
-
-            if (doctor.gstNumber) {
-                docPdf.text(`GST: ${doctor.gstNumber}`, 20, y);
-                y += 6;
+            if (doctor.degree?.length) {
+                docPdf.text(
+                    `Degree: ${doctor.degree.join(", ")}`,
+                    margin,
+                    leftY
+                );
+                leftY += 6;
             }
 
-            // Doctor Right Side
-            docPdf.setFontSize(14);
-            docPdf.text(doctor.name, pageWidth - 20, 20, { align: "right" });
+            if (doctor.registrationNumber) {
+                docPdf.text(
+                    `Reg No: ${doctor.registrationNumber}`,
+                    margin,
+                    leftY
+                );
+                leftY += 6;
+            }
 
-            // Patient Info
-            y += 12;
-            docPdf.text(`Invoice No: INV-${invoiceNumber}`, 20, y);
-            y += 8;
-            docPdf.text(`Patient: ${details.name}`, 20, y);
-            y += 6;
-            docPdf.text(`Gender: ${details.gender || "N/A"}`, 20, y); // ✅ SHOW GENDER ON INVOICE
-            y += 6;
-            docPdf.text(`Phone: ${details.number}`, 20, y);
-            y += 6;
-            docPdf.text(`Age: ${details.age}`, 20, y);
-            y += 6;
+            // Invoice No Below Doctor Information
+            docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
+            leftY += 10;
+
+            // Patient Name, Age, Gender
+            docPdf.text(
+                `Patient: ${details.name} | Age: ${
+                    details.age || "N/A"
+                } | Gender: ${details.gender || "N/A"}`,
+                margin,
+                leftY
+            );
+            leftY += 10;
+
+            // =============== RIGHT SECTION =============== //
+            docPdf.setFontSize(12);
+
+            if (doctor.address.line1) {
+                docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
+                    align: "right",
+                });
+                rightY += 6;
+            }
+
+            if (doctor.address.line2) {
+                docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
+                    align: "right",
+                });
+                rightY += 6;
+            }
+
+            docPdf.text(
+                `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
+                pageWidth - margin,
+                rightY,
+                { align: "right" }
+            );
+            rightY += 6;
+
+            // ⭐ ADD DOCTOR PHONE NUMBER HERE
+            if (doctor.phone) {
+                docPdf.text(
+                    `Phone: ${doctor.phone}`,
+                    pageWidth - margin,
+                    rightY,
+                    { align: "right" }
+                );
+                rightY += 6;
+            }
+
+            // Date
             docPdf.text(
                 `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
-                20,
-                y
+                pageWidth - margin,
+                rightY,
+                { align: "right" }
             );
-            y += 8;
 
+            // Move table start a bit lower
+            const tableStart = Math.max(leftY, rightY) + 10;
+
+            // =============== SERVICES TABLE =============== //
             autoTable(docPdf, {
-                startY: y,
-                head: [["Service", "Amount"]],
+                startY: tableStart,
+                head: [["Service", "Amount (₹)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
                     typeof s === "object" ? s.amount : Number(s),
                 ]),
+                theme: "grid",
+                headStyles: { fillColor: [230, 230, 230] },
+                styles: { fontSize: 12, cellPadding: 4 },
             });
 
-            const finalY = docPdf.lastAutoTable.finalY + 10;
+            const afterTable = docPdf.lastAutoTable.finalY + 10;
 
+            // CALCULATE TOTAL
             const total = (visit.service || []).reduce(
                 (sum, s) =>
                     sum + (typeof s === "object" ? s.amount : Number(s)),
                 0
             );
 
-            docPdf.text(`Total: ₹${total}`, pageWidth - 20, finalY, {
-                align: "right",
-            });
+            // =============== RECEIVED MESSAGE =============== //
+            docPdf.setFontSize(12);
+            docPdf.text(
+                `Received with thanks from ${details.name} the sum of rupees ${total} on account of consultation/services.`,
+                margin,
+                afterTable
+            );
 
+            // =============== STAMP SPACE (BOTTOM RIGHT) =============== //
+            docPdf.setFontSize(12);
+            docPdf.text(
+                "Doctor's Signature / Stamp",
+                pageWidth - margin,
+                afterTable + 25,
+                {
+                    align: "right",
+                }
+            );
+
+            // Save PDF
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
             console.error(err);
@@ -604,6 +675,151 @@ export default function PatientDetails() {
                                     Save Changes
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/* -------------------- EDIT APPOINTMENT MODAL -------------------- */}
+            <div
+                className="modal fade"
+                id="editAppointmentModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5">
+                                Edit Appointment
+                            </h1>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            ></button>
+                        </div>
+
+                        <div className="modal-body">
+                            <form>
+                                {/* DATE */}
+                                <div className="mb-3">
+                                    <label className="form-label">Date</label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={apptData.date}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                date: e.target.value,
+                                            }))
+                                        }
+                                    />
+                                </div>
+
+                                {/* SERVICES */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Services
+                                    </label>
+                                    <ServiceList
+                                        onSelect={(serviceObj, checked) => {
+                                            let updatedServices = [
+                                                ...apptData.service,
+                                            ];
+                                            let updatedAmounts = [
+                                                ...apptServiceAmounts,
+                                            ];
+
+                                            if (checked) {
+                                                updatedServices.push(
+                                                    serviceObj
+                                                );
+                                                updatedAmounts.push(
+                                                    serviceObj.amount || 0
+                                                );
+                                            } else {
+                                                const i =
+                                                    updatedServices.findIndex(
+                                                        (s) =>
+                                                            s.name ===
+                                                            serviceObj.name
+                                                    );
+                                                updatedServices.splice(i, 1);
+                                                updatedAmounts.splice(i, 1);
+                                            }
+
+                                            const total = updatedAmounts.reduce(
+                                                (sum, a) => sum + a,
+                                                0
+                                            );
+
+                                            setApptServiceAmounts(
+                                                updatedAmounts
+                                            );
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                service: updatedServices,
+                                                amount: total,
+                                            }));
+                                        }}
+                                        selectedServices={apptData.service}
+                                        services={availableServices}
+                                    />
+                                </div>
+
+                                {/* AMOUNT DISPLAY */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Total Amount
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={apptData.amount}
+                                        readOnly
+                                    />
+                                </div>
+
+                                {/* PAYMENT TYPE */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Payment Type
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        value={apptData.payment_type}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                payment_type: e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="">Select Payment</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Card">Card</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Close
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                data-bs-dismiss="modal"
+                                onClick={handleUpdateAppt}
+                            >
+                                Save Changes
+                            </button>
                         </div>
                     </div>
                 </div>
