@@ -1,83 +1,65 @@
-// routes/appointmentReport.js
 const express = require("express");
 const router = express.Router();
-const ExcelJS = require("exceljs");
 const Appointment = require("../models/Appointment");
 const fetchuser = require("../middleware/fetchuser");
+const ExcelJS = require("exceljs");
 
-// existing fetch-all-visits route (keep as is)
-// router.get("/fetch-all-visits", fetchuser, async (req, res) => { ... });
-
+// GET: Excel download
 router.get("/download-excel", fetchuser, async (req, res) => {
     try {
-        // fetch all appointments of this doctor
         const appointments = await Appointment.find({ doctor: req.doc.id })
             .populate("patient", "name number")
             .populate("doctor", "name");
 
-        // flatten visits
-        const allVisits = appointments.flatMap((a) =>
+        // Build visit list
+        const visits = appointments.flatMap((a) =>
             (a.visits || []).map((v) => ({
                 patientName: a.patient?.name || "Unknown",
                 number: a.patient?.number || "N/A",
                 doctorName: a.doctor?.name || "Unknown",
-                date: v.date,
-                paymentType: v.payment_type,
-                invoiceNumber: v.invoiceNumber,
-                amount: v.amount,
+                date: v.date ? new Date(v.date).toLocaleDateString() : "",
+                paymentType: v.payment_type || "",
+                invoiceNumber: v.invoiceNumber || "",
+                amount: v.amount || 0,
+                services: (v.service || [])
+                    .map((s) => s?.name || "")
+                    .join(", "),
             }))
         );
 
-        // create workbook and worksheet
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Visit Records");
 
-        // define columns
         sheet.columns = [
-            { header: "Patient Name", key: "patientName", width: 30 },
-            { header: "Number", key: "number", width: 18 },
-            { header: "Doctor", key: "doctorName", width: 25 },
-            { header: "Date", key: "date", width: 18 },
-            { header: "Payment Type", key: "paymentType", width: 15 },
-            { header: "Invoice Number", key: "invoiceNumber", width: 15 },
-            { header: "Amount", key: "amount", width: 12 },
+            { header: "Patient", key: "patientName", width: 20 },
+            { header: "Number", key: "number", width: 15 },
+            { header: "Doctor", key: "doctorName", width: 20 },
+            { header: "Date", key: "date", width: 15 },
+            { header: "Payment", key: "paymentType", width: 12 },
+            { header: "Invoice", key: "invoiceNumber", width: 10 },
+            { header: "Amount", key: "amount", width: 10 },
+            { header: "Services", key: "services", width: 35 },
         ];
 
-        // Optionally style header
-        sheet.getRow(1).font = { bold: true };
+        visits.forEach((v) => sheet.addRow(v));
 
-        // Add rows. Format date to readable string.
-        for (const v of allVisits) {
-            sheet.addRow({
-                patientName: v.patientName,
-                number: v.number,
-                doctorName: v.doctorName,
-                date: v.date ? new Date(v.date).toLocaleString() : "",
-                paymentType: v.paymentType,
-                invoiceNumber: v.invoiceNumber,
-                amount: v.amount,
-            });
-        }
-
-        // Set response headers to trigger download
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         );
-        const filename = `visit-records-${new Date()
-            .toISOString()
-            .slice(0, 10)}.xlsx`;
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename=${filename}`
+            "attachment; filename=visit-records.xlsx"
         );
 
-        // stream workbook to response
         await workbook.xlsx.write(res);
         res.end();
-    } catch (err) {
-        console.error("Excel Download Error:", err);
-        res.status(500).json({ message: "Server error generating Excel" });
+    } catch (error) {
+        console.error("Excel Error:", error);
+        res.status(500).json({
+            message: "Server error generating Excel",
+            error: error.message,
+        });
     }
 });
 
