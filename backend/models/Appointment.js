@@ -33,22 +33,22 @@ const AppointmentSchema = new Schema({
 
 // Helper to get next invoice number for a doctor
 async function getNextInvoiceNumber(doctorId) {
-  const counter = await Counter.findOneAndUpdate(
-    { _id: `invoice_${doctorId}` },
-    { $inc: { seq: 0 } },
-    { new: true }
-  );
+    const counter = await Counter.findOneAndUpdate(
+        { _id: `invoice_${doctorId}` },
+        { $inc: { seq: 0 } },
+        { new: true }
+    );
 
-  if (!counter) {
-    // Create the counter first with seq = 1
-    const newCounter = await Counter.create({
-      _id: `invoice_${doctorId}`,
-      seq: 1,
-    });
-    return newCounter.seq;
-  }
+    if (!counter) {
+        // Create the counter first with seq = 1
+        const newCounter = await Counter.create({
+            _id: `invoice_${doctorId}`,
+            seq: 1,
+        });
+        return newCounter.seq;
+    }
 
-  return counter.seq;
+    return counter.seq;
 }
 
 // Static method to add visit
@@ -57,15 +57,16 @@ AppointmentSchema.statics.addVisit = async function (
     doctorId,
     service,
     amount,
-    payment_type
+    payment_type,
+    date
 ) {
-    const now = new Date();
+    const visitDate = date ? new Date(date) : new Date();
 
     // Get invoice number **for this doctor**
     const invoiceNumber = await getNextInvoiceNumber(doctorId);
 
     const newVisit = {
-        date: now,
+        date: visitDate,
         service,
         amount,
         payment_type,
