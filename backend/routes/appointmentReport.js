@@ -12,38 +12,78 @@ router.get("/download-excel", fetchuser, async (req, res) => {
             .populate("patient", "name number")
             .populate("doctor", "name");
 
-        // Build visit list
-        const visits = appointments.flatMap((a) =>
-            (a.visits || []).map((v) => ({
-                patientName: a.patient?.name || "Unknown",
-                number: a.patient?.number || "N/A",
-                doctorName: a.doctor?.name || "Unknown",
-                date: v.date ? new Date(v.date).toLocaleDateString() : "",
-                paymentType: v.payment_type || "",
-                invoiceNumber: v.invoiceNumber || "",
-                amount: v.amount || 0,
-                services: (v.service || [])
-                    .map((s) => s?.name || "")
-                    .join(", "),
-            }))
+        const grouped = {};
+
+        // Group visits by date
+        appointments.forEach((a) => {
+            (a.visits || []).forEach((v) => {
+                if (!v.date) return;
+
+                const iso = new Date(v.date).toISOString().split("T")[0]; // YYYY-MM-DD
+
+                if (!grouped[iso]) grouped[iso] = [];
+
+                grouped[iso].push({
+                    patientName: a.patient?.name || "Unknown",
+                    number: a.patient?.number || "N/A",
+                    doctorName: a.doctor?.name || "Unknown",
+                    date: new Date(v.date).toLocaleDateString(),
+                    paymentType: v.payment_type || "",
+                    invoiceNumber: v.invoiceNumber || "",
+                    amount: v.amount || 0,
+                    services: (v.service || [])
+                        .map((s) => s?.name || "")
+                        .join(", "),
+                });
+            });
+        });
+
+        // ✅ SORT DATES ASCENDING (OLDEST FIRST)
+        const sortedDates = Object.keys(grouped).sort(
+            (a, b) => new Date(a) - new Date(b)
         );
 
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Visit Records");
 
-        sheet.columns = [
-            { header: "Patient", key: "patientName", width: 20 },
-            { header: "Number", key: "number", width: 15 },
-            { header: "Doctor", key: "doctorName", width: 20 },
-            { header: "Date", key: "date", width: 15 },
-            { header: "Payment", key: "paymentType", width: 12 },
-            { header: "Invoice", key: "invoiceNumber", width: 10 },
-            { header: "Amount", key: "amount", width: 10 },
-            { header: "Services", key: "services", width: 35 },
-        ];
+        // Write grouped rows
+        sortedDates.forEach((dateStr) => {
+            // Date header (bold)
+            sheet.addRow([`${new Date(dateStr).toLocaleDateString()}`]);
+            sheet.lastRow.font = { bold: true };
 
-        visits.forEach((v) => sheet.addRow(v));
+            // Column header for each date section
+            sheet.addRow([
+                "Patient",
+                "Number",
+                "Doctor",
+                "Date",
+                "Payment",
+                "Invoice",
+                "Amount",
+                "Services",
+            ]);
+            sheet.lastRow.font = { bold: true };
 
+            // Add visits under this date
+            grouped[dateStr].forEach((v) => {
+                sheet.addRow([
+                    v.patientName,
+                    v.number,
+                    v.doctorName,
+                    v.date,
+                    v.paymentType,
+                    v.invoiceNumber,
+                    v.amount,
+                    v.services,
+                ]);
+            });
+
+            // Blank line between groups
+            sheet.addRow([]);
+        });
+
+        // Excel headers
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
