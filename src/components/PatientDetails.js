@@ -291,15 +291,24 @@ export default function PatientDetails() {
             const tableStartY = Math.max(leftY, rightY) + 10;
 
             autoTable(docPdf, {
-                startY: tableStartY,
-                head: [["Service", "Amount (Rs.)"]],
+                startY: tableStart,
+                head: [["Service", "Amount (₹)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
                     typeof s === "object" ? s.amount : Number(s),
                 ]),
-                theme: "grid",
-                styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [230, 230, 230] },
+                theme: "grid", // keeps borders
+                headStyles: {
+                    fillColor: null, // ❌ remove grey background
+                    textColor: 0, // black text
+                    fontStyle: "bold", // header bold
+                },
+                styles: {
+                    fontSize: 12,
+                    cellPadding: 4,
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.2,
+                },
             });
 
             const afterTableY = docPdf.lastAutoTable.finalY + 8;
