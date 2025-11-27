@@ -58,13 +58,14 @@ AppointmentSchema.statics.addVisit = async function (
     service,
     amount,
     payment_type,
+    invoiceNumber,
     date
 ) {
-    const parsed = Date.parse(date);
-    const visitDate = isNaN(parsed) ? new Date() : new Date(parsed);
-
-    // Get invoice number **for this doctor**
-    const invoiceNumber = await getNextInvoiceNumber(doctorId);
+    // Parse date safely
+    let visitDate = new Date();
+    if (date && !isNaN(Date.parse(date))) {
+        visitDate = new Date(date);
+    }
 
     const newVisit = {
         date: visitDate,
@@ -76,7 +77,10 @@ AppointmentSchema.statics.addVisit = async function (
 
     const appointment = await this.findOneAndUpdate(
         { patient: patientId },
-        { $push: { visits: newVisit }, $set: { doctor: doctorId } },
+        {
+            $push: { visits: newVisit },
+            $set: { doctor: doctorId },
+        },
         { upsert: true, new: true }
     );
 
