@@ -292,7 +292,7 @@ export default function PatientDetails() {
 
             autoTable(docPdf, {
                 startY: tableStartY,
-                head: [["Service", "Amount (₹)"]],
+                head: [["Service", "Amount (Rs.)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
                     typeof s === "object" ? s.amount : Number(s),
@@ -317,7 +317,7 @@ export default function PatientDetails() {
             );
 
             docPdf.text(
-                `Received with thanks from ${details.name} the sum of rupees ${total} on account of consultation/services.`,
+                `Received with thanks from ${details.name} the sum of Rupees ${total} on account of services.`,
                 margin,
                 afterTableY
             );
