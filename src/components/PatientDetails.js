@@ -314,16 +314,16 @@ export default function PatientDetails() {
 
             // =============== STAMP SPACE (BOTTOM RIGHT) =============== //
             docPdf.setFontSize(12);
+            const pageHeight = docPdf.internal.pageSize.getHeight();
+
+            docPdf.setFontSize(12);
             docPdf.text(
                 "Doctor's Signature / Stamp",
                 pageWidth - margin,
-                afterTable + 25,
-                {
-                    align: "right",
-                }
+                pageHeight - 20,
+                { align: "right" }
             );
 
-            // Save PDF
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
             console.error(err);
