@@ -16,7 +16,7 @@ const Signup = (props) => {
         city: "",
         state: "",
         pincode: "",
-        gstNumber: "",
+        regNumber: "",
         experience: "",
         // timings: [], // user types "10:00-12:00" etc.,
         degrees: [""],
@@ -323,11 +323,11 @@ const Signup = (props) => {
 
                 {/* GST */}
                 <div className="mb-3">
-                    <label className="form-label">GST Number (optional)</label>
+                    <label className="form-label">Registration Number (optional)</label>
                     <input
                         type="text"
                         className="form-control"
-                        name="gstNumber"
+                        name="regNumber"
                         onChange={onChange}
                     />
                 </div>

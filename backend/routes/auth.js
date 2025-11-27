@@ -57,7 +57,7 @@ router.post("/createdoc",
                 phone: req.body.phone,
                 appointmentPhone: req.body.appointmentPhone || "",
                 address: req.body.address,
-                gstNumber: req.body.gstNumber || "",
+                regNumber: req.body.regNumber || "",
                 experience: req.body.experience,
                 // timings: req.body.timings.map((t) => ({
                 //     day: t.day,

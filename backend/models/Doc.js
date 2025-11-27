@@ -46,7 +46,7 @@ const DocSchema = new Schema({
         pincode: { type: String, required: true },
     },
 
-    gstNumber: { type: String },
+    regNumber: { type: String },
 
     experience: {
         type: String, // e.g., "22+ years"
