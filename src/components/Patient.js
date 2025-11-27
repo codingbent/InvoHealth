@@ -70,94 +70,53 @@ const Patient = (props) => {
         }
     };
 
+    const openModal = (id) => {
+        const modalEl = document.getElementById(id);
+        const modal = new window.bootstrap.Modal(modalEl);
+        modal.show();
+    };
+
     return (
         <>
             {localStorage.getItem("token") != null ? (
                 <>
-                    <div className="mt-3 d-grid gap-2 d-md-flex justify-content-md-center">
-                        {/* Modal for Adding patients */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#patientModal"
-                        >
-                            Add patient
+                    <button
+                        className="btn btn-primary actions-button w-100"
+                        onClick={() =>
+                            document
+                                .getElementById("actionSheet")
+                                .classList.add("open")
+                        }
+                    >
+                        Actions ▾
+                    </button>
+
+                    <div id="actionSheet" className="action-sheet">
+                        <button onClick={() => openModal("patientModal")}>
+                            ➕ Add Patient
                         </button>
-                        <div
-                            className="modal fade"
-                            id="patientModal"
-                            tabIndex="-1"
-                            aria-labelledby="patientModalLabel"
-                            aria-hidden="true"
-                        >
-                            <div className="modal-dialog">
-                                <AddPatient showAlert={showAlert} />
-                            </div>
-                        </div>
-                        {/* Modal for Adding services */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#serviceModal"
-                        >
-                            Add Service
+                        <button onClick={() => openModal("serviceModal")}>
+                            🧾 Add Service
                         </button>
-                        <div
-                            className="modal fade"
-                            id="serviceModal"
-                            tabIndex="-1"
-                            aria-labelledby="serviceModalLabel"
-                            aria-hidden="true"
-                        >
-                            <div className="modal-dialog">
-                                <AddServices showAlert={showAlert} />
-                            </div>
-                        </div>
-                        {/* Toggle appointment vs patient list */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => setShowAppointment(true)}
-                        >
-                            Add Appointment
+                        <button onClick={() => setShowAppointment(true)}>
+                            📅 Add Appointment
                         </button>
-                        {showAppointment && (
-                            <button
-                                type="button"
-                                className="btn btn-secondary ms-2"
-                                onClick={updateclose}
-                            >
-                                Close
-                            </button>
-                        )}
-                        {/* Edit Service button */}
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editServiceModal"
-                        >
-                            Edit Service
+                        <button onClick={() => openModal("editServiceModal")}>
+                            ✏️ Edit Service
                         </button>
-                        {/* <AppointmentRecord/> */}
-                        <div
-                            className="modal fade"
-                            id="editServiceModal"
-                            tabIndex="-1"
-                            aria-labelledby="editServiceModalLabel"
-                            aria-hidden="true"
-                        >
-                            <div className="modal-dialog">
-                                <EditService showAlert={showAlert} />
-                            </div>
-                        </div>
+                        <button onClick={downloadExcelSecure}>
+                            ⬇️ Download Excel
+                        </button>
+
                         <button
-                            className="btn btn-primary"
-                            onClick={downloadExcelSecure}
+                            className="action-sheet-close"
+                            onClick={() =>
+                                document
+                                    .getElementById("actionSheet")
+                                    .classList.remove("open")
+                            }
                         >
-                            Download Excel (secure)
+                            Close
                         </button>
                     </div>
 
