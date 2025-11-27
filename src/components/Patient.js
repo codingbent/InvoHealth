@@ -187,7 +187,7 @@ const Patient = (props) => {
                             </div>
 
                             {/* FILTER BUTTON (float right on desktop, full width on mobile) */}
-                            <div className="col-12 col-md-3 mb-2 text-md-end">
+                            {/* <div className="col-12 col-md-3 mb-2 text-md-end">
                                 <button
                                     className="btn btn-outline-primary w-100 w-md-auto"
                                     data-bs-toggle="offcanvas"
@@ -195,7 +195,7 @@ const Patient = (props) => {
                                 >
                                     Filters
                                 </button>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
 
