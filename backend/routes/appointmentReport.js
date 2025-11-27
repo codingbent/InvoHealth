@@ -5,12 +5,14 @@ const fetchuser = require("../middleware/fetchuser");
 
 router.get("/fetch-all-visits", fetchuser, async (req, res) => {
     try {
-        const appointments = await Appointment.find({ doctor: req.doc.id })
-            .populate("patient", "name number")
-            .populate("doctor", "name");
+        const appointments = await Appointment.find({
+            doctor: req.doc.id
+        })
+        .populate("patient", "name number")
+        .populate("doctor", "name");
 
         const allVisits = appointments.flatMap((a) =>
-            a.visits.map((v) => ({
+            (a.visits || []).map((v) => ({
                 appointmentId: a._id,
                 patientName: a.patient?.name || "Unknown",
                 number: a.patient?.number || "N/A",
@@ -26,8 +28,8 @@ router.get("/fetch-all-visits", fetchuser, async (req, res) => {
 
         res.json(allVisits);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Report Error:", error);
+        res.status(500).json({ message: error.message });
     }
 });
 
