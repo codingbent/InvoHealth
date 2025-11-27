@@ -71,10 +71,12 @@ const Patient = (props) => {
 
     // 🔥 Bootstrap modal opener (works 100%)
     const openModal = (id) => {
-        document.getElementById("actionSheet").classList.remove("open");
+        const sheet = document.getElementById("actionSheet");
 
-        const modalEl = document.getElementById(id);
-        const modal = new window.bootstrap.Modal(modalEl);
+        sheet.classList.remove("open");
+        document.body.classList.remove("freeze-scroll");
+
+        const modal = new window.bootstrap.Modal(document.getElementById(id));
         modal.show();
     };
 
@@ -89,11 +91,12 @@ const Patient = (props) => {
                     >
                         <button
                             className="btn btn-primary actions-button w-25"
-                            onClick={() =>
+                            onClick={() => {
                                 document
                                     .getElementById("actionSheet")
-                                    .classList.add("open")
-                            }
+                                    .classList.add("open");
+                                document.body.classList.add("freeze-scroll");
+                            }}
                         >
                             Actions
                         </button>
@@ -130,11 +133,12 @@ const Patient = (props) => {
 
                         <button
                             className="action-sheet-close"
-                            onClick={() =>
+                            onClick={() => {
                                 document
                                     .getElementById("actionSheet")
-                                    .classList.remove("open")
-                            }
+                                    .classList.remove("open");
+                                document.body.classList.remove("freeze-scroll");
+                            }}
                         >
                             Close
                         </button>

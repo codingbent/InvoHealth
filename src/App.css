@@ -90,3 +90,15 @@
     pointer-events: none !important;
 }
 
+body.freeze-scroll {
+    overflow: hidden !important;
+}
+.modal.fade {
+    visibility: hidden;
+}
+
+.modal.show {
+    visibility: visible;
+}
+
+
