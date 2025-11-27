@@ -123,12 +123,12 @@ const Patient = (props) => {
                                         </button>
                                     </li>
                                     <li>
-                                        <button
+                                        {/* <button
                                             className="dropdown-item"
                                             onClick={downloadFilteredExcel}
                                         >
                                             Download Excel (secure)
-                                        </button>
+                                        </button> */}
                                     </li>
                                 </ul>
                             </div>
