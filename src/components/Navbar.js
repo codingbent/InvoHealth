@@ -1,12 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar(props) {
-    var navigate = useNavigate();
-    const handlelogout = () => {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("name");
+        props.showAlert("Logged out successfully", "success");
         navigate("/");
-        props.showAlert("Logged out Successfully", "success");
     };
+
+    const doctorName = localStorage.getItem("name");
+
     return (
         <>
             <nav className="navbar navbar-expand-lg bg-body-tertiary">
@@ -14,6 +19,7 @@ export default function Navbar(props) {
                     <Link className="navbar-brand" to="/">
                         InvoHealth
                     </Link>
+
                     <button
                         className="navbar-toggler"
                         type="button"
@@ -40,33 +46,51 @@ export default function Navbar(props) {
                                 </Link>
                             </li>
                         </ul>
-                        {localStorage.getItem("token") != null ? (
-                            <>
-                                <div className="d-flex align-items-center gap-2">
-                                    <span className="text-dark fw-semibold">
-                                        👤 {localStorage.getItem("name")}
-                                    </span>
-                                    <button
-                                        className="btn btn-primary btn-outline-light rounded-pill px-3"
-                                        onClick={handlelogout}
-                                    >
-                                        Logout
-                                    </button>
-                                </div>
-                            </>
+
+                        {localStorage.getItem("token") ? (
+                            <div className="dropdown">
+                                <button
+                                    className="btn btn-light dropdown-toggle fw-semibold"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    👤 {doctorName}
+                                </button>
+
+                                <ul className="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button
+                                            className="dropdown-item"
+                                            onClick={() => navigate("/profile")}
+                                        >
+                                            My Profile
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <hr className="dropdown-divider" />
+                                    </li>
+                                    <li>
+                                        <button
+                                            className="dropdown-item text-danger"
+                                            onClick={handleLogout}
+                                        >
+                                            Logout
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                         ) : (
                             <form className="d-flex" role="search">
                                 <Link
                                     className="btn btn-primary mx-2"
                                     to="/login"
-                                    role="button"
                                 >
                                     Login
                                 </Link>
                                 <Link
                                     className="btn btn-primary mx-2"
                                     to="/signup"
-                                    role="button"
                                 >
                                     Sign Up
                                 </Link>
