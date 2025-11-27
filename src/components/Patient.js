@@ -30,6 +30,42 @@ const Patient = (props) => {
         setShowPatientDetails(false);
         setSelectedPatientId(null);
     };
+    const downloadExcelSecure = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(
+                `${API_BASE_URL}/api/report/download-excel`,
+                {
+                    method: "GET",
+                    headers: {
+                        "auth-token": token,
+                    },
+                }
+            );
+
+            if (!res.ok) {
+                // try to read json error
+                const txt = await res.text();
+                throw new Error(`Download failed: ${res.status} ${txt}`);
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const filename =
+                res.headers.get("content-disposition")?.split("filename=")[1] ||
+                "visit-records.xlsx";
+            a.href = url;
+            a.download = filename.replace(/"/g, "");
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Download error:", err);
+            alert("Download failed. See console for details.");
+        }
+    };
 
     return (
         <>
@@ -56,7 +92,6 @@ const Patient = (props) => {
                                 <AddPatient showAlert={showAlert} />
                             </div>
                         </div>
-
                         {/* Modal for Adding services */}
                         <button
                             type="button"
@@ -77,7 +112,6 @@ const Patient = (props) => {
                                 <AddServices showAlert={showAlert} />
                             </div>
                         </div>
-
                         {/* Toggle appointment vs patient list */}
                         <button
                             type="button"
@@ -95,7 +129,6 @@ const Patient = (props) => {
                                 Close
                             </button>
                         )}
-
                         {/* Edit Service button */}
                         <button
                             type="button"
@@ -105,7 +138,6 @@ const Patient = (props) => {
                         >
                             Edit Service
                         </button>
-
                         {/* <AppointmentRecord/> */}
                         <div
                             className="modal fade"
@@ -118,6 +150,13 @@ const Patient = (props) => {
                                 <EditService showAlert={showAlert} />
                             </div>
                         </div>
+                        // place above search input, inside return
+                        <button
+                            className="btn btn-success mb-3 me-2"
+                            onClick={downloadExcelSecure}
+                        >
+                            Download Excel (secure)
+                        </button>
                     </div>
 
                     <div>
@@ -127,9 +166,6 @@ const Patient = (props) => {
                                     <PatientList
                                         openPatientDetails={openPatientDetails}
                                     />{" "}
-                                </div>
-                                <div className="record-list">
-                                    <AppointmentRecord />
                                 </div>
                             </>
                         )}
