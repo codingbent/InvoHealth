@@ -150,7 +150,6 @@ const Patient = (props) => {
                                 <EditService showAlert={showAlert} />
                             </div>
                         </div>
-                        // place above search input, inside return
                         <button
                             className="btn btn-success mb-3 me-2"
                             onClick={downloadExcelSecure}
