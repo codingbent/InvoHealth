@@ -296,7 +296,7 @@ const AddPatient = ({ showAlert }) => {
                                 <thead className="table-light">
                                     <tr>
                                         <th>Service</th>
-                                        <th className="text-end">Amount (₹)</th>
+                                        <th className="text-end">Amount ( )</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -353,7 +353,7 @@ const AddPatient = ({ showAlert }) => {
                                             {isPercent && ` (${discount}%)`}
                                             {!isPercent &&
                                                 discount > 0 &&
-                                                ` (₹${discount})`}
+                                                ` ( ${discount})`}
                                         </th>
                                         <td className="text-end">
                                             {discount > 0 ? discount : 0}
@@ -362,7 +362,7 @@ const AddPatient = ({ showAlert }) => {
 
                                     <tr className="table-primary fw-bold">
                                         <th>Final Amount After Discount</th>
-                                        <td className="text-end">₹ {amount}</td>
+                                        <td className="text-end">  {amount}</td>
                                     </tr>
                                 </tbody>
                             </table>

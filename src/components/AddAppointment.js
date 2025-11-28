@@ -334,7 +334,7 @@ const AddAppointment = (props) => {
                                     <tr>
                                         <th>Total Before Discount</th>
                                         <td className="text-end">
-                                            ₹ {serviceTotal}
+                                              {serviceTotal}
                                         </td>
                                     </tr>
 
@@ -344,11 +344,11 @@ const AddAppointment = (props) => {
                                             {isPercent
                                                 ? `(${discount}%)`
                                                 : discount > 0
-                                                ? `(₹${discount})`
+                                                ? `( ${discount})`
                                                 : ""}
                                         </th>
                                         <td className="text-end">
-                                            ₹{" "}
+                                             {" "}
                                             {(() => {
                                                 if (discount <= 0) return 0;
                                                 if (isPercent)
@@ -364,7 +364,7 @@ const AddAppointment = (props) => {
                                     <tr className="table-primary fw-bold">
                                         <th>Final Amount</th>
                                         <td className="text-end">
-                                            ₹ {finalAmount}
+                                              {finalAmount}
                                         </td>
                                     </tr>
                                 </tbody>

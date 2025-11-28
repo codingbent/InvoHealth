@@ -313,7 +313,7 @@ export default function PatientDetails() {
                 // SHOW ALL ROWS
                 tableBody.push(["TOTAL", serviceTotal.toFixed(2)]);
                 tableBody.push([
-                    percent ? `DISCOUNT (${disc}%)` : `DISCOUNT (₹${disc})`,
+                    percent ? `DISCOUNT (${disc}%)` : `DISCOUNT (${disc})`,
                     `- ${discountValue.toFixed(2)}`,
                 ]);
                 tableBody.push(["FINAL AMOUNT", finalAmount.toFixed(2)]);

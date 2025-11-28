@@ -118,7 +118,7 @@ export default function AppointmentRecord() {
                                             <td>{v.doctorName}</td>
                                             <td>{v.paymentType}</td>
                                             <td>{v.invoiceNumber}</td>
-                                            <td>₹{v.amount}</td>
+                                            <td> {v.amount}</td>
                                         </tr>
                                     ))}
                                 </tbody>
