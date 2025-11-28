@@ -299,7 +299,7 @@ export default function PatientDetails() {
                 ]),
                 theme: "grid",
                 styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [0,0,0] },
+                headStyles: { fillColor: [0, 0, 0] },
             });
 
             const afterTableY = docPdf.lastAutoTable.finalY + 8;
@@ -469,7 +469,7 @@ export default function PatientDetails() {
                     {appointments.length === 0 ? (
                         <p>No appointments found</p>
                     ) : (
-                        <table className="table table-bordered mt-2">
+                        <table className="table table-bordered mt-2 table-fixed">
                             <thead>
                                 <tr>
                                     <th>Date</th>
