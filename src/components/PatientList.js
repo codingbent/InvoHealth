@@ -296,7 +296,7 @@ export default function PatientList() {
                                         <thead>
                                             <tr>
                                                 <th>Name</th>
-                                                <th>Number</th>
+                                                {/* <th>Number</th> */}
                                                 <th>Gender</th>
                                                 <th>Payment</th>
                                                 <th>Action</th>
@@ -307,7 +307,7 @@ export default function PatientList() {
                                             {group.map((p) => (
                                                 <tr key={p._id}>
                                                     <td>{p.name}</td>
-                                                    <td>{p.number}</td>
+                                                    {/* <td>{p.number}</td> */}
                                                     <td>{p.gender || "N/A"}</td>
                                                     <td>
                                                         {p.lastpayment_type ||
