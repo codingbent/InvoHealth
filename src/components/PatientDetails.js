@@ -198,7 +198,9 @@ export default function PatientDetails() {
             let leftY = 20;
             let rightY = 20;
 
-            // Left: clinic + doctor + invoice + patient
+            // ------------------------------------------------------
+            // HEADER — CLINIC + DOCTOR DETAILS
+            // ------------------------------------------------------
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
             leftY += 10;
@@ -233,7 +235,9 @@ export default function PatientDetails() {
             );
             leftY += 10;
 
-            // Right: address + phone + date
+            // ------------------------------------------------------
+            // RIGHT SIDE — Clinic Address + Date
+            // ------------------------------------------------------
             docPdf.setFontSize(10.5);
             if (doctor.address.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
@@ -261,7 +265,9 @@ export default function PatientDetails() {
                     `Phone: ${doctor.phone}`,
                     pageWidth - margin,
                     rightY,
-                    { align: "right" }
+                    {
+                        align: "right",
+                    }
                 );
                 rightY += 5;
             }
@@ -273,24 +279,14 @@ export default function PatientDetails() {
                 { align: "right" }
             );
 
-            // Table
+            // ------------------------------------------------------
+            // TABLE START POSITION
+            // ------------------------------------------------------
             const tableStartY = Math.max(leftY, rightY) + 10;
 
-            autoTable(docPdf, {
-                startY: tableStartY,
-                head: [["Service", "Amount (Rs.)"]],
-                body: (visit.service || []).map((s) => [
-                    typeof s === "object" ? s.name : s,
-                    typeof s === "object" ? s.amount : Number(s),
-                ]),
-                theme: "grid",
-                styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [0, 0, 0] },
-            });
-
-            const afterTableY = docPdf.lastAutoTable.finalY + 8;
-
-            // Calculate totals
+            // ------------------------------------------------------
+            // CALCULATIONS
+            // ------------------------------------------------------
             const serviceTotal = (visit.service || []).reduce(
                 (sum, s) =>
                     sum + (typeof s === "object" ? s.amount : Number(s)),
@@ -308,34 +304,61 @@ export default function PatientDetails() {
                     ? visit.amount
                     : Math.max(serviceTotal - discountValue, 0);
 
-            // Footer text showing totals and discount
+            // ------------------------------------------------------
+            // BUILD TABLE BODY
+            // ------------------------------------------------------
+            const tableBody = (visit.service || []).map((s) => [
+                typeof s === "object" ? s.name : s,
+                typeof s === "object" ? s.amount : Number(s),
+            ]);
+
+            tableBody.push(["TOTAL", serviceTotal.toFixed(2)]);
+
+            if (discountValue > 0) {
+                tableBody.push([
+                    percent ? `DISCOUNT (${disc}%)` : `DISCOUNT (₹${disc})`,
+                    `- ${discountValue.toFixed(2)}`,
+                ]);
+            }
+
+            tableBody.push(["FINAL AMOUNT", finalAmount.toFixed(2)]);
+
+            // ------------------------------------------------------
+            // RENDER TABLE
+            // ------------------------------------------------------
+            autoTable(docPdf, {
+                startY: tableStartY,
+                head: [["Service", "Amount (Rs.)"]],
+                body: tableBody,
+                theme: "grid",
+                styles: { fontSize: 11, cellPadding: 3 },
+                headStyles: { fillColor: [0, 0, 0] },
+            });
+
+            const afterTableY = docPdf.lastAutoTable.finalY + 12;
+
+            // ------------------------------------------------------
+            // RECEIPT TEXT
+            // ------------------------------------------------------
             docPdf.setFontSize(11);
             docPdf.text(
-                `Service Total: ₹ ${serviceTotal.toFixed(2)}`,
+                `Received with thanks from ${
+                    details.name
+                } the sum of Rupees ${finalAmount.toFixed(
+                    2
+                )} on account of consultation/services.`,
                 margin,
                 afterTableY
             );
 
-            if (discountValue > 0) {
-                const discLabel = percent ? `${disc}%` : `₹ ${disc}`;
-                docPdf.text(
-                    `Discount (${discLabel}): - ₹ ${discountValue.toFixed(2)}`,
-                    margin,
-                    afterTableY + 8
-                );
-            }
-
-            docPdf.text(
-                `Final Amount: ₹ ${finalAmount.toFixed(2)}`,
-                margin,
-                afterTableY + 16
-            );
-
-            // Stamp at bottom-right
+            // ------------------------------------------------------
+            // SIGNATURE / STAMP AREA
+            // ------------------------------------------------------
             docPdf.setFontSize(12);
             docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
                 align: "right",
             });
+
             if (doctor.degree && doctor.degree.length > 0) {
                 docPdf.text(
                     doctor.degree.join(", "),
@@ -345,6 +368,9 @@ export default function PatientDetails() {
                 );
             }
 
+            // ------------------------------------------------------
+            // SAVE PDF
+            // ------------------------------------------------------
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
             console.error(err);
