@@ -351,26 +351,38 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
     try {
         const patientId = req.params.id;
 
-        // Check if patient exists
         const patient = await Patient.findById(patientId);
-        if (!patient) {
-            return res
-                .status(404)
-                .json({ success: false, message: "Patient not found" });
+        if (!patient) return res.status(404).json({ success: false, message: "Patient not found" });
+
+        // Clean appointments before delete
+        const appointments = await Appointment.find({ patient: patientId });
+
+        for (let a of appointments) {
+            a.visits = a.visits.filter(v => {
+                const isEmptyVisit =
+                    (!v.service || v.service.length === 0) &&
+                    (!v.amount || v.amount === 0);
+                return !isEmptyVisit;
+            });
+
+            if (a.visits.length === 0) {
+                await Appointment.findByIdAndDelete(a._id);
+            } else {
+                await a.save();
+            }
         }
 
-        // Delete patient
+        // Now delete patient safely
         await Patient.findByIdAndDelete(patientId);
 
-        // (Optional) also delete related appointments if needed
-        await Appointment.deleteMany({ patientId: patientId });
+        res.json({ success: true, message: "Patient and related appointments deleted" });
 
-        res.json({ success: true, message: "Patient deleted successfully" });
     } catch (err) {
-        console.error("Error deleting patient:", err.message);
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
+
 
 router.post("/addappointment/:id", async (req, res) => {
     try {
@@ -598,30 +610,37 @@ router.put("/updatedoc", fetchuser, async (req, res) => {
     }
 });
 
-router.put("/edit-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
-    try {
-        const { appointmentId, visitId } = req.params;
-        const { date, service, amount, payment_type } = req.body;
+router.put("/edit-invoice/:appointmentId/:visitId",
+    fetchuser,
+    async (req, res) => {
+        try {
+            const { appointmentId, visitId } = req.params;
+            const { date, service, amount, payment_type } = req.body;
 
-        const appointment = await Appointment.findById(appointmentId);
-        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+            const appointment = await Appointment.findById(appointmentId);
+            if (!appointment)
+                return res
+                    .status(404)
+                    .json({ message: "Appointment not found" });
 
-        const visit = appointment.visits.id(visitId);
-        if (!visit) return res.status(404).json({ message: "Visit not found" });
+            const visit = appointment.visits.id(visitId);
+            if (!visit)
+                return res.status(404).json({ message: "Visit not found" });
 
-        visit.date = date || visit.date;
-        visit.service = service || visit.service;
-        visit.amount = amount ?? visit.amount;
-        visit.payment_type = payment_type || visit.payment_type;
+            visit.date = date || visit.date;
+            visit.service = service || visit.service;
+            visit.amount = amount ?? visit.amount;
+            visit.payment_type = payment_type || visit.payment_type;
 
-        await appointment.save();
+            await appointment.save();
 
-        res.json({ success: true, message: "Invoice updated", visit });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
+            res.json({ success: true, message: "Invoice updated", visit });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: "Server error" });
+        }
     }
-});
+);
 
 router.delete("/delete-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
     try {
@@ -630,19 +649,36 @@ router.delete("/delete-invoice/:appointmentId/:visitId", fetchuser, async (req, 
         const appointment = await Appointment.findById(appointmentId);
         if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
+        // Remove visit
         appointment.visits = appointment.visits.filter(
             (v) => v._id.toString() !== visitId
         );
 
-        await appointment.save();
+        // 🛑 NEW FIX: Also remove broken/empty visits
+        appointment.visits = appointment.visits.filter(v => {
+            const isEmptyVisit =
+                (!v.service || v.service.length === 0) &&
+                (!v.amount || v.amount === 0);
 
-        res.json({ success: true, message: "Invoice deleted" });
+            return !isEmptyVisit;
+        });
+
+        // If no visits left → delete appointment
+        if (appointment.visits.length === 0) {
+            await Appointment.findByIdAndDelete(appointmentId);
+            return res.json({
+                success: true,
+                message: "Visit deleted — appointment removed (no visits left)"
+            });
+        }
+
+        await appointment.save();
+        res.json({ success: true, message: "Visit deleted" });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: "Server error" });
     }
 });
-
-
 
 module.exports = router;
