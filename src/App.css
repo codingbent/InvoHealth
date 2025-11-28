@@ -126,30 +126,26 @@ body.freeze-scroll {
 /* Column widths */
 .patient-table th:nth-child(1),
 .patient-table td:nth-child(1) {
-  width: 120px;   /* Name */
+  width: 30%;   /* Name */
 }
+
+
 
 .patient-table th:nth-child(2),
 .patient-table td:nth-child(2) {
-  width: 110px;   /* Phone Number */
+  width: 20%;    /* Gender */
+  text-align: center;
 }
 
 .patient-table th:nth-child(3),
 .patient-table td:nth-child(3) {
-  width: 70px;    /* Gender */
+  width: 30%;    /* Payment */
   text-align: center;
 }
 
 .patient-table th:nth-child(4),
 .patient-table td:nth-child(4) {
-  width: 85px;    /* Payment */
-  text-align: center;
-}
-
-.patient-table th:nth-child(5),
-.patient-table td:nth-child(5) {
-  width: 80px;    /* Actions */
-  text-align: center;
+  width: 20%;   /* Action */
 }
 
 /* Delete button shrink */
