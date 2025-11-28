@@ -36,13 +36,10 @@ const Patient = (props) => {
     const downloadExcelSecure = async () => {
         try {
             const token = localStorage.getItem("token");
-            const res = await fetch(
-                `${API_BASE_URL}/api/report/download-excel`,
-                {
-                    method: "GET",
-                    headers: { "auth-token": token },
-                }
-            );
+            const res = await fetch(`${API_BASE_URL}/api/report/download-excel`, {
+                method: "GET",
+                headers: { "auth-token": token },
+            });
 
             if (!res.ok) {
                 const txt = await res.text();
@@ -111,7 +108,7 @@ const Patient = (props) => {
             {localStorage.getItem("token") ? (
                 <>
                     {/* ACTION BUTTON */}
-                    <div id="actionsWrapper" className="w-75 mx-auto mt-3">
+                    <div className="w-75 d-flex justify-content-center m-3 " id="actionsWrapper">
                         <button
                             className="btn btn-primary actions-button w-100"
                             onClick={showActionSheet}
@@ -122,12 +119,8 @@ const Patient = (props) => {
 
                     {/* ACTION SHEET */}
                     <div id="actionSheet" className="action-sheet hidden">
-                        <button onClick={() => openModal("patientModal")}>
-                            ➕ Add Patient
-                        </button>
-                        <button onClick={() => openModal("serviceModal")}>
-                            🧾 Add Service
-                        </button>
+                        <button onClick={() => openModal("patientModal")}>➕ Add Patient</button>
+                        <button onClick={() => openModal("serviceModal")}>🧾 Add Service</button>
 
                         <button
                             onClick={() => {
@@ -138,17 +131,10 @@ const Patient = (props) => {
                             📅 Add Appointment
                         </button>
 
-                        <button onClick={() => openModal("editServiceModal")}>
-                            ✏️ Edit Service
-                        </button>
-                        <button onClick={downloadExcelSecure}>
-                            ⬇️ Download Excel
-                        </button>
+                        <button onClick={() => openModal("editServiceModal")}>✏️ Edit Service</button>
+                        <button onClick={downloadExcelSecure}>⬇️ Download Excel</button>
 
-                        <button
-                            className="action-sheet-close"
-                            onClick={hideActionSheet}
-                        >
+                        <button className="action-sheet-close" onClick={hideActionSheet}>
                             Close
                         </button>
                     </div>
@@ -166,11 +152,7 @@ const Patient = (props) => {
                         </div>
                     </div>
 
-                    <div
-                        className="modal fade"
-                        id="editServiceModal"
-                        tabIndex="-1"
-                    >
+                    <div className="modal fade" id="editServiceModal" tabIndex="-1">
                         <div className="modal-dialog">
                             <EditService showAlert={showAlert} />
                         </div>
@@ -180,19 +162,14 @@ const Patient = (props) => {
                     <div>
                         {!showAppointment && !showPatientDetails && (
                             <div className="patient-list">
-                                <PatientList
-                                    openPatientDetails={openPatientDetails}
-                                />
+                                <PatientList openPatientDetails={openPatientDetails} />
                             </div>
                         )}
 
                         {showAppointment && (
                             <div className="appointment container">
                                 <AddAppointment showAlert={props.showAlert} />
-                                <button
-                                    className="btn btn-secondary mt-2"
-                                    onClick={updateclose}
-                                >
+                                <button className="btn btn-secondary mt-2" onClick={updateclose}>
                                     Close
                                 </button>
                             </div>
