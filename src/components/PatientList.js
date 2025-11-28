@@ -304,7 +304,7 @@ export default function PatientList() {
                                         </thead>
 
                                         <tbody>
-                                            {patients.map((p) => (
+                                            {group.map((p) => (
                                                 <tr key={p._id}>
                                                     <td>{p.name}</td>
                                                     <td>{p.number}</td>
