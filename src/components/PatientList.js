@@ -191,7 +191,7 @@ export default function PatientList() {
         <>
             <div className="container mt-3">
                 {/* ----------- FILTER BUTTON ---------- */}
-                <div className="d-flex mb-3">
+                <div className="w-75 mx-auto mb-3">
                     <button
                         className="btn btn-outline-primary w-100"
                         data-bs-toggle="offcanvas"
