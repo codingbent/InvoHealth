@@ -291,50 +291,45 @@ export default function PatientList() {
                                         : new Date(date).toLocaleDateString()}
                                 </h5>
 
-                                <table className="table table-striped table-bordered">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Number</th>
-                                            <th>Gender</th>
-                                            <th>Payment</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {group.map((p) => (
-                                            <tr
-                                                key={p._id}
-                                                style={{ cursor: "pointer" }}
-                                                onClick={() =>
-                                                    navigate(
-                                                        `/patient/${p._id}`
-                                                    )
-                                                }
-                                            >
-                                                <td>{p.name}</td>
-                                                <td>{p.number}</td>
-                                                <td>{p.gender || "N/A"}</td>
-                                                <td>
-                                                    {p.lastpayment_type ||
-                                                        "N/A"}
-                                                </td>
-                                                <td>
-                                                    <button
-                                                        className="btn btn-danger btn-sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDelete(p._id);
-                                                        }}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </td>
+                                <div className="table-responsive patient-table-wrapper">
+                                    <table className="table patient-table table-bordered table-fixed">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Number</th>
+                                                <th>Gender</th>
+                                                <th>Payment</th>
+                                                <th>Action</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+
+                                        <tbody>
+                                            {patients.map((p) => (
+                                                <tr key={p._id}>
+                                                    <td>{p.name}</td>
+                                                    <td>{p.number}</td>
+                                                    <td>{p.gender || "N/A"}</td>
+                                                    <td>
+                                                        {p.lastpayment_type ||
+                                                            "N/A"}
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-danger btn-sm w-100"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    p._id
+                                                                )
+                                                            }
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         );
                     })}
