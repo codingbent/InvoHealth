@@ -278,9 +278,32 @@ const AddPatient = ({ showAlert }) => {
                                 ))}
                             </ul>
 
-                            {/* Discount Section */}
-                            <div className="mb-3 mt-3">
-                                <label className="form-label">Discount</label>
+                            {/* Total Before Discount */}
+                            <div className="mb-2">
+                                <label className="form-label fw-bold">
+                                    Total Amount (Before Discount)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    value={service.reduce(
+                                        (sum, s, i) =>
+                                            sum +
+                                            (Number(serviceAmounts[i]) ||
+                                                Number(s.amount) ||
+                                                0),
+                                        0
+                                    )}
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* Discount */}
+                            <div className="mb-3">
+                                <label className="form-label fw-bold">
+                                    Discount
+                                </label>
+
                                 <input
                                     type="number"
                                     className="form-control"
@@ -306,14 +329,18 @@ const AddPatient = ({ showAlert }) => {
                                 </div>
                             </div>
 
-                            {/* Total Amount */}
-                            <label className="form-label">Total Amount</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                value={amount}
-                                readOnly
-                            />
+                            {/* Final Amount After Discount */}
+                            <div className="mb-3">
+                                <label className="form-label fw-bold">
+                                    Final Amount (After Discount)
+                                </label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    value={amount}
+                                    readOnly
+                                />
+                            </div>
                         </>
                     )}
 
