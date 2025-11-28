@@ -133,13 +133,13 @@ body.freeze-scroll {
 
 .patient-table th:nth-child(2),
 .patient-table td:nth-child(2) {
-  width: 20%;    /* Gender */
+  width: 25%;    /* Gender */
   text-align: center;
 }
 
 .patient-table th:nth-child(3),
 .patient-table td:nth-child(3) {
-  width: 30%;    /* Payment */
+  width: 25%;    /* Payment */
   text-align: center;
 }
 
