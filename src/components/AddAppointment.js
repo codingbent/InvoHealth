@@ -6,7 +6,6 @@ const AddAppointment = (props) => {
     const [filteredPatients, setFilteredPatients] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
-    const [amount, setAmount] = useState(0);
     const [searchText, setSearchText] = useState("");
 
     const [selectedPatient, setSelectedPatient] = useState(
@@ -18,7 +17,16 @@ const AddAppointment = (props) => {
     const [payment_type, setpayment_type] = useState("Cash");
     const [allServices, setAllServices] = useState([]);
 
-    // ✅ New: Appointment Date
+    const [serviceTotal, setServiceTotal] = useState(0);
+
+    // 🆕 DISCOUNT FIELDS
+    const [discount, setDiscount] = useState(0);
+    const [isPercent, setIsPercent] = useState(false);
+
+    // 🆕 Final payable amount
+    const [finalAmount, setFinalAmount] = useState(0);
+
+    // 🆕 Appointment Date
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
@@ -28,6 +36,7 @@ const AddAppointment = (props) => {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
+    // FETCH SERVICES
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -49,6 +58,7 @@ const AddAppointment = (props) => {
         fetchServices();
     }, []);
 
+    // FETCH PATIENTS
     useEffect(() => {
         const fetchPatients = async () => {
             try {
@@ -71,6 +81,7 @@ const AddAppointment = (props) => {
         fetchPatients();
     }, []);
 
+    // FILTER PATIENTS
     useEffect(() => {
         const filtered = patientsList.filter((p) =>
             p.name.toLowerCase().includes(searchText.toLowerCase())
@@ -78,13 +89,26 @@ const AddAppointment = (props) => {
         setFilteredPatients(filtered);
     }, [searchText, patientsList]);
 
+    // CALCULATE TOTALS
     useEffect(() => {
         const total = services.reduce(
             (acc, s) => acc + (serviceAmounts[s._id] ?? s.amount ?? 0),
             0
         );
-        setAmount(total);
-    }, [services, serviceAmounts]);
+        setServiceTotal(total);
+
+        let discountValue = 0;
+
+        if (discount > 0) {
+            if (isPercent) discountValue = total * (discount / 100);
+            else discountValue = discount;
+        }
+
+        if (discountValue > total) discountValue = total;
+        if (discountValue < 0) discountValue = 0;
+
+        setFinalAmount(total - discountValue);
+    }, [services, serviceAmounts, discount, isPercent]);
 
     const handleSelectPatient = (patient) => {
         setSelectedPatient(patient);
@@ -99,6 +123,7 @@ const AddAppointment = (props) => {
         }));
     };
 
+    // SUBMIT APPOINTMENT
     const handleAddAppointment = async (e) => {
         e.preventDefault();
 
@@ -122,9 +147,11 @@ const AddAppointment = (props) => {
                             name: s.name,
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
-                        amount,
+                        amount: finalAmount,
                         payment_type,
-                        date: appointmentDate, // ✅ Added here!
+                        discount,
+                        isPercent,
+                        date: appointmentDate,
                     }),
                 }
             );
@@ -133,13 +160,18 @@ const AddAppointment = (props) => {
 
             if (res.ok && result.success) {
                 props.showAlert("Appointment added successfully!", "success");
+
+                // Reset fields
                 setServices([]);
                 setServiceAmounts({});
-                setAmount(0);
+                setServiceTotal(0);
+                setFinalAmount(0);
+                setDiscount(0);
+                setIsPercent(false);
                 setSelectedPatient(null);
                 localStorage.removeItem("patient");
                 setpayment_type("Cash");
-                setAppointmentDate(new Date().toISOString().slice(0, 10)); // Reset
+                setAppointmentDate(new Date().toISOString().slice(0, 10));
             } else {
                 props.showAlert(
                     result.error || "Failed to add appointment",
@@ -167,6 +199,7 @@ const AddAppointment = (props) => {
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                 />
+
                 {searchText && (
                     <ul className="list-group mt-1">
                         {filteredPatients.map((p) => (
@@ -186,6 +219,7 @@ const AddAppointment = (props) => {
                         )}
                     </ul>
                 )}
+
                 {selectedPatient && (
                     <div className="mt-2">
                         <strong>Selected Patient:</strong>{" "}
@@ -207,6 +241,7 @@ const AddAppointment = (props) => {
                         />
                     </div>
 
+                    {/* Services */}
                     <div className="mb-3">
                         <label className="form-label">Services</label>
                         <ServiceList
@@ -225,45 +260,119 @@ const AddAppointment = (props) => {
                     </div>
 
                     {services.length > 0 && (
-                        <div className="mb-3">
-                            <label className="form-label">Bill Details</label>
-                            <ul className="list-group mb-2">
-                                {services.map((s) => (
-                                    <li
-                                        key={s._id}
-                                        className="list-group-item d-flex justify-content-between align-items-center"
-                                    >
-                                        <span>{s.name}</span>
-                                        <input
-                                            type="number"
-                                            className="form-control w-25"
-                                            value={
-                                                serviceAmounts[s._id] ??
-                                                s.amount ??
-                                                0
-                                            }
-                                            onChange={(e) =>
-                                                handleServiceAmountChange(
-                                                    s._id,
-                                                    e.target.value
-                                                )
-                                            }
-                                        />
-                                    </li>
-                                ))}
-                            </ul>
+                        <>
+                            {/* Service Amount Table */}
+                            <div className="mb-3">
+                                <label className="form-label">
+                                    Bill Details
+                                </label>
+                                <ul className="list-group mb-2">
+                                    {services.map((s) => (
+                                        <li
+                                            key={s._id}
+                                            className="list-group-item d-flex justify-content-between align-items-center"
+                                        >
+                                            <span>{s.name}</span>
+                                            <input
+                                                type="number"
+                                                className="form-control w-25"
+                                                value={
+                                                    serviceAmounts[s._id] ??
+                                                    s.amount ??
+                                                    0
+                                                }
+                                                onChange={(e) =>
+                                                    handleServiceAmountChange(
+                                                        s._id,
+                                                        e.target.value
+                                                    )
+                                                }
+                                            />
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
 
-                            <label className="form-label">Total Amount</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                value={amount}
-                                readOnly
-                            />
-                        </div>
+                            {/* 🔥 DISCOUNT SECTION */}
+                            <div className="mb-3">
+                                <label className="form-label fw-bold">
+                                    Discount
+                                </label>
+
+                                <div className="d-flex gap-2">
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        placeholder="Enter discount"
+                                        style={{ maxWidth: "200px" }}
+                                        value={discount}
+                                        onChange={(e) =>
+                                            setDiscount(Number(e.target.value))
+                                        }
+                                    />
+
+                                    <div className="form-check d-flex align-items-center">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={isPercent}
+                                            onChange={(e) =>
+                                                setIsPercent(e.target.checked)
+                                            }
+                                            style={{ marginRight: "5px" }}
+                                        />
+                                        <label className="form-check-label">
+                                            %
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Summary Table */}
+                            <table className="table table-bordered mb-3">
+                                <tbody>
+                                    <tr>
+                                        <th>Total Before Discount</th>
+                                        <td className="text-end">
+                                            ₹ {serviceTotal}
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <th>
+                                            Discount{" "}
+                                            {isPercent
+                                                ? `(${discount}%)`
+                                                : discount > 0
+                                                ? `(₹${discount})`
+                                                : ""}
+                                        </th>
+                                        <td className="text-end">
+                                            ₹{" "}
+                                            {(() => {
+                                                if (discount <= 0) return 0;
+                                                if (isPercent)
+                                                    return (
+                                                        serviceTotal *
+                                                        (discount / 100)
+                                                    ).toFixed(2);
+                                                return discount;
+                                            })()}
+                                        </td>
+                                    </tr>
+
+                                    <tr className="table-primary fw-bold">
+                                        <th>Final Amount</th>
+                                        <td className="text-end">
+                                            ₹ {finalAmount}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </>
                     )}
 
-                    {/* Payment Type */}
+                    {/* Payment */}
                     <div className="mb-3">
                         <label className="form-label">Payment Type</label>
                         <select
@@ -278,6 +387,7 @@ const AddAppointment = (props) => {
                         </select>
                     </div>
 
+                    {/* Submit */}
                     <button type="submit" className="btn btn-primary">
                         Save Appointment
                     </button>

@@ -13,7 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const authMiddleware = require("../middleware/fetchuser"); // if using auth
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
-router.post("/createdoc",
+router.post(
+    "/createdoc",
     [
         body("name").isLength({ min: 3 }),
         body("email").isEmail(),
@@ -118,6 +119,8 @@ router.post("/addpatient",
                 age: req.body.age,
                 gender: req.body.gender, // ✅ Save gender
                 doctor: doctorId,
+                discount: req.body.discount, // NEW
+                isPercent: req.body.isPercent,
             });
 
             success = true;
@@ -133,7 +136,8 @@ router.post("/addpatient",
 );
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 
-router.post("/createservice",
+router.post(
+    "/createservice",
     fetchuser,
     [body("name").notEmpty(), body("amount").isNumeric()],
     async (req, res) => {
@@ -284,7 +288,8 @@ router.get("/fetchpatientsbylastvisit", async (req, res) => {
 
 //update patient details
 
-router.put("/updatepatientdetails/:id",
+router.put(
+    "/updatepatientdetails/:id",
     [
         body("name", "Enter Name").notEmpty(),
         body("service").optional(),
@@ -352,13 +357,16 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
         const patientId = req.params.id;
 
         const patient = await Patient.findById(patientId);
-        if (!patient) return res.status(404).json({ success: false, message: "Patient not found" });
+        if (!patient)
+            return res
+                .status(404)
+                .json({ success: false, message: "Patient not found" });
 
         // Clean appointments before delete
         const appointments = await Appointment.find({ patient: patientId });
 
         for (let a of appointments) {
-            a.visits = a.visits.filter(v => {
+            a.visits = a.visits.filter((v) => {
                 const isEmptyVisit =
                     (!v.service || v.service.length === 0) &&
                     (!v.amount || v.amount === 0);
@@ -375,43 +383,94 @@ router.delete("/deletepatient/:id", authMiddleware, async (req, res) => {
         // Now delete patient safely
         await Patient.findByIdAndDelete(patientId);
 
-        res.json({ success: true, message: "Patient and related appointments deleted" });
-
+        res.json({
+            success: true,
+            message: "Patient and related appointments deleted",
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
 
-
 router.post("/addappointment/:id", async (req, res) => {
     try {
-        const { service, amount, payment_type, doctorId, date } = req.body;
+        const {
+            service,
+            amount,
+            payment_type,
+            doctorId,
+            date,
+            discount,
+            isPercent,
+        } = req.body;
+
         const patientId = req.params.id;
 
-        if (!service || !Array.isArray(service)) {
+        // --------------------------------------
+        // 1. VALIDATION
+        // --------------------------------------
+        if (!service || !Array.isArray(service) || service.length === 0) {
             return res
                 .status(400)
-                .json({ message: "Service must be an array" });
-        }
-        if (amount == null) {
-            return res.status(400).json({ message: "Amount is required" });
+                .json({ success: false, message: "Service must be a non-empty array" });
         }
 
-        // Determine doctor ID
+        // --------------------------------------
+        // 2. Determine doctor ID
+        // --------------------------------------
         let finalDoctorId = doctorId;
+
         if (!finalDoctorId) {
             const patient = await Patient.findById(patientId);
-            if (!patient)
-                return res.status(404).json({ message: "Patient not found" });
-            if (!patient.doctor)
+            if (!patient) {
+                return res
+                    .status(404)
+                    .json({ success: false, message: "Patient not found" });
+            }
+            if (!patient.doctor) {
                 return res
                     .status(400)
-                    .json({ message: "Doctor ID is required" });
+                    .json({ success: false, message: "Doctor ID missing for patient" });
+            }
             finalDoctorId = patient.doctor;
         }
 
-        // Generate per-doctor invoice number
+        // --------------------------------------
+        // 3. Compute serviceTotal (server-authoritative)
+        // --------------------------------------
+        const serviceTotal = service.reduce(
+            (sum, s) => sum + (Number(s.amount) || 0),
+            0
+        );
+
+        // --------------------------------------
+        // 4. Compute discount
+        // --------------------------------------
+        const disc = Number(discount) || 0;
+        const percentFlag = Boolean(isPercent);
+
+        let discountValue = 0;
+
+        if (disc > 0) {
+            if (percentFlag) {
+                discountValue = serviceTotal * (disc / 100);
+            } else {
+                discountValue = disc;
+            }
+        }
+
+        if (discountValue > serviceTotal) discountValue = serviceTotal;
+        if (discountValue < 0) discountValue = 0;
+
+        // --------------------------------------
+        // 5. Final payable amount
+        // --------------------------------------
+        const finalAmount = serviceTotal - discountValue;
+
+        // --------------------------------------
+        // 6. Generate invoiceNumber per doctor
+        // --------------------------------------
         const counterId = `invoice_${finalDoctorId}`;
         const counter = await Counter.findByIdAndUpdate(
             counterId,
@@ -420,24 +479,45 @@ router.post("/addappointment/:id", async (req, res) => {
         );
         const invoiceNumber = counter.seq;
 
-        const appointment = await Appointment.addVisit(
-            patientId,
-            finalDoctorId,
-            service,
-            amount,
-            payment_type,
+        // --------------------------------------
+        // 7. Add visit using Appointment static method
+        //    but we override final amount & discount inside visit
+        // --------------------------------------
+        const visitData = {
+            service: service.map((s) => ({
+                id: s.id || null,
+                name: s.name,
+                amount: Number(s.amount) || 0,
+            })),
+            amount: finalAmount,
+            payment_type: payment_type,
             invoiceNumber,
-            date
+            date: date || new Date(),
+            discount: disc,
+            isPercent: percentFlag,
+        };
+
+        const appointment = await Appointment.findOneAndUpdate(
+            { patient: patientId },
+            {
+                $push: { visits: visitData },
+                $set: { doctor: finalDoctorId },
+            },
+            { upsert: true, new: true }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Appointment added successfully",
             appointment,
         });
     } catch (err) {
         console.error("Add Appointment Error:", err);
-        res.status(500).json({ message: "Server error" });
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: err.message,
+        });
     }
 });
 
@@ -461,21 +541,19 @@ router.get("/patientdetails/:id", async (req, res) => {
 router.put("/updateappointment/:appointmentId/:visitId",
     authMiddleware,
     async (req, res) => {
-        const { appointmentId, visitId } = req.params;
-        const { date, service, amount, payment_type } = req.body;
-
-        if (
-            !date ||
-            !service ||
-            !Array.isArray(service) ||
-            service.length === 0
-        ) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Invalid data" });
-        }
-
         try {
+            const { appointmentId, visitId } = req.params;
+            const { date, service, payment_type, discount, isPercent } = req.body;
+
+            // 1. Basic validation
+            if (!date || !service || !Array.isArray(service) || service.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid data. Missing date or services.",
+                });
+            }
+
+            // 2. Fetch appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
                 return res
@@ -483,6 +561,7 @@ router.put("/updateappointment/:appointmentId/:visitId",
                     .json({ success: false, message: "Appointment not found" });
             }
 
+            // 3. Find correct visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
                 return res
@@ -490,18 +569,43 @@ router.put("/updateappointment/:appointmentId/:visitId",
                     .json({ success: false, message: "Visit not found" });
             }
 
-            // Update fields
+            // 4. Update visit date
             visit.date = new Date(date);
+
+            // 5. Update service list (normalize)
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
-                amount: s.amount || 0,
+                amount: Number(s.amount) || 0,
             }));
-            visit.amount =
-                amount ||
-                visit.service.reduce((sum, s) => sum + (s.amount || 0), 0);
 
-            // ✅ Handle payment_type safely
+            // 6. Compute service total
+            const serviceTotal = visit.service.reduce(
+                (sum, s) => sum + (Number(s.amount) || 0),
+                0
+            );
+
+            // 7. Compute discount
+            const disc = Number(discount) || 0;
+            const percentFlag = Boolean(isPercent);
+
+            let discountValue = 0;
+
+            if (disc > 0) {
+                if (percentFlag) {
+                    discountValue = serviceTotal * (disc / 100);
+                } else {
+                    discountValue = disc;
+                }
+            }
+
+            if (discountValue < 0) discountValue = 0;
+            if (discountValue > serviceTotal) discountValue = serviceTotal;
+
+            // 8. Final payable amount
+            const finalAmount = serviceTotal - discountValue;
+
+            // 9. Update payment type (validated)
             if (
                 payment_type &&
                 ["Cash", "Card", "UPI", "Other"].includes(payment_type)
@@ -509,12 +613,22 @@ router.put("/updateappointment/:appointmentId/:visitId",
                 visit.payment_type = payment_type;
             }
 
+            // 10. Save computed values
+            visit.amount = finalAmount;
+            visit.discount = disc;
+            visit.isPercent = percentFlag;
+
+            // 11. Save appointment
             await appointment.save();
 
-            res.json({ success: true, visit });
+            return res.json({
+                success: true,
+                message: "Appointment updated successfully",
+                visit,
+            });
         } catch (err) {
-            console.error("Error updating visit:", err); // ✅ full error log
-            res.status(500).json({
+            console.error("Error updating appointment:", err);
+            return res.status(500).json({
                 success: false,
                 message: err.message || "Server error",
             });
@@ -533,7 +647,8 @@ router.get("/appointments/:patientId", async (req, res) => {
     }
 });
 
-router.post("/login",
+router.post(
+    "/login",
     [body("email").isEmail(), body("password", "Enter password").exists()],
     async (req, res) => {
         let success = false;
@@ -610,12 +725,14 @@ router.put("/updatedoc", fetchuser, async (req, res) => {
     }
 });
 
-router.put("/edit-invoice/:appointmentId/:visitId",
+router.put(
+    "/edit-invoice/:appointmentId/:visitId",
     fetchuser,
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, amount, payment_type } = req.body;
+            const { date, service, amount, payment_type, discount, isPercent } =
+                req.body;
 
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment)
@@ -627,58 +744,100 @@ router.put("/edit-invoice/:appointmentId/:visitId",
             if (!visit)
                 return res.status(404).json({ message: "Visit not found" });
 
-            visit.date = date || visit.date;
-            visit.service = service || visit.service;
-            visit.amount = amount ?? visit.amount;
-            visit.payment_type = payment_type || visit.payment_type;
+            // Update fields (service array, date, payment type)
+            if (date) visit.date = date;
+            if (service) visit.service = service;
+            if (payment_type) visit.payment_type = payment_type;
+
+            // Server-side calculation of amount from provided service array (if service provided)
+            // If client also sent amount, we'll use server-computed amount for consistency.
+            const serviceTotal = computeServiceTotal(visit.service || service || []);
+            let finalAmount = serviceTotal;
+
+            // Normalize discount values
+            const disc = Number(discount) || 0;
+            const percentFlag = !!isPercent;
+
+            if (disc > 0) {
+                if (percentFlag) {
+                    finalAmount = finalAmount - (serviceTotal * (disc / 100));
+                } else {
+                    finalAmount = finalAmount - disc;
+                }
+            }
+
+            if (finalAmount < 0) finalAmount = 0;
+
+            // Save computed amount and discount metadata
+            visit.amount = typeof amount !== "undefined" ? Number(finalAmount) : finalAmount;
+            visit.discount = disc;
+            visit.isPercent = percentFlag;
 
             await appointment.save();
 
-            res.json({ success: true, message: "Invoice updated", visit });
+            return res.json({
+                success: true,
+                message: "Invoice updated",
+                visit,
+            });
+        } catch (err) {
+            console.error("Edit invoice error:", err);
+            res.status(500).json({ message: "Server error" });
+        }
+    }
+);
+
+function computeServiceTotal(serviceArr = []) {
+    return serviceArr.reduce((sum, s) => {
+        if (!s) return sum;
+        if (typeof s === "object") return sum + (Number(s.amount) || 0);
+        return sum + (Number(s) || 0);
+    }, 0);
+}
+router.delete(
+    "/delete-invoice/:appointmentId/:visitId",
+    fetchuser,
+    async (req, res) => {
+        try {
+            const { appointmentId, visitId } = req.params;
+
+            const appointment = await Appointment.findById(appointmentId);
+            if (!appointment)
+                return res
+                    .status(404)
+                    .json({ message: "Appointment not found" });
+
+            // Remove visit
+            appointment.visits = appointment.visits.filter(
+                (v) => v._id.toString() !== visitId
+            );
+
+            // 🛑 NEW FIX: Also remove broken/empty visits
+            appointment.visits = appointment.visits.filter((v) => {
+                const isEmptyVisit =
+                    (!v.service || v.service.length === 0) &&
+                    (!v.amount || v.amount === 0);
+
+                return !isEmptyVisit;
+            });
+
+            // If no visits left → delete appointment
+            if (appointment.visits.length === 0) {
+                await Appointment.findByIdAndDelete(appointmentId);
+                return res.json({
+                    success: true,
+                    message:
+                        "Visit deleted — appointment removed (no visits left)",
+                });
+            }
+
+            await appointment.save();
+            res.json({ success: true, message: "Visit deleted" });
         } catch (err) {
             console.error(err);
             res.status(500).json({ message: "Server error" });
         }
     }
 );
-
-router.delete("/delete-invoice/:appointmentId/:visitId", fetchuser, async (req, res) => {
-    try {
-        const { appointmentId, visitId } = req.params;
-
-        const appointment = await Appointment.findById(appointmentId);
-        if (!appointment) return res.status(404).json({ message: "Appointment not found" });
-
-        // Remove visit
-        appointment.visits = appointment.visits.filter(
-            (v) => v._id.toString() !== visitId
-        );
-
-        // 🛑 NEW FIX: Also remove broken/empty visits
-        appointment.visits = appointment.visits.filter(v => {
-            const isEmptyVisit =
-                (!v.service || v.service.length === 0) &&
-                (!v.amount || v.amount === 0);
-
-            return !isEmptyVisit;
-        });
-
-        // If no visits left → delete appointment
-        if (appointment.visits.length === 0) {
-            await Appointment.findByIdAndDelete(appointmentId);
-            return res.json({
-                success: true,
-                message: "Visit deleted — appointment removed (no visits left)"
-            });
-        }
-
-        await appointment.save();
-        res.json({ success: true, message: "Visit deleted" });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
-    }
-});
 
 module.exports = router;

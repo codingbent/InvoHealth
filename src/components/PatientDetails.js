@@ -19,6 +19,8 @@ export default function PatientDetails() {
         service: [],
         amount: 0,
         payment_type: "",
+        discount: 0,
+        isPercent: false,
     });
 
     const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
@@ -115,7 +117,7 @@ export default function PatientDetails() {
                 service: patientData.service || [],
                 number: patientData.number || "",
                 age: patientData.age || "",
-                gender: patientData.gender || "", // ✅ ADDED
+                gender: patientData.gender || "",
                 amount: patientData.amount || 0,
             });
 
@@ -131,6 +133,7 @@ export default function PatientDetails() {
     useEffect(() => {
         fetchData();
         fetchDoctor();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     // ------------------------------------------------------------
@@ -176,7 +179,7 @@ export default function PatientDetails() {
     };
 
     // ------------------------------------------------------------
-    // INVOICE GENERATOR  (unchanged)
+    // INVOICE GENERATOR  (updated to include discount lines)
     // ------------------------------------------------------------
     const generateInvoice = (appointmentId, visit, details) => {
         try {
@@ -195,21 +198,15 @@ export default function PatientDetails() {
             let leftY = 20;
             let rightY = 20;
 
-            // --------------------------------------------------
-            // LEFT SECTION (Doctor & Patient Info)
-            // --------------------------------------------------
-
-            // Clinic Name
+            // Left: clinic + doctor + invoice + patient
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
             leftY += 10;
 
-            // Doctor Name
             docPdf.setFontSize(14);
             docPdf.text(doctor.name, margin, leftY);
             leftY += 8;
 
-            // Degree
             docPdf.setFontSize(11);
             if (doctor.degree?.length) {
                 docPdf.text(
@@ -219,18 +216,14 @@ export default function PatientDetails() {
                 );
                 leftY += 6;
             }
-
-            // Registration Number
             if (doctor.regNumber) {
                 docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
                 leftY += 6;
             }
 
-            // Invoice Number
             docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
             leftY += 8;
 
-            // Patient Info
             docPdf.text(
                 `Patient: ${details.name} | Age: ${
                     details.age || "N/A"
@@ -240,12 +233,8 @@ export default function PatientDetails() {
             );
             leftY += 10;
 
-            // --------------------------------------------------
-            // RIGHT SECTION (Address + Phone + Date)
-            // --------------------------------------------------
-
+            // Right: address + phone + date
             docPdf.setFontSize(10.5);
-
             if (doctor.address.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
@@ -284,10 +273,7 @@ export default function PatientDetails() {
                 { align: "right" }
             );
 
-            // --------------------------------------------------
-            // TABLE
-            // --------------------------------------------------
-
+            // Table
             const tableStartY = Math.max(leftY, rightY) + 10;
 
             autoTable(docPdf, {
@@ -304,36 +290,52 @@ export default function PatientDetails() {
 
             const afterTableY = docPdf.lastAutoTable.finalY + 8;
 
-            // --------------------------------------------------
-            // FOOTER TEXT (RECEIVED MESSAGE)
-            // --------------------------------------------------
-
-            docPdf.setFontSize(11);
-
-            const total = (visit.service || []).reduce(
+            // Calculate totals
+            const serviceTotal = (visit.service || []).reduce(
                 (sum, s) =>
                     sum + (typeof s === "object" ? s.amount : Number(s)),
                 0
             );
 
+            const disc = Number(visit.discount) || 0;
+            const percent = !!visit.isPercent;
+
+            const discountValue =
+                disc > 0 ? (percent ? serviceTotal * (disc / 100) : disc) : 0;
+
+            const finalAmount =
+                typeof visit.amount !== "undefined" && visit.amount !== null
+                    ? visit.amount
+                    : Math.max(serviceTotal - discountValue, 0);
+
+            // Footer text showing totals and discount
+            docPdf.setFontSize(11);
             docPdf.text(
-                `Received with thanks from ${details.name} the sum of Rupees ${total} on account of services.`,
+                `Service Total: ₹ ${serviceTotal.toFixed(2)}`,
                 margin,
                 afterTableY
             );
 
-            // --------------------------------------------------
-            // FIXED STAMP AREA AT BOTTOM RIGHT (ALWAYS)
-            // --------------------------------------------------
+            if (discountValue > 0) {
+                const discLabel = percent ? `${disc}%` : `₹ ${disc}`;
+                docPdf.text(
+                    `Discount (${discLabel}): - ₹ ${discountValue.toFixed(2)}`,
+                    margin,
+                    afterTableY + 8
+                );
+            }
 
+            docPdf.text(
+                `Final Amount: ₹ ${finalAmount.toFixed(2)}`,
+                margin,
+                afterTableY + 16
+            );
+
+            // Stamp at bottom-right
             docPdf.setFontSize(12);
-
-            // Doctor Name (1st line)
             docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
                 align: "right",
             });
-
-            // Degrees (2nd line, supports multiple degrees)
             if (doctor.degree && doctor.degree.length > 0) {
                 docPdf.text(
                     doctor.degree.join(", "),
@@ -342,10 +344,6 @@ export default function PatientDetails() {
                     { align: "right" }
                 );
             }
-
-            // --------------------------------------------------
-            // SAVE PDF
-            // --------------------------------------------------
 
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
@@ -369,21 +367,33 @@ export default function PatientDetails() {
         setApptData({
             date: visit.date?.slice(0, 10),
             service: normalizedServices,
-            amount: normalizedServices.reduce(
-                (sum, s) => sum + (s.amount || 0),
-                0
-            ),
+            amount:
+                visit.amount ??
+                normalizedServices.reduce((sum, s) => sum + (s.amount || 0), 0),
             payment_type: visit.payment_type,
+            discount: visit.discount || 0,
+            isPercent: !!visit.isPercent,
         });
 
         setApptServiceAmounts(normalizedServices.map((s) => s.amount || 0));
 
+        // open modal
         document.getElementById("editAppointmentModalBtn").click();
     };
 
     const handleUpdateAppt = async () => {
         try {
             const token = localStorage.getItem("token");
+
+            // send service objects as-is (backend will compute amount)
+            const body = {
+                date: apptData.date,
+                service: apptData.service,
+                amount: apptData.amount, // optional, backend recomputes from services + discount
+                payment_type: apptData.payment_type,
+                discount: apptData.discount || 0,
+                isPercent: !!apptData.isPercent,
+            };
 
             const response = await fetch(
                 `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
@@ -393,12 +403,7 @@ export default function PatientDetails() {
                         "Content-Type": "application/json",
                         "auth-token": token,
                     },
-                    body: JSON.stringify({
-                        date: apptData.date,
-                        service: apptData.service,
-                        amount: apptData.amount,
-                        payment_type: apptData.payment_type,
-                    }),
+                    body: JSON.stringify(body),
                 }
             );
 
@@ -412,6 +417,7 @@ export default function PatientDetails() {
             }
         } catch (err) {
             console.error(err);
+            alert("Server error");
         }
     };
 
@@ -446,6 +452,8 @@ export default function PatientDetails() {
 
     if (loading) return <p>Loading patient details...</p>;
 
+    // compute visits count or other derived data if needed
+
     return (
         <>
             <button
@@ -459,8 +467,7 @@ export default function PatientDetails() {
                     <h3>Name: {details?.name}</h3>
                     <h3>Number: {details?.number}</h3>
                     <h3>Age: {details?.age}</h3>
-                    <h3>Gender: {details?.gender || "N/A"}</h3>{" "}
-                    {/* ✅ SHOW GENDER */}
+                    <h3>Gender: {details?.gender || "N/A"}</h3>
                 </div>
 
                 <button
@@ -471,9 +478,6 @@ export default function PatientDetails() {
                     Edit Details
                 </button>
 
-                {/* ----------------------------------------------------------
-                PREVIOUS APPOINTMENTS TABLE
-            ----------------------------------------------------------- */}
                 <div className="mt-4">
                     <h3>Previous Appointment Details</h3>
 
@@ -481,7 +485,6 @@ export default function PatientDetails() {
                         <p>No appointments found</p>
                     ) : (
                         <div className="table-responsive">
-                            {/* DESKTOP TABLE */}
                             <table className="table table-bordered mt-2 patient-visit-table">
                                 <thead>
                                     <tr>
@@ -503,7 +506,7 @@ export default function PatientDetails() {
                                                     new Date(a.date)
                                             )
                                             .map((visit) => (
-                                                <tr>
+                                                <tr key={visit._id}>
                                                     <td>
                                                         {new Date(
                                                             visit.date
@@ -522,19 +525,25 @@ export default function PatientDetails() {
                                                             .join(", ")}
                                                     </td>
                                                     <td>
-                                                        {(
-                                                            visit.service || []
-                                                        ).reduce(
-                                                            (sum, s) =>
-                                                                sum +
-                                                                (typeof s ===
-                                                                "object"
-                                                                    ? s.amount
-                                                                    : Number(
-                                                                          s
-                                                                      )),
-                                                            0
-                                                        )}
+                                                        {/* Show stored visit.amount if present, else compute */}
+                                                        {typeof visit.amount !==
+                                                            "undefined" &&
+                                                        visit.amount !== null
+                                                            ? visit.amount
+                                                            : (
+                                                                  visit.service ||
+                                                                  []
+                                                              ).reduce(
+                                                                  (sum, s) =>
+                                                                      sum +
+                                                                      (typeof s ===
+                                                                      "object"
+                                                                          ? s.amount
+                                                                          : Number(
+                                                                                s
+                                                                            )),
+                                                                  0
+                                                              )}
                                                     </td>
                                                     <td>
                                                         {visit.payment_type ||
@@ -603,7 +612,7 @@ export default function PatientDetails() {
                                 </tbody>
                             </table>
 
-                            {/* MOBILE CARD VIEW */}
+                            {/* MOBILE CARD VIEW (unchanged) */}
                             <div className="d-sm-none">
                                 {appointments.map((appt) =>
                                     appt.visits
@@ -614,7 +623,10 @@ export default function PatientDetails() {
                                                 new Date(a.date)
                                         )
                                         .map((visit) => (
-                                            <div className="visit-card">
+                                            <div
+                                                className="visit-card"
+                                                key={visit._id}
+                                            >
                                                 <div className="visit-card-row">
                                                     <span>Date</span>
                                                     <span>
@@ -643,19 +655,24 @@ export default function PatientDetails() {
                                                 <div className="visit-card-row">
                                                     <span>Amount</span>
                                                     <span>
-                                                        {(
-                                                            visit.service || []
-                                                        ).reduce(
-                                                            (sum, s) =>
-                                                                sum +
-                                                                (typeof s ===
-                                                                "object"
-                                                                    ? s.amount
-                                                                    : Number(
-                                                                          s
-                                                                      )),
-                                                            0
-                                                        )}
+                                                        {typeof visit.amount !==
+                                                            "undefined" &&
+                                                        visit.amount !== null
+                                                            ? visit.amount
+                                                            : (
+                                                                  visit.service ||
+                                                                  []
+                                                              ).reduce(
+                                                                  (sum, s) =>
+                                                                      sum +
+                                                                      (typeof s ===
+                                                                      "object"
+                                                                          ? s.amount
+                                                                          : Number(
+                                                                                s
+                                                                            )),
+                                                                  0
+                                                              )}
                                                     </span>
                                                 </div>
 
@@ -713,9 +730,7 @@ export default function PatientDetails() {
                     )}
                 </div>
 
-                {/* ----------------------------------------------------------
-                EDIT PATIENT DETAILS MODAL
-            ----------------------------------------------------------- */}
+                {/* EDIT PATIENT DETAILS MODAL (unchanged) */}
                 <div
                     className="modal fade"
                     id="editPatientModal"
@@ -780,7 +795,6 @@ export default function PatientDetails() {
                                         />
                                     </div>
 
-                                    {/* ✅ GENDER DROPDOWN */}
                                     <div className="mb-3">
                                         <label className="form-label">
                                             Gender
@@ -823,7 +837,8 @@ export default function PatientDetails() {
                     </div>
                 </div>
             </div>
-            {/* -------------------- EDIT APPOINTMENT MODAL -------------------- */}
+
+            {/* -------------------- EDIT APPOINTMENT MODAL (updated) -------------------- */}
             <div
                 className="modal fade"
                 id="editAppointmentModal"
@@ -889,8 +904,13 @@ export default function PatientDetails() {
                                                             s.name ===
                                                             serviceObj.name
                                                     );
-                                                updatedServices.splice(i, 1);
-                                                updatedAmounts.splice(i, 1);
+                                                if (i > -1) {
+                                                    updatedServices.splice(
+                                                        i,
+                                                        1
+                                                    );
+                                                    updatedAmounts.splice(i, 1);
+                                                }
                                             }
 
                                             const total = updatedAmounts.reduce(
@@ -915,12 +935,100 @@ export default function PatientDetails() {
                                 {/* AMOUNT DISPLAY */}
                                 <div className="mb-3">
                                     <label className="form-label">
-                                        Total Amount
+                                        Total Service Amount
                                     </label>
                                     <input
                                         type="number"
                                         className="form-control"
-                                        value={apptData.amount}
+                                        value={apptData.service.reduce(
+                                            (sum, s, i) =>
+                                                sum +
+                                                (Number(
+                                                    apptServiceAmounts[i]
+                                                ) ||
+                                                    Number(s.amount) ||
+                                                    0),
+                                            0
+                                        )}
+                                        readOnly
+                                    />
+                                </div>
+
+                                {/* DISCOUNT */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Discount
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={apptData.discount}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                discount: Number(
+                                                    e.target.value
+                                                ),
+                                            }))
+                                        }
+                                    />
+                                    <div className="form-check mt-2">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={!!apptData.isPercent}
+                                            onChange={(e) =>
+                                                setApptData((prev) => ({
+                                                    ...prev,
+                                                    isPercent: e.target.checked,
+                                                }))
+                                            }
+                                        />
+                                        <label className="form-check-label">
+                                            Apply discount as %
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* FINAL AMOUNT AFTER DISCOUNT */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Final Amount (After Discount)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={(() => {
+                                            const serviceTotal =
+                                                apptData.service.reduce(
+                                                    (sum, s, i) =>
+                                                        sum +
+                                                        (Number(
+                                                            apptServiceAmounts[
+                                                                i
+                                                            ]
+                                                        ) ||
+                                                            Number(s.amount) ||
+                                                            0),
+                                                    0
+                                                );
+                                            const disc =
+                                                Number(apptData.discount) || 0;
+                                            const percent =
+                                                !!apptData.isPercent;
+                                            const discountValue =
+                                                disc > 0
+                                                    ? percent
+                                                        ? serviceTotal *
+                                                          (disc / 100)
+                                                        : disc
+                                                    : 0;
+                                            const final = Math.max(
+                                                serviceTotal - discountValue,
+                                                0
+                                            );
+                                            return final;
+                                        })()}
                                         readOnly
                                     />
                                 </div>

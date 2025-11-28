@@ -20,7 +20,13 @@ const AppointmentSchema = new Schema({
                     amount: Number,
                 },
             ],
+
             amount: { type: Number, default: 0 },
+
+            // 🆕 DISCOUNT FIELDS
+            discount: { type: Number, default: 0 }, // discount value
+            isPercent: { type: Boolean, default: false }, // true = percentage, false = fixed
+
             payment_type: {
                 type: String,
                 enum: ["Cash", "Card", "UPI", "Other"],

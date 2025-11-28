@@ -32,14 +32,22 @@ const PatientSchema = new Schema({
         type: Number,
         default: 0,
     },
+    discount: {
+        type: Number,
+        default: 0,
+    },
+    isPercent: {
+        type: Boolean,
+        default: false,
+    },
     age: {
         type: Number,
         required: false,
     },
-    gender:{
-        type:String,
+    gender: {
+        type: String,
         enum: ["Male", "Female", "Other"],
-        required:false
+        required: false,
     },
     date: {
         type: Date,
