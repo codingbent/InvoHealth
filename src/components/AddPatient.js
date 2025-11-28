@@ -15,6 +15,10 @@ const AddPatient = ({ showAlert }) => {
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState([]);
 
+    // 🆕 Discount States
+    const [discount, setDiscount] = useState(0);
+    const [isPercent, setIsPercent] = useState(false);
+
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
@@ -27,7 +31,7 @@ const AddPatient = ({ showAlert }) => {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // Fetch services
+    // Fetch Services
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -44,20 +48,34 @@ const AddPatient = ({ showAlert }) => {
         fetchServices();
     }, []);
 
-    // Calculate amount
     useEffect(() => {
-        const newAmounts = service.map(
+        const prices = service.map(
             (s, index) => serviceAmounts[index] ?? s.amount ?? 0
         );
-        const total = newAmounts.reduce((a, b) => a + b, 0);
-        setPatient((prev) => ({ ...prev, amount: total }));
-    }, [service, serviceAmounts]);
+
+        const serviceTotal = prices.reduce((sum, x) => sum + x, 0);
+
+        let final = serviceTotal;
+
+        if (discount > 0) {
+            if (isPercent) {
+                final -= serviceTotal * (discount / 100);
+            } else {
+                final -= discount;
+            }
+        }
+
+        if (final < 0) final = 0;
+
+        setPatient((prev) => ({ ...prev, amount: final }));
+    }, [service, serviceAmounts, discount, isPercent]);
 
     const handleServiceSelect = (serviceObj, checked) => {
         setPatient((prev) => {
             const updatedServices = checked
                 ? [...prev.service, serviceObj]
                 : prev.service.filter((s) => s._id !== serviceObj._id);
+
             return { ...prev, service: updatedServices };
         });
 
@@ -77,11 +95,12 @@ const AddPatient = ({ showAlert }) => {
     const onChange = (e) =>
         setPatient({ ...patient, [e.target.name]: e.target.value });
 
+    // Submit Form
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            // Create patient first
+            // Create Patient
             const patientRes = await fetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
@@ -101,6 +120,8 @@ const AddPatient = ({ showAlert }) => {
                         number,
                         amount,
                         age,
+                        discount,
+                        isPercent,
                     }),
                 }
             );
@@ -116,7 +137,7 @@ const AddPatient = ({ showAlert }) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // Add initial appointment
+            // Create Appointment
             const token = localStorage.getItem("token");
             const decoded = jwtDecode(token);
             const doctorId = decoded.doc?.id;
@@ -139,6 +160,8 @@ const AddPatient = ({ showAlert }) => {
                         date: appointmentDate,
                         payment_type,
                         doctorId,
+                        discount,
+                        isPercent,
                     }),
                 }
             );
@@ -151,7 +174,7 @@ const AddPatient = ({ showAlert }) => {
                 showAlert("Patient added but appointment failed", "warning");
             }
 
-            // Reset form
+            // Reset Form
             setPatient({
                 name: "",
                 service: [],
@@ -160,7 +183,11 @@ const AddPatient = ({ showAlert }) => {
                 age: "",
                 gender: "Other",
             });
+
             setServiceAmounts([]);
+            setDiscount(0);
+            setIsPercent(false);
+
             setAppointmentDate(new Date().toISOString().slice(0, 10));
             setPaymentType("Cash");
         } catch (err) {
@@ -222,7 +249,7 @@ const AddPatient = ({ showAlert }) => {
                         />
                     </div>
 
-                    {/* Bill */}
+                    {/* Bill Calculation */}
                     {service.length > 0 && (
                         <>
                             <label className="form-label">Bill Details</label>
@@ -251,6 +278,35 @@ const AddPatient = ({ showAlert }) => {
                                 ))}
                             </ul>
 
+                            {/* Discount Section */}
+                            <div className="mb-3 mt-3">
+                                <label className="form-label">Discount</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    placeholder="Enter discount"
+                                    value={discount}
+                                    onChange={(e) =>
+                                        setDiscount(Number(e.target.value))
+                                    }
+                                />
+
+                                <div className="form-check mt-2">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        checked={isPercent}
+                                        onChange={(e) =>
+                                            setIsPercent(e.target.checked)
+                                        }
+                                    />
+                                    <label className="form-check-label">
+                                        Apply discount as %
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Total Amount */}
                             <label className="form-label">Total Amount</label>
                             <input
                                 type="number"

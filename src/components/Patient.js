@@ -132,7 +132,7 @@ const Patient = (props) => {
                         </button>
 
                         <button onClick={() => openModal("editServiceModal")}>✏️ Edit Service</button>
-                        <button onClick={downloadExcelSecure}>⬇️ Download Excel</button>
+                        <button onClick={downloadExcelSecure}>⬇️ Download Record</button>
 
                         <button className="action-sheet-close" onClick={hideActionSheet}>
                             Close
