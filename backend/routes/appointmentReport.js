@@ -4,30 +4,32 @@ const Appointment = require("../models/Appointment");
 const fetchuser = require("../middleware/fetchuser");
 const ExcelJS = require("exceljs");
 
-// GET: Excel download
 router.get("/download-excel", fetchuser, async (req, res) => {
     try {
-        const appointments = await Appointment.find({
-            doctor: req.doc.id,
-        })
+        const appointments = await Appointment.find({ doctor: req.doc.id })
             .populate("patient", "name number")
             .populate("doctor", "name");
 
         const grouped = {};
 
+        // Group visits by date
         appointments.forEach((a) => {
-            // 🛑 FIX #1 — Skip appointments with no visits
             // Skip appointments with no visits
             if (!a.visits || a.visits.length === 0) return;
 
             // Skip missing or invalid patients
-            if (!a.patient || !a.patient.name) return;
+            if (
+                !a.patient ||
+                Object.keys(a.patient).length === 0 ||
+                !a.patient.name
+            ) {
+                return;
+            }
 
-            // For each visit
-            a.visits.forEach((v) => {
+            (a.visits || []).forEach((v) => {
                 if (!v.date) return;
 
-                const iso = new Date(v.date).toISOString().split("T")[0];
+                const iso = new Date(v.date).toISOString().split("T")[0]; // YYYY-MM-DD
 
                 if (!grouped[iso]) grouped[iso] = [];
 
@@ -46,7 +48,7 @@ router.get("/download-excel", fetchuser, async (req, res) => {
             });
         });
 
-        // Sort dates in ascending order
+        // Sort dates ascending
         const sortedDates = Object.keys(grouped).sort(
             (a, b) => new Date(a) - new Date(b)
         );
@@ -54,12 +56,13 @@ router.get("/download-excel", fetchuser, async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Visit Records");
 
+        // Write grouped rows
         sortedDates.forEach((dateStr) => {
-            // Date header
+            // Date title
             sheet.addRow([`${new Date(dateStr).toLocaleDateString()}`]);
             sheet.lastRow.font = { bold: true };
 
-            // Column header
+            // Column headers
             sheet.addRow([
                 "Patient",
                 "Number",
@@ -72,8 +75,15 @@ router.get("/download-excel", fetchuser, async (req, res) => {
             ]);
             sheet.lastRow.font = { bold: true };
 
-            // Add visits
-            grouped[dateStr].forEach((v) => {
+            // 🔥 Sort by invoiceNumber ascending
+            const sortedVisits = grouped[dateStr].sort(
+                (a, b) => Number(a.invoiceNumber) - Number(b.invoiceNumber)
+            );
+
+            let dayTotal = 0;
+
+            // Visits
+            sortedVisits.forEach((v) => {
                 sheet.addRow([
                     v.patientName,
                     v.number,
@@ -84,13 +94,28 @@ router.get("/download-excel", fetchuser, async (req, res) => {
                     v.amount,
                     v.services,
                 ]);
+
+                dayTotal += v.amount;
             });
 
-            // Blank space after each date group
+            // 🔥 GRAND TOTAL ROW
+            const totalRow = sheet.addRow([
+                "",
+                "",
+                "",
+                "",
+                "",
+                "TOTAL",
+                dayTotal,
+                "",
+            ]);
+            totalRow.font = { bold: true };
+
+            // Blank line between groups
             sheet.addRow([]);
         });
 
-        // Excel headers
+        // Response headers
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
