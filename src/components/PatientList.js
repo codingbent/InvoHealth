@@ -291,7 +291,7 @@ export default function PatientList() {
                                         : new Date(date).toLocaleDateString()}
                                 </h5>
 
-                                <table className="table table-striped table-bordered">
+                                <table className="table table-striped table-bordered patient-table table-fixed">
                                     <thead className="table-light">
                                         <tr>
                                             <th>Name</th>
