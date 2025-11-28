@@ -265,12 +265,12 @@ export default function PatientList() {
                             <option value="UPI">UPI</option>
                         </select>
 
-                        <button
+                        {/* <button
                             className="btn btn-primary w-100"
                             data-bs-dismiss="offcanvas"
                         >
                             Apply Filters
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
