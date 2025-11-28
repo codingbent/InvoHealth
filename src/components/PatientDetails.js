@@ -356,17 +356,28 @@ export default function PatientDetails() {
     const editInvoice = (appointmentId, visit, details) => {
         setEditingAppt({ ...visit, appointmentId });
 
+        // NORMALIZE SERVICE OBJECTS
+        const normalizedServices = (visit.service || []).map((s) =>
+            typeof s === "object"
+                ? s
+                : availableServices.find((x) => x.name === s) || {
+                      name: s,
+                      amount: 0,
+                  }
+        );
+
         setApptData({
             date: visit.date?.slice(0, 10),
-            service: visit.service || [],
-            amount: visit.amount,
+            service: normalizedServices,
+            amount: normalizedServices.reduce(
+                (sum, s) => sum + (s.amount || 0),
+                0
+            ),
             payment_type: visit.payment_type,
         });
 
-        const serviceAmounts = (visit.service || []).map((s) => s.amount || 0);
-        setApptServiceAmounts(serviceAmounts);
+        setApptServiceAmounts(normalizedServices.map((s) => s.amount || 0));
 
-        // OPEN MODAL
         document.getElementById("editAppointmentModalBtn").click();
     };
 
