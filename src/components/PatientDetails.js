@@ -470,7 +470,8 @@ export default function PatientDetails() {
                         <p>No appointments found</p>
                     ) : (
                         <div className="table-responsive">
-                            <table className="table table-bordered mt-2 table-fixed">
+                            {/* DESKTOP TABLE */}
+                            <table className="table table-bordered mt-2 patient-visit-table">
                                 <thead>
                                     <tr>
                                         <th>Date</th>
@@ -532,13 +533,10 @@ export default function PatientDetails() {
                                                         <div className="dropdown">
                                                             <button
                                                                 className="btn btn-primary dropdown-toggle"
-                                                                type="button"
                                                                 data-bs-toggle="dropdown"
-                                                                aria-expanded="false"
                                                             >
                                                                 Actions
                                                             </button>
-
                                                             <ul className="dropdown-menu">
                                                                 <li>
                                                                     <button
@@ -554,7 +552,6 @@ export default function PatientDetails() {
                                                                         Invoice
                                                                     </button>
                                                                 </li>
-
                                                                 <li>
                                                                     <button
                                                                         className="dropdown-item"
@@ -569,7 +566,6 @@ export default function PatientDetails() {
                                                                         Edit
                                                                     </button>
                                                                 </li>
-
                                                                 <li>
                                                                     <button
                                                                         className="dropdown-item text-danger"
@@ -592,6 +588,113 @@ export default function PatientDetails() {
                                     )}
                                 </tbody>
                             </table>
+
+                            {/* MOBILE CARD VIEW */}
+                            <div className="d-sm-none">
+                                {appointments.map((appt) =>
+                                    appt.visits
+                                        .slice()
+                                        .sort(
+                                            (a, b) =>
+                                                new Date(b.date) -
+                                                new Date(a.date)
+                                        )
+                                        .map((visit) => (
+                                            <div className="visit-card">
+                                                <div className="visit-card-row">
+                                                    <span>Date</span>
+                                                    <span>
+                                                        {new Date(
+                                                            visit.date
+                                                        ).toLocaleDateString(
+                                                            "en-IN"
+                                                        )}
+                                                    </span>
+                                                </div>
+
+                                                <div className="visit-card-row">
+                                                    <span>Services</span>
+                                                    <span>
+                                                        {(visit.service || [])
+                                                            .map((s) =>
+                                                                typeof s ===
+                                                                "object"
+                                                                    ? s.name
+                                                                    : s
+                                                            )
+                                                            .join(", ")}
+                                                    </span>
+                                                </div>
+
+                                                <div className="visit-card-row">
+                                                    <span>Amount</span>
+                                                    <span>
+                                                        {(
+                                                            visit.service || []
+                                                        ).reduce(
+                                                            (sum, s) =>
+                                                                sum +
+                                                                (typeof s ===
+                                                                "object"
+                                                                    ? s.amount
+                                                                    : Number(
+                                                                          s
+                                                                      )),
+                                                            0
+                                                        )}
+                                                    </span>
+                                                </div>
+
+                                                <div className="visit-card-row">
+                                                    <span>Payment</span>
+                                                    <span>
+                                                        {visit.payment_type ||
+                                                            "N/A"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="visit-card-actions mt-2">
+                                                    <button
+                                                        className="btn btn-primary btn-sm"
+                                                        onClick={() =>
+                                                            generateInvoice(
+                                                                appt._id,
+                                                                visit,
+                                                                details
+                                                            )
+                                                        }
+                                                    >
+                                                        Invoice
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-secondary btn-sm"
+                                                        onClick={() =>
+                                                            editInvoice(
+                                                                appt._id,
+                                                                visit,
+                                                                details
+                                                            )
+                                                        }
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-danger btn-sm"
+                                                        onClick={() =>
+                                                            deleteInvoice(
+                                                                appt._id,
+                                                                visit,
+                                                                details
+                                                            )
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

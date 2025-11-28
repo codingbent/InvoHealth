@@ -163,3 +163,40 @@ body.freeze-scroll {
   background: #f8f9fa;
   font-weight: 600;
 }
+
+/* Hide table and show card on screens < 576px */
+@media (max-width: 576px) {
+    .patient-visit-table {
+        display: none !important;
+    }
+
+    .visit-card {
+        display: block;
+        border: 1px solid #ddd;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        background: #fff;
+    }
+
+    .visit-card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 14px;
+    }
+
+    .visit-card-row span:first-child {
+        font-weight: 600;
+        color: #444;
+    }
+
+    .visit-card-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .visit-card-actions button {
+        flex: 1;
+    }
+}
