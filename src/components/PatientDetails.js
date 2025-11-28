@@ -541,7 +541,10 @@ export default function PatientDetails() {
                                                             "N/A"}
                                                     </td>
                                                     <td>
-                                                        <div className="dropdown">
+                                                        <div
+                                                            className="dropdown"
+                                                            data-bs-display="static"
+                                                        >
                                                             <button
                                                                 className="btn btn-primary dropdown-toggle"
                                                                 data-bs-toggle="dropdown"
