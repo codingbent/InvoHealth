@@ -249,98 +249,123 @@ const AddPatient = ({ showAlert }) => {
                         />
                     </div>
 
-                    {/* Bill Calculation */}
+                    {/* Bill Section */}
                     {service.length > 0 && (
                         <>
-                            <label className="form-label">Bill Details</label>
-                            <ul className="list-group mb-2">
-                                {service.map((s, index) => (
-                                    <li
-                                        key={s._id}
-                                        className="list-group-item d-flex justify-content-between"
-                                    >
-                                        <span>{s.name}</span>
-                                        <input
-                                            type="number"
-                                            className="form-control w-25"
-                                            value={
-                                                serviceAmounts[index] ??
-                                                s.amount
-                                            }
-                                            onChange={(e) =>
-                                                handleServiceAmountChange(
-                                                    index,
-                                                    e.target.value
-                                                )
-                                            }
-                                        />
-                                    </li>
-                                ))}
-                            </ul>
-
-                            {/* Total Before Discount */}
-                            <div className="mb-2">
-                                <label className="form-label fw-bold">
-                                    Total Amount (Before Discount)
-                                </label>
-                                <input
-                                    type="number"
-                                    className="form-control"
-                                    value={service.reduce(
-                                        (sum, s, i) =>
-                                            sum +
-                                            (Number(serviceAmounts[i]) ||
-                                                Number(s.amount) ||
-                                                0),
-                                        0
-                                    )}
-                                    readOnly
-                                />
-                            </div>
-
-                            {/* Discount */}
+                            {/* 🔥 Discount Inputs BEFORE Table */}
                             <div className="mb-3">
                                 <label className="form-label fw-bold">
                                     Discount
                                 </label>
 
-                                <input
-                                    type="number"
-                                    className="form-control"
-                                    placeholder="Enter discount"
-                                    value={discount}
-                                    onChange={(e) =>
-                                        setDiscount(Number(e.target.value))
-                                    }
-                                />
-
-                                <div className="form-check mt-2">
+                                <div className="d-flex gap-2">
                                     <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        checked={isPercent}
+                                        type="number"
+                                        className="form-control"
+                                        placeholder="Enter discount"
+                                        style={{ maxWidth: "200px" }}
+                                        value={discount}
                                         onChange={(e) =>
-                                            setIsPercent(e.target.checked)
+                                            setDiscount(Number(e.target.value))
                                         }
                                     />
-                                    <label className="form-check-label">
-                                        Apply discount as %
-                                    </label>
+
+                                    {/* % Checkbox */}
+                                    <div className="form-check d-flex align-items-center">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={isPercent}
+                                            onChange={(e) =>
+                                                setIsPercent(e.target.checked)
+                                            }
+                                            style={{ marginRight: "5px" }}
+                                        />
+                                        <label className="form-check-label">
+                                            %
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Final Amount After Discount */}
-                            <div className="mb-3">
-                                <label className="form-label fw-bold">
-                                    Final Amount (After Discount)
-                                </label>
-                                <input
-                                    type="number"
-                                    className="form-control"
-                                    value={amount}
-                                    readOnly
-                                />
-                            </div>
+                            {/* 🔥 Table for Services */}
+                            <label className="form-label fw-bold">
+                                Bill Details
+                            </label>
+                            <table className="table table-bordered">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Service</th>
+                                        <th className="text-end">Amount (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {service.map((s, index) => (
+                                        <tr key={s._id}>
+                                            <td>{s.name}</td>
+                                            <td className="text-end">
+                                                <input
+                                                    type="number"
+                                                    className="form-control text-end"
+                                                    style={{
+                                                        maxWidth: "120px",
+                                                        float: "right",
+                                                    }}
+                                                    value={
+                                                        serviceAmounts[index] ??
+                                                        s.amount
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleServiceAmountChange(
+                                                            index,
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* 🔥 Summary Table */}
+                            <table className="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th>Total Before Discount</th>
+                                        <td className="text-end">
+                                            {service.reduce(
+                                                (sum, s, i) =>
+                                                    sum +
+                                                    (Number(
+                                                        serviceAmounts[i]
+                                                    ) ||
+                                                        Number(s.amount) ||
+                                                        0),
+                                                0
+                                            )}
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <th>
+                                            Discount
+                                            {isPercent && ` (${discount}%)`}
+                                            {!isPercent &&
+                                                discount > 0 &&
+                                                ` (₹${discount})`}
+                                        </th>
+                                        <td className="text-end">
+                                            {discount > 0 ? discount : 0}
+                                        </td>
+                                    </tr>
+
+                                    <tr className="table-primary fw-bold">
+                                        <th>Final Amount After Discount</th>
+                                        <td className="text-end">₹ {amount}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </>
                     )}
 
