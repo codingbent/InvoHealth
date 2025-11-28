@@ -199,7 +199,7 @@ export default function PatientDetails() {
             let rightY = 20;
 
             // ------------------------------------------------------
-            // HEADER — CLINIC + DOCTOR DETAILS
+            // HEADER SECTION
             // ------------------------------------------------------
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
@@ -227,24 +227,24 @@ export default function PatientDetails() {
             leftY += 8;
 
             docPdf.text(
-                `Patient: ${details.name} | Age: ${
-                    details.age || "N/A"
-                } | Gender: ${details.gender || "N/A"}`,
+                `Patient: ${details.name} | Age: ${details.age} | Gender: ${details.gender}`,
                 margin,
                 leftY
             );
             leftY += 10;
 
             // ------------------------------------------------------
-            // RIGHT SIDE — Clinic Address + Date
+            // RIGHT HEADER: Address + Date
             // ------------------------------------------------------
             docPdf.setFontSize(10.5);
+
             if (doctor.address.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
                 });
                 rightY += 5;
             }
+
             if (doctor.address.line2) {
                 docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
                     align: "right",
@@ -265,9 +265,7 @@ export default function PatientDetails() {
                     `Phone: ${doctor.phone}`,
                     pageWidth - margin,
                     rightY,
-                    {
-                        align: "right",
-                    }
+                    { align: "right" }
                 );
                 rightY += 5;
             }
@@ -278,11 +276,6 @@ export default function PatientDetails() {
                 rightY,
                 { align: "right" }
             );
-
-            // ------------------------------------------------------
-            // TABLE START POSITION
-            // ------------------------------------------------------
-            const tableStartY = Math.max(leftY, rightY) + 10;
 
             // ------------------------------------------------------
             // CALCULATIONS
@@ -300,7 +293,7 @@ export default function PatientDetails() {
                 disc > 0 ? (percent ? serviceTotal * (disc / 100) : disc) : 0;
 
             const finalAmount =
-                typeof visit.amount !== "undefined" && visit.amount !== null
+                typeof visit.amount === "number"
                     ? visit.amount
                     : Math.max(serviceTotal - discountValue, 0);
 
@@ -312,20 +305,28 @@ export default function PatientDetails() {
                 typeof s === "object" ? s.amount : Number(s),
             ]);
 
-            tableBody.push(["TOTAL", serviceTotal.toFixed(2)]);
+            // ------------------------------------------------------
+            // SUMMARY LOGIC BASED ON DISCOUNT
+            // ------------------------------------------------------
 
             if (discountValue > 0) {
+                // SHOW ALL ROWS
+                tableBody.push(["TOTAL", serviceTotal.toFixed(2)]);
                 tableBody.push([
                     percent ? `DISCOUNT (${disc}%)` : `DISCOUNT (₹${disc})`,
                     `- ${discountValue.toFixed(2)}`,
                 ]);
+                tableBody.push(["FINAL AMOUNT", finalAmount.toFixed(2)]);
+            } else {
+                // SHOW ONLY FINAL PAYABLE AMOUNT (NO TOTAL, NO DISCOUNT)
+                tableBody.push(["FINAL AMOUNT", finalAmount.toFixed(2)]);
             }
-
-            tableBody.push(["FINAL AMOUNT", finalAmount.toFixed(2)]);
 
             // ------------------------------------------------------
             // RENDER TABLE
             // ------------------------------------------------------
+            const tableStartY = Math.max(leftY, rightY) + 10;
+
             autoTable(docPdf, {
                 startY: tableStartY,
                 head: [["Service", "Amount (Rs.)"]],
@@ -338,7 +339,7 @@ export default function PatientDetails() {
             const afterTableY = docPdf.lastAutoTable.finalY + 12;
 
             // ------------------------------------------------------
-            // RECEIPT TEXT
+            // RECEIPT FOOTER
             // ------------------------------------------------------
             docPdf.setFontSize(11);
             docPdf.text(
@@ -352,14 +353,13 @@ export default function PatientDetails() {
             );
 
             // ------------------------------------------------------
-            // SIGNATURE / STAMP AREA
+            // SIGNATURE AREA
             // ------------------------------------------------------
             docPdf.setFontSize(12);
             docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
                 align: "right",
             });
-
-            if (doctor.degree && doctor.degree.length > 0) {
+            if (doctor.degree?.length) {
                 docPdf.text(
                     doctor.degree.join(", "),
                     pageWidth - margin,
@@ -368,9 +368,7 @@ export default function PatientDetails() {
                 );
             }
 
-            // ------------------------------------------------------
             // SAVE PDF
-            // ------------------------------------------------------
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
             console.error(err);
