@@ -373,6 +373,10 @@ export default function PatientDetails() {
     };
 
     const handleUpdateAppt = async () => {
+        if (!editingAppt) {
+            alert("No appointment selected");
+            return;
+        }
         try {
             const token = localStorage.getItem("token");
 
@@ -462,7 +466,6 @@ export default function PatientDetails() {
                 PREVIOUS APPOINTMENTS TABLE
             ----------------------------------------------------------- */}
                 <div className="mt-4">
-
                     {appointments.length === 0 ? (
                         <p>No appointments found</p>
                     ) : (
