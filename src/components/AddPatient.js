@@ -391,6 +391,8 @@ const AddPatient = ({ showAlert }) => {
                             <option value="Cash">Cash</option>
                             <option value="Card">Card</option>
                             <option value="UPI">UPI</option>
+                            <option value="ICICI">ICICI</option>
+                            <option value="HDFC">HDFC</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>

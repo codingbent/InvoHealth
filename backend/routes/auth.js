@@ -608,7 +608,7 @@ router.put("/updateappointment/:appointmentId/:visitId",
             // 9. Update payment type (validated)
             if (
                 payment_type &&
-                ["Cash", "Card", "UPI", "Other"].includes(payment_type)
+                ["Cash", "Card", "UPI","ICICI","HDFC", "Other"].includes(payment_type)
             ) {
                 visit.payment_type = payment_type;
             }
