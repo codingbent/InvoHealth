@@ -325,6 +325,44 @@ export default function PatientList() {
                             </div>
                         ))}
                     </div>
+                    <hr />
+
+                    <label className="fw-semibold">Start Date</label>
+                    <input
+                        type="date"
+                        className="form-control mb-3"
+                        value={startDate}
+                        onChange={(e) => {
+                            setSelectedFY(""); // clear FY when manual date used
+                            setStartDate(e.target.value);
+                        }}
+                    />
+
+                    <label className="fw-semibold">End Date</label>
+                    <input
+                        type="date"
+                        className="form-control mb-3"
+                        value={endDate}
+                        onChange={(e) => {
+                            setSelectedFY(""); // clear FY when manual date used
+                            setEndDate(e.target.value);
+                        }}
+                    />
+                    <hr />
+                    <label className="fw-semibold">Financial Year</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedFY}
+                        onChange={(e) => {
+                            setSelectedFY(e.target.value);
+                        }}
+                    >
+                        <option value="">All Years</option>
+                        <option value="2025">FY 2025-26</option>
+                        <option value="2026">FY 2026-27</option>
+                        <option value="2027">FY 2027-28</option>
+                        <option value="2028">FY 2028-29</option>
+                    </select>
 
                     <hr />
 
@@ -345,7 +383,9 @@ export default function PatientList() {
                 </div>
             </div>
             <div className="d-flex justify-content-center mb-3">
-                <button className="btn btn-success">📥 Download Excel</button>
+                <button className="btn btn-success" onClick={downloadExcel}>
+                    📥 Download Excel
+                </button>
             </div>
 
             {/* DATA VIEW */}
