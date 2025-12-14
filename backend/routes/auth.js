@@ -84,7 +84,8 @@ router.post(
 );
 
 // Creating a Patient using : POST "/API/AUTH" Doesn't require auth
-router.post("/addpatient",
+router.post(
+    "/addpatient",
     fetchuser,
     [
         body("name", "Enter Name").notEmpty(),
@@ -411,33 +412,36 @@ router.post("/addappointment/:id", async (req, res) => {
         // 1. VALIDATION
         // --------------------------------------
         if (!service || !Array.isArray(service) || service.length === 0) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Service must be a non-empty array" });
+            return res.status(400).json({
+                success: false,
+                message: "Service must be a non-empty array",
+            });
         }
 
         // --------------------------------------
-        // 2. Determine doctor ID
+        // 2. DETERMINE DOCTOR ID
         // --------------------------------------
         let finalDoctorId = doctorId;
 
         if (!finalDoctorId) {
             const patient = await Patient.findById(patientId);
             if (!patient) {
-                return res
-                    .status(404)
-                    .json({ success: false, message: "Patient not found" });
+                return res.status(404).json({
+                    success: false,
+                    message: "Patient not found",
+                });
             }
             if (!patient.doctor) {
-                return res
-                    .status(400)
-                    .json({ success: false, message: "Doctor ID missing for patient" });
+                return res.status(400).json({
+                    success: false,
+                    message: "Doctor ID missing for patient",
+                });
             }
             finalDoctorId = patient.doctor;
         }
 
         // --------------------------------------
-        // 3. Compute serviceTotal (server-authoritative)
+        // 3. COMPUTE SERVICE TOTAL (AUTHORITATIVE)
         // --------------------------------------
         const serviceTotal = service.reduce(
             (sum, s) => sum + (Number(s.amount) || 0),
@@ -445,31 +449,26 @@ router.post("/addappointment/:id", async (req, res) => {
         );
 
         // --------------------------------------
-        // 4. Compute discount
+        // 4. COMPUTE DISCOUNT
         // --------------------------------------
         const disc = Number(discount) || 0;
         const percentFlag = Boolean(isPercent);
 
         let discountValue = 0;
-
         if (disc > 0) {
-            if (percentFlag) {
-                discountValue = serviceTotal * (disc / 100);
-            } else {
-                discountValue = disc;
-            }
+            discountValue = percentFlag ? serviceTotal * (disc / 100) : disc;
         }
 
         if (discountValue > serviceTotal) discountValue = serviceTotal;
         if (discountValue < 0) discountValue = 0;
 
         // --------------------------------------
-        // 5. Final payable amount
+        // 5. FINAL PAYABLE AMOUNT
         // --------------------------------------
         const finalAmount = serviceTotal - discountValue;
 
         // --------------------------------------
-        // 6. Generate invoiceNumber per doctor
+        // 6. GENERATE INVOICE NUMBER (PER DOCTOR)
         // --------------------------------------
         const counterId = `invoice_${finalDoctorId}`;
         const counter = await Counter.findByIdAndUpdate(
@@ -480,8 +479,7 @@ router.post("/addappointment/:id", async (req, res) => {
         const invoiceNumber = counter.seq;
 
         // --------------------------------------
-        // 7. Add visit using Appointment static method
-        //    but we override final amount & discount inside visit
+        // 7. PREPARE VISIT DATA
         // --------------------------------------
         const visitData = {
             service: service.map((s) => ({
@@ -490,13 +488,16 @@ router.post("/addappointment/:id", async (req, res) => {
                 amount: Number(s.amount) || 0,
             })),
             amount: finalAmount,
-            payment_type: payment_type,
+            payment_type,
             invoiceNumber,
-            date: date || new Date(),
+            date: date ? new Date(date) : new Date(),
             discount: disc,
             isPercent: percentFlag,
         };
 
+        // --------------------------------------
+        // 8. PUSH VISIT INTO APPOINTMENT
+        // --------------------------------------
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
             {
@@ -506,6 +507,26 @@ router.post("/addappointment/:id", async (req, res) => {
             { upsert: true, new: true }
         );
 
+        // --------------------------------------
+        // 9. 🔥 RECOMPUTE LATEST VISIT DATE (FIX)
+        // --------------------------------------
+        const latestVisitDate = appointment.visits.reduce((latest, v) => {
+            const d = new Date(v.date);
+            return d > latest ? d : latest;
+        }, new Date(0));
+
+        // --------------------------------------
+        // 10. UPDATE PATIENT SUMMARY FIELDS
+        // --------------------------------------
+        await Patient.findByIdAndUpdate(patientId, {
+            lastAppointment: latestVisitDate,
+            lastpayment_type: visitData.payment_type,
+            lastAmount: visitData.amount,
+        });
+
+        // --------------------------------------
+        // 11. RESPONSE
+        // --------------------------------------
         return res.status(201).json({
             success: true,
             message: "Appointment added successfully",
@@ -538,15 +559,22 @@ router.get("/patientdetails/:id", async (req, res) => {
 });
 
 // PUT /api/auth/updateappointment/:appointmentId
-router.put("/updateappointment/:appointmentId/:visitId",
+router.put(
+    "/updateappointment/:appointmentId/:visitId",
     authMiddleware,
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, payment_type, discount, isPercent } = req.body;
+            const { date, service, payment_type, discount, isPercent } =
+                req.body;
 
             // 1. Basic validation
-            if (!date || !service || !Array.isArray(service) || service.length === 0) {
+            if (
+                !date ||
+                !service ||
+                !Array.isArray(service) ||
+                service.length === 0
+            ) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid data. Missing date or services.",
@@ -608,7 +636,9 @@ router.put("/updateappointment/:appointmentId/:visitId",
             // 9. Update payment type (validated)
             if (
                 payment_type &&
-                ["Cash", "Card", "UPI","ICICI","HDFC", "Other"].includes(payment_type)
+                ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
+                    payment_type
+                )
             ) {
                 visit.payment_type = payment_type;
             }
@@ -751,7 +781,9 @@ router.put(
 
             // Server-side calculation of amount from provided service array (if service provided)
             // If client also sent amount, we'll use server-computed amount for consistency.
-            const serviceTotal = computeServiceTotal(visit.service || service || []);
+            const serviceTotal = computeServiceTotal(
+                visit.service || service || []
+            );
             let finalAmount = serviceTotal;
 
             // Normalize discount values
@@ -760,7 +792,7 @@ router.put(
 
             if (disc > 0) {
                 if (percentFlag) {
-                    finalAmount = finalAmount - (serviceTotal * (disc / 100));
+                    finalAmount = finalAmount - serviceTotal * (disc / 100);
                 } else {
                     finalAmount = finalAmount - disc;
                 }
@@ -769,7 +801,10 @@ router.put(
             if (finalAmount < 0) finalAmount = 0;
 
             // Save computed amount and discount metadata
-            visit.amount = typeof amount !== "undefined" ? Number(finalAmount) : finalAmount;
+            visit.amount =
+                typeof amount !== "undefined"
+                    ? Number(finalAmount)
+                    : finalAmount;
             visit.discount = disc;
             visit.isPercent = percentFlag;
 
