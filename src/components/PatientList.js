@@ -253,6 +253,7 @@ export default function PatientList() {
                         <option value="UPI">UPI</option>
                         <option value="ICICI">ICICI</option>
                         <option value="HDFC">HDFC</option>
+                        <option value="Other">Other</option>
                     </select>
                 </div>
             </div>

@@ -299,7 +299,7 @@ export default function PatientDetails() {
                 ]),
                 theme: "grid",
                 styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [0,0,0] },
+                headStyles: { fillColor: [0, 0, 0] },
             });
 
             const afterTableY = docPdf.lastAutoTable.finalY + 8;
@@ -353,20 +353,19 @@ export default function PatientDetails() {
         }
     };
 
-    const editInvoice = (appointmentId, visit, details) => {
+    const editInvoice = (appointmentId, visit) => {
         setEditingAppt({ ...visit, appointmentId });
 
         setApptData({
             date: visit.date?.slice(0, 10),
             service: visit.service || [],
-            amount: visit.amount,
-            payment_type: visit.payment_type,
+            payment_type: visit.payment_type || "",
+            discount: visit.discount || 0,
+            isPercent: !!visit.isPercent,
         });
 
-        const serviceAmounts = (visit.service || []).map((s) => s.amount || 0);
-        setApptServiceAmounts(serviceAmounts);
+        setApptServiceAmounts((visit.service || []).map((s) => s.amount || 0));
 
-        // OPEN MODAL
         document.getElementById("editAppointmentModalBtn").click();
     };
 
@@ -385,8 +384,9 @@ export default function PatientDetails() {
                     body: JSON.stringify({
                         date: apptData.date,
                         service: apptData.service,
-                        amount: apptData.amount,
                         payment_type: apptData.payment_type,
+                        discount: apptData.discount || 0,
+                        isPercent: !!apptData.isPercent,
                     }),
                 }
             );
@@ -400,7 +400,8 @@ export default function PatientDetails() {
                 alert("Update failed: " + data.message);
             }
         } catch (err) {
-            console.error(err);
+            console.error("Edit invoice error:", err);
+            alert("Server error");
         }
     };
 
@@ -481,76 +482,88 @@ export default function PatientDetails() {
                             </thead>
 
                             <tbody>
-    {appointments
-        .slice()
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .map((visit) => (
-            <tr key={visit._id}>
-                <td>
-                    {new Date(visit.date).toLocaleDateString("en-IN")}
-                </td>
+                                {appointments
+                                    .slice()
+                                    .sort(
+                                        (a, b) =>
+                                            new Date(b.date) - new Date(a.date)
+                                    )
+                                    .map((visit) => (
+                                        <tr key={visit._id}>
+                                            <td>
+                                                {new Date(
+                                                    visit.date
+                                                ).toLocaleDateString("en-IN")}
+                                            </td>
 
-                <td>
-                    {(visit.service || [])
-                        .map((s) =>
-                            typeof s === "object" ? s.name : s
-                        )
-                        .join(", ")}
-                </td>
+                                            <td>
+                                                {(visit.service || [])
+                                                    .map((s) => s.name)
+                                                    .join(", ")}
+                                            </td>
 
-                <td>{visit.amount}</td>
+                                            <td>{visit.amount}</td>
 
-                <td>{visit.payment_type || "N/A"}</td>
+                                            <td>
+                                                {visit.payment_type || "N/A"}
+                                            </td>
 
-                <td>
-                    <div className="dropdown">
-                        <button
-                            className="btn btn-primary dropdown-toggle"
-                            data-bs-toggle="dropdown"
-                        >
-                            Actions
-                        </button>
+                                            <td>
+                                                <div className="dropdown">
+                                                    <button
+                                                        className="btn btn-primary dropdown-toggle"
+                                                        data-bs-toggle="dropdown"
+                                                    >
+                                                        Actions
+                                                    </button>
 
-                        <ul className="dropdown-menu">
-                            <li>
-                                <button
-                                    className="dropdown-item"
-                                    onClick={() =>
-                                        generateInvoice(id, visit, details)
-                                    }
-                                >
-                                    Invoice
-                                </button>
-                            </li>
-
-                            <li>
-                                <button
-                                    className="dropdown-item"
-                                    onClick={() =>
-                                        editInvoice(id, visit, details)
-                                    }
-                                >
-                                    Edit
-                                </button>
-                            </li>
-
-                            <li>
-                                <button
-                                    className="dropdown-item text-danger"
-                                    onClick={() =>
-                                        deleteInvoice(id, visit)
-                                    }
-                                >
-                                    Delete
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </td>
-            </tr>
-        ))}
-</tbody>
-
+                                                    <ul className="dropdown-menu">
+                                                        <li>
+                                                            <button
+                                                                className="dropdown-item"
+                                                                onClick={() =>
+                                                                    generateInvoice(
+                                                                        id,
+                                                                        visit,
+                                                                        details
+                                                                    )
+                                                                }
+                                                            >
+                                                                Invoice
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button
+                                                                className="dropdown-item"
+                                                                onClick={() =>
+                                                                    editInvoice(
+                                                                        id,
+                                                                        visit
+                                                                    )
+                                                                }
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button
+                                                                className="dropdown-item text-danger"
+                                                                onClick={() =>
+                                                                    deleteInvoice(
+                                                                        id,
+                                                                        visit
+                                                                    )
+                                                                }
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                            </tbody>
                         </table>
                     )}
                 </div>
@@ -786,6 +799,8 @@ export default function PatientDetails() {
                                         <option value="Cash">Cash</option>
                                         <option value="Card">Card</option>
                                         <option value="UPI">UPI</option>
+                                        <option value="ICICI">ICICI</option>
+                                        <option value="HDFC">HDFC</option>
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>

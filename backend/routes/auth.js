@@ -767,50 +767,78 @@ router.put(
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, amount, payment_type, discount, isPercent } =
-                req.body;
+            const { date, service, payment_type, discount, isPercent } = req.body;
 
-            const appointment = await Appointment.findById(appointmentId);
-            if (!appointment)
-                return res
-                    .status(404)
-                    .json({ message: "Appointment not found" });
-
-            const visit = appointment.visits.id(visitId);
-            if (!visit)
-                return res.status(404).json({ message: "Visit not found" });
-
-            // Update fields (service array, date, payment type)
-            if (date) visit.date = date;
-            if (service) visit.service = service;
-            if (payment_type) visit.payment_type = payment_type;
-
-            // Server-side calculation of amount from provided service array (if service provided)
-            // If client also sent amount, we'll use server-computed amount for consistency.
-            const serviceTotal = computeServiceTotal(
-                visit.service || service || []
-            );
-            let finalAmount = serviceTotal;
-
-            // Normalize discount values
-            const disc = Number(discount) || 0;
-            const percentFlag = !!isPercent;
-
-            if (disc > 0) {
-                if (percentFlag) {
-                    finalAmount = finalAmount - serviceTotal * (disc / 100);
-                } else {
-                    finalAmount = finalAmount - disc;
-                }
+            // 1. Validation
+            if (!date || !Array.isArray(service) || service.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Date and at least one service are required",
+                });
             }
 
-            if (finalAmount < 0) finalAmount = 0;
+            // 2. Fetch appointment
+            const appointment = await Appointment.findById(appointmentId);
+            if (!appointment) {
+                return res
+                    .status(404)
+                    .json({ success: false, message: "Appointment not found" });
+            }
 
-            // Save computed amount and discount metadata
-            visit.amount =
-                typeof amount !== "undefined"
-                    ? Number(finalAmount)
-                    : finalAmount;
+            // 3. Fetch visit
+            const visit = appointment.visits.id(visitId);
+            if (!visit) {
+                return res
+                    .status(404)
+                    .json({ success: false, message: "Visit not found" });
+            }
+
+            // 4. Update date safely
+            const visitDate = new Date(date);
+            visit.date = visitDate;
+
+            // 5. Normalize services
+            visit.service = service.map((s) => ({
+                id: s.id || null,
+                name: s.name,
+                amount: Number(s.amount) || 0,
+            }));
+
+            // 6. Compute service total
+            const serviceTotal = visit.service.reduce(
+                (sum, s) => sum + s.amount,
+                0
+            );
+
+            // 7. Discount calculation
+            const disc = Number(discount) || 0;
+            const percentFlag = Boolean(isPercent);
+
+            let discountValue = 0;
+            if (disc > 0) {
+                discountValue = percentFlag
+                    ? serviceTotal * (disc / 100)
+                    : disc;
+            }
+
+            if (discountValue > serviceTotal) discountValue = serviceTotal;
+            if (discountValue < 0) discountValue = 0;
+
+            // 8. Final amount
+            const finalAmount = serviceTotal - discountValue;
+
+            // 9. Payment type validation
+            if (
+                payment_type &&
+                ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
+                    payment_type
+                )
+            ) {
+                visit.payment_type = payment_type;
+            }
+
+            // 10. Save computed values
+            visit.amount = finalAmount;
             visit.discount = disc;
             visit.isPercent = percentFlag;
 
@@ -818,12 +846,15 @@ router.put(
 
             return res.json({
                 success: true,
-                message: "Invoice updated",
+                message: "Invoice updated successfully",
                 visit,
             });
         } catch (err) {
             console.error("Edit invoice error:", err);
-            res.status(500).json({ message: "Server error" });
+            res.status(500).json({
+                success: false,
+                message: "Server error",
+            });
         }
     }
 );
