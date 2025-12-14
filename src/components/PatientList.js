@@ -156,6 +156,15 @@ export default function PatientList() {
 
             return searchMatch && genderMatch && serviceMatch && paymentMatch;
         });
+    const resetFilters = () => {
+        setSearchTerm("");
+        setSelectedService("");
+        setSelectedpayment_type("");
+        setSelectedGender("");
+        setStartDate("");
+        setEndDate("");
+        setSelectedFY("");
+    };
 
     // =======================
     // TOTAL CALCULATION (FIXED)
@@ -192,43 +201,124 @@ export default function PatientList() {
         }
         patientsByMonth[monthKey].push(dateKey);
     });
-    const getFilteredPatientsFlat = () => {
-        let result = [];
+    // const getFilteredPatientsFlat = () => {
+    //     let result = [];
 
-        Object.keys(patientsByDate).forEach((dateKey) => {
-            if (!isDateInRange(dateKey)) return;
+    //     Object.keys(patientsByDate).forEach((dateKey) => {
+    //         if (!isDateInRange(dateKey)) return;
 
-            const group = applyFilters(patientsByDate[dateKey]);
-            group.forEach((p) => {
-                result.push({
-                    Date: dateKey === "No Visits" ? "" : dateKey,
+    //         const group = applyFilters(patientsByDate[dateKey]);
+    //         group.forEach((p) => {
+    //             result.push({
+    //                 Date: dateKey === "No Visits" ? "" : dateKey,
+    //                 Name: p.name,
+    //                 Gender: p.gender || "",
+    //                 Phone: p.number || "",
+    //                 Payment: p.lastpayment_type || "",
+    //                 Amount: p.amount || 0,
+    //             });
+    //         });
+    //     });
+
+    //     return result;
+    // };
+
+    const getExcelRowsGroupedByDate = () => {
+        const rows = [];
+
+        const sortedDates = Object.keys(patientsByDate)
+            .filter((d) => isDateInRange(d))
+            .sort((a, b) => new Date(a) - new Date(b));
+
+        sortedDates.forEach((dateKey) => {
+            const patients = applyFilters(patientsByDate[dateKey] || []);
+            if (patients.length === 0) return;
+
+            // 👉 DATE HEADER ROW
+            rows.push({
+                Date: dateKey === "No Visits" ? "No Visits" : dateKey,
+                Name: "",
+                Gender: "",
+                Phone: "",
+                Payment: "",
+                Amount: "",
+            });
+
+            let dayTotal = 0;
+
+            // 👉 PATIENT ROWS
+            patients.forEach((p) => {
+                const amount =
+                    p.lastVisit?.amount ??
+                    p.amount ??
+                    p.visits?.[p.visits.length - 1]?.amount ??
+                    0;
+
+                dayTotal += Number(amount);
+
+                rows.push({
+                    Date: "",
                     Name: p.name,
-                    Gender: p.gender || "",
+                    Gender: p.gender || "N/A",
                     Phone: p.number || "",
-                    Payment: p.lastpayment_type || "",
-                    Amount: p.amount || 0,
+                    Payment: p.lastpayment_type || "N/A",
+                    Amount: amount,
                 });
             });
+
+            // 👉 TOTAL ROW
+            rows.push({
+                Date: "",
+                Name: "TOTAL",
+                Gender: "",
+                Phone: "",
+                Payment: "",
+                Amount: dayTotal,
+            });
+
+            // 👉 EMPTY ROW FOR SPACING
+            rows.push({});
         });
 
-        return result;
+        return rows;
     };
+
     const downloadExcel = () => {
-        const data = getFilteredPatientsFlat();
+        const data = getExcelRowsGroupedByDate();
 
         if (data.length === 0) {
             alert("No data to export");
             return;
         }
 
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(data, {
+            skipHeader: false,
+        });
 
+        // 🔥 Column widths (important for clean design)
+        worksheet["!cols"] = [
+            { wch: 14 }, // Date
+            { wch: 20 }, // Name
+            { wch: 12 }, // Gender
+            { wch: 16 }, // Phone
+            { wch: 12 }, // Payment
+            { wch: 12 }, // Amount
+        ];
+
+        const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
 
-        const fileName = selectedFY
-            ? `Patients_FY_${selectedFY}-${Number(selectedFY) + 1}.xlsx`
-            : "Patients_Filtered.xlsx";
+        let fileName = "Patients_All.xlsx";
+
+        if (selectedFY) {
+            fileName = `Patients_FY_${selectedFY}-${
+                Number(selectedFY) + 1
+            }.xlsx`;
+        } else if (startDate || endDate) {
+            fileName = `Patients_${startDate || "Start"}_to_${
+                endDate || "End"
+            }.xlsx`;
+        }
 
         XLSX.writeFile(workbook, fileName);
     };
@@ -350,14 +440,23 @@ export default function PatientList() {
                         onChange={(e) => setSelectedFY(e.target.value)}
                     >
                         <option value="">Select FY</option>
-                        <option value="2024">FY 2024–25</option>
-                        <option value="2025">FY 2025–26</option>
+                        <option value="2025">FY 2025-26</option>
+                        <option value="2026">FY 2026-27</option>
+                        <option value="2027">FY 2027-28</option>
+                        <option value="2028">FY 2028-29</option>
+                        <option value="2029">FY 2029-30</option>
                     </select>
                     <button
                         className="btn btn-success w-100 mt-3"
                         onClick={downloadExcel}
                     >
                         Download Excel
+                    </button>
+                    <button
+                        className="btn btn-outline-secondary w-100 mt-2"
+                        onClick={resetFilters}
+                    >
+                        Reset Filters
                     </button>
                 </div>
             </div>
