@@ -151,8 +151,11 @@ export default function PatientList() {
 
             const paymentMatch =
                 !selectedpayment_type ||
-                (p.lastpayment_type || "").toLowerCase() ===
-                    selectedpayment_type.toLowerCase();
+                p.visits?.some(
+                    (v) =>
+                        (v.payment_type || "").toLowerCase() ===
+                        selectedpayment_type.toLowerCase()
+                );
 
             return searchMatch && genderMatch && serviceMatch && paymentMatch;
         });
