@@ -4,15 +4,20 @@ import * as XLSX from "xlsx";
 
 export default function PatientList() {
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedGender, setSelectedGender] = useState("");
+
+    // DATA
     const [appointments, setAppointments] = useState([]);
 
     // FILTER STATES
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
+    const [selectedServices, setSelectedServices] = useState([]);
+    const genderMatch = !selectedGender || a.gender === selectedGender;
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
+
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -43,12 +48,15 @@ export default function PatientList() {
 
         fetchAppointments();
     }, []);
+
+    // =========================
+    // FINANCIAL YEAR LOGIC
+    // =========================
     useEffect(() => {
         if (!selectedFY) return;
 
-        // Financial year: 1 April → 31 March
-        const fyStart = new Date(Number(selectedFY), 3, 1); // April = 3
-        const fyEnd = new Date(Number(selectedFY) + 1, 2, 31); // March = 2
+        const fyStart = new Date(Number(selectedFY), 3, 1);
+        const fyEnd = new Date(Number(selectedFY) + 1, 2, 31);
 
         setStartDate(fyStart.toISOString().split("T")[0]);
         setEndDate(fyEnd.toISOString().split("T")[0]);
@@ -72,12 +80,25 @@ export default function PatientList() {
             (!startDate || new Date(a.date) >= new Date(startDate)) &&
             (!endDate || new Date(a.date) <= new Date(endDate));
 
-        return searchMatch && paymentMatch && genderMatch && dateMatch;
+        const serviceMatch =
+            selectedServices.length === 0 ||
+            (a.services || []).some((s) =>
+                selectedServices.includes(typeof s === "object" ? s.name : s)
+            );
+
+        return (
+            searchMatch &&
+            paymentMatch &&
+            genderMatch &&
+            dateMatch &&
+            serviceMatch
+        );
     });
 
     const hasAnyFilter =
         searchTerm ||
         selectedPayments.length > 0 ||
+        selectedServices.length > 0 ||
         selectedGender ||
         startDate ||
         endDate ||
@@ -119,9 +140,21 @@ export default function PatientList() {
     });
 
     // =========================
-    // DOWNLOAD EXCEL (IMAGE MATCH)
+    // SERVICES LIST (DYNAMIC)
     // =========================
+    const allServices = Array.from(
+        new Set(
+            appointments.flatMap((a) =>
+                (a.services || []).map((s) =>
+                    typeof s === "object" ? s.name : s
+                )
+            )
+        )
+    ).sort();
 
+    // =========================
+    // EXCEL EXPORT
+    // =========================
     const boldCell = (value) => ({
         v: value,
         s: { font: { bold: true } },
@@ -150,16 +183,8 @@ export default function PatientList() {
                         Patient: useBold
                             ? boldCell(new Date(day).toLocaleDateString())
                             : new Date(day).toLocaleDateString(),
-                        Number: "",
-                        Doctor: "",
-                        Date: "",
-                        Payment: "",
-                        Invoice: "",
-                        Amount: "",
-                        Services: "",
                     });
 
-                    // ================= HEADER ROW =================
                     rows.push({
                         Patient: useBold ? boldCell("Patient") : "Patient",
                         Number: useBold ? boldCell("Number") : "Number",
@@ -193,12 +218,7 @@ export default function PatientList() {
 
                     // ================= TOTAL ROW =================
                     rows.push({
-                        Patient: "",
-                        Number: "",
-                        Doctor: "",
-                        Date: "",
-                        Payment: "",
-                        Invoice: useBold ? boldCell("TOTAL") : "TOTAL",
+                        Payment: useBold ? boldCell("TOTAL") : "TOTAL",
                         Amount: useBold ? boldCell(dayTotal) : dayTotal,
                         Services: "",
                     });
@@ -208,42 +228,16 @@ export default function PatientList() {
                 });
         });
 
-        const worksheet = XLSX.utils.json_to_sheet(rows, {
-            skipHeader: true,
-        });
+        const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Visit Records");
 
-        worksheet["!cols"] = [
-            { wch: 16 },
-            { wch: 14 },
-            { wch: 14 },
-            { wch: 12 },
-            { wch: 12 },
-            { wch: 10 },
-            { wch: 12 },
-            { wch: 30 },
-        ];
-
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
-
-        let fileName = "visit-records.xlsx";
-
-        if (selectedFY) {
-            fileName = `visit-records_FY_${selectedFY}-${
-                Number(selectedFY) + 1
-            }.xlsx`;
-        } else if (startDate || endDate) {
-            fileName = `visit-records_${startDate || "start"}_to_${
-                endDate || "end"
-            }.xlsx`;
-        }
-
-        XLSX.writeFile(workbook, fileName);
+        XLSX.writeFile(wb, "visit-records.xlsx");
     };
 
-    // =======================
+    // =========================
     // UI
-    // =======================
+    // =========================
     return (
         <div className="container mt-3">
             <h4 className="mb-3">Patients</h4>
@@ -259,127 +253,90 @@ export default function PatientList() {
                 </button>
             </div>
 
-            {/* OFFCANVAS FILTER PANEL */}
-            <div
-                className="offcanvas offcanvas-end"
-                tabIndex="-1"
-                id="filterPanel"
-            >
+            {/* FILTER PANEL */}
+            <div className="offcanvas offcanvas-end" id="filterPanel">
                 <div className="offcanvas-header">
                     <h5>Filters</h5>
-                    <button
-                        type="button"
-                        className="btn-close"
-                        data-bs-dismiss="offcanvas"
-                    ></button>
+                    <button className="btn-close" data-bs-dismiss="offcanvas" />
                 </div>
 
                 <div className="offcanvas-body">
                     <label>Search</label>
                     <input
                         className="form-control mb-3"
-                        placeholder="Name or Phone"
+                        placeholder="Search name or phone"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
 
                     <label className="fw-semibold">Payment Types</label>
-
-                    <div className="mb-3">
-                        {["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].map(
-                            (type) => (
-                                <div className="form-check" key={type}>
-                                    <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        id={`pay-${type}`}
-                                        checked={selectedPayments.includes(
-                                            type
-                                        )}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedPayments([
-                                                    ...selectedPayments,
-                                                    type,
-                                                ]);
-                                            } else {
-                                                setSelectedPayments(
-                                                    selectedPayments.filter(
-                                                        (p) => p !== type
-                                                    )
-                                                );
-                                            }
-                                        }}
-                                    />
-                                    <label
-                                        className="form-check-label"
-                                        htmlFor={`pay-${type}`}
-                                    >
-                                        {type}
-                                    </label>
-                                </div>
-                            )
-                        )}
-                    </div>
-
-                    <label>Gender</label>
+                    {["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].map(
+                        (type) => (
+                            <div className="form-check" key={type}>
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={selectedPayments.includes(type)}
+                                    onChange={(e) =>
+                                        setSelectedPayments(
+                                            e.target.checked
+                                                ? [...selectedPayments, type]
+                                                : selectedPayments.filter(
+                                                      (p) => p !== type
+                                                  )
+                                        )
+                                    }
+                                />
+                                <label className="form-check-label">
+                                    {type}
+                                </label>
+                            </div>
+                        )
+                    )}
+                    <label className="fw-semibold mt-2">Gender</label>
                     <select
                         className="form-select mb-3"
                         value={selectedGender}
                         onChange={(e) => setSelectedGender(e.target.value)}
                     >
-                        <option value="">All Gender</option>
+                        <option value="">All</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                     </select>
 
-                    <label>Start Date</label>
-                    <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={startDate}
-                        onChange={(e) => {
-                            setSelectedFY(""); // 🔑 clear FY
-                            setStartDate(e.target.value);
-                        }}
-                    />
+                    <hr />
 
-                    <label>End Date</label>
-                    <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={endDate}
-                        onChange={(e) => {
-                            setSelectedFY(""); // 🔑 clear FY
-                            setEndDate(e.target.value);
-                        }}
-                    />
-                    <label>Financial Year</label>
-                    <select
-                        className="form-select mb-3"
-                        value={selectedFY}
-                        onChange={(e) => setSelectedFY(e.target.value)}
-                    >
-                        <option value="">Select Financial Year</option>
-                        <option value="2025">FY 2025-26</option>
-                        <option value="2026">FY 2026-27</option>
-                        <option value="2027">FY 2027-28</option>
-                        <option value="2028">FY 2028-29</option>
-                        <option value="2029">FY 2029-30</option>
-                    </select>
+                    <label className="fw-semibold">Services</label>
+                    <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                        {allServices.map((s) => (
+                            <div className="form-check" key={s}>
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={selectedServices.includes(s)}
+                                    onChange={(e) =>
+                                        setSelectedServices(
+                                            e.target.checked
+                                                ? [...selectedServices, s]
+                                                : selectedServices.filter(
+                                                      (x) => x !== s
+                                                  )
+                                        )
+                                    }
+                                />
+                                <label className="form-check-label">{s}</label>
+                            </div>
+                        ))}
+                    </div>
 
-                    <button
-                        className="btn btn-success w-100 mt-2"
-                        data-bs-dismiss="offcanvas"
-                    >
-                        Apply Filters
-                    </button>
+                    <hr />
 
                     <button
                         className="btn btn-outline-secondary w-100 mt-2"
                         onClick={() => {
                             setSearchTerm("");
                             setSelectedPayments([]);
+                            setSelectedServices([]);
                             setSelectedGender("");
                             setStartDate("");
                             setEndDate("");
@@ -395,78 +352,44 @@ export default function PatientList() {
                 📥 Download Excel
             </button>
 
-            {/* MONTH → DAY VIEW */}
-            {Object.keys(appointmentsByMonth).map((month) => {
-                const daysObj = appointmentsByMonth[month];
-                const monthTotal = Object.values(daysObj).reduce(
-                    (sum, d) => sum + getDayTotal(d),
-                    0
-                );
+            {/* DATA VIEW */}
+            {Object.keys(appointmentsByMonth).map((month) => (
+                <div key={month} className="mb-5">
+                    <h4 className="bg-primary text-white p-2 rounded">
+                        {month}
+                    </h4>
 
-                return (
-                    <div key={month} className="mb-5">
-                        <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
-                            <span>{month}</span>
-                            <span>₹ {monthTotal.toFixed(2)}</span>
-                        </h4>
+                    {Object.keys(appointmentsByMonth[month]).map((day) => (
+                        <div key={day}>
+                            <h6 className="bg-light p-2">
+                                {new Date(day).toLocaleDateString()}
+                            </h6>
 
-                        {Object.keys(daysObj)
-                            .sort((a, b) => new Date(b) - new Date(a))
-                            .map((day) => {
-                                const dayApps = daysObj[day];
-                                const dayTotal = getDayTotal(dayApps);
-
-                                return (
-                                    <div key={day} className="mb-4">
-                                        <h6 className="bg-light p-2 rounded d-flex justify-content-between">
-                                            <span>
-                                                {new Date(
-                                                    day
-                                                ).toLocaleDateString()}
-                                            </span>
-                                            <span>₹ {dayTotal.toFixed(2)}</span>
-                                        </h6>
-
-                                        <table className="table table-bordered table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Gender</th>
-                                                    <th>Payment</th>
-                                                    <th>Amount</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {dayApps.map((a, i) => (
-                                                    <tr
-                                                        key={i}
-                                                        style={{
-                                                            cursor: "pointer",
-                                                        }}
-                                                        onClick={() =>
-                                                            navigate(
-                                                                `/patient/${a.patientId}`
-                                                            )
-                                                        }
-                                                    >
-                                                        <td>{a.name}</td>
-                                                        <td>
-                                                            {a.gender || "N/A"}
-                                                        </td>
-                                                        <td>
-                                                            {a.payment_type}
-                                                        </td>
-                                                        <td>₹ {a.amount}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                );
-                            })}
-                    </div>
-                );
-            })}
+                            <table className="table table-bordered">
+                                <tbody>
+                                    {appointmentsByMonth[month][day].map(
+                                        (a, i) => (
+                                            <tr
+                                                key={i}
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/patient/${a.patientId}`
+                                                    )
+                                                }
+                                                style={{ cursor: "pointer" }}
+                                            >
+                                                <td>{a.name}</td>
+                                                <td>{a.payment_type}</td>
+                                                <td>₹ {a.amount}</td>
+                                            </tr>
+                                        )
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+                </div>
+            ))}
         </div>
     );
 }
