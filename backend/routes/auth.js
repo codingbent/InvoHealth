@@ -769,7 +769,7 @@ router.put(
             const { appointmentId, visitId } = req.params;
             const { date, service, payment_type, discount, isPercent } = req.body;
 
-            // 1. Validation
+            // 1️⃣ Validation
             if (!date || !Array.isArray(service) || service.length === 0) {
                 return res.status(400).json({
                     success: false,
@@ -777,40 +777,42 @@ router.put(
                 });
             }
 
-            // 2. Fetch appointment
+            // 2️⃣ Find appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
-                return res
-                    .status(404)
-                    .json({ success: false, message: "Appointment not found" });
+                return res.status(404).json({
+                    success: false,
+                    message: "Appointment not found",
+                });
             }
 
-            // 3. Fetch visit
+            // 3️⃣ Find visit inside appointment
             const visit = appointment.visits.id(visitId);
             if (!visit) {
-                return res
-                    .status(404)
-                    .json({ success: false, message: "Visit not found" });
+                return res.status(404).json({
+                    success: false,
+                    message: "Visit not found",
+                });
             }
 
-            // 4. Update date safely
+            // 4️⃣ Update date
             const visitDate = new Date(date);
             visit.date = visitDate;
 
-            // 5. Normalize services
+            // 5️⃣ Normalize services
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
                 amount: Number(s.amount) || 0,
             }));
 
-            // 6. Compute service total
+            // 6️⃣ Compute service total
             const serviceTotal = visit.service.reduce(
                 (sum, s) => sum + s.amount,
                 0
             );
 
-            // 7. Discount calculation
+            // 7️⃣ Discount calculation
             const disc = Number(discount) || 0;
             const percentFlag = Boolean(isPercent);
 
@@ -824,10 +826,10 @@ router.put(
             if (discountValue > serviceTotal) discountValue = serviceTotal;
             if (discountValue < 0) discountValue = 0;
 
-            // 8. Final amount
+            // 8️⃣ Final amount
             const finalAmount = serviceTotal - discountValue;
 
-            // 9. Payment type validation
+            // 9️⃣ Payment type validation
             if (
                 payment_type &&
                 ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
@@ -837,11 +839,12 @@ router.put(
                 visit.payment_type = payment_type;
             }
 
-            // 10. Save computed values
+            // 🔟 Save computed values
             visit.amount = finalAmount;
             visit.discount = disc;
             visit.isPercent = percentFlag;
 
+            // 1️⃣1️⃣ Save appointment
             await appointment.save();
 
             return res.json({
