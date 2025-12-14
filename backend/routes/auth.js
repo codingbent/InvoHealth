@@ -209,84 +209,6 @@ router.put("/updateservice/:id", async (req, res) => {
     }
 });
 
-//fetch all patients
-
-router.get("/fetchallpatients", fetchuser, async (req, res) => {
-    try {
-        const patients = await Patient.find({ doctor: req.doc.id });
-
-        const patientsWithLast = await Promise.all(
-            patients.map(async (p) => {
-                const appointment = await Appointment.findOne({
-                    patient: p._id,
-                });
-                let lastDate = null;
-                let lastpayment_type = null;
-
-                if (appointment && appointment.visits.length > 0) {
-                    const lastVisit =
-                        appointment.visits[appointment.visits.length - 1];
-                    lastDate = lastVisit.date;
-                    lastpayment_type = lastVisit.payment_type; // <-- add this
-                }
-
-                return {
-                    ...p.toObject(),
-                    lastAppointment: lastDate,
-                    lastpayment_type, // <-- return it
-                };
-            })
-        );
-
-        res.json(patientsWithLast);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server error");
-    }
-});
-
-//
-
-router.get("/fetchpatientsbylastvisit", async (req, res) => {
-    try {
-        const patients = await Patient.find();
-
-        // Attach latest visit date per patient
-        const patientsWithVisit = await Promise.all(
-            patients.map(async (p) => {
-                const appointment = await Appointment.findOne({
-                    patient: p._id,
-                });
-                let lastDate = null;
-                if (appointment && appointment.visits.length > 0) {
-                    lastDate =
-                        appointment.visits[appointment.visits.length - 1].date;
-                }
-                return {
-                    ...p.toObject(),
-                    lastAppointment: lastDate,
-                };
-            })
-        );
-
-        // Group patients by lastAppointment date
-        const grouped = {};
-        patientsWithVisit.forEach((p) => {
-            const dateKey = p.lastAppointment
-                ? new Date(p.lastAppointment).toISOString().slice(0, 10) // YYYY-MM-DD
-                : "No Visits";
-
-            if (!grouped[dateKey]) grouped[dateKey] = [];
-            grouped[dateKey].push(p);
-        });
-
-        res.json(grouped);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Server error");
-    }
-});
-
 //update patient details
 
 router.put(
@@ -677,9 +599,7 @@ router.get("/appointments/:patientId", fetchuser, async (req, res) => {
         }
 
         // sort visits latest first
-        appointment.visits.sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-        );
+        appointment.visits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json({
             appointmentId: appointment._id,
@@ -953,9 +873,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
         });
 
         // 3️⃣ Sort by date DESC (latest first)
-        allVisits.sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-        );
+        allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json(allVisits);
     } catch (err) {
@@ -963,6 +881,5 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
 
 module.exports = router;
