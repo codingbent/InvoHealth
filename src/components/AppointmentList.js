@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 export default function AppointmentList() {
     const navigate = useNavigate();
 
-    // ALL appointments (flattened visits)
+    // ALL flattened visits
     const [appointments, setAppointments] = useState([]);
 
     // FILTER STATES
@@ -97,7 +97,6 @@ export default function AppointmentList() {
         if (!appointmentsByMonth[monthKey]) {
             appointmentsByMonth[monthKey] = {};
         }
-
         if (!appointmentsByMonth[monthKey][dayKey]) {
             appointmentsByMonth[monthKey][dayKey] = [];
         }
@@ -106,7 +105,7 @@ export default function AppointmentList() {
     });
 
     // =========================
-    // DOWNLOAD EXCEL
+    // DOWNLOAD EXCEL (IMAGE MATCH)
     // =========================
     const downloadExcel = () => {
         if (dataToShow.length === 0) {
@@ -116,7 +115,6 @@ export default function AppointmentList() {
 
         const rows = [];
 
-        // Loop month → day (same structure as UI)
         Object.keys(appointmentsByMonth).forEach((month) => {
             const daysObj = appointmentsByMonth[month];
 
@@ -126,7 +124,7 @@ export default function AppointmentList() {
                     const dayApps = daysObj[day];
                     let dayTotal = 0;
 
-                    // ===== DATE ROW =====
+                    // DATE ROW
                     rows.push({
                         Patient: new Date(day).toLocaleDateString(),
                         Number: "",
@@ -138,7 +136,7 @@ export default function AppointmentList() {
                         Services: "",
                     });
 
-                    // ===== HEADER ROW =====
+                    // HEADER ROW
                     rows.push({
                         Patient: "Patient",
                         Number: "Number",
@@ -150,14 +148,14 @@ export default function AppointmentList() {
                         Services: "Services",
                     });
 
-                    // ===== APPOINTMENT ROWS =====
+                    // DATA ROWS
                     dayApps.forEach((a) => {
                         dayTotal += Number(a.amount || 0);
 
                         rows.push({
                             Patient: a.name,
                             Number: a.number || "",
-                            Doctor: a.doctorName || "abhed",
+                            Doctor: a.doctorName || "",
                             Date: new Date(a.date).toLocaleDateString(),
                             Payment: a.payment_type,
                             Invoice: a.invoiceNumber || "",
@@ -170,7 +168,7 @@ export default function AppointmentList() {
                         });
                     });
 
-                    // ===== TOTAL ROW =====
+                    // TOTAL ROW
                     rows.push({
                         Patient: "",
                         Number: "",
@@ -182,7 +180,7 @@ export default function AppointmentList() {
                         Services: "",
                     });
 
-                    // ===== EMPTY ROW =====
+                    // EMPTY ROW
                     rows.push({});
                 });
         });
@@ -191,21 +189,19 @@ export default function AppointmentList() {
             skipHeader: true,
         });
 
-        // Column widths (matches image)
         worksheet["!cols"] = [
-            { wch: 16 }, // Patient
-            { wch: 14 }, // Number
-            { wch: 14 }, // Doctor
-            { wch: 12 }, // Date
-            { wch: 12 }, // Payment
-            { wch: 10 }, // Invoice
-            { wch: 12 }, // Amount
-            { wch: 30 }, // Services
+            { wch: 16 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 30 },
         ];
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
-
         XLSX.writeFile(workbook, "visit-records.xlsx");
     };
 
@@ -216,55 +212,103 @@ export default function AppointmentList() {
         <div className="container mt-3">
             <h4 className="mb-3">Appointments</h4>
 
-            {/* FILTERS */}
-            <input
-                className="form-control mb-2"
-                placeholder="Search by name or phone"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            {/* FILTER BUTTON */}
+            <div className="w-75 mx-auto mb-3">
+                <button
+                    className="btn btn-outline-primary w-100"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#filterPanel"
+                >
+                    🔍 Filters
+                </button>
+            </div>
 
-            <select
-                className="form-select mb-2"
-                value={selectedPayment}
-                onChange={(e) => setSelectedPayment(e.target.value)}
+            {/* OFFCANVAS FILTER PANEL */}
+            <div
+                className="offcanvas offcanvas-end"
+                tabIndex="-1"
+                id="filterPanel"
             >
-                <option value="">All Payment Types</option>
-                <option value="Cash">Cash</option>
-                <option value="Card">Card</option>
-                <option value="UPI">UPI</option>
-                <option value="ICICI">ICICI</option>
-                <option value="HDFC">HDFC</option>
-                <option value="Other">Other</option>
-            </select>
+                <div className="offcanvas-header">
+                    <h5>Filters</h5>
+                    <button
+                        type="button"
+                        className="btn-close"
+                        data-bs-dismiss="offcanvas"
+                    ></button>
+                </div>
 
-            <select
-                className="form-select mb-2"
-                value={selectedGender}
-                onChange={(e) => setSelectedGender(e.target.value)}
-            >
-                <option value="">All Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-            </select>
+                <div className="offcanvas-body">
+                    <label>Search</label>
+                    <input
+                        className="form-control mb-3"
+                        placeholder="Name or Phone"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
 
-            <div className="row mb-3">
-                <div className="col">
+                    <label>Payment</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedPayment}
+                        onChange={(e) => setSelectedPayment(e.target.value)}
+                    >
+                        <option value="">All Payment Types</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="UPI">UPI</option>
+                        <option value="ICICI">ICICI</option>
+                        <option value="HDFC">HDFC</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label>Gender</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedGender}
+                        onChange={(e) => setSelectedGender(e.target.value)}
+                    >
+                        <option value="">All Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    <label>Start Date</label>
                     <input
                         type="date"
-                        className="form-control"
+                        className="form-control mb-3"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                     />
-                </div>
-                <div className="col">
+
+                    <label>End Date</label>
                     <input
                         type="date"
-                        className="form-control"
+                        className="form-control mb-3"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                     />
+
+                    <button
+                        className="btn btn-success w-100 mt-2"
+                        data-bs-dismiss="offcanvas"
+                    >
+                        Apply Filters
+                    </button>
+
+                    <button
+                        className="btn btn-outline-secondary w-100 mt-2"
+                        onClick={() => {
+                            setSearchTerm("");
+                            setSelectedPayment("");
+                            setSelectedGender("");
+                            setStartDate("");
+                            setEndDate("");
+                        }}
+                    >
+                        Reset Filters
+                    </button>
                 </div>
             </div>
 
@@ -272,17 +316,16 @@ export default function AppointmentList() {
                 📥 Download Excel
             </button>
 
-            {/* MONTH + DAY GROUPED VIEW */}
+            {/* MONTH → DAY VIEW */}
             {Object.keys(appointmentsByMonth).map((month) => {
                 const daysObj = appointmentsByMonth[month];
                 const monthTotal = Object.values(daysObj).reduce(
-                    (sum, dayApps) => sum + getDayTotal(dayApps),
+                    (sum, d) => sum + getDayTotal(d),
                     0
                 );
 
                 return (
                     <div key={month} className="mb-5">
-                        {/* MONTH HEADER */}
                         <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
                             <span>{month}</span>
                             <span>₹ {monthTotal.toFixed(2)}</span>
@@ -296,20 +339,17 @@ export default function AppointmentList() {
 
                                 return (
                                     <div key={day} className="mb-4">
-                                        {/* DAY HEADER */}
                                         <h6 className="bg-light p-2 rounded d-flex justify-content-between">
                                             <span>
                                                 {new Date(
                                                     day
                                                 ).toLocaleDateString()}
                                             </span>
-                                            <span className="fw-bold">
-                                                ₹ {dayTotal.toFixed(2)}
-                                            </span>
+                                            <span>₹ {dayTotal.toFixed(2)}</span>
                                         </h6>
 
                                         <table className="table table-bordered table-striped">
-                                            <thead className="table-light">
+                                            <thead>
                                                 <tr>
                                                     <th>Name</th>
                                                     <th>Gender</th>
