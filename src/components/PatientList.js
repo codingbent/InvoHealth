@@ -493,7 +493,6 @@ export default function PatientList() {
                 }, 0);
 
                 if (monthDates.length === 0) return null;
-
                 return (
                     <div key={month} className="mb-5">
                         {/* MONTH HEADER */}
