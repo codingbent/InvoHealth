@@ -48,10 +48,9 @@ export default function PatientDetails() {
 
     // ================= FETCH SERVICES =================
     const fetchServices = async () => {
-        const res = await fetch(
-            `${API_BASE_URL}/api/auth/fetchallservice`,
-            { headers: { "auth-token": localStorage.getItem("token") } }
-        );
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
+            headers: { "auth-token": localStorage.getItem("token") },
+        });
         const data = await res.json();
         setAvailableServices(Array.isArray(data) ? data : []);
     };
@@ -142,10 +141,7 @@ export default function PatientDetails() {
             44
         );
 
-        const tableBody = (visit.service || []).map((s) => [
-            s.name,
-            s.amount,
-        ]);
+        const tableBody = (visit.service || []).map((s) => [s.name, s.amount]);
 
         autoTable(doc, {
             startY: 55,
@@ -167,8 +163,7 @@ export default function PatientDetails() {
         setEditingVisit(visit);
 
         const normalizedServices = visit.service.map(
-            (s) =>
-                availableServices.find((x) => x.name === s.name) || s
+            (s) => availableServices.find((x) => x.name === s.name) || s
         );
 
         setApptData({
@@ -238,9 +233,9 @@ export default function PatientDetails() {
                         {appointments.map((visit) => (
                             <tr key={visit._id}>
                                 <td>
-                                    {new Date(
-                                        visit.date
-                                    ).toLocaleDateString("en-IN")}
+                                    {new Date(visit.date).toLocaleDateString(
+                                        "en-IN"
+                                    )}
                                 </td>
                                 <td>
                                     {visit.service
@@ -282,9 +277,7 @@ export default function PatientDetails() {
                                                 <button
                                                     className="dropdown-item text-danger"
                                                     onClick={() =>
-                                                        deleteInvoice(
-                                                            visit._id
-                                                        )
+                                                        deleteInvoice(visit._id)
                                                     }
                                                 >
                                                     Delete
@@ -343,6 +336,126 @@ export default function PatientDetails() {
                                 onClick={updateVisit}
                             >
                                 Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div
+                className="modal fade"
+                id="editPatientModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        {/* HEADER */}
+                        <div className="modal-header">
+                            <h5 className="modal-title">
+                                Edit Patient Details
+                            </h5>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"
+                            ></button>
+                        </div>
+
+                        {/* BODY */}
+                        <div className="modal-body">
+                            {/* NAME */}
+                            <div className="mb-3">
+                                <label className="form-label">
+                                    Patient Name
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    value={patient.name}
+                                    onChange={(e) =>
+                                        setPatient({
+                                            ...patient,
+                                            name: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+
+                            {/* MOBILE NUMBER */}
+                            <div className="mb-3">
+                                <label className="form-label">
+                                    Mobile Number
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    value={patient.number}
+                                    maxLength={10}
+                                    onChange={(e) => {
+                                        if (/^\d*$/.test(e.target.value)) {
+                                            setPatient({
+                                                ...patient,
+                                                number: e.target.value,
+                                            });
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* AGE */}
+                            <div className="mb-3">
+                                <label className="form-label">Age</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    value={patient.age}
+                                    onChange={(e) =>
+                                        setPatient({
+                                            ...patient,
+                                            age: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+
+                            {/* GENDER */}
+                            <div className="mb-3">
+                                <label className="form-label">Gender</label>
+                                <select
+                                    className="form-select"
+                                    value={patient.gender}
+                                    onChange={(e) =>
+                                        setPatient({
+                                            ...patient,
+                                            gender: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* FOOTER */}
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                data-bs-dismiss="modal"
+                                onClick={handleSave}
+                            >
+                                Save Changes
                             </button>
                         </div>
                     </div>
