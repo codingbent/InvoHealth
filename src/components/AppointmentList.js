@@ -107,6 +107,12 @@ export default function AppointmentList() {
     // =========================
     // DOWNLOAD EXCEL (IMAGE MATCH)
     // =========================
+
+    const boldCell = (value) => ({
+        v: value,
+        s: { font: { bold: true } },
+    });
+
     const downloadExcel = () => {
         if (dataToShow.length === 0) {
             alert("No data to export");
@@ -114,6 +120,7 @@ export default function AppointmentList() {
         }
 
         const rows = [];
+        const useBold = !hasAnyFilter;
 
         Object.keys(appointmentsByMonth).forEach((month) => {
             const daysObj = appointmentsByMonth[month];
@@ -124,9 +131,11 @@ export default function AppointmentList() {
                     const dayApps = daysObj[day];
                     let dayTotal = 0;
 
-                    // DATE ROW
+                    // ================= DATE ROW =================
                     rows.push({
-                        Patient: new Date(day).toLocaleDateString(),
+                        Patient: useBold
+                            ? boldCell(new Date(day).toLocaleDateString())
+                            : new Date(day).toLocaleDateString(),
                         Number: "",
                         Doctor: "",
                         Date: "",
@@ -136,26 +145,26 @@ export default function AppointmentList() {
                         Services: "",
                     });
 
-                    // HEADER ROW
+                    // ================= HEADER ROW =================
                     rows.push({
-                        Patient: "Patient",
-                        Number: "Number",
-                        Doctor: "Doctor",
-                        Date: "Date",
-                        Payment: "Payment",
-                        Invoice: "Invoice",
-                        Amount: "Amount",
-                        Services: "Services",
+                        Patient: useBold ? boldCell("Patient") : "Patient",
+                        Number: useBold ? boldCell("Number") : "Number",
+                        Doctor: useBold ? boldCell("Doctor") : "Doctor",
+                        Date: useBold ? boldCell("Date") : "Date",
+                        Payment: useBold ? boldCell("Payment") : "Payment",
+                        Invoice: useBold ? boldCell("Invoice") : "Invoice",
+                        Amount: useBold ? boldCell("Amount") : "Amount",
+                        Services: useBold ? boldCell("Services") : "Services",
                     });
 
-                    // DATA ROWS
+                    // ================= DATA ROWS =================
                     dayApps.forEach((a) => {
                         dayTotal += Number(a.amount || 0);
 
                         rows.push({
                             Patient: a.name,
                             Number: a.number || "",
-                            Doctor: a.doctorName || "",
+                            Doctor: a.doctorName || "abhed",
                             Date: new Date(a.date).toLocaleDateString(),
                             Payment: a.payment_type,
                             Invoice: a.invoiceNumber || "",
@@ -168,19 +177,19 @@ export default function AppointmentList() {
                         });
                     });
 
-                    // TOTAL ROW
+                    // ================= TOTAL ROW =================
                     rows.push({
                         Patient: "",
                         Number: "",
                         Doctor: "",
                         Date: "",
                         Payment: "",
-                        Invoice: "TOTAL",
-                        Amount: dayTotal,
+                        Invoice: useBold ? boldCell("TOTAL") : "TOTAL",
+                        Amount: useBold ? boldCell(dayTotal) : dayTotal,
                         Services: "",
                     });
 
-                    // EMPTY ROW
+                    // ================= EMPTY ROW =================
                     rows.push({});
                 });
         });
@@ -202,6 +211,7 @@ export default function AppointmentList() {
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
+
         XLSX.writeFile(workbook, "visit-records.xlsx");
     };
 
