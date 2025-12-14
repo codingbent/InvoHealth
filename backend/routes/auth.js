@@ -100,8 +100,8 @@ router.post(
         // 👉 Gender validation (optional but allowed)
         body("gender")
             .optional()
-            .isIn(["Male", "Female", "Other"])
-            .withMessage("Gender must be Male, Female, or Other"),
+            .isIn(["Male", "Female"])
+            .withMessage("Gender must be Male, Female"),
     ],
     async (req, res) => {
         let success = false;
@@ -304,8 +304,8 @@ router.put(
         // 👉 Gender field validation
         body("gender")
             .optional()
-            .isIn(["Male", "Female", "Other"])
-            .withMessage("Gender must be Male, Female, or Other"),
+            .isIn(["Male", "Female"])
+            .withMessage("Gender must be Male, Female"),
     ],
     async (req, res) => {
         try {

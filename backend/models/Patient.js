@@ -46,7 +46,7 @@ const PatientSchema = new Schema({
     },
     gender: {
         type: String,
-        enum: ["Male", "Female", "Other"],
+        enum: ["Male", "Female"],
         required: false,
     },
     date: {
@@ -57,6 +57,10 @@ const PatientSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "doc",
         required: true,
+    },
+    payment_types: {
+        type: [String],
+        default: [],
     },
 });
 

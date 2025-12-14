@@ -764,7 +764,6 @@ export default function PatientDetails() {
                                             <option value="Female">
                                                 Female
                                             </option>
-                                            <option value="Other">Other</option>
                                         </select>
                                     </div>
                                 </form>

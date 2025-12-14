@@ -181,7 +181,7 @@ const AddPatient = ({ showAlert }) => {
                 number: "0000000000",
                 amount: 0,
                 age: "",
-                gender: "Other",
+                gender: "Male",
             });
 
             setServiceAmounts([]);
@@ -235,7 +235,6 @@ const AddPatient = ({ showAlert }) => {
                         >
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
-                            <option value="Other">Other</option>
                         </select>
                     </div>
 

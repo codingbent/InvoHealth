@@ -151,9 +151,9 @@ export default function PatientList() {
 
             const paymentMatch =
                 !selectedpayment_type ||
-                p.visits?.some(
-                    (v) =>
-                        (v.payment_type || "").toLowerCase() ===
+                p.payment_types?.some(
+                    (pt) =>
+                        (pt || "").toLowerCase() ===
                         selectedpayment_type.toLowerCase()
                 );
 
@@ -278,7 +278,7 @@ export default function PatientList() {
                     Number: p.number || "",
                     Doctor: p.doctorName || "",
                     Date: dateKey,
-                    Payment: p.lastpayment_type || "N/A",
+                    Payment: p.payment_types?.join(", ") || "N/A",
                     Invoice: p.lastInvoice || "",
                     Amount: amount,
                     Services: (p.service || [])
@@ -398,7 +398,6 @@ export default function PatientList() {
                         <option value="">All Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
-                        <option value="Other">Other</option>
                     </select>
 
                     {/* SERVICES */}
@@ -557,9 +556,15 @@ export default function PatientList() {
                                                             {p.gender || "N/A"}
                                                         </td>
                                                         <td>
-                                                            {p.lastpayment_type ||
-                                                                "N/A"}
+                                                            {p.payment_types &&
+                                                            p.payment_types
+                                                                .length > 0
+                                                                ? p.payment_types.join(
+                                                                      ", "
+                                                                  )
+                                                                : "N/A"}
                                                         </td>
+
                                                         <td>
                                                             <button
                                                                 className="btn btn-danger btn-sm"
