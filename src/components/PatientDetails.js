@@ -481,113 +481,76 @@ export default function PatientDetails() {
                             </thead>
 
                             <tbody>
-                                {appointments.map((appt) =>
-                                    appt.visits
-                                        .slice()
-                                        .sort(
-                                            (a, b) =>
-                                                new Date(b.date) -
-                                                new Date(a.date)
-                                        )
-                                        .map((visit) => (
-                                            <tr>
-                                                <td>
-                                                    {new Date(
-                                                        visit.date
-                                                    ).toLocaleDateString(
-                                                        "en-IN"
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {(visit.service || [])
-                                                        .map((s) =>
-                                                            typeof s ===
-                                                            "object"
-                                                                ? s.name
-                                                                : s
-                                                        )
-                                                        .join(", ")}
-                                                </td>
-                                                <td>
-                                                    {(
-                                                        visit.service || []
-                                                    ).reduce(
-                                                        (sum, s) =>
-                                                            sum +
-                                                            (typeof s ===
-                                                            "object"
-                                                                ? s.amount
-                                                                : Number(s)),
-                                                        0
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {visit.payment_type ||
-                                                        "N/A"}
-                                                </td>
-                                                <td>
-                                                    <div className="dropdown">
-                                                        <button
-                                                            className="btn btn-primary dropdown-toggle"
-                                                            type="button"
-                                                            data-bs-toggle="dropdown"
-                                                            aria-expanded="false"
-                                                        >
-                                                            Actions
-                                                        </button>
+    {appointments
+        .slice()
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .map((visit) => (
+            <tr key={visit._id}>
+                <td>
+                    {new Date(visit.date).toLocaleDateString("en-IN")}
+                </td>
 
-                                                        <ul className="dropdown-menu">
-                                                            <li>
-                                                                <button
-                                                                    className="dropdown-item"
-                                                                    onClick={() =>
-                                                                        generateInvoice(
-                                                                            appt._id,
-                                                                            visit,
-                                                                            details
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Invoice
-                                                                </button>
-                                                            </li>
+                <td>
+                    {(visit.service || [])
+                        .map((s) =>
+                            typeof s === "object" ? s.name : s
+                        )
+                        .join(", ")}
+                </td>
 
-                                                            <li>
-                                                                <button
-                                                                    className="dropdown-item"
-                                                                    onClick={() =>
-                                                                        editInvoice(
-                                                                            appt._id,
-                                                                            visit,
-                                                                            details
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                            </li>
+                <td>{visit.amount}</td>
 
-                                                            <li>
-                                                                <button
-                                                                    className="dropdown-item text-danger"
-                                                                    onClick={() =>
-                                                                        deleteInvoice(
-                                                                            appt._id,
-                                                                            visit,
-                                                                            details
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                )}
-                            </tbody>
+                <td>{visit.payment_type || "N/A"}</td>
+
+                <td>
+                    <div className="dropdown">
+                        <button
+                            className="btn btn-primary dropdown-toggle"
+                            data-bs-toggle="dropdown"
+                        >
+                            Actions
+                        </button>
+
+                        <ul className="dropdown-menu">
+                            <li>
+                                <button
+                                    className="dropdown-item"
+                                    onClick={() =>
+                                        generateInvoice(id, visit, details)
+                                    }
+                                >
+                                    Invoice
+                                </button>
+                            </li>
+
+                            <li>
+                                <button
+                                    className="dropdown-item"
+                                    onClick={() =>
+                                        editInvoice(id, visit, details)
+                                    }
+                                >
+                                    Edit
+                                </button>
+                            </li>
+
+                            <li>
+                                <button
+                                    className="dropdown-item text-danger"
+                                    onClick={() =>
+                                        deleteInvoice(id, visit)
+                                    }
+                                >
+                                    Delete
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+        ))}
+</tbody>
+
                         </table>
                     )}
                 </div>
