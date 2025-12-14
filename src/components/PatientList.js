@@ -13,7 +13,6 @@ export default function PatientList() {
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
-    const genderMatch = !selectedGender || a.gender === selectedGender;
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
