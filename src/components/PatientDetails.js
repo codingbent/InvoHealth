@@ -11,121 +11,173 @@ export default function PatientDetails() {
             : "http://localhost:5001";
 
     const { id } = useParams();
-
     const [details, setDetails] = useState(null);
-    const [appointments, setAppointments] = useState([]);
-    const [availableServices, setAvailableServices] = useState([]);
-    const [doctor, setDoctor] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [editingAppt, setEditingAppt] = useState(null);
 
-    // ---------------- PATIENT EDIT ----------------
-    const [patient, setPatient] = useState({
-        name: "",
-        number: "",
-        age: "",
-        gender: "",
-    });
-
-    // ---------------- APPOINTMENT EDIT ----------------
-    const [editingVisit, setEditingVisit] = useState(null);
     const [apptData, setApptData] = useState({
         date: "",
         service: [],
+        amount: 0,
         payment_type: "",
-        discount: 0,
-        isPercent: false,
     });
+
     const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
+    const [patient, setPatient] = useState({
+        name: "",
+        service: [],
+        number: "",
+        age: "",
+        gender: "",
+        amount: 0,
+    });
 
-    // ================= FETCH DOCTOR =================
+    const [appointments, setAppointments] = useState([]);
+    const [availableServices, setAvailableServices] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [doctor, setDoctor] = useState(null);
+
+    // ------------------------------------------------------------
+    // FETCH DOCTOR DETAILS
+    // ------------------------------------------------------------
     const fetchDoctor = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
-            headers: { "auth-token": localStorage.getItem("token") },
-        });
-        const data = await res.json();
-        if (data.success) setDoctor(data.doctor);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
+                headers: { "auth-token": token },
+            });
+            const data = await res.json();
+            if (data.success) setDoctor(data.doctor);
+        } catch (err) {
+            console.error("Error fetching doctor:", err);
+        }
     };
 
-    // ================= FETCH SERVICES =================
+    // ------------------------------------------------------------
+    // DATE HELPERS
+    // ------------------------------------------------------------
+    const toISTDateTime = (dateStr) => {
+        if (!dateStr) return "";
+        const date = new Date(dateStr);
+        const istOffset = 5.5 * 60;
+        const istDate = new Date(date.getTime() + istOffset * 60000);
+        return istDate.toISOString().slice(0, 10);
+    };
+
+    const fromISTToUTC = (istDate) => {
+        if (!istDate) return null;
+        const [year, month, day] = istDate.split("-").map(Number);
+        return new Date(Date.UTC(year, month - 1, day));
+    };
+
+    // ------------------------------------------------------------
+    // FETCH SERVICES
+    // ------------------------------------------------------------
     const fetchServices = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetchallservice`, {
-            headers: { "auth-token": localStorage.getItem("token") },
-        });
-        const data = await res.json();
-        setAvailableServices(Array.isArray(data) ? data : []);
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(
+                `${API_BASE_URL}/api/auth/fetchallservice`,
+                {
+                    headers: { "auth-token": token },
+                }
+            );
+            const data = await res.json();
+            setAvailableServices(data);
+        } catch (err) {
+            console.error("Error fetching services:", err);
+        }
     };
 
-    // ================= FETCH DATA =================
+    // ------------------------------------------------------------
+    // FETCH PATIENT + APPOINTMENTS
+    // ------------------------------------------------------------
     const fetchData = async () => {
         setLoading(true);
-        const token = localStorage.getItem("token");
+        try {
+            const token = localStorage.getItem("token");
 
-        const [pRes, vRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, {
-                headers: { "auth-token": token },
-            }),
-            fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, {
-                headers: { "auth-token": token },
-            }),
-        ]);
+            const [patientRes, appointmentsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, {
+                    headers: { "auth-token": token },
+                }),
+                fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, {
+                    headers: { "auth-token": token },
+                }),
+            ]);
 
-        const patientData = await pRes.json();
-        const visits = await vRes.json();
+            const patientData = await patientRes.json();
+            const appointmentsData = await appointmentsRes.json();
 
-        setDetails(patientData);
-        setPatient({
-            name: patientData.name || "",
-            number: patientData.number || "",
-            age: patientData.age || "",
-            gender: patientData.gender || "",
-        });
+            setDetails(patientData);
 
-        setAppointments(Array.isArray(visits) ? visits : []);
-        await fetchServices();
-        setLoading(false);
+            setPatient({
+                name: patientData.name || "",
+                service: patientData.service || [],
+                number: patientData.number || "",
+                age: patientData.age || "",
+                gender: patientData.gender || "", // ✅ ADDED
+                amount: patientData.amount || 0,
+            });
+
+            setAppointments(appointmentsData);
+            await fetchServices();
+        } catch (err) {
+            console.error("Error fetching patient:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         fetchData();
         fetchDoctor();
-        // eslint-disable-next-line
     }, [id]);
 
-    // ================= SAVE PATIENT =================
-    const handleSavePatient = async () => {
-        if (!/^\d{10}$/.test(patient.number)) {
-            alert("Invalid mobile number");
+    // ------------------------------------------------------------
+    // UPDATE PATIENT DETAILS
+    // ------------------------------------------------------------
+    const handleChange = (e) =>
+        setPatient({ ...patient, [e.target.name]: e.target.value });
+
+    const handleSave = async () => {
+        const num = patient.number;
+
+        if (!/^\d{10}$/.test(num)) {
+            alert("Enter a valid 10-digit number");
             return;
         }
 
-        await fetch(`${API_BASE_URL}/api/auth/updatepatientdetails/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
-            },
-            body: JSON.stringify(patient),
-        });
+        try {
+            const token = localStorage.getItem("token");
 
-        fetchData();
-    };
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/updatepatientdetails/${id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": token,
+                    },
+                    body: JSON.stringify(patient),
+                }
+            );
 
-    // ================= DELETE VISIT =================
-    const deleteInvoice = async (visitId) => {
-        if (!window.confirm("Delete this invoice?")) return;
-
-        await fetch(
-            `${API_BASE_URL}/api/auth/delete-invoice/${id}/${visitId}`,
-            {
-                method: "DELETE",
-                headers: { "auth-token": localStorage.getItem("token") },
+            const result = await response.json();
+            if (response.ok) {
+                alert("Patient updated successfully");
+                setDetails(patient);
+            } else {
+                alert(result.message || "Update failed");
             }
-        );
-
-        fetchData();
+        } catch (err) {
+            console.error(err);
+            alert("Server error");
+        }
     };
 
-    // ================= INVOICE PDF =================
+    // ------------------------------------------------------------
+    // INVOICE GENERATOR  (unchanged)
+    // ------------------------------------------------------------
     const generateInvoice = (appointmentId, visit, details) => {
         try {
             if (!doctor) {
@@ -240,24 +292,11 @@ export default function PatientDetails() {
 
             autoTable(docPdf, {
                 startY: tableStartY,
-                // head: [["Service", "Amount (₹)"]],
                 head: [["Service", "Amount (Rs.)"]],
                 body: (visit.service || []).map((s) => [
                     typeof s === "object" ? s.name : s,
                     typeof s === "object" ? s.amount : Number(s),
                 ]),
-                // theme: "grid", // keeps borders
-                // headStyles: {
-                //     fillColor: null, // ❌ remove grey background
-                //     textColor: 0, // black text
-                //     fontStyle: "bold", // header bold
-                // },
-                // styles: {
-                //     fontSize: 12,
-                //     cellPadding: 4,
-                //     lineColor: [0, 0, 0],
-                //     lineWidth: 0.2,
-                // },
                 theme: "grid",
                 styles: { fontSize: 11, cellPadding: 3 },
                 headStyles: { fillColor: [0,0,0] },
@@ -314,302 +353,493 @@ export default function PatientDetails() {
         }
     };
 
-    // ================= EDIT VISIT =================
-    const openEditVisit = (visit) => {
-        setEditingVisit(visit);
-
-        const normalizedServices = visit.service.map(
-            (s) => availableServices.find((x) => x.name === s.name) || s
-        );
+    const editInvoice = (appointmentId, visit, details) => {
+        setEditingAppt({ ...visit, appointmentId });
 
         setApptData({
-            date: visit.date.slice(0, 10),
-            service: normalizedServices,
+            date: visit.date?.slice(0, 10),
+            service: visit.service || [],
+            amount: visit.amount,
             payment_type: visit.payment_type,
-            discount: visit.discount || 0,
-            isPercent: !!visit.isPercent,
         });
 
-        setApptServiceAmounts(normalizedServices.map((s) => s.amount || 0));
+        const serviceAmounts = (visit.service || []).map((s) => s.amount || 0);
+        setApptServiceAmounts(serviceAmounts);
 
-        document.getElementById("editAppointmentBtn").click();
+        // OPEN MODAL
+        document.getElementById("editAppointmentModalBtn").click();
     };
 
-    const updateVisit = async () => {
-        await fetch(
-            `${API_BASE_URL}/api/auth/edit-invoice/${id}/${editingVisit._id}`,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "auth-token": localStorage.getItem("token"),
-                },
-                body: JSON.stringify(apptData),
+    const handleUpdateAppt = async () => {
+        try {
+            const token = localStorage.getItem("token");
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": token,
+                    },
+                    body: JSON.stringify({
+                        date: apptData.date,
+                        service: apptData.service,
+                        amount: apptData.amount,
+                        payment_type: apptData.payment_type,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert("Invoice updated successfully!");
+                fetchData();
+            } else {
+                alert("Update failed: " + data.message);
             }
-        );
-
-        fetchData();
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    if (loading) return <p>Loading...</p>;
+    const deleteInvoice = async (appointmentId, visit) => {
+        if (!window.confirm("Delete this invoice?")) return;
 
-    // ================= UI =================
+        try {
+            const token = localStorage.getItem("token");
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "auth-token": token,
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert("Invoice deleted!");
+                fetchData();
+            } else {
+                alert("Delete failed: " + data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    if (loading) return <p>Loading patient details...</p>;
+
     return (
-        <div className="container">
-            <h3>Name: {details.name}</h3>
-            <h3>Number: {details.number}</h3>
-            <h3>Age: {details.age}</h3>
-            <h3>Gender: {details.gender}</h3>
-
-            {/* EDIT PATIENT */}
+        <>
             <button
-                className="btn btn-primary my-2"
-                data-bs-toggle="modal"
-                data-bs-target="#editPatientModal"
-            >
-                Edit Patient
-            </button>
-
-            <h4 className="mt-4">Appointments</h4>
-
-            {appointments.length === 0 ? (
-                <p>No appointments found</p>
-            ) : (
-                <table className="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Services</th>
-                            <th>Amount</th>
-                            <th>Payment</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {appointments.map((visit) => (
-                            <tr key={visit._id}>
-                                <td>
-                                    {new Date(visit.date).toLocaleDateString(
-                                        "en-IN"
-                                    )}
-                                </td>
-                                <td>
-                                    {visit.service
-                                        .map((s) => s.name)
-                                        .join(", ")}
-                                </td>
-                                <td>{visit.amount}</td>
-                                <td>{visit.payment_type}</td>
-                                <td>
-                                    <div className="dropdown">
-                                        <button
-                                            className="btn btn-primary btn-sm dropdown-toggle"
-                                            data-bs-toggle="dropdown"
-                                        >
-                                            Actions
-                                        </button>
-                                        <ul className="dropdown-menu">
-                                            <li>
-                                                <button
-                                                    className="dropdown-item"
-                                                    onClick={() =>
-                                                        generateInvoice(visit)
-                                                    }
-                                                >
-                                                    Invoice
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button
-                                                    className="dropdown-item"
-                                                    onClick={() =>
-                                                        openEditVisit(visit)
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button
-                                                    className="dropdown-item text-danger"
-                                                    onClick={() =>
-                                                        deleteInvoice(visit._id)
-                                                    }
-                                                >
-                                                    Delete
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-
-            {/* ================= HIDDEN MODAL TRIGGER ================= */}
-            <button
-                id="editAppointmentBtn"
+                id="editAppointmentModalBtn"
+                style={{ display: "none" }}
                 data-bs-toggle="modal"
                 data-bs-target="#editAppointmentModal"
-                style={{ display: "none" }}
-            />
+            ></button>
+            <div className="container">
+                <div className="m-2">
+                    <h3>Name: {details?.name}</h3>
+                    <h3>Number: {details?.number}</h3>
+                    <h3>Age: {details?.age}</h3>
+                    <h3>Gender: {details?.gender || "N/A"}</h3>{" "}
+                    {/* ✅ SHOW GENDER */}
+                </div>
 
-            {/* ================= EDIT PATIENT MODAL ================= */}
-            {/* (same as your current one – already correct) */}
+                <button
+                    className="btn btn-primary m-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editPatientModal"
+                >
+                    Edit Details
+                </button>
 
-            {/* ================= EDIT APPOINTMENT MODAL ================= */}
-            <div className="modal fade" id="editAppointmentModal">
-                <div className="modal-dialog">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h5>Edit Appointment</h5>
-                            <button
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            />
-                        </div>
-                        <div className="modal-body">
-                            <ServiceList
-                                services={availableServices}
-                                selectedServices={apptData.service}
-                                onSelect={(s, checked) => {
-                                    let list = [...apptData.service];
-                                    if (checked) list.push(s);
-                                    else
-                                        list = list.filter(
-                                            (x) => x.name !== s.name
-                                        );
-                                    setApptData({ ...apptData, service: list });
-                                }}
-                            />
-                        </div>
-                        <div className="modal-footer">
-                            <button
-                                className="btn btn-primary"
-                                data-bs-dismiss="modal"
-                                onClick={updateVisit}
-                            >
-                                Save
-                            </button>
+                {/* ----------------------------------------------------------
+                PREVIOUS APPOINTMENTS TABLE
+            ----------------------------------------------------------- */}
+                <div className="mt-4">
+                    <h3>Previous Appointment Details</h3>
+
+                    {appointments.length === 0 ? (
+                        <p>No appointments found</p>
+                    ) : (
+                        <table className="table table-bordered mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Services</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {appointments.map((appt) =>
+                                    appt.visits
+                                        .slice()
+                                        .sort(
+                                            (a, b) =>
+                                                new Date(b.date) -
+                                                new Date(a.date)
+                                        )
+                                        .map((visit) => (
+                                            <tr>
+                                                <td>
+                                                    {new Date(
+                                                        visit.date
+                                                    ).toLocaleDateString(
+                                                        "en-IN"
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {(visit.service || [])
+                                                        .map((s) =>
+                                                            typeof s ===
+                                                            "object"
+                                                                ? s.name
+                                                                : s
+                                                        )
+                                                        .join(", ")}
+                                                </td>
+                                                <td>
+                                                    {(
+                                                        visit.service || []
+                                                    ).reduce(
+                                                        (sum, s) =>
+                                                            sum +
+                                                            (typeof s ===
+                                                            "object"
+                                                                ? s.amount
+                                                                : Number(s)),
+                                                        0
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {visit.payment_type ||
+                                                        "N/A"}
+                                                </td>
+                                                <td>
+                                                    <div className="dropdown">
+                                                        <button
+                                                            className="btn btn-primary dropdown-toggle"
+                                                            type="button"
+                                                            data-bs-toggle="dropdown"
+                                                            aria-expanded="false"
+                                                        >
+                                                            Actions
+                                                        </button>
+
+                                                        <ul className="dropdown-menu">
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() =>
+                                                                        generateInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Invoice
+                                                                </button>
+                                                            </li>
+
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() =>
+                                                                        editInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            </li>
+
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item text-danger"
+                                                                    onClick={() =>
+                                                                        deleteInvoice(
+                                                                            appt._id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* ----------------------------------------------------------
+                EDIT PATIENT DETAILS MODAL
+            ----------------------------------------------------------- */}
+                <div
+                    className="modal fade"
+                    id="editPatientModal"
+                    tabIndex="-1"
+                    aria-hidden="true"
+                >
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h1 className="modal-title fs-5">
+                                    Edit Patient Details
+                                </h1>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    data-bs-dismiss="modal"
+                                />
+                            </div>
+
+                            <div className="modal-body">
+                                <form>
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Name
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="name"
+                                            value={patient.name}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Number
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="number"
+                                            value={patient.number}
+                                            onChange={(e) => {
+                                                if (
+                                                    /^\d*$/.test(e.target.value)
+                                                )
+                                                    handleChange(e);
+                                            }}
+                                            maxLength={10}
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Age
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            name="age"
+                                            value={patient.age}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+
+                                    {/* ✅ GENDER DROPDOWN */}
+                                    <div className="mb-3">
+                                        <label className="form-label">
+                                            Gender
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            name="gender"
+                                            value={patient.gender}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">
+                                                Select Gender
+                                            </option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">
+                                                Female
+                                            </option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div className="modal-footer">
+                                <button
+                                    className="btn btn-secondary"
+                                    data-bs-dismiss="modal"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    data-bs-dismiss="modal"
+                                    onClick={handleSave}
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            {/* -------------------- EDIT APPOINTMENT MODAL -------------------- */}
             <div
                 className="modal fade"
-                id="editPatientModal"
+                id="editAppointmentModal"
                 tabIndex="-1"
                 aria-hidden="true"
             >
-                <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-dialog">
                     <div className="modal-content">
-                        {/* HEADER */}
                         <div className="modal-header">
-                            <h5 className="modal-title">
-                                Edit Patient Details
-                            </h5>
+                            <h1 className="modal-title fs-5">
+                                Edit Appointment
+                            </h1>
                             <button
                                 type="button"
                                 className="btn-close"
                                 data-bs-dismiss="modal"
-                                aria-label="Close"
                             ></button>
                         </div>
 
-                        {/* BODY */}
                         <div className="modal-body">
-                            {/* NAME */}
-                            <div className="mb-3">
-                                <label className="form-label">
-                                    Patient Name
-                                </label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    value={patient.name}
-                                    onChange={(e) =>
-                                        setPatient({
-                                            ...patient,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-
-                            {/* MOBILE NUMBER */}
-                            <div className="mb-3">
-                                <label className="form-label">
-                                    Mobile Number
-                                </label>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    value={patient.number}
-                                    maxLength={10}
-                                    onChange={(e) => {
-                                        if (/^\d*$/.test(e.target.value)) {
-                                            setPatient({
-                                                ...patient,
-                                                number: e.target.value,
-                                            });
+                            <form>
+                                {/* DATE */}
+                                <div className="mb-3">
+                                    <label className="form-label">Date</label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={apptData.date}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                date: e.target.value,
+                                            }))
                                         }
-                                    }}
-                                />
-                            </div>
+                                    />
+                                </div>
 
-                            {/* AGE */}
-                            <div className="mb-3">
-                                <label className="form-label">Age</label>
-                                <input
-                                    type="number"
-                                    className="form-control"
-                                    value={patient.age}
-                                    onChange={(e) =>
-                                        setPatient({
-                                            ...patient,
-                                            age: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
+                                {/* SERVICES */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Services
+                                    </label>
+                                    <ServiceList
+                                        onSelect={(serviceObj, checked) => {
+                                            let updatedServices = [
+                                                ...apptData.service,
+                                            ];
+                                            let updatedAmounts = [
+                                                ...apptServiceAmounts,
+                                            ];
 
-                            {/* GENDER */}
-                            <div className="mb-3">
-                                <label className="form-label">Gender</label>
-                                <select
-                                    className="form-select"
-                                    value={patient.gender}
-                                    onChange={(e) =>
-                                        setPatient({
-                                            ...patient,
-                                            gender: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="">Select Gender</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
+                                            if (checked) {
+                                                updatedServices.push(
+                                                    serviceObj
+                                                );
+                                                updatedAmounts.push(
+                                                    serviceObj.amount || 0
+                                                );
+                                            } else {
+                                                const i =
+                                                    updatedServices.findIndex(
+                                                        (s) =>
+                                                            s.name ===
+                                                            serviceObj.name
+                                                    );
+                                                updatedServices.splice(i, 1);
+                                                updatedAmounts.splice(i, 1);
+                                            }
+
+                                            const total = updatedAmounts.reduce(
+                                                (sum, a) => sum + a,
+                                                0
+                                            );
+
+                                            setApptServiceAmounts(
+                                                updatedAmounts
+                                            );
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                service: updatedServices,
+                                                amount: total,
+                                            }));
+                                        }}
+                                        selectedServices={apptData.service}
+                                        services={availableServices}
+                                    />
+                                </div>
+
+                                {/* AMOUNT DISPLAY */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Total Amount
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={apptData.amount}
+                                        readOnly
+                                    />
+                                </div>
+
+                                {/* PAYMENT TYPE */}
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Payment Type
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        value={apptData.payment_type}
+                                        onChange={(e) =>
+                                            setApptData((prev) => ({
+                                                ...prev,
+                                                payment_type: e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="">Select Payment</option>
+                                        <option value="Cash">Cash</option>
+                                        <option value="Card">Card</option>
+                                        <option value="UPI">UPI</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </form>
                         </div>
 
-                        {/* FOOTER */}
                         <div className="modal-footer">
                             <button
-                                type="button"
                                 className="btn btn-secondary"
                                 data-bs-dismiss="modal"
                             >
-                                Cancel
+                                Close
                             </button>
                             <button
-                                type="button"
                                 className="btn btn-primary"
                                 data-bs-dismiss="modal"
-                                onClick={handleSavePatient}
+                                onClick={handleUpdateAppt}
                             >
                                 Save Changes
                             </button>
@@ -617,6 +847,6 @@ export default function PatientDetails() {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
