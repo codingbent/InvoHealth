@@ -548,7 +548,7 @@ export default function PatientDetails() {
                                                                     className="btn btn-sm btn-warning me-1"
                                                                     onClick={() =>
                                                                         editInvoice(
-                                                                            id,
+                                                                            appointmentId,
                                                                             visit
                                                                         )
                                                                     }
@@ -560,7 +560,7 @@ export default function PatientDetails() {
                                                                     className="btn btn-sm btn-danger"
                                                                     onClick={() =>
                                                                         deleteInvoice(
-                                                                            id,
+                                                                            appointmentId,
                                                                             visit
                                                                         )
                                                                     }
@@ -649,7 +649,7 @@ export default function PatientDetails() {
                                                                 className="btn btn-warning btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     editInvoice(
-                                                                        id,
+                                                                        appointmentId,
                                                                         visit
                                                                     )
                                                                 }
@@ -661,7 +661,7 @@ export default function PatientDetails() {
                                                                 className="btn btn-danger btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     deleteInvoice(
-                                                                        id,
+                                                                        appointmentId,
                                                                         visit
                                                                     )
                                                                 }
