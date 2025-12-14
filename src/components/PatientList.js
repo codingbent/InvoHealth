@@ -120,8 +120,7 @@ export default function PatientList() {
             const serviceMatch =
                 !selectedService ||
                 p.service?.some((s) => {
-                    const sName =
-                        typeof s === "object" ? s.name : (s || "").toString();
+                    const sName = typeof s === "object" ? s.name : String(s);
                     return (
                         sName.toLowerCase() === selectedService.toLowerCase()
                     );
@@ -136,10 +135,18 @@ export default function PatientList() {
         });
 
     // =======================
-    // Calculate totals
+    // TOTAL CALCULATION (FIXED)
     // =======================
     const getDayTotal = (patients) =>
-        patients.reduce((sum, p) => sum + (Number(p.lastAmount) || 0), 0);
+        patients.reduce((sum, p) => {
+            const amount =
+                p.lastVisit?.amount ??
+                p.amount ??
+                p.visits?.[p.visits.length - 1]?.amount ??
+                0;
+
+            return sum + Number(amount);
+        }, 0);
 
     const getMonthKey = (dateKey) => {
         if (dateKey === "No Visits") return "No Visits";
@@ -151,7 +158,7 @@ export default function PatientList() {
     };
 
     // =======================
-    // Group by month
+    // GROUP BY MONTH
     // =======================
     const patientsByMonth = {};
 
@@ -188,7 +195,7 @@ export default function PatientList() {
                     return sum + getDayTotal(group);
                 }, 0);
 
-                if (monthTotal === 0) return null;
+                if (monthDates.length === 0) return null;
 
                 return (
                     <div key={month} className="mb-5">
