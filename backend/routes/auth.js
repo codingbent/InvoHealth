@@ -924,4 +924,33 @@ router.delete(
     }
 );
 
+router.get("/fetchallappointments", fetchuser, async (req, res) => {
+    try {
+        const appointments = await Appointment.find({ doctor: req.doc.id })
+            .populate("patient", "name number gender");
+
+        const rows = [];
+
+        appointments.forEach(appt => {
+            appt.visits.forEach(v => {
+                rows.push({
+                    patientId: appt.patient._id,
+                    name: appt.patient.name,
+                    number: appt.patient.number,
+                    gender: appt.patient.gender,
+                    date: v.date,
+                    payment_type: v.payment_type,
+                    amount: v.amount,
+                    services: v.services || []
+                });
+            });
+        });
+
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
+    }
+});
+
 module.exports = router;

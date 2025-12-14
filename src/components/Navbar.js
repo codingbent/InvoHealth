@@ -45,6 +45,19 @@ export default function Navbar(props) {
                                     Home
                                 </Link>
                             </li>
+
+                            {/* ✅ ADD THIS */}
+                            {localStorage.getItem("token") && (
+                                <li className="nav-item">
+                                    <Link
+                                        className="nav-link"
+                                        to="/appointments"
+                                    >
+                                        Appointments
+                                    </Link>
+                                </li>
+                            )}
+
                             <li className="nav-item">
                                 <Link className="nav-link" to="/about">
                                     About

@@ -41,6 +41,8 @@ function App() {
                         element={<Signup showAlert={showAlert} />}
                     />
                     <Route path="/profile" element={<DoctorProfile />} />
+                    <Route path="/appointments" element={<AppointmentList />} />
+
                 </Routes>
             </BrowserRouter>
         </>
