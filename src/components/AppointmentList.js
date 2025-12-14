@@ -10,12 +10,11 @@ export default function AppointmentList() {
 
     // FILTER STATES
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedPayment, setSelectedPayment] = useState("");
+    const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedGender, setSelectedGender] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
-
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -48,15 +47,15 @@ export default function AppointmentList() {
         fetchAppointments();
     }, []);
     useEffect(() => {
-    if (!selectedFY) return;
+        if (!selectedFY) return;
 
-    // Financial year: 1 April → 31 March
-    const fyStart = new Date(Number(selectedFY), 3, 1); // April = 3
-    const fyEnd = new Date(Number(selectedFY) + 1, 2, 31); // March = 2
+        // Financial year: 1 April → 31 March
+        const fyStart = new Date(Number(selectedFY), 3, 1); // April = 3
+        const fyEnd = new Date(Number(selectedFY) + 1, 2, 31); // March = 2
 
-    setStartDate(fyStart.toISOString().split("T")[0]);
-    setEndDate(fyEnd.toISOString().split("T")[0]);
-}, [selectedFY]);
+        setStartDate(fyStart.toISOString().split("T")[0]);
+        setEndDate(fyEnd.toISOString().split("T")[0]);
+    }, [selectedFY]);
 
     // =========================
     // APPLY FILTERS
@@ -67,7 +66,8 @@ export default function AppointmentList() {
             a.number?.includes(searchTerm);
 
         const paymentMatch =
-            !selectedPayment || a.payment_type === selectedPayment;
+            selectedPayments.length === 0 ||
+            selectedPayments.includes(a.payment_type);
 
         const genderMatch = !selectedGender || a.gender === selectedGender;
 
@@ -79,7 +79,12 @@ export default function AppointmentList() {
     });
 
     const hasAnyFilter =
-        searchTerm || selectedPayment || selectedGender || startDate || endDate || selectedFY;
+        searchTerm ||
+        selectedPayments.length > 0 ||
+        selectedGender ||
+        startDate ||
+        endDate ||
+        selectedFY;
 
     const dataToShow = hasAnyFilter ? filteredAppointments : appointments;
 
@@ -224,7 +229,19 @@ export default function AppointmentList() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
 
-        XLSX.writeFile(workbook, "visit-records.xlsx");
+        let fileName = "visit-records.xlsx";
+
+        if (selectedFY) {
+            fileName = `visit-records_FY_${selectedFY}-${
+                Number(selectedFY) + 1
+            }.xlsx`;
+        } else if (startDate || endDate) {
+            fileName = `visit-records_${startDate || "start"}_to_${
+                endDate || "end"
+            }.xlsx`;
+        }
+
+        XLSX.writeFile(workbook, fileName);
     };
 
     // =========================
@@ -269,20 +286,44 @@ export default function AppointmentList() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
 
-                    <label>Payment</label>
-                    <select
-                        className="form-select mb-3"
-                        value={selectedPayment}
-                        onChange={(e) => setSelectedPayment(e.target.value)}
-                    >
-                        <option value="">All Payment Types</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Card">Card</option>
-                        <option value="UPI">UPI</option>
-                        <option value="ICICI">ICICI</option>
-                        <option value="HDFC">HDFC</option>
-                        <option value="Other">Other</option>
-                    </select>
+                    <label className="fw-semibold">Payment Types</label>
+
+                    <div className="mb-3">
+                        {["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].map(
+                            (type) => (
+                                <div className="form-check" key={type}>
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        id={`pay-${type}`}
+                                        checked={selectedPayments.includes(
+                                            type
+                                        )}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedPayments([
+                                                    ...selectedPayments,
+                                                    type,
+                                                ]);
+                                            } else {
+                                                setSelectedPayments(
+                                                    selectedPayments.filter(
+                                                        (p) => p !== type
+                                                    )
+                                                );
+                                            }
+                                        }}
+                                    />
+                                    <label
+                                        className="form-check-label"
+                                        htmlFor={`pay-${type}`}
+                                    >
+                                        {type}
+                                    </label>
+                                </div>
+                            )
+                        )}
+                    </div>
 
                     <label>Gender</label>
                     <select
@@ -298,37 +339,38 @@ export default function AppointmentList() {
 
                     <label>Start Date</label>
                     <input
-    type="date"
-    className="form-control mb-3"
-    value={startDate}
-    onChange={(e) => {
-        setSelectedFY(""); // 🔑 clear FY
-        setStartDate(e.target.value);
-    }}
-/>
+                        type="date"
+                        className="form-control mb-3"
+                        value={startDate}
+                        onChange={(e) => {
+                            setSelectedFY(""); // 🔑 clear FY
+                            setStartDate(e.target.value);
+                        }}
+                    />
 
                     <label>End Date</label>
                     <input
-    type="date"
-    className="form-control mb-3"
-    value={endDate}
-    onChange={(e) => {
-        setSelectedFY(""); // 🔑 clear FY
-        setEndDate(e.target.value);
-    }}
-/>
+                        type="date"
+                        className="form-control mb-3"
+                        value={endDate}
+                        onChange={(e) => {
+                            setSelectedFY(""); // 🔑 clear FY
+                            setEndDate(e.target.value);
+                        }}
+                    />
                     <label>Financial Year</label>
-<select
-    className="form-select mb-3"
-    value={selectedFY}
-    onChange={(e) => setSelectedFY(e.target.value)}
->
-    <option value="">Select Financial Year</option>
-    <option value="2024">FY 2024-25</option>
-    <option value="2025">FY 2025-26</option>
-    <option value="2026">FY 2026-27</option>
-    <option value="2027">FY 2027-28</option>
-</select>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedFY}
+                        onChange={(e) => setSelectedFY(e.target.value)}
+                    >
+                        <option value="">Select Financial Year</option>
+                        <option value="2025">FY 2025-26</option>
+                        <option value="2026">FY 2026-27</option>
+                        <option value="2027">FY 2027-28</option>
+                        <option value="2028">FY 2028-29</option>
+                        <option value="2029">FY 2029-30</option>
+                    </select>
 
                     <button
                         className="btn btn-success w-100 mt-2"
@@ -341,7 +383,7 @@ export default function AppointmentList() {
                         className="btn btn-outline-secondary w-100 mt-2"
                         onClick={() => {
                             setSearchTerm("");
-                            setSelectedPayment("");
+                            setSelectedPayments([]);
                             setSelectedGender("");
                             setStartDate("");
                             setEndDate("");
