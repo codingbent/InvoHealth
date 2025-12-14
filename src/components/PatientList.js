@@ -12,6 +12,10 @@ export default function PatientList() {
     const [selectedService, setSelectedService] = useState("");
     const [selectedpayment_type, setSelectedpayment_type] = useState("");
     const [selectedGender, setSelectedGender] = useState("");
+    // DATE FILTERS
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [selectedFY, setSelectedFY] = useState("");
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -103,6 +107,25 @@ export default function PatientList() {
         fetchPatients();
         fetchServices();
     }, []);
+    const isDateInRange = (dateKey) => {
+        if (dateKey === "No Visits") return false;
+
+        const d = new Date(dateKey);
+
+        if (startDate && d < new Date(startDate)) return false;
+        if (endDate && d > new Date(endDate)) return false;
+
+        return true;
+    };
+    useEffect(() => {
+        if (!selectedFY) return;
+
+        const fyStart = new Date(Number(selectedFY), 3, 1); // 1 April
+        const fyEnd = new Date(Number(selectedFY) + 1, 2, 31); // 31 March
+
+        setStartDate(fyStart.toISOString().split("T")[0]);
+        setEndDate(fyEnd.toISOString().split("T")[0]);
+    }, [selectedFY]);
 
     // =======================
     // APPLY FILTERS
@@ -169,6 +192,46 @@ export default function PatientList() {
         }
         patientsByMonth[monthKey].push(dateKey);
     });
+    const getFilteredPatientsFlat = () => {
+        let result = [];
+
+        Object.keys(patientsByDate).forEach((dateKey) => {
+            if (!isDateInRange(dateKey)) return;
+
+            const group = applyFilters(patientsByDate[dateKey]);
+            group.forEach((p) => {
+                result.push({
+                    Date: dateKey === "No Visits" ? "" : dateKey,
+                    Name: p.name,
+                    Gender: p.gender || "",
+                    Phone: p.number || "",
+                    Payment: p.lastpayment_type || "",
+                    Amount: p.amount || 0,
+                });
+            });
+        });
+
+        return result;
+    };
+    const downloadExcel = () => {
+        const data = getFilteredPatientsFlat();
+
+        if (data.length === 0) {
+            alert("No data to export");
+            return;
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
+
+        const fileName = selectedFY
+            ? `Patients_FY_${selectedFY}-${Number(selectedFY) + 1}.xlsx`
+            : "Patients_Filtered.xlsx";
+
+        XLSX.writeFile(workbook, fileName);
+    };
 
     // =======================
     // UI RENDER
@@ -255,12 +318,53 @@ export default function PatientList() {
                         <option value="HDFC">HDFC</option>
                         <option value="Other">Other</option>
                     </select>
+
+                    {/* DATE RANGE */}
+                    <label>Start Date</label>
+                    <input
+                        type="date"
+                        className="form-control mb-3"
+                        value={startDate}
+                        onChange={(e) => {
+                            setSelectedFY("");
+                            setStartDate(e.target.value);
+                        }}
+                    />
+
+                    <label>End Date</label>
+                    <input
+                        type="date"
+                        className="form-control mb-3"
+                        value={endDate}
+                        onChange={(e) => {
+                            setSelectedFY("");
+                            setEndDate(e.target.value);
+                        }}
+                    />
+
+                    {/* FINANCIAL YEAR */}
+                    <label>Financial Year</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedFY}
+                        onChange={(e) => setSelectedFY(e.target.value)}
+                    >
+                        <option value="">Select FY</option>
+                        <option value="2024">FY 2024–25</option>
+                        <option value="2025">FY 2025–26</option>
+                    </select>
+                    <button
+                        className="btn btn-success w-100 mt-3"
+                        onClick={downloadExcel}
+                    >
+                        Download Excel
+                    </button>
                 </div>
             </div>
 
             {/* PATIENT LIST */}
             {Object.keys(patientsByMonth).map((month) => {
-                const monthDates = patientsByMonth[month];
+                const monthDates = patientsByMonth[month].filter(isDateInRange);
 
                 const monthTotal = monthDates.reduce((sum, dateKey) => {
                     const group = applyFilters(patientsByDate[dateKey] || []);
