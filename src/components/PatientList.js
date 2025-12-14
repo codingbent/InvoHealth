@@ -344,13 +344,8 @@ export default function PatientList() {
                     </button>
                 </div>
             </div>
-            <div className="justify-content-center">
-                <button
-                    className="btn btn-success mb-3"
-                    onClick={downloadExcel}
-                >
-                    📥 Download Excel
-                </button>
+            <div className="d-flex justify-content-center mb-3">
+                <button className="btn btn-success">📥 Download Excel</button>
             </div>
 
             {/* DATA VIEW */}
