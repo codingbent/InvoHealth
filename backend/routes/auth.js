@@ -663,22 +663,28 @@ router.put(
     }
 );
 
-router.get("/appointments/:patientId", async (req, res) => {
+router.get("/appointments/:patientId", fetchuser, async (req, res) => {
     try {
         const appointment = await Appointment.findOne({
             patient: req.params.patientId,
         });
 
         if (!appointment) {
-            return res.json([]);
+            return res.json({
+                appointmentId: null,
+                visits: [],
+            });
         }
 
-        // 🔥 Sort visits by date DESC (latest first)
+        // Sort visits latest first
         appointment.visits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        res.json(appointment.visits);
+        res.json({
+            appointmentId: appointment._id,
+            visits: appointment.visits,
+        });
     } catch (err) {
-        console.error("Fetch Appointments Error:", err);
+        console.error("Fetch appointments error:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -767,7 +773,8 @@ router.put(
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, payment_type, discount, isPercent } = req.body;
+            const { date, service, payment_type, discount, isPercent } =
+                req.body;
 
             // 1️⃣ Validation
             if (!date || !Array.isArray(service) || service.length === 0) {

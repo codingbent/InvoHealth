@@ -13,6 +13,7 @@ export default function PatientDetails() {
     const { id } = useParams();
     const [details, setDetails] = useState(null);
     const [editingAppt, setEditingAppt] = useState(null);
+    const [appointmentId, setAppointmentId] = useState(null);
 
     const [apptData, setApptData] = useState({
         date: "",
@@ -119,7 +120,8 @@ export default function PatientDetails() {
                 amount: patientData.amount || 0,
             });
 
-            setAppointments(appointmentsData);
+            setAppointmentId(appointmentsData.appointmentId);
+            setAppointments(appointmentsData.visits || []);
             await fetchServices();
         } catch (err) {
             console.error("Error fetching patient:", err);
