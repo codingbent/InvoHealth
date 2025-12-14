@@ -399,6 +399,23 @@ export default function PatientList() {
                                         </h6>
 
                                         <table className="table table-bordered table-striped">
+                                            {/* COLUMN WIDTHS */}
+                                            <colgroup>
+                                                <col style={{ width: "40%" }} />
+                                                <col style={{ width: "30%" }} />
+                                                <col style={{ width: "30%" }} />
+                                            </colgroup>
+
+                                            {/* TABLE HEADER */}
+                                            <thead className="table-light">
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Payment</th>
+                                                    <th>Amount</th>
+                                                </tr>
+                                            </thead>
+
+                                            {/* TABLE BODY */}
                                             <tbody>
                                                 {dayApps.map((a, i) => (
                                                     <tr
