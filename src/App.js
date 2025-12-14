@@ -9,7 +9,6 @@ import Navbar from "./components/Navbar";
 import Alert from "./components/Alert";
 import PatientDetails from "./components/PatientDetails";
 import DoctorProfile from "./components/DoctorProfile";
-import AppointmentList from "./components/AppointmentList";
 
 function App() {
     const [alert, setalert] = useState(null);
