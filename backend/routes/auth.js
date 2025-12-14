@@ -408,49 +408,49 @@ router.post("/addappointment/:id", async (req, res) => {
 
         const patientId = req.params.id;
 
-        // --------------------------------------
+        // --------------------------------------------------
         // 1. VALIDATION
-        // --------------------------------------
-        if (!service || !Array.isArray(service) || service.length === 0) {
+        // --------------------------------------------------
+        if (!Array.isArray(service) || service.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "Service must be a non-empty array",
             });
         }
 
-        // --------------------------------------
-        // 2. DETERMINE DOCTOR ID
-        // --------------------------------------
-        let finalDoctorId = doctorId;
-
-        if (!finalDoctorId) {
-            const patient = await Patient.findById(patientId);
-            if (!patient) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Patient not found",
-                });
-            }
-            if (!patient.doctor) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Doctor ID missing for patient",
-                });
-            }
-            finalDoctorId = patient.doctor;
+        // --------------------------------------------------
+        // 2. FIND PATIENT
+        // --------------------------------------------------
+        const patient = await Patient.findById(patientId);
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found",
+            });
         }
 
-        // --------------------------------------
-        // 3. COMPUTE SERVICE TOTAL (AUTHORITATIVE)
-        // --------------------------------------
+        // --------------------------------------------------
+        // 3. DETERMINE DOCTOR
+        // --------------------------------------------------
+        const finalDoctorId = doctorId || patient.doctor;
+        if (!finalDoctorId) {
+            return res.status(400).json({
+                success: false,
+                message: "Doctor ID missing",
+            });
+        }
+
+        // --------------------------------------------------
+        // 4. SERVICE TOTAL (SERVER AUTHORITATIVE)
+        // --------------------------------------------------
         const serviceTotal = service.reduce(
             (sum, s) => sum + (Number(s.amount) || 0),
             0
         );
 
-        // --------------------------------------
-        // 4. COMPUTE DISCOUNT
-        // --------------------------------------
+        // --------------------------------------------------
+        // 5. DISCOUNT
+        // --------------------------------------------------
         const disc = Number(discount) || 0;
         const percentFlag = Boolean(isPercent);
 
@@ -462,25 +462,28 @@ router.post("/addappointment/:id", async (req, res) => {
         if (discountValue > serviceTotal) discountValue = serviceTotal;
         if (discountValue < 0) discountValue = 0;
 
-        // --------------------------------------
-        // 5. FINAL PAYABLE AMOUNT
-        // --------------------------------------
+        // --------------------------------------------------
+        // 6. FINAL AMOUNT
+        // --------------------------------------------------
         const finalAmount = serviceTotal - discountValue;
 
-        // --------------------------------------
-        // 6. GENERATE INVOICE NUMBER (PER DOCTOR)
-        // --------------------------------------
+        // --------------------------------------------------
+        // 7. INVOICE NUMBER (PER DOCTOR)
+        // --------------------------------------------------
         const counterId = `invoice_${finalDoctorId}`;
         const counter = await Counter.findByIdAndUpdate(
             counterId,
             { $inc: { seq: 1 } },
             { new: true, upsert: true }
         );
+
         const invoiceNumber = counter.seq;
 
-        // --------------------------------------
-        // 7. PREPARE VISIT DATA
-        // --------------------------------------
+        // --------------------------------------------------
+        // 8. VISIT OBJECT
+        // --------------------------------------------------
+        const visitDate = date ? new Date(date) : new Date();
+
         const visitData = {
             service: service.map((s) => ({
                 id: s.id || null,
@@ -490,43 +493,37 @@ router.post("/addappointment/:id", async (req, res) => {
             amount: finalAmount,
             payment_type,
             invoiceNumber,
-            date: date ? new Date(date) : new Date(),
+            date: visitDate,
             discount: disc,
             isPercent: percentFlag,
         };
 
-        // --------------------------------------
-        // 8. PUSH VISIT INTO APPOINTMENT
-        // --------------------------------------
+        // --------------------------------------------------
+        // 9. SAVE VISIT
+        // --------------------------------------------------
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
             {
                 $push: { visits: visitData },
                 $set: { doctor: finalDoctorId },
             },
-            { upsert: true, new: true }
+            { new: true, upsert: true }
         );
 
-        // --------------------------------------
-        // 9. 🔥 RECOMPUTE LATEST VISIT DATE (FIX)
-        // --------------------------------------
-        const latestVisitDate = appointment.visits.reduce((latest, v) => {
-            const d = new Date(v.date);
-            return d > latest ? d : latest;
-        }, new Date(0));
+        // --------------------------------------------------
+        // 🔥 10. FIX: UPDATE lastAppointment SAFELY
+        // --------------------------------------------------
+        const currentLast = patient.lastAppointment
+            ? new Date(patient.lastAppointment)
+            : null;
 
-        // --------------------------------------
-        // 10. UPDATE PATIENT SUMMARY FIELDS
-        // --------------------------------------
-        await Patient.findByIdAndUpdate(patientId, {
-            lastAppointment: latestVisitDate,
-            lastpayment_type: visitData.payment_type,
-            lastAmount: visitData.amount,
-        });
+        if (!currentLast || visitDate > currentLast) {
+            patient.lastAppointment = visitDate;
+            patient.lastpayment_type = payment_type;
+            await patient.save();
+        }
+        // --------------------------------------------------
 
-        // --------------------------------------
-        // 11. RESPONSE
-        // --------------------------------------
         return res.status(201).json({
             success: true,
             message: "Appointment added successfully",
@@ -677,9 +674,7 @@ router.get("/appointments/:patientId", async (req, res) => {
         }
 
         // 🔥 Sort visits by date DESC (latest first)
-        appointment.visits.sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-        );
+        appointment.visits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json(appointment.visits);
     } catch (err) {
