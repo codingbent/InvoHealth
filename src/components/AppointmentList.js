@@ -57,8 +57,7 @@ export default function AppointmentList() {
         const paymentMatch =
             !selectedPayment || a.payment_type === selectedPayment;
 
-        const genderMatch =
-            !selectedGender || a.gender === selectedGender;
+        const genderMatch = !selectedGender || a.gender === selectedGender;
 
         const dateMatch =
             (!startDate || new Date(a.date) >= new Date(startDate)) &&
@@ -70,9 +69,7 @@ export default function AppointmentList() {
     const hasAnyFilter =
         searchTerm || selectedPayment || selectedGender || startDate || endDate;
 
-    const dataToShow = hasAnyFilter
-        ? filteredAppointments
-        : appointments;
+    const dataToShow = hasAnyFilter ? filteredAppointments : appointments;
 
     // =========================
     // HELPERS
@@ -83,8 +80,7 @@ export default function AppointmentList() {
             year: "numeric",
         });
 
-    const getDateKey = (date) =>
-        new Date(date).toISOString().split("T")[0];
+    const getDateKey = (date) => new Date(date).toISOString().split("T")[0];
 
     const getDayTotal = (apps) =>
         apps.reduce((sum, a) => sum + Number(a.amount || 0), 0);
@@ -118,20 +114,99 @@ export default function AppointmentList() {
             return;
         }
 
-        const rows = dataToShow.map((a) => ({
-            Name: a.name,
-            Number: a.number || "",
-            Gender: a.gender || "",
-            Date: new Date(a.date).toLocaleDateString(),
-            Payment: a.payment_type,
-            Amount: a.amount,
-        }));
+        const rows = [];
 
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Appointments");
+        // Loop month → day (same structure as UI)
+        Object.keys(appointmentsByMonth).forEach((month) => {
+            const daysObj = appointmentsByMonth[month];
 
-        XLSX.writeFile(wb, "Visit-Records.xlsx");
+            Object.keys(daysObj)
+                .sort((a, b) => new Date(a) - new Date(b))
+                .forEach((day) => {
+                    const dayApps = daysObj[day];
+                    let dayTotal = 0;
+
+                    // ===== DATE ROW =====
+                    rows.push({
+                        Patient: new Date(day).toLocaleDateString(),
+                        Number: "",
+                        Doctor: "",
+                        Date: "",
+                        Payment: "",
+                        Invoice: "",
+                        Amount: "",
+                        Services: "",
+                    });
+
+                    // ===== HEADER ROW =====
+                    rows.push({
+                        Patient: "Patient",
+                        Number: "Number",
+                        Doctor: "Doctor",
+                        Date: "Date",
+                        Payment: "Payment",
+                        Invoice: "Invoice",
+                        Amount: "Amount",
+                        Services: "Services",
+                    });
+
+                    // ===== APPOINTMENT ROWS =====
+                    dayApps.forEach((a) => {
+                        dayTotal += Number(a.amount || 0);
+
+                        rows.push({
+                            Patient: a.name,
+                            Number: a.number || "",
+                            Doctor: a.doctorName || "abhed",
+                            Date: new Date(a.date).toLocaleDateString(),
+                            Payment: a.payment_type,
+                            Invoice: a.invoiceNumber || "",
+                            Amount: a.amount,
+                            Services: (a.services || [])
+                                .map((s) =>
+                                    typeof s === "object" ? s.name : s
+                                )
+                                .join(", "),
+                        });
+                    });
+
+                    // ===== TOTAL ROW =====
+                    rows.push({
+                        Patient: "",
+                        Number: "",
+                        Doctor: "",
+                        Date: "",
+                        Payment: "",
+                        Invoice: "TOTAL",
+                        Amount: dayTotal,
+                        Services: "",
+                    });
+
+                    // ===== EMPTY ROW =====
+                    rows.push({});
+                });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(rows, {
+            skipHeader: true,
+        });
+
+        // Column widths (matches image)
+        worksheet["!cols"] = [
+            { wch: 16 }, // Patient
+            { wch: 14 }, // Number
+            { wch: 14 }, // Doctor
+            { wch: 12 }, // Date
+            { wch: 12 }, // Payment
+            { wch: 10 }, // Invoice
+            { wch: 12 }, // Amount
+            { wch: 30 }, // Services
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
+
+        XLSX.writeFile(workbook, "visit-records.xlsx");
     };
 
     // =========================
@@ -262,9 +337,7 @@ export default function AppointmentList() {
                                                         <td>
                                                             {a.payment_type}
                                                         </td>
-                                                        <td>
-                                                            ₹ {a.amount}
-                                                        </td>
+                                                        <td>₹ {a.amount}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
