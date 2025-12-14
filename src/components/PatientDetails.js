@@ -126,36 +126,192 @@ export default function PatientDetails() {
     };
 
     // ================= INVOICE PDF =================
-    const generateInvoice = (visit) => {
-        if (!doctor) return alert("Doctor data not loaded");
+    const generateInvoice = (appointmentId, visit, details) => {
+        try {
+            if (!doctor) {
+                alert("Doctor details not loaded yet!");
+                return;
+            }
 
-        const doc = new jsPDF();
-        doc.setFontSize(14);
-        doc.text(doctor.clinicName, 15, 20);
-        doc.setFontSize(11);
-        doc.text(`Doctor: ${doctor.name}`, 15, 28);
-        doc.text(`Patient: ${details.name}`, 15, 36);
-        doc.text(
-            `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
-            15,
-            44
-        );
+            const margin = 20;
+            const invoiceNumber = visit.invoiceNumber || "N/A";
+            const docPdf = new jsPDF();
 
-        const tableBody = (visit.service || []).map((s) => [s.name, s.amount]);
+            const pageWidth = docPdf.internal.pageSize.getWidth();
+            const pageHeight = docPdf.internal.pageSize.getHeight();
 
-        autoTable(doc, {
-            startY: 55,
-            head: [["Service", "Amount"]],
-            body: tableBody,
-        });
+            let leftY = 20;
+            let rightY = 20;
 
-        doc.text(
-            `Final Amount: ₹${visit.amount}`,
-            15,
-            doc.lastAutoTable.finalY + 10
-        );
+            // --------------------------------------------------
+            // LEFT SECTION (Doctor & Patient Info)
+            // --------------------------------------------------
 
-        doc.save(`Invoice_${details.name}.pdf`);
+            // Clinic Name
+            docPdf.setFontSize(16);
+            docPdf.text(doctor.clinicName, margin, leftY);
+            leftY += 10;
+
+            // Doctor Name
+            docPdf.setFontSize(14);
+            docPdf.text(doctor.name, margin, leftY);
+            leftY += 8;
+
+            // Degree
+            docPdf.setFontSize(11);
+            if (doctor.degree?.length) {
+                docPdf.text(
+                    `Degree: ${doctor.degree.join(", ")}`,
+                    margin,
+                    leftY
+                );
+                leftY += 6;
+            }
+
+            // Registration Number
+            if (doctor.regNumber) {
+                docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
+                leftY += 6;
+            }
+
+            // Invoice Number
+            docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
+            leftY += 8;
+
+            // Patient Info
+            docPdf.text(
+                `Patient: ${details.name} | Age: ${
+                    details.age || "N/A"
+                } | Gender: ${details.gender || "N/A"}`,
+                margin,
+                leftY
+            );
+            leftY += 10;
+
+            // --------------------------------------------------
+            // RIGHT SECTION (Address + Phone + Date)
+            // --------------------------------------------------
+
+            docPdf.setFontSize(10.5);
+
+            if (doctor.address.line1) {
+                docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
+                    align: "right",
+                });
+                rightY += 5;
+            }
+            if (doctor.address.line2) {
+                docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
+                    align: "right",
+                });
+                rightY += 5;
+            }
+
+            docPdf.text(
+                `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
+                pageWidth - margin,
+                rightY,
+                { align: "right" }
+            );
+            rightY += 5;
+
+            if (doctor.phone) {
+                docPdf.text(
+                    `Phone: ${doctor.phone}`,
+                    pageWidth - margin,
+                    rightY,
+                    { align: "right" }
+                );
+                rightY += 5;
+            }
+
+            docPdf.text(
+                `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
+                pageWidth - margin,
+                rightY,
+                { align: "right" }
+            );
+
+            // --------------------------------------------------
+            // TABLE
+            // --------------------------------------------------
+
+            const tableStartY = Math.max(leftY, rightY) + 10;
+
+            autoTable(docPdf, {
+                startY: tableStartY,
+                // head: [["Service", "Amount (₹)"]],
+                head: [["Service", "Amount (Rs.)"]],
+                body: (visit.service || []).map((s) => [
+                    typeof s === "object" ? s.name : s,
+                    typeof s === "object" ? s.amount : Number(s),
+                ]),
+                // theme: "grid", // keeps borders
+                // headStyles: {
+                //     fillColor: null, // ❌ remove grey background
+                //     textColor: 0, // black text
+                //     fontStyle: "bold", // header bold
+                // },
+                // styles: {
+                //     fontSize: 12,
+                //     cellPadding: 4,
+                //     lineColor: [0, 0, 0],
+                //     lineWidth: 0.2,
+                // },
+                theme: "grid",
+                styles: { fontSize: 11, cellPadding: 3 },
+                headStyles: { fillColor: [0,0,0] },
+            });
+
+            const afterTableY = docPdf.lastAutoTable.finalY + 8;
+
+            // --------------------------------------------------
+            // FOOTER TEXT (RECEIVED MESSAGE)
+            // --------------------------------------------------
+
+            docPdf.setFontSize(11);
+
+            const total = (visit.service || []).reduce(
+                (sum, s) =>
+                    sum + (typeof s === "object" ? s.amount : Number(s)),
+                0
+            );
+
+            docPdf.text(
+                `Received with thanks from ${details.name} the sum of Rupees ${total} on account of services.`,
+                margin,
+                afterTableY
+            );
+
+            // --------------------------------------------------
+            // FIXED STAMP AREA AT BOTTOM RIGHT (ALWAYS)
+            // --------------------------------------------------
+
+            docPdf.setFontSize(12);
+
+            // Doctor Name (1st line)
+            docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
+                align: "right",
+            });
+
+            // Degrees (2nd line, supports multiple degrees)
+            if (doctor.degree && doctor.degree.length > 0) {
+                docPdf.text(
+                    doctor.degree.join(", "),
+                    pageWidth - margin,
+                    pageHeight - 18,
+                    { align: "right" }
+                );
+            }
+
+            // --------------------------------------------------
+            // SAVE PDF
+            // --------------------------------------------------
+
+            docPdf.save(`Invoice_${details.name}.pdf`);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     // ================= EDIT VISIT =================
