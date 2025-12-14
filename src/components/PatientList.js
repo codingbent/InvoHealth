@@ -151,9 +151,9 @@ export default function PatientList() {
 
             const paymentMatch =
                 !selectedpayment_type ||
-                p.payment_types?.some(
-                    (pt) =>
-                        (pt || "").toLowerCase() ===
+                p.visits?.some(
+                    (v) =>
+                        (v.payment_type || "").toLowerCase() ===
                         selectedpayment_type.toLowerCase()
                 );
 
@@ -278,7 +278,7 @@ export default function PatientList() {
                     Number: p.number || "",
                     Doctor: p.doctorName || "",
                     Date: dateKey,
-                    Payment: p.payment_types?.join(", ") || "N/A",
+                    Payment: p.lastpayment_type || "N/A",
                     Invoice: p.lastInvoice || "",
                     Amount: amount,
                     Services: (p.service || [])
@@ -556,15 +556,9 @@ export default function PatientList() {
                                                             {p.gender || "N/A"}
                                                         </td>
                                                         <td>
-                                                            {p.payment_types &&
-                                                            p.payment_types
-                                                                .length > 0
-                                                                ? p.payment_types.join(
-                                                                      ", "
-                                                                  )
-                                                                : "N/A"}
+                                                            {p.lastpayment_type ||
+                                                                "N/A"}
                                                         </td>
-
                                                         <td>
                                                             <button
                                                                 className="btn btn-danger btn-sm"
