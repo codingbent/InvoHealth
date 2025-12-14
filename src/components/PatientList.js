@@ -352,43 +352,81 @@ export default function PatientList() {
             </button>
 
             {/* DATA VIEW */}
-            {Object.keys(appointmentsByMonth).map((month) => (
-                <div key={month} className="mb-5">
-                    <h4 className="bg-primary text-white p-2 rounded">
-                        {month}
-                    </h4>
+            {Object.keys(appointmentsByMonth).map((month) => {
+                const monthTotal = Object.values(
+                    appointmentsByMonth[month]
+                ).reduce(
+                    (sum, dayApps) =>
+                        sum +
+                        dayApps.reduce(
+                            (daySum, a) => daySum + Number(a.amount || 0),
+                            0
+                        ),
+                    0
+                );
 
-                    {Object.keys(appointmentsByMonth[month]).map((day) => (
-                        <div key={day}>
-                            <h6 className="bg-light p-2">
-                                {new Date(day).toLocaleDateString()}
-                            </h6>
+                return (
+                    <div key={month} className="mb-5">
+                        {/* MONTH HEADER WITH TOTAL */}
+                        <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
+                            <span>{month}</span>
+                            <span className="fw-bold">
+                                ₹ {monthTotal.toFixed(2)}
+                            </span>
+                        </h4>
 
-                            <table className="table table-bordered">
-                                <tbody>
-                                    {appointmentsByMonth[month][day].map(
-                                        (a, i) => (
-                                            <tr
-                                                key={i}
-                                                onClick={() =>
-                                                    navigate(
-                                                        `/patient/${a.patientId}`
-                                                    )
-                                                }
-                                                style={{ cursor: "pointer" }}
-                                            >
-                                                <td>{a.name}</td>
-                                                <td>{a.payment_type}</td>
-                                                <td>₹ {a.amount}</td>
-                                            </tr>
-                                        )
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    ))}
-                </div>
-            ))}
+                        {Object.keys(appointmentsByMonth[month])
+                            .sort((a, b) => new Date(b) - new Date(a))
+                            .map((day) => {
+                                const dayApps = appointmentsByMonth[month][day];
+                                const dayTotal = dayApps.reduce(
+                                    (sum, a) => sum + Number(a.amount || 0),
+                                    0
+                                );
+
+                                return (
+                                    <div key={day}>
+                                        {/* DAY HEADER WITH TOTAL */}
+                                        <h6 className="bg-light p-2 d-flex justify-content-between">
+                                            <span>
+                                                {new Date(
+                                                    day
+                                                ).toLocaleDateString()}
+                                            </span>
+                                            <span className="fw-semibold">
+                                                ₹ {dayTotal.toFixed(2)}
+                                            </span>
+                                        </h6>
+
+                                        <table className="table table-bordered table-striped">
+                                            <tbody>
+                                                {dayApps.map((a, i) => (
+                                                    <tr
+                                                        key={i}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/patient/${a.patientId}`
+                                                            )
+                                                        }
+                                                        style={{
+                                                            cursor: "pointer",
+                                                        }}
+                                                    >
+                                                        <td>{a.name}</td>
+                                                        <td>
+                                                            {a.payment_type}
+                                                        </td>
+                                                        <td>₹ {a.amount}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })}
+                    </div>
+                );
+            })}
         </div>
     );
 }
