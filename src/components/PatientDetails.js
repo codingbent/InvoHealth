@@ -354,26 +354,23 @@ export default function PatientDetails() {
     };
 
     const editInvoice = (appointmentId, visit) => {
-    setEditingAppt({
-        appointmentId,
-        _id: visit._id
-    });
+        setEditingAppt({
+            appointmentId,
+            _id: visit._id,
+        });
 
-    setApptData({
-        date: visit.date?.slice(0, 10),
-        service: visit.service || [],
-        payment_type: visit.payment_type || "",
-        discount: visit.discount || 0,
-        isPercent: !!visit.isPercent,
-    });
+        setApptData({
+            date: visit.date?.slice(0, 10),
+            service: visit.service || [],
+            payment_type: visit.payment_type || "",
+            discount: visit.discount || 0,
+            isPercent: !!visit.isPercent,
+        });
 
-    setApptServiceAmounts(
-        (visit.service || []).map((s) => s.amount || 0)
-    );
+        setApptServiceAmounts((visit.service || []).map((s) => s.amount || 0));
 
-    document.getElementById("editAppointmentModalBtn").click();
-};
-
+        document.getElementById("editAppointmentModalBtn").click();
+    };
 
     const handleUpdateAppt = async () => {
         try {
@@ -476,57 +473,169 @@ export default function PatientDetails() {
                     {appointments.length === 0 ? (
                         <p>No appointments found</p>
                     ) : (
-                        <table className="table table-bordered mt-2">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Services</th>
-                                    <th>Amount</th>
-                                    <th>Payment</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
+                        <div className="mt-4">
+                            <h3>Previous Appointment Details</h3>
 
-                            <tbody>
-                                {appointments
-                                    .slice()
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(b.date) - new Date(a.date)
-                                    )
-                                    .map((visit) => (
-                                        <tr key={visit._id}>
-                                            <td>
-                                                {new Date(
-                                                    visit.date
-                                                ).toLocaleDateString("en-IN")}
-                                            </td>
+                            {appointments.length === 0 ? (
+                                <p>No appointments found</p>
+                            ) : (
+                                <>
+                                    {/* ================= DESKTOP TABLE ================= */}
+                                    <div className="d-none d-md-block">
+                                        <table className="table table-bordered mt-2">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Services</th>
+                                                    <th>Amount</th>
+                                                    <th>Payment</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
 
-                                            <td>
-                                                {(visit.service || [])
-                                                    .map((s) => s.name)
-                                                    .join(", ")}
-                                            </td>
+                                            <tbody>
+                                                {appointments
+                                                    .slice()
+                                                    .sort(
+                                                        (a, b) =>
+                                                            new Date(b.date) -
+                                                            new Date(a.date)
+                                                    )
+                                                    .map((visit) => (
+                                                        <tr key={visit._id}>
+                                                            <td>
+                                                                {new Date(
+                                                                    visit.date
+                                                                ).toLocaleDateString(
+                                                                    "en-IN"
+                                                                )}
+                                                            </td>
 
-                                            <td>{visit.amount}</td>
+                                                            <td>
+                                                                {(
+                                                                    visit.service ||
+                                                                    []
+                                                                )
+                                                                    .map(
+                                                                        (s) =>
+                                                                            s.name
+                                                                    )
+                                                                    .join(", ")}
+                                                            </td>
 
-                                            <td>
-                                                {visit.payment_type || "N/A"}
-                                            </td>
+                                                            <td>
+                                                                {visit.amount}
+                                                            </td>
 
-                                            <td>
-                                                <div className="dropdown">
-                                                    <button
-                                                        className="btn btn-primary dropdown-toggle"
-                                                        data-bs-toggle="dropdown"
-                                                    >
-                                                        Actions
-                                                    </button>
+                                                            <td>
+                                                                {visit.payment_type ||
+                                                                    "N/A"}
+                                                            </td>
 
-                                                    <ul className="dropdown-menu">
-                                                        <li>
+                                                            <td className="text-nowrap">
+                                                                <button
+                                                                    className="btn btn-sm btn-success me-1"
+                                                                    onClick={() =>
+                                                                        generateInvoice(
+                                                                            id,
+                                                                            visit,
+                                                                            details
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Invoice
+                                                                </button>
+
+                                                                <button
+                                                                    className="btn btn-sm btn-warning me-1"
+                                                                    onClick={() =>
+                                                                        editInvoice(
+                                                                            id,
+                                                                            visit
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Edit
+                                                                </button>
+
+                                                                <button
+                                                                    className="btn btn-sm btn-danger"
+                                                                    onClick={() =>
+                                                                        deleteInvoice(
+                                                                            id,
+                                                                            visit
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* ================= MOBILE CARDS ================= */}
+                                    <div className="d-block d-md-none">
+                                        {appointments
+                                            .slice()
+                                            .sort(
+                                                (a, b) =>
+                                                    new Date(b.date) -
+                                                    new Date(a.date)
+                                            )
+                                            .map((visit) => (
+                                                <div
+                                                    key={visit._id}
+                                                    className="card mb-3 shadow-sm"
+                                                >
+                                                    <div className="card-body">
+                                                        <p className="mb-1">
+                                                            <strong>
+                                                                Date:
+                                                            </strong>{" "}
+                                                            {new Date(
+                                                                visit.date
+                                                            ).toLocaleDateString(
+                                                                "en-IN"
+                                                            )}
+                                                        </p>
+
+                                                        <p className="mb-1">
+                                                            <strong>
+                                                                Services:
+                                                            </strong>{" "}
+                                                            {(
+                                                                visit.service ||
+                                                                []
+                                                            )
+                                                                .map(
+                                                                    (s) =>
+                                                                        s.name
+                                                                )
+                                                                .join(", ")}
+                                                        </p>
+
+                                                        <div className="d-flex justify-content-between mb-2">
+                                                            <span>
+                                                                <strong>
+                                                                    Amount:
+                                                                </strong>{" "}
+                                                                ₹{visit.amount}
+                                                            </span>
+                                                            <span>
+                                                                <strong>
+                                                                    Type:
+                                                                </strong>{" "}
+                                                                {visit.payment_type ||
+                                                                    "N/A"}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="d-flex gap-2">
                                                             <button
-                                                                className="dropdown-item"
+                                                                className="btn btn-success btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     generateInvoice(
                                                                         id,
@@ -537,10 +646,9 @@ export default function PatientDetails() {
                                                             >
                                                                 Invoice
                                                             </button>
-                                                        </li>
-                                                        <li>
+
                                                             <button
-                                                                className="dropdown-item"
+                                                                className="btn btn-warning btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     editInvoice(
                                                                         id,
@@ -550,10 +658,9 @@ export default function PatientDetails() {
                                                             >
                                                                 Edit
                                                             </button>
-                                                        </li>
-                                                        <li>
+
                                                             <button
-                                                                className="dropdown-item text-danger"
+                                                                className="btn btn-danger btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     deleteInvoice(
                                                                         id,
@@ -563,14 +670,14 @@ export default function PatientDetails() {
                                                             >
                                                                 Delete
                                                             </button>
-                                                        </li>
-                                                    </ul>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
+                                            ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     )}
                 </div>
 
