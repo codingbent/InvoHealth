@@ -411,29 +411,23 @@ export default function PatientDetails() {
     const deleteInvoice = async (appointmentId, visit) => {
         if (!window.confirm("Delete this invoice?")) return;
 
-        try {
-            const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token");
 
-            const response = await fetch(
-                `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        "auth-token": token,
-                    },
-                }
-            );
-
-            const data = await response.json();
-
-            if (data.success) {
-                alert("Invoice deleted!");
-                fetchData();
-            } else {
-                alert("Delete failed: " + data.message);
+        const response = await fetch(
+            `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
+            {
+                method: "DELETE",
+                headers: { "auth-token": token },
             }
-        } catch (err) {
-            console.error(err);
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("Invoice deleted!");
+            fetchData();
+        } else {
+            alert("Delete failed: " + data.message);
         }
     };
 
@@ -651,7 +645,7 @@ export default function PatientDetails() {
                                                                 className="btn btn-warning btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     editInvoice(
-                                                                        id,
+                                                                        appt._id,
                                                                         visit
                                                                     )
                                                                 }
@@ -663,7 +657,7 @@ export default function PatientDetails() {
                                                                 className="btn btn-danger btn-sm flex-fill"
                                                                 onClick={() =>
                                                                     deleteInvoice(
-                                                                        id,
+                                                                        appt._id,
                                                                         visit
                                                                     )
                                                                 }
