@@ -14,6 +14,8 @@ export default function AppointmentList() {
     const [selectedGender, setSelectedGender] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [selectedFY, setSelectedFY] = useState("");
+
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -45,6 +47,16 @@ export default function AppointmentList() {
 
         fetchAppointments();
     }, []);
+    useEffect(() => {
+    if (!selectedFY) return;
+
+    // Financial year: 1 April → 31 March
+    const fyStart = new Date(Number(selectedFY), 3, 1); // April = 3
+    const fyEnd = new Date(Number(selectedFY) + 1, 2, 31); // March = 2
+
+    setStartDate(fyStart.toISOString().split("T")[0]);
+    setEndDate(fyEnd.toISOString().split("T")[0]);
+}, [selectedFY]);
 
     // =========================
     // APPLY FILTERS
@@ -67,7 +79,7 @@ export default function AppointmentList() {
     });
 
     const hasAnyFilter =
-        searchTerm || selectedPayment || selectedGender || startDate || endDate;
+        searchTerm || selectedPayment || selectedGender || startDate || endDate || selectedFY;
 
     const dataToShow = hasAnyFilter ? filteredAppointments : appointments;
 
@@ -286,19 +298,37 @@ export default function AppointmentList() {
 
                     <label>Start Date</label>
                     <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
+    type="date"
+    className="form-control mb-3"
+    value={startDate}
+    onChange={(e) => {
+        setSelectedFY(""); // 🔑 clear FY
+        setStartDate(e.target.value);
+    }}
+/>
 
                     <label>End Date</label>
                     <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                    />
+    type="date"
+    className="form-control mb-3"
+    value={endDate}
+    onChange={(e) => {
+        setSelectedFY(""); // 🔑 clear FY
+        setEndDate(e.target.value);
+    }}
+/>
+                    <label>Financial Year</label>
+<select
+    className="form-select mb-3"
+    value={selectedFY}
+    onChange={(e) => setSelectedFY(e.target.value)}
+>
+    <option value="">Select Financial Year</option>
+    <option value="2024">FY 2024-25</option>
+    <option value="2025">FY 2025-26</option>
+    <option value="2026">FY 2026-27</option>
+    <option value="2027">FY 2027-28</option>
+</select>
 
                     <button
                         className="btn btn-success w-100 mt-2"
@@ -315,6 +345,7 @@ export default function AppointmentList() {
                             setSelectedGender("");
                             setStartDate("");
                             setEndDate("");
+                            setSelectedFY("");
                         }}
                     >
                         Reset Filters
