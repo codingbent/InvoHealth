@@ -668,11 +668,22 @@ router.put(
 
 router.get("/appointments/:patientId", async (req, res) => {
     try {
-        const appointments = await Appointment.find({
+        const appointment = await Appointment.findOne({
             patient: req.params.patientId,
         });
-        res.json(appointments);
+
+        if (!appointment) {
+            return res.json([]);
+        }
+
+        // 🔥 Sort visits by date DESC (latest first)
+        appointment.visits.sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
+        res.json(appointment.visits);
     } catch (err) {
+        console.error("Fetch Appointments Error:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
