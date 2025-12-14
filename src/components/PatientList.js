@@ -151,11 +151,8 @@ export default function PatientList() {
 
             const paymentMatch =
                 !selectedpayment_type ||
-                p.visits?.some(
-                    (v) =>
-                        (v.payment_type || "").toLowerCase() ===
-                        selectedpayment_type.toLowerCase()
-                );
+                (p.lastpayment_type || "").toLowerCase() ===
+                    selectedpayment_type.toLowerCase();
 
             return searchMatch && genderMatch && serviceMatch && paymentMatch;
         });
@@ -398,6 +395,7 @@ export default function PatientList() {
                         <option value="">All Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                     </select>
 
                     {/* SERVICES */}
@@ -495,6 +493,7 @@ export default function PatientList() {
                 }, 0);
 
                 if (monthDates.length === 0) return null;
+
                 return (
                     <div key={month} className="mb-5">
                         {/* MONTH HEADER */}
