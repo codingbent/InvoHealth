@@ -185,6 +185,77 @@ export default function PatientList() {
                     Filters
                 </button>
             </div>
+            {/* =============== OFFCANVAS FILTER PANEL =============== */}
+            <div
+                className="offcanvas offcanvas-end"
+                tabIndex="-1"
+                id="filterPanel"
+            >
+                <div className="offcanvas-header">
+                    <h5>Filters</h5>
+                    <button
+                        type="button"
+                        className="btn-close"
+                        data-bs-dismiss="offcanvas"
+                    ></button>
+                </div>
+
+                <div className="offcanvas-body">
+                    {/* SEARCH */}
+                    <label>Search</label>
+                    <input
+                        className="form-control mb-3"
+                        placeholder="Name or Phone"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
+                    {/* GENDER */}
+                    <label>Gender</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedGender}
+                        onChange={(e) => setSelectedGender(e.target.value)}
+                    >
+                        <option value="">All Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+
+                    {/* SERVICES */}
+                    <label>Services</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedService}
+                        onChange={(e) => setSelectedService(e.target.value)}
+                    >
+                        <option value="">All Services</option>
+                        {services.map((s) => (
+                            <option key={s._id} value={s.name}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* PAYMENT */}
+                    <label>Payment Type</label>
+                    <select
+                        className="form-select mb-3"
+                        value={selectedpayment_type}
+                        onChange={(e) =>
+                            setSelectedpayment_type(e.target.value)
+                        }
+                    >
+                        <option value="">All Payment Types</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="UPI">UPI</option>
+                        <option value="ICICI">ICICI</option>
+                        <option value="HDFC">HDFC</option>
+                    </select>
+                </div>
+            </div>
 
             {/* PATIENT LIST */}
             {Object.keys(patientsByMonth).map((month) => {
