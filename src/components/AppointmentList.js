@@ -4,8 +4,11 @@ import * as XLSX from "xlsx";
 
 export default function AppointmentList() {
     const navigate = useNavigate();
+
+    // ALL appointments (flattened visits)
     const [appointments, setAppointments] = useState([]);
 
+    // FILTER STATES
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedPayment, setSelectedPayment] = useState("");
     const [selectedGender, setSelectedGender] = useState("");
@@ -17,36 +20,45 @@ export default function AppointmentList() {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // ======================
-    // Fetch appointments
-    // ======================
+    // =========================
+    // FETCH ALL APPOINTMENTS
+    // =========================
     useEffect(() => {
-        fetch(`${API_BASE_URL}/api/auth/fetchallappointments`, {
-            headers: {
-                "auth-token": localStorage.getItem("token"),
-            },
-        })
-            .then((res) => res.json())
-            .then(setAppointments)
-            .catch(() => setAppointments([]));
+        const fetchAppointments = async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/api/auth/fetchallappointments`,
+                    {
+                        headers: {
+                            "auth-token": localStorage.getItem("token"),
+                        },
+                    }
+                );
+
+                const data = await res.json();
+                setAppointments(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error(err);
+                setAppointments([]);
+            }
+        };
+
+        fetchAppointments();
     }, []);
 
-    // ======================
-    // Filter logic
-    // ======================
+    // =========================
+    // APPLY FILTERS
+    // =========================
     const filteredAppointments = appointments.filter((a) => {
         const searchMatch =
-            a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             a.number?.includes(searchTerm);
 
         const paymentMatch =
-            !selectedPayment ||
-            a.payment_type?.toLowerCase() ===
-                selectedPayment.toLowerCase();
+            !selectedPayment || a.payment_type === selectedPayment;
 
         const genderMatch =
-            !selectedGender ||
-            a.gender?.toLowerCase() === selectedGender.toLowerCase();
+            !selectedGender || a.gender === selectedGender;
 
         const dateMatch =
             (!startDate || new Date(a.date) >= new Date(startDate)) &&
@@ -55,30 +67,61 @@ export default function AppointmentList() {
         return searchMatch && paymentMatch && genderMatch && dateMatch;
     });
 
-    // ======================
-    // Smart Excel Export
-    // ======================
+    const hasAnyFilter =
+        searchTerm || selectedPayment || selectedGender || startDate || endDate;
+
+    const dataToShow = hasAnyFilter
+        ? filteredAppointments
+        : appointments;
+
+    // =========================
+    // HELPERS
+    // =========================
+    const getMonthKey = (date) =>
+        new Date(date).toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+        });
+
+    const getDateKey = (date) =>
+        new Date(date).toISOString().split("T")[0];
+
+    const getDayTotal = (apps) =>
+        apps.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+
+    // =========================
+    // GROUP BY MONTH → DAY
+    // =========================
+    const appointmentsByMonth = {};
+
+    dataToShow.forEach((a) => {
+        const monthKey = getMonthKey(a.date);
+        const dayKey = getDateKey(a.date);
+
+        if (!appointmentsByMonth[monthKey]) {
+            appointmentsByMonth[monthKey] = {};
+        }
+
+        if (!appointmentsByMonth[monthKey][dayKey]) {
+            appointmentsByMonth[monthKey][dayKey] = [];
+        }
+
+        appointmentsByMonth[monthKey][dayKey].push(a);
+    });
+
+    // =========================
+    // DOWNLOAD EXCEL
+    // =========================
     const downloadExcel = () => {
-        const hasAnyFilter =
-            searchTerm ||
-            selectedPayment ||
-            selectedGender ||
-            startDate ||
-            endDate;
-
-        const dataToExport = hasAnyFilter
-            ? filteredAppointments
-            : appointments;
-
-        if (dataToExport.length === 0) {
+        if (dataToShow.length === 0) {
             alert("No data to export");
             return;
         }
 
-        const rows = dataToExport.map((a) => ({
+        const rows = dataToShow.map((a) => ({
             Name: a.name,
-            Number: a.number,
-            Gender: a.gender,
+            Number: a.number || "",
+            Gender: a.gender || "",
             Date: new Date(a.date).toLocaleDateString(),
             Payment: a.payment_type,
             Amount: a.amount,
@@ -91,14 +134,17 @@ export default function AppointmentList() {
         XLSX.writeFile(wb, "Visit-Records.xlsx");
     };
 
+    // =========================
+    // UI
+    // =========================
     return (
         <div className="container mt-3">
             <h4 className="mb-3">Appointments</h4>
 
-            {/* Filters */}
+            {/* FILTERS */}
             <input
                 className="form-control mb-2"
-                placeholder="Search name or phone"
+                placeholder="Search by name or phone"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -108,12 +154,13 @@ export default function AppointmentList() {
                 value={selectedPayment}
                 onChange={(e) => setSelectedPayment(e.target.value)}
             >
-                <option value="">All Payments</option>
+                <option value="">All Payment Types</option>
                 <option value="Cash">Cash</option>
                 <option value="Card">Card</option>
                 <option value="UPI">UPI</option>
                 <option value="ICICI">ICICI</option>
                 <option value="HDFC">HDFC</option>
+                <option value="Other">Other</option>
             </select>
 
             <select
@@ -146,44 +193,88 @@ export default function AppointmentList() {
                 </div>
             </div>
 
-            <button
-                className="btn btn-success mb-3"
-                onClick={downloadExcel}
-            >
+            <button className="btn btn-success mb-3" onClick={downloadExcel}>
                 📥 Download Excel
             </button>
 
-            {/* Table */}
-            <table className="table table-bordered table-striped">
-                <thead className="table-light">
-                    <tr>
-                        <th>Name</th>
-                        <th>Gender</th>
-                        <th>Date</th>
-                        <th>Payment</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filteredAppointments.map((a, i) => (
-                        <tr
-                            key={i}
-                            style={{ cursor: "pointer" }}
-                            onClick={() =>
-                                navigate(`/patient/${a.patientId}`)
-                            }
-                        >
-                            <td>{a.name}</td>
-                            <td>{a.gender}</td>
-                            <td>
-                                {new Date(a.date).toLocaleDateString()}
-                            </td>
-                            <td>{a.payment_type}</td>
-                            <td>₹ {a.amount}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {/* MONTH + DAY GROUPED VIEW */}
+            {Object.keys(appointmentsByMonth).map((month) => {
+                const daysObj = appointmentsByMonth[month];
+                const monthTotal = Object.values(daysObj).reduce(
+                    (sum, dayApps) => sum + getDayTotal(dayApps),
+                    0
+                );
+
+                return (
+                    <div key={month} className="mb-5">
+                        {/* MONTH HEADER */}
+                        <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
+                            <span>{month}</span>
+                            <span>₹ {monthTotal.toFixed(2)}</span>
+                        </h4>
+
+                        {Object.keys(daysObj)
+                            .sort((a, b) => new Date(b) - new Date(a))
+                            .map((day) => {
+                                const dayApps = daysObj[day];
+                                const dayTotal = getDayTotal(dayApps);
+
+                                return (
+                                    <div key={day} className="mb-4">
+                                        {/* DAY HEADER */}
+                                        <h6 className="bg-light p-2 rounded d-flex justify-content-between">
+                                            <span>
+                                                {new Date(
+                                                    day
+                                                ).toLocaleDateString()}
+                                            </span>
+                                            <span className="fw-bold">
+                                                ₹ {dayTotal.toFixed(2)}
+                                            </span>
+                                        </h6>
+
+                                        <table className="table table-bordered table-striped">
+                                            <thead className="table-light">
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Gender</th>
+                                                    <th>Payment</th>
+                                                    <th>Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {dayApps.map((a, i) => (
+                                                    <tr
+                                                        key={i}
+                                                        style={{
+                                                            cursor: "pointer",
+                                                        }}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/patient/${a.patientId}`
+                                                            )
+                                                        }
+                                                    >
+                                                        <td>{a.name}</td>
+                                                        <td>
+                                                            {a.gender || "N/A"}
+                                                        </td>
+                                                        <td>
+                                                            {a.payment_type}
+                                                        </td>
+                                                        <td>
+                                                            ₹ {a.amount}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })}
+                    </div>
+                );
+            })}
         </div>
     );
 }

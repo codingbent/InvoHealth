@@ -926,31 +926,43 @@ router.delete(
 
 router.get("/fetchallappointments", fetchuser, async (req, res) => {
     try {
-        const appointments = await Appointment.find({ doctor: req.doc.id })
-            .populate("patient", "name number gender");
+        // 1️⃣ Get all appointments for logged-in doctor
+        const appointments = await Appointment.find({
+            doctor: req.doc.id,
+        }).populate("patient");
 
-        const rows = [];
+        const allVisits = [];
 
-        appointments.forEach(appt => {
-            appt.visits.forEach(v => {
-                rows.push({
+        // 2️⃣ FLATTEN visits (VERY IMPORTANT)
+        appointments.forEach((appt) => {
+            if (!appt.patient) return;
+
+            appt.visits.forEach((visit) => {
+                allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name,
-                    number: appt.patient.number,
-                    gender: appt.patient.gender,
-                    date: v.date,
-                    payment_type: v.payment_type,
-                    amount: v.amount,
-                    services: v.services || []
+                    number: appt.patient.number || "",
+                    gender: appt.patient.gender || "",
+                    date: visit.date,
+                    payment_type: visit.payment_type,
+                    amount: visit.amount,
+                    services: visit.service || [],
+                    invoiceNumber: visit.invoiceNumber || "",
                 });
             });
         });
 
-        res.json(rows);
+        // 3️⃣ Sort by date DESC (latest first)
+        allVisits.sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
+        res.json(allVisits);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: "Server error" });
     }
 });
+
 
 module.exports = router;
