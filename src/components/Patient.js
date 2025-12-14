@@ -33,39 +33,39 @@ const Patient = (props) => {
         setSelectedPatientId(null);
     };
 
-    const downloadExcelSecure = async () => {
-        try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/report/download-excel`, {
-                method: "GET",
-                headers: { "auth-token": token },
-            });
+    // const downloadExcelSecure = async () => {
+    //     try {
+    //         const token = localStorage.getItem("token");
+    //         const res = await fetch(`${API_BASE_URL}/api/report/download-excel`, {
+    //             method: "GET",
+    //             headers: { "auth-token": token },
+    //         });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(`Download failed: ${res.status} ${txt}`);
-            }
+    //         if (!res.ok) {
+    //             const txt = await res.text();
+    //             throw new Error(`Download failed: ${res.status} ${txt}`);
+    //         }
 
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
+    //         const blob = await res.blob();
+    //         const url = window.URL.createObjectURL(blob);
+    //         const a = document.createElement("a");
 
-            const filename =
-                res.headers.get("content-disposition")?.split("filename=")[1] ||
-                "visit-records.xlsx";
+    //         const filename =
+    //             res.headers.get("content-disposition")?.split("filename=")[1] ||
+    //             "visit-records.xlsx";
 
-            a.href = url;
-            a.download = filename.replace(/"/g, "");
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+    //         a.href = url;
+    //         a.download = filename.replace(/"/g, "");
+    //         document.body.appendChild(a);
+    //         a.click();
+    //         a.remove();
 
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error("Download error:", err);
-            alert("Download failed. See console for details.");
-        }
-    };
+    //         window.URL.revokeObjectURL(url);
+    //     } catch (err) {
+    //         console.error("Download error:", err);
+    //         alert("Download failed. See console for details.");
+    //     }
+    // };
 
     // ========== OPEN MODAL (close sheet first) ==========
     const openModal = (id) => {
@@ -132,7 +132,7 @@ const Patient = (props) => {
                         </button>
 
                         <button onClick={() => openModal("editServiceModal")}>✏️ Edit Service</button>
-                        <button onClick={downloadExcelSecure}>⬇️ Download Record</button>
+                        {/* <button onClick={downloadExcelSecure}>⬇️ Download Record</button> */}
 
                         <button className="action-sheet-close" onClick={hideActionSheet}>
                             Close

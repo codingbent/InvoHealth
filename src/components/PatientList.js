@@ -239,8 +239,6 @@ export default function PatientList() {
     // =========================
     return (
         <div className="container mt-3">
-            <h4 className="mb-3">Patients</h4>
-
             {/* FILTER BUTTON */}
             <div className="w-75 mx-auto mb-3">
                 <button
@@ -346,10 +344,14 @@ export default function PatientList() {
                     </button>
                 </div>
             </div>
-
-            <button className="btn btn-success mb-3" onClick={downloadExcel}>
-                📥 Download Excel
-            </button>
+            <div className="justify-content-center">
+                <button
+                    className="btn btn-success mb-3"
+                    onClick={downloadExcel}
+                >
+                    📥 Download Excel
+                </button>
+            </div>
 
             {/* DATA VIEW */}
             {Object.keys(appointmentsByMonth).map((month) => {
