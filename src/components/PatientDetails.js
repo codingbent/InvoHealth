@@ -453,7 +453,7 @@ export default function PatientDetails() {
                                 type="button"
                                 className="btn btn-primary"
                                 data-bs-dismiss="modal"
-                                onClick={handleSave}
+                                onClick={handleSavePatient}
                             >
                                 Save Changes
                             </button>
