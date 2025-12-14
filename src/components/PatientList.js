@@ -227,26 +227,40 @@ export default function PatientList() {
         const rows = [];
 
         const sortedDates = Object.keys(patientsByDate)
-            .filter((d) => isDateInRange(d))
+            .filter(isDateInRange)
             .sort((a, b) => new Date(a) - new Date(b));
 
         sortedDates.forEach((dateKey) => {
             const patients = applyFilters(patientsByDate[dateKey] || []);
             if (patients.length === 0) return;
 
-            // 👉 DATE HEADER ROW
+            // ---------------- DATE ROW ----------------
             rows.push({
-                Date: dateKey === "No Visits" ? "No Visits" : dateKey,
-                Name: "",
-                Gender: "",
-                Phone: "",
+                Patient: dateKey,
+                Number: "",
+                Doctor: "",
+                Date: "",
                 Payment: "",
+                Invoice: "",
                 Amount: "",
+                Services: "",
+            });
+
+            // ---------------- HEADER ROW ----------------
+            rows.push({
+                Patient: "Patient",
+                Number: "Number",
+                Doctor: "Doctor",
+                Date: "Date",
+                Payment: "Payment",
+                Invoice: "Invoice",
+                Amount: "Amount",
+                Services: "Services",
             });
 
             let dayTotal = 0;
 
-            // 👉 PATIENT ROWS
+            // ---------------- PATIENT ROWS ----------------
             patients.forEach((p) => {
                 const amount =
                     p.lastVisit?.amount ??
@@ -257,26 +271,32 @@ export default function PatientList() {
                 dayTotal += Number(amount);
 
                 rows.push({
-                    Date: "",
-                    Name: p.name,
-                    Gender: p.gender || "N/A",
-                    Phone: p.number || "",
+                    Patient: p.name,
+                    Number: p.number || "",
+                    Doctor: p.doctorName || "",
+                    Date: dateKey,
                     Payment: p.lastpayment_type || "N/A",
+                    Invoice: p.lastInvoice || "",
                     Amount: amount,
+                    Services: (p.service || [])
+                        .map((s) => (typeof s === "object" ? s.name : s))
+                        .join(", "),
                 });
             });
 
-            // 👉 TOTAL ROW
+            // ---------------- TOTAL ROW ----------------
             rows.push({
+                Patient: "",
+                Number: "",
+                Doctor: "",
                 Date: "",
-                Name: "TOTAL",
-                Gender: "",
-                Phone: "",
                 Payment: "",
+                Invoice: "TOTAL",
                 Amount: dayTotal,
+                Services: "",
             });
 
-            // 👉 EMPTY ROW FOR SPACING
+            // ---------------- EMPTY ROW ----------------
             rows.push({});
         });
 
@@ -292,31 +312,33 @@ export default function PatientList() {
         }
 
         const worksheet = XLSX.utils.json_to_sheet(data, {
-            skipHeader: false,
+            skipHeader: true,
         });
 
-        // 🔥 Column widths (important for clean design)
+        // Column widths (matches your screenshot layout)
         worksheet["!cols"] = [
-            { wch: 14 }, // Date
-            { wch: 20 }, // Name
-            { wch: 12 }, // Gender
-            { wch: 16 }, // Phone
+            { wch: 16 }, // Patient
+            { wch: 14 }, // Number
+            { wch: 14 }, // Doctor
+            { wch: 12 }, // Date
             { wch: 12 }, // Payment
+            { wch: 10 }, // Invoice
             { wch: 12 }, // Amount
+            { wch: 30 }, // Services
         ];
 
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Visit Records");
 
-        let fileName = "Patients_All.xlsx";
+        let fileName = "visit-records.xlsx";
 
         if (selectedFY) {
-            fileName = `Patients_FY_${selectedFY}-${
+            fileName = `visit-records_FY_${selectedFY}-${
                 Number(selectedFY) + 1
             }.xlsx`;
         } else if (startDate || endDate) {
-            fileName = `Patients_${startDate || "Start"}_to_${
-                endDate || "End"
+            fileName = `visit-records_${startDate || "start"}_to_${
+                endDate || "end"
             }.xlsx`;
         }
 
