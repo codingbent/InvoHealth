@@ -880,5 +880,16 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+router.get("/fetchallpatients", fetchuser, async (req, res) => {
+    try {
+        const patients = await Patient.find({ doctor: req.user.id })
+            .select("name number age gender") // ⚡ only needed fields
+            .sort({ name: 1 }); // alphabetical
 
+        res.json(patients);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
 module.exports = router;
