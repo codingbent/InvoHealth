@@ -260,16 +260,24 @@ const AddAppointment = (props) => {
                         <label className="form-label">Services</label>
                         <ServiceList
                             services={allServices}
-                            onSelect={(serviceObj, checked) => {
-                                setServices((prev) =>
-                                    checked
-                                        ? [...prev, serviceObj]
-                                        : prev.filter(
-                                              (s) => s._id !== serviceObj._id
-                                          )
-                                );
-                            }}
                             selectedServices={services}
+                            onAdd={(service) => {
+                                setServices((prev) => {
+                                    if (prev.some((s) => s._id === service._id))
+                                        return prev;
+                                    return [...prev, service];
+                                });
+                            }}
+                            onRemove={(id) => {
+                                setServices((prev) =>
+                                    prev.filter((s) => s._id !== id)
+                                );
+                                setServiceAmounts((prev) => {
+                                    const copy = { ...prev };
+                                    delete copy[id];
+                                    return copy;
+                                });
+                            }}
                         />
                     </div>
 
