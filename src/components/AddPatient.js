@@ -6,7 +6,7 @@ const AddPatient = ({ showAlert }) => {
     const [patient, setPatient] = useState({
         name: "",
         service: [],
-        number: "0000000000",
+        number: "",
         amount: 0,
         age: "",
         gender: "Male",
@@ -82,6 +82,23 @@ const AddPatient = ({ showAlert }) => {
     // Submit Form
     const handleSubmit = async (e) => {
         e.preventDefault();
+        let finalNumber = number.trim();
+
+        // 🚨 If number is empty
+        if (!finalNumber) {
+            const wantsToAdd = window.confirm(
+                "Mobile number is not entered.\n\nClick OK to add a mobile number.\nClick Cancel to continue without it."
+            );
+
+            // User wants to ADD number → stop submit
+            if (wantsToAdd) {
+                showAlert("Please enter a mobile number", "warning");
+                return;
+            }
+
+            // User DENIES adding → save placeholder
+            finalNumber = "0000000000";
+        }
 
         try {
             // Create Patient
@@ -101,7 +118,7 @@ const AddPatient = ({ showAlert }) => {
                             name: s.name,
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
-                        number,
+                        number: finalNumber,
                         amount,
                         age,
                         discount,
@@ -162,7 +179,7 @@ const AddPatient = ({ showAlert }) => {
             setPatient({
                 name: "",
                 service: [],
-                number: "0000000000",
+                number: "",
                 amount: 0,
                 age: "",
                 gender: "Male",
@@ -422,10 +439,11 @@ const AddPatient = ({ showAlert }) => {
                     <div className="mb-3">
                         <label className="form-label">Mobile Number</label>
                         <input
-                            type="number"
+                            type="tel"
                             className="form-control"
                             name="number"
                             value={number}
+                            placeholder="Enter mobile number"
                             onChange={onChange}
                         />
                     </div>
