@@ -13,6 +13,7 @@ export default function PatientList() {
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
+    const [allServices, setAllServices] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
@@ -47,6 +48,31 @@ export default function PatientList() {
         };
 
         fetchAppointments();
+    }, []);
+
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/api/auth/fetchallservice`,
+                    {
+                        headers: {
+                            "auth-token": localStorage.getItem("token"),
+                        },
+                    }
+                );
+                const data = await res.json();
+
+                // normalize service names
+                setAllServices(
+                    Array.isArray(data) ? data.map((s) => s.name).sort() : []
+                );
+            } catch (err) {
+                console.error("Error fetching services", err);
+            }
+        };
+
+        fetchServices();
     }, []);
 
     // =========================
@@ -162,15 +188,15 @@ export default function PatientList() {
     // =========================
     // SERVICES LIST (DYNAMIC)
     // =========================
-    const allServices = Array.from(
-        new Set(
-            appointments.flatMap((a) =>
-                (a.services || []).map((s) =>
-                    typeof s === "object" ? s.name : s
-                )
-            )
-        )
-    ).sort();
+    // const allServices = Array.from(
+    //     new Set(
+    //         appointments.flatMap((a) =>
+    //             (a.services || []).map((s) =>
+    //                 typeof s === "object" ? s.name : s
+    //             )
+    //         )
+    //     )
+    // ).sort();
 
     // =========================
     // EXCEL EXPORT
