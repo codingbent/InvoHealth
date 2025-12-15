@@ -77,8 +77,8 @@ export default function PatientList() {
         const genderMatch = !selectedGender || a.gender === selectedGender;
 
         const dateMatch =
-            (!startDate || new Date(a.date) >= new Date(startDate)) &&
-            (!endDate || new Date(a.date) <= new Date(endDate));
+            (!startDate || new Date(String(a.date)) >= new Date(startDate)) &&
+            (!endDate || new Date(String(a.date)) <= new Date(endDate));
 
         const serviceMatch =
             selectedServices.length === 0 ||
@@ -189,7 +189,7 @@ export default function PatientList() {
         } else {
             // derive from all data being exported
             const dates = dataToShow
-                .map((a) => new Date(a.date))
+                .map((a) => new Date(String(a.date)))
                 .sort((a, b) => a - b);
 
             if (dates.length === 0) return "";
@@ -211,7 +211,7 @@ export default function PatientList() {
 
         // ✅ sort ALL records by date DESC
         const sorted = [...dataToShow].sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
+            (a, b) => new Date(b.date) - new Date(String(a.date))
         );
 
         const rows = [];
@@ -225,7 +225,7 @@ export default function PatientList() {
         let dayTotal = 0;
 
         sorted.forEach((a, index) => {
-            const day = new Date(a.date).toISOString().split("T")[0];
+            const day = new Date(String(a.date)).toISOString().split("T")[0];
 
             // 🔄 New day block
             if (day !== currentDay) {
@@ -257,7 +257,7 @@ export default function PatientList() {
             rows.push({
                 Patient: a.name,
                 Number: a.number || "",
-                Date: new Date(a.date).toLocaleDateString(),
+                Date: new Date(String(a.date)).toLocaleDateString(),
                 Payment: a.payment_type,
                 Invoice: a.invoiceNumber || "",
                 Amount: a.amount,
