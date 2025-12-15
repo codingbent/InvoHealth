@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Modal } from "bootstrap";
 
 export default function DoctorProfile() {
     const API_BASE_URL =
@@ -19,8 +20,20 @@ export default function DoctorProfile() {
 
             const data = await res.json();
             if (data.success) {
-                setDoctor(data.doctor);
-                setEditData(data.doctor);
+                const doc = data.doctor;
+
+                setDoctor(doc);
+                setEditData({
+                    ...doc,
+                    degree: doc.degree?.length ? doc.degree : [""],
+                    address: {
+                        line1: doc.address?.line1 || "",
+                        line2: doc.address?.line2 || "",
+                        city: doc.address?.city || "",
+                        state: doc.address?.state || "",
+                        pincode: doc.address?.pincode || "",
+                    },
+                });
             }
         } catch (err) {
             console.error("Error fetching doctor:", err);
@@ -46,19 +59,47 @@ export default function DoctorProfile() {
 
     const handleSave = async () => {
         try {
+            const payload = {
+                ...editData,
+                degree: editData.degree.filter((d) => d.trim() !== ""),
+            };
+
+            if (payload.degree.length === 0) {
+                alert("Please add at least one degree");
+                return;
+            }
+
             const res = await fetch(`${API_BASE_URL}/api/auth/updatedoc`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     "auth-token": localStorage.getItem("token"),
                 },
-                body: JSON.stringify(editData),
+                body: JSON.stringify(payload),
             });
 
             const data = await res.json();
+
             if (data.success) {
-                alert("Profile updated successfully!");
-                setDoctor(editData);
+                const doc = data.doctor;
+
+                setDoctor(doc);
+                setEditData({
+                    ...doc,
+                    degree: doc.degree?.length ? doc.degree : [""],
+                    address: {
+                        line1: doc.address?.line1 || "",
+                        line2: doc.address?.line2 || "",
+                        city: doc.address?.city || "",
+                        state: doc.address?.state || "",
+                        pincode: doc.address?.pincode || "",
+                    },
+                });
+
+                // ✅ close modal ONLY on success
+                const modalEl = document.getElementById("editDocModal");
+                const modal = Modal.getInstance(modalEl);
+                modal?.hide();
             } else {
                 alert("Update failed");
             }
@@ -66,6 +107,25 @@ export default function DoctorProfile() {
             console.error("Error updating doctor:", err);
             alert("Server error");
         }
+    };
+
+    const handleDegreeChange = (index, value) => {
+        const updated = [...editData.degree];
+        updated[index] = value;
+        setEditData({ ...editData, degree: updated });
+    };
+
+    const addDegreeField = () => {
+        setEditData({
+            ...editData,
+            degree: [...editData.degree, ""],
+        });
+    };
+
+    const removeDegreeField = (index) => {
+        const updated = [...editData.degree];
+        updated.splice(index, 1);
+        setEditData({ ...editData, degree: updated });
     };
 
     if (loading) return <p>Loading...</p>;
@@ -181,21 +241,49 @@ export default function DoctorProfile() {
                                 {/* Degree */}
                                 <div className="mb-3">
                                     <label className="form-label">
-                                        Degree (comma separated)
+                                        Degree(s)
                                     </label>
-                                    <input
-                                        className="form-control"
-                                        name="degree"
-                                        value={editData.degree?.join(", ")}
-                                        onChange={(e) =>
-                                            setEditData({
-                                                ...editData,
-                                                degree: e.target.value.split(
-                                                    ","
-                                                ),
-                                            })
-                                        }
-                                    />
+
+                                    {editData.degree.map((deg, index) => (
+                                        <div
+                                            key={index}
+                                            className="d-flex mb-2"
+                                        >
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Enter degree"
+                                                value={deg}
+                                                onChange={(e) =>
+                                                    handleDegreeChange(
+                                                        index,
+                                                        e.target.value
+                                                    )
+                                                }
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn btn-danger ms-2"
+                                                onClick={() =>
+                                                    removeDegreeField(index)
+                                                }
+                                                disabled={
+                                                    editData.degree.length === 1
+                                                }
+                                            >
+                                                X
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary mt-2"
+                                        onClick={addDegreeField}
+                                    >
+                                        + Add Degree
+                                    </button>
                                 </div>
 
                                 {/* Address */}
@@ -265,7 +353,6 @@ export default function DoctorProfile() {
                             </button>
                             <button
                                 className="btn btn-primary"
-                                data-bs-dismiss="modal"
                                 onClick={handleSave}
                             >
                                 Save Changes
