@@ -524,91 +524,96 @@ export default function PatientDetails() {
                 {/* ================= APPOINTMENTS ================= */}
                 <div className="mt-4">
                     <h3>Previous Appointment Details</h3>
+                    <div className="d-none d-md-block">
+                        {appointments.length === 0 ? (
+                            <p>No appointments found</p>
+                        ) : (
+                            <table className="table table-bordered mt-2">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Services</th>
+                                        <th>Amount</th>
+                                        <th>Payment</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
 
-                    {appointments.length === 0 ? (
-                        <p>No appointments found</p>
-                    ) : (
-                        <table className="table table-bordered mt-2">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Services</th>
-                                    <th>Amount</th>
-                                    <th>Payment</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
+                                <tbody>
+                                    {appointments
+                                        .slice()
+                                        .sort(
+                                            (a, b) =>
+                                                new Date(b.date) -
+                                                new Date(a.date)
+                                        )
+                                        .map((visit) => (
+                                            <tr key={visit._id}>
+                                                <td>
+                                                    {new Date(
+                                                        visit.date
+                                                    ).toLocaleDateString(
+                                                        "en-IN"
+                                                    )}
+                                                </td>
 
-                            <tbody>
-                                {appointments
-                                    .slice()
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(b.date) - new Date(a.date)
-                                    )
-                                    .map((visit) => (
-                                        <tr key={visit._id}>
-                                            <td>
-                                                {new Date(
-                                                    visit.date
-                                                ).toLocaleDateString("en-IN")}
-                                            </td>
+                                                <td>
+                                                    {(visit.service || [])
+                                                        .map((s) => s.name)
+                                                        .join(", ")}
+                                                </td>
 
-                                            <td>
-                                                {(visit.service || [])
-                                                    .map((s) => s.name)
-                                                    .join(", ")}
-                                            </td>
+                                                <td>₹{visit.amount}</td>
 
-                                            <td>₹{visit.amount}</td>
+                                                <td>
+                                                    {visit.payment_type ||
+                                                        "N/A"}
+                                                </td>
 
-                                            <td>
-                                                {visit.payment_type || "N/A"}
-                                            </td>
+                                                <td className="text-nowrap">
+                                                    <button
+                                                        className="btn btn-sm btn-success me-1"
+                                                        onClick={() =>
+                                                            generateInvoice(
+                                                                id,
+                                                                visit,
+                                                                details
+                                                            )
+                                                        }
+                                                    >
+                                                        Invoice
+                                                    </button>
 
-                                            <td className="text-nowrap">
-                                                <button
-                                                    className="btn btn-sm btn-success me-1"
-                                                    onClick={() =>
-                                                        generateInvoice(
-                                                            id,
-                                                            visit,
-                                                            details
-                                                        )
-                                                    }
-                                                >
-                                                    Invoice
-                                                </button>
+                                                    <button
+                                                        className="btn btn-sm btn-warning me-1"
+                                                        onClick={() =>
+                                                            editInvoice(
+                                                                appointmentId,
+                                                                visit
+                                                            )
+                                                        }
+                                                    >
+                                                        Edit
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-warning me-1"
-                                                    onClick={() =>
-                                                        editInvoice(
-                                                            appointmentId,
-                                                            visit
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    className="btn btn-sm btn-danger"
-                                                    onClick={() =>
-                                                        deleteInvoice(
-                                                            appointmentId,
-                                                            visit
-                                                        )
-                                                    }
-                                                >
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
-                    )}
+                                                    <button
+                                                        className="btn btn-sm btn-danger"
+                                                        onClick={() =>
+                                                            deleteInvoice(
+                                                                appointmentId,
+                                                                visit
+                                                            )
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
                 </div>
                 {/* ================= MOBILE VIEW ================= */}
                 <div className="d-block d-md-none">
