@@ -153,7 +153,7 @@ export default function PatientDetails() {
         if (discountValue > total) discountValue = total;
         if (discountValue < 0) discountValue = 0;
 
-        setFinalAmount(total - discountValue);
+        setFinalAmount(Math.round((total - discountValue) * 100) / 100);
     }, [apptData.service, serviceAmounts, discount, isPercent]);
 
     // ------------------------------------------------------------
@@ -631,8 +631,23 @@ export default function PatientDetails() {
                                     onSelect={(serviceObj, checked) => {
                                         let updated = [...apptData.service];
 
-                                        if (checked) updated.push(serviceObj);
-                                        else
+                                        if (checked) {
+                                            if (
+                                                !updated.some(
+                                                    (s) =>
+                                                        (s._id || s.id) ===
+                                                        serviceObj._id
+                                                )
+                                            ) {
+                                                updated.push({
+                                                    _id: serviceObj._id,
+                                                    id: serviceObj._id,
+                                                    name: serviceObj.name,
+                                                    amount:
+                                                        serviceObj.amount || 0,
+                                                });
+                                            }
+                                        } else
                                             updated = updated.filter(
                                                 (s) =>
                                                     (s._id || s.id) !==
@@ -746,7 +761,7 @@ export default function PatientDetails() {
                                                 </th>
                                                 <td className="text-end">
                                                     ₹
-                                                    {serviceTotal - finalAmount}
+                                                    {(serviceTotal - finalAmount).toFixed(2)}
                                                 </td>
                                             </tr>
 

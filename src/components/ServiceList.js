@@ -3,15 +3,16 @@ export default function ServiceList({
     selectedServices = [],
     onSelect,
 }) {
+    const selectedIds = new Set(selectedServices.map((s) => s._id || s.id));
+
     return (
         <div>
             {services.map((service) => {
-                const isChecked = selectedServices.some(
-                    (s) => (s._id || s.id) === service._id
-                );
+                const id = service._id || service.id;
+                const isChecked = selectedIds.has(id);
 
                 return (
-                    <div key={service._id} className="form-check">
+                    <div key={id} className="form-check">
                         <input
                             type="checkbox"
                             className="form-check-input"
