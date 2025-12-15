@@ -209,79 +209,68 @@ export default function PatientList() {
             return;
         }
 
+        // ✅ sort ALL records by date DESC
+        const sorted = [...dataToShow].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        );
+
         const rows = [];
-        const useBold = !hasAnyFilter;
 
-        const dateRangeText = getDateRangeText();
+        // ===== HEADER =====
+        rows.push({ Patient: `Doctor: ${doctor?.name || ""}` });
+        rows.push({ Patient: getDateRangeText() });
+        rows.push({});
 
-        // 🔝 TOP HEADER ROWS
-        rows.push({
-            Patient: boldCell(`Doctor: ${doctor?.name || ""}`),
-        });
+        let currentDay = null;
+        let dayTotal = 0;
 
-        rows.push({
-            Patient: boldCell(dateRangeText),
-        });
+        sorted.forEach((a, index) => {
+            const day = new Date(a.date).toISOString().split("T")[0];
 
-        rows.push({}); // empty line
+            // 🔄 New day block
+            if (day !== currentDay) {
+                if (currentDay !== null) {
+                    rows.push({ Payment: "TOTAL", Amount: dayTotal });
+                    rows.push({});
+                }
 
-        Object.keys(appointmentsByMonth)
-            .sort((a, b) => {
-                const da = new Date(`01 ${a}`);
-                const db = new Date(`01 ${b}`);
-                return db - da; // month DESC
-            })
-            .forEach((month) => {
-                const daysObj = appointmentsByMonth[month];
+                currentDay = day;
+                dayTotal = 0;
 
-                Object.keys(daysObj)
-                    .sort((a, b) => new Date(b) - new Date(a)) // day DESC
-                    .forEach((day) => {
-                        const dayApps = daysObj[day];
-                        let dayTotal = 0;
+                rows.push({
+                    Patient: new Date(day).toLocaleDateString(),
+                });
 
-                        rows.push({
-                            Patient: boldCell(
-                                new Date(day).toLocaleDateString()
-                            ),
-                        });
+                rows.push({
+                    Patient: "Patient",
+                    Number: "Number",
+                    Date: "Date",
+                    Payment: "Payment",
+                    Invoice: "Invoice",
+                    Amount: "Amount",
+                    Services: "Services",
+                });
+            }
 
-                        rows.push({
-                            Patient: boldCell("Patient"),
-                            Number: boldCell("Number"),
-                            Date: boldCell("Date"),
-                            Payment: boldCell("Payment"),
-                            Invoice: boldCell("Invoice"),
-                            Amount: boldCell("Amount"),
-                            Services: boldCell("Services"),
-                        });
+            dayTotal += Number(a.amount || 0);
 
-                        dayApps.forEach((a) => {
-                            dayTotal += Number(a.amount || 0);
-
-                            rows.push({
-                                Patient: a.name,
-                                Number: a.number || "",
-                                Date: new Date(a.date).toLocaleDateString(),
-                                Payment: a.payment_type,
-                                Invoice: a.invoiceNumber || "",
-                                Amount: a.amount,
-                                Services: (a.services || [])
-                                    .map((s) =>
-                                        typeof s === "object" ? s.name : s
-                                    )
-                                    .join(", "),
-                            });
-                        });
-
-                        rows.push({
-                            Payment: boldCell("TOTAL"),
-                            Amount: boldCell(dayTotal),
-                        });
-
-                        rows.push({});
-                    });
+            rows.push({
+                Patient: a.name,
+                Number: a.number || "",
+                Date: new Date(a.date).toLocaleDateString(),
+                Payment: a.payment_type,
+                Invoice: a.invoiceNumber || "",
+                Amount: a.amount,
+                Services: (a.services || [])
+                    .map((s) => (typeof s === "object" ? s.name : s))
+                    .join(", "),
             });
+
+            // 🔚 Last row total
+            if (index === sorted.length - 1) {
+                rows.push({ Payment: "TOTAL", Amount: dayTotal });
+            }
+        });
 
         const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
         const wb = XLSX.utils.book_new();
