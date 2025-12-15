@@ -655,7 +655,7 @@ export default function PatientDetails() {
                                     {/* ACTION BUTTONS */}
                                     <div className="d-flex justify-content-between gap-2">
                                         <button
-                                            className="btn btn-sm btn-outline-success w-100"
+                                            className="btn btn-sm btn-success w-100"
                                             onClick={() =>
                                                 generateInvoice(
                                                     id,
@@ -668,7 +668,7 @@ export default function PatientDetails() {
                                         </button>
 
                                         <button
-                                            className="btn btn-sm btn-outline-warning w-100"
+                                            className="btn btn-sm btn-warning w-100"
                                             onClick={() =>
                                                 editInvoice(
                                                     appointmentId,
@@ -680,7 +680,7 @@ export default function PatientDetails() {
                                         </button>
 
                                         <button
-                                            className="btn btn-sm btn-outline-danger w-100"
+                                            className="btn btn-sm btn-danger w-100"
                                             onClick={() =>
                                                 deleteInvoice(
                                                     appointmentId,
