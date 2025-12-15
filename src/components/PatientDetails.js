@@ -610,6 +610,86 @@ export default function PatientDetails() {
                         </table>
                     )}
                 </div>
+                {/* ================= MOBILE VIEW ================= */}
+                <div className="d-block d-md-none">
+                    {appointments
+                        .slice()
+                        .sort((a, b) => new Date(b.date) - new Date(a.date))
+                        .map((visit) => (
+                            <div
+                                key={visit._id}
+                                className="card mb-3 shadow-sm"
+                            >
+                                <div className="card-body">
+                                    {/* DATE */}
+                                    <h6 className="fw-bold mb-1">
+                                        {new Date(
+                                            visit.date
+                                        ).toLocaleDateString("en-IN")}
+                                    </h6>
+
+                                    {/* SERVICES */}
+                                    <p className="mb-1">
+                                        <strong>Services:</strong>{" "}
+                                        {(visit.service || [])
+                                            .map((s) => s.name)
+                                            .join(", ")}
+                                    </p>
+
+                                    {/* PAYMENT + TOTAL */}
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span>
+                                            <strong>Payment:</strong>{" "}
+                                            {visit.payment_type || "N/A"}
+                                        </span>
+                                        <span className="fw-bold">
+                                            ₹{visit.amount}
+                                        </span>
+                                    </div>
+
+                                    {/* ACTION BUTTONS */}
+                                    <div className="d-flex justify-content-between gap-2">
+                                        <button
+                                            className="btn btn-sm btn-outline-success w-100"
+                                            onClick={() =>
+                                                generateInvoice(
+                                                    id,
+                                                    visit,
+                                                    details
+                                                )
+                                            }
+                                        >
+                                            Invoice
+                                        </button>
+
+                                        <button
+                                            className="btn btn-sm btn-outline-warning w-100"
+                                            onClick={() =>
+                                                editInvoice(
+                                                    appointmentId,
+                                                    visit
+                                                )
+                                            }
+                                        >
+                                            Edit
+                                        </button>
+
+                                        <button
+                                            className="btn btn-sm btn-outline-danger w-100"
+                                            onClick={() =>
+                                                deleteInvoice(
+                                                    appointmentId,
+                                                    visit
+                                                )
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                </div>
             </div>
 
             {/* ================= EDIT APPOINTMENT MODAL ================= */}
