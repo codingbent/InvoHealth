@@ -139,7 +139,7 @@ export default function PatientDetails() {
     }, [id]);
     useEffect(() => {
         const total = apptData.service.reduce(
-            (sum, s) => sum + (serviceAmounts[s.id || s._id] ?? s.amount ?? 0),
+            (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
             0
         );
 
@@ -383,7 +383,6 @@ export default function PatientDetails() {
         });
         const normalizedServices = (visit.service || []).map((s) => ({
             _id: s._id || s.id,
-            id: s._id || s.id,
             name: s.name,
             amount: s.amount || 0,
         }));
@@ -427,8 +426,7 @@ export default function PatientDetails() {
                         date: apptData.date,
                         service: apptData.service.map((s) => ({
                             ...s,
-                            amount:
-                                serviceAmounts[s.id || s._id] ?? s.amount ?? 0,
+                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         amount: finalAmount,
                         payment_type: apptData.payment_type,
@@ -628,39 +626,31 @@ export default function PatientDetails() {
                                 <ServiceList
                                     services={availableServices}
                                     selectedServices={apptData.service}
-                                    onSelect={(serviceObj, checked) => {
+                                    onAdd={(service) => {
                                         setApptData((prev) => {
-                                            let updated;
-
-                                            if (checked) {
-                                                // ADD only if not present
-                                                if (
-                                                    prev.service.some(
-                                                        (s) =>
-                                                            s.serviceId ===
-                                                            serviceObj.serviceId
-                                                    )
-                                                ) {
-                                                    return prev;
-                                                }
-                                                updated = [
-                                                    ...prev.service,
-                                                    serviceObj,
-                                                ];
-                                            } else {
-                                                // REMOVE exactly one
-                                                updated = prev.service.filter(
-                                                    (s) =>
-                                                        s.serviceId !==
-                                                        serviceObj.serviceId
-                                                );
+                                            if (
+                                                prev.service.some(
+                                                    (s) => s._id === service._id
+                                                )
+                                            ) {
+                                                return prev;
                                             }
-
                                             return {
                                                 ...prev,
-                                                service: updated,
+                                                service: [
+                                                    ...prev.service,
+                                                    service,
+                                                ],
                                             };
                                         });
+                                    }}
+                                    onRemove={(id) => {
+                                        setApptData((prev) => ({
+                                            ...prev,
+                                            service: prev.service.filter(
+                                                (s) => s._id !== id
+                                            ),
+                                        }));
                                     }}
                                 />
                             </div>
@@ -675,26 +665,24 @@ export default function PatientDetails() {
                                     <ul className="list-group mb-3">
                                         {apptData.service.map((s) => (
                                             <li
-                                                key={s.serviceId}
+                                                key={s._id}
                                                 className="list-group-item d-flex justify-content-between"
                                             >
                                                 <span>{s.name}</span>
                                                 <input
                                                     type="number"
                                                     value={
-                                                        serviceAmounts[
-                                                            s.serviceId
-                                                        ] ?? s.amount
+                                                        serviceAmounts[s._id] ??
+                                                        s.amount
                                                     }
                                                     onChange={(e) =>
                                                         setServiceAmounts(
                                                             (prev) => ({
                                                                 ...prev,
-                                                                [s.serviceId]:
-                                                                    Number(
-                                                                        e.target
-                                                                            .value
-                                                                    ),
+                                                                [s._id]: Number(
+                                                                    e.target
+                                                                        .value
+                                                                ),
                                                             })
                                                         )
                                                     }

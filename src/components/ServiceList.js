@@ -1,41 +1,54 @@
 export default function ServiceList({
     services = [],
     selectedServices = [],
-    onSelect,
+    onAdd,
+    onRemove,
 }) {
-    const selectedIds = new Set(
-        selectedServices.map(s => s.serviceId)
-    );
+    const selectedIds = new Set(selectedServices.map((s) => s._id));
 
     return (
-        <div>
-            {services.map(service => {
-                const serviceId = service._id;
-                const isChecked = selectedIds.has(serviceId);
+        <>
+            {/* AVAILABLE SERVICES */}
+            <div className="d-flex flex-wrap gap-2 mb-3">
+                {services.map((service) => {
+                    const isSelected = selectedIds.has(service._id);
 
-                return (
-                    <div key={serviceId} className="form-check">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            checked={isChecked}
-                            onChange={(e) =>
-                                onSelect(
-                                    {
-                                        serviceId,
-                                        name: service.name,
-                                        amount: service.amount || 0,
-                                    },
-                                    e.target.checked
-                                )
-                            }
+                    return (
+                        <button
+                            key={service._id}
+                            type="button"
+                            className={`btn btn-sm ${
+                                isSelected
+                                    ? "btn-secondary"
+                                    : "btn-outline-primary"
+                            }`}
+                            disabled={isSelected}
+                            onClick={() => onAdd(service)}
+                        >
+                            {service.name} ₹{service.amount}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* SELECTED TAGS */}
+            <div className="d-flex flex-wrap gap-2">
+                {selectedServices.map((s) => (
+                    <span
+                        key={s._id}
+                        className="badge bg-primary d-flex align-items-center"
+                        style={{ gap: "6px", padding: "8px 10px" }}
+                    >
+                        {s.name}
+                        <button
+                            type="button"
+                            className="btn-close btn-close-white"
+                            style={{ fontSize: "0.6rem" }}
+                            onClick={() => onRemove(s._id)}
                         />
-                        <label className="form-check-label">
-                            {service.name} ({service.amount || 0})
-                        </label>
-                    </div>
-                );
-            })}
-        </div>
+                    </span>
+                ))}
+            </div>
+        </>
     );
 }

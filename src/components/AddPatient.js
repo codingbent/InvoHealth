@@ -13,7 +13,7 @@ const AddPatient = ({ showAlert }) => {
     });
 
     const [availableServices, setAvailableServices] = useState([]);
-    const [serviceAmounts, setServiceAmounts] = useState([]);
+    const [serviceAmounts, setServiceAmounts] = useState({});
 
     // 🆕 Discount States
     const [discount, setDiscount] = useState(0);
@@ -50,7 +50,7 @@ const AddPatient = ({ showAlert }) => {
 
     useEffect(() => {
         const prices = service.map(
-            (s, index) => serviceAmounts[index] ?? s.amount ?? 0
+            (s) => serviceAmounts[s._id] ?? s.amount ?? 0
         );
 
         const serviceTotal = prices.reduce((sum, x) => sum + x, 0);
@@ -69,22 +69,6 @@ const AddPatient = ({ showAlert }) => {
 
         setPatient((prev) => ({ ...prev, amount: final }));
     }, [service, serviceAmounts, discount, isPercent]);
-
-    const handleServiceSelect = (serviceObj, checked) => {
-        setPatient((prev) => {
-            const updatedServices = checked
-                ? [...prev.service, serviceObj]
-                : prev.service.filter((s) => s._id !== serviceObj._id);
-
-            return { ...prev, service: updatedServices };
-        });
-
-        setServiceAmounts((prevAmounts) => {
-            const index = service.findIndex((s) => s._id === serviceObj._id);
-            if (checked) return [...prevAmounts, serviceObj.amount ?? 0];
-            else return prevAmounts.filter((_, i) => i !== index);
-        });
-    };
 
     const handleServiceAmountChange = (index, value) => {
         const newAmounts = [...serviceAmounts];
@@ -112,10 +96,10 @@ const AddPatient = ({ showAlert }) => {
                     body: JSON.stringify({
                         name,
                         gender,
-                        service: service.map((s, index) => ({
+                        service: service.map((s) => ({
                             id: s._id,
                             name: s.name,
-                            amount: serviceAmounts[index] ?? s.amount ?? 0,
+                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         number,
                         amount,
@@ -242,9 +226,42 @@ const AddPatient = ({ showAlert }) => {
                     <div className="mb-3">
                         <label className="form-label">Services</label>
                         <ServiceList
-                            onSelect={handleServiceSelect}
-                            selectedServices={service}
                             services={availableServices}
+                            selectedServices={service}
+                            onAdd={(serviceObj) => {
+                                setPatient((prev) => {
+                                    if (
+                                        prev.service.some(
+                                            (s) => s._id === serviceObj._id
+                                        )
+                                    ) {
+                                        return prev;
+                                    }
+                                    return {
+                                        ...prev,
+                                        service: [...prev.service, serviceObj],
+                                    };
+                                });
+
+                                setServiceAmounts((prev) => ({
+                                    ...prev,
+                                    [serviceObj._id]: serviceObj.amount ?? 0,
+                                }));
+                            }}
+                            onRemove={(id) => {
+                                setPatient((prev) => ({
+                                    ...prev,
+                                    service: prev.service.filter(
+                                        (s) => s._id !== id
+                                    ),
+                                }));
+
+                                setServiceAmounts((prev) => {
+                                    const copy = { ...prev };
+                                    delete copy[id];
+                                    return copy;
+                                });
+                            }}
                         />
                     </div>
 
@@ -311,13 +328,18 @@ const AddPatient = ({ showAlert }) => {
                                                         float: "right",
                                                     }}
                                                     value={
-                                                        serviceAmounts[index] ??
+                                                        serviceAmounts[s._id] ??
                                                         s.amount
                                                     }
                                                     onChange={(e) =>
-                                                        handleServiceAmountChange(
-                                                            index,
-                                                            e.target.value
+                                                        setServiceAmounts(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                [s._id]: Number(
+                                                                    e.target
+                                                                        .value
+                                                                ),
+                                                            })
                                                         )
                                                     }
                                                 />
