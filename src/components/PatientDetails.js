@@ -14,15 +14,18 @@ export default function PatientDetails() {
     const [details, setDetails] = useState(null);
     const [editingAppt, setEditingAppt] = useState(null);
     const [appointmentId, setAppointmentId] = useState(null);
+    const [serviceAmounts, setServiceAmounts] = useState({});
+    const [serviceTotal, setServiceTotal] = useState(0);
+    const [discount, setDiscount] = useState(0);
+    const [isPercent, setIsPercent] = useState(false);
+    const [finalAmount, setFinalAmount] = useState(0);
 
     const [apptData, setApptData] = useState({
         date: "",
         service: [],
-        amount: 0,
         payment_type: "",
     });
 
-    const [apptServiceAmounts, setApptServiceAmounts] = useState([]);
     const [patient, setPatient] = useState({
         name: "",
         service: [],
@@ -134,6 +137,24 @@ export default function PatientDetails() {
         fetchData();
         fetchDoctor();
     }, [id]);
+    useEffect(() => {
+        const total = apptData.service.reduce(
+            (sum, s) => sum + (serviceAmounts[s.id || s._id] ?? s.amount ?? 0),
+            0
+        );
+
+        setServiceTotal(total);
+
+        let discountValue = 0;
+        if (discount > 0) {
+            discountValue = isPercent ? total * (discount / 100) : discount;
+        }
+
+        if (discountValue > total) discountValue = total;
+        if (discountValue < 0) discountValue = 0;
+
+        setFinalAmount(total - discountValue);
+    }, [apptData.service, serviceAmounts, discount, isPercent]);
 
     // ------------------------------------------------------------
     // UPDATE PATIENT DETAILS
@@ -369,9 +390,20 @@ export default function PatientDetails() {
             isPercent: !!visit.isPercent,
         });
 
-        setApptServiceAmounts((visit.service || []).map((s) => s.amount || 0));
+        // Service amount map
+        const amountMap = {};
+        (visit.service || []).forEach((s) => {
+            amountMap[s.id || s._id] = s.amount || 0;
+        });
+
+        setServiceAmounts(amountMap);
+        setDiscount(visit.discount || 0);
+        setIsPercent(!!visit.isPercent);
 
         document.getElementById("editAppointmentModalBtn").click();
+        setTimeout(() => {
+            setServiceAmounts(amountMap);
+        }, 0);
     };
 
     const handleUpdateAppt = async () => {
@@ -392,10 +424,15 @@ export default function PatientDetails() {
                     },
                     body: JSON.stringify({
                         date: apptData.date,
-                        service: apptData.service,
+                        service: apptData.service.map((s) => ({
+                            ...s,
+                            amount:
+                                serviceAmounts[s.id || s._id] ?? s.amount ?? 0,
+                        })),
+                        amount: finalAmount,
                         payment_type: apptData.payment_type,
-                        discount: apptData.discount || 0,
-                        isPercent: !!apptData.isPercent,
+                        discount,
+                        isPercent,
                     }),
                 }
             );
@@ -441,366 +478,125 @@ export default function PatientDetails() {
 
     return (
         <>
+            {/* Hidden button to trigger edit appointment modal */}
             <button
                 id="editAppointmentModalBtn"
                 style={{ display: "none" }}
                 data-bs-toggle="modal"
                 data-bs-target="#editAppointmentModal"
-            ></button>
+            />
+
             <div className="container">
+                {/* ================= PATIENT INFO ================= */}
                 <div className="m-2">
                     <h3>Name: {details?.name}</h3>
                     <h3>Number: {details?.number}</h3>
                     <h3>Age: {details?.age}</h3>
-                    <h3>Gender: {details?.gender || "N/A"}</h3>{" "}
-                    {/* ✅ SHOW GENDER */}
+                    <h3>Gender: {details?.gender || "N/A"}</h3>
                 </div>
 
-                <button
-                    className="btn btn-primary m-2"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editPatientModal"
-                >
-                    Edit Details
-                </button>
-
-                {/* ----------------------------------------------------------
-                PREVIOUS APPOINTMENTS TABLE
-            ----------------------------------------------------------- */}
+                {/* ================= APPOINTMENTS ================= */}
                 <div className="mt-4">
+                    <h3>Previous Appointment Details</h3>
+
                     {appointments.length === 0 ? (
                         <p>No appointments found</p>
                     ) : (
-                        <div className="mt-4">
-                            <h3>Previous Appointment Details</h3>
+                        <table className="table table-bordered mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Services</th>
+                                    <th>Amount</th>
+                                    <th>Payment</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
 
-                            {appointments.length === 0 ? (
-                                <p>No appointments found</p>
-                            ) : (
-                                <>
-                                    {/* ================= DESKTOP TABLE ================= */}
-                                    <div className="d-none d-md-block">
-                                        <table className="table table-bordered mt-2">
-                                            <thead>
-                                                <tr>
-                                                    <th>Date</th>
-                                                    <th>Services</th>
-                                                    <th>Amount</th>
-                                                    <th>Payment</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
+                            <tbody>
+                                {appointments
+                                    .slice()
+                                    .sort(
+                                        (a, b) =>
+                                            new Date(b.date) - new Date(a.date)
+                                    )
+                                    .map((visit) => (
+                                        <tr key={visit._id}>
+                                            <td>
+                                                {new Date(
+                                                    visit.date
+                                                ).toLocaleDateString("en-IN")}
+                                            </td>
 
-                                            <tbody>
-                                                {appointments
-                                                    .slice()
-                                                    .sort(
-                                                        (a, b) =>
-                                                            new Date(b.date) -
-                                                            new Date(a.date)
-                                                    )
-                                                    .map((visit) => (
-                                                        <tr key={visit._id}>
-                                                            <td>
-                                                                {new Date(
-                                                                    visit.date
-                                                                ).toLocaleDateString(
-                                                                    "en-IN"
-                                                                )}
-                                                            </td>
+                                            <td>
+                                                {(visit.service || [])
+                                                    .map((s) => s.name)
+                                                    .join(", ")}
+                                            </td>
 
-                                                            <td>
-                                                                {(
-                                                                    visit.service ||
-                                                                    []
-                                                                )
-                                                                    .map(
-                                                                        (s) =>
-                                                                            s.name
-                                                                    )
-                                                                    .join(", ")}
-                                                            </td>
+                                            <td>₹{visit.amount}</td>
 
-                                                            <td>
-                                                                {visit.amount}
-                                                            </td>
+                                            <td>
+                                                {visit.payment_type || "N/A"}
+                                            </td>
 
-                                                            <td>
-                                                                {visit.payment_type ||
-                                                                    "N/A"}
-                                                            </td>
-
-                                                            <td className="text-nowrap">
-                                                                <button
-                                                                    className="btn btn-sm btn-success me-1"
-                                                                    onClick={() =>
-                                                                        generateInvoice(
-                                                                            id,
-                                                                            visit,
-                                                                            details
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Invoice
-                                                                </button>
-
-                                                                <button
-                                                                    className="btn btn-sm btn-warning me-1"
-                                                                    onClick={() =>
-                                                                        editInvoice(
-                                                                            appointmentId,
-                                                                            visit
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Edit
-                                                                </button>
-
-                                                                <button
-                                                                    className="btn btn-sm btn-danger"
-                                                                    onClick={() =>
-                                                                        deleteInvoice(
-                                                                            appointmentId,
-                                                                            visit
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* ================= MOBILE CARDS ================= */}
-                                    <div className="d-block d-md-none">
-                                        {appointments
-                                            .slice()
-                                            .sort(
-                                                (a, b) =>
-                                                    new Date(b.date) -
-                                                    new Date(a.date)
-                                            )
-                                            .map((visit) => (
-                                                <div
-                                                    key={visit._id}
-                                                    className="card mb-3 shadow-sm"
+                                            <td className="text-nowrap">
+                                                <button
+                                                    className="btn btn-sm btn-success me-1"
+                                                    onClick={() =>
+                                                        generateInvoice(
+                                                            id,
+                                                            visit,
+                                                            details
+                                                        )
+                                                    }
                                                 >
-                                                    <div className="card-body">
-                                                        <p>
-                                                            <strong>
-                                                                Date:
-                                                            </strong>{" "}
-                                                            {new Date(
-                                                                visit.date
-                                                            ).toLocaleDateString(
-                                                                "en-IN"
-                                                            )}
-                                                        </p>
+                                                    Invoice
+                                                </button>
 
-                                                        <p>
-                                                            <strong>
-                                                                Services:
-                                                            </strong>{" "}
-                                                            {(
-                                                                visit.service ||
-                                                                []
-                                                            )
-                                                                .map(
-                                                                    (s) =>
-                                                                        s.name
-                                                                )
-                                                                .join(", ")}
-                                                        </p>
+                                                <button
+                                                    className="btn btn-sm btn-warning me-1"
+                                                    onClick={() =>
+                                                        editInvoice(
+                                                            appointmentId,
+                                                            visit
+                                                        )
+                                                    }
+                                                >
+                                                    Edit
+                                                </button>
 
-                                                        <div className="d-flex justify-content-between mb-2">
-                                                            <span>
-                                                                <strong>
-                                                                    Amount:
-                                                                </strong>{" "}
-                                                                ₹{visit.amount}
-                                                            </span>
-                                                            <span>
-                                                                <strong>
-                                                                    Type:
-                                                                </strong>{" "}
-                                                                {visit.payment_type ||
-                                                                    "N/A"}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="d-flex gap-2">
-                                                            <button
-                                                                className="btn btn-success btn-sm flex-fill"
-                                                                onClick={() =>
-                                                                    generateInvoice(
-                                                                        id,
-                                                                        visit,
-                                                                        details
-                                                                    )
-                                                                }
-                                                            >
-                                                                Invoice
-                                                            </button>
-
-                                                            <button
-                                                                className="btn btn-warning btn-sm flex-fill"
-                                                                onClick={() =>
-                                                                    editInvoice(
-                                                                        appointmentId,
-                                                                        visit
-                                                                    )
-                                                                }
-                                                            >
-                                                                Edit
-                                                            </button>
-
-                                                            <button
-                                                                className="btn btn-danger btn-sm flex-fill"
-                                                                onClick={() =>
-                                                                    deleteInvoice(
-                                                                        appointmentId,
-                                                                        visit
-                                                                    )
-                                                                }
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                                <button
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() =>
+                                                        deleteInvoice(
+                                                            appointmentId,
+                                                            visit
+                                                        )
+                                                    }
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
-
-                {/* ----------------------------------------------------------
-                EDIT PATIENT DETAILS MODAL
-            ----------------------------------------------------------- */}
-                <div
-                    className="modal fade"
-                    id="editPatientModal"
-                    tabIndex="-1"
-                    aria-hidden="true"
-                >
-                    <div className="modal-dialog">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h1 className="modal-title fs-5">
-                                    Edit Patient Details
-                                </h1>
-                                <button
-                                    type="button"
-                                    className="btn-close"
-                                    data-bs-dismiss="modal"
-                                />
-                            </div>
-
-                            <div className="modal-body">
-                                <form>
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Name
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="name"
-                                            value={patient.name}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Number
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="number"
-                                            value={patient.number}
-                                            onChange={(e) => {
-                                                if (
-                                                    /^\d*$/.test(e.target.value)
-                                                )
-                                                    handleChange(e);
-                                            }}
-                                            maxLength={10}
-                                        />
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Age
-                                        </label>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            name="age"
-                                            value={patient.age}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-
-                                    {/* ✅ GENDER DROPDOWN */}
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Gender
-                                        </label>
-                                        <select
-                                            className="form-select"
-                                            name="gender"
-                                            value={patient.gender}
-                                            onChange={handleChange}
-                                        >
-                                            <option value="">
-                                                Select Gender
-                                            </option>
-                                            <option value="Male">Male</option>
-                                            <option value="Female">
-                                                Female
-                                            </option>
-                                        </select>
-                                    </div>
-                                </form>
-                            </div>
-
-                            <div className="modal-footer">
-                                <button
-                                    className="btn btn-secondary"
-                                    data-bs-dismiss="modal"
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    data-bs-dismiss="modal"
-                                    onClick={handleSave}
-                                >
-                                    Save Changes
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-            {/* -------------------- EDIT APPOINTMENT MODAL -------------------- */}
+
+            {/* ================= EDIT APPOINTMENT MODAL ================= */}
             <div
                 className="modal fade"
                 id="editAppointmentModal"
                 tabIndex="-1"
                 aria-hidden="true"
             >
-                <div className="modal-dialog">
+                <div className="modal-dialog modal-lg modal-dialog-scrollable">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h1 className="modal-title fs-5">
-                                Edit Appointment
-                            </h1>
+                            <h5 className="modal-title">Edit Appointment</h5>
                             <button
                                 type="button"
                                 className="btn-close"
@@ -809,112 +605,184 @@ export default function PatientDetails() {
                         </div>
 
                         <div className="modal-body">
-                            <form>
-                                {/* DATE */}
-                                <div className="mb-3">
-                                    <label className="form-label">Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        value={apptData.date}
-                                        onChange={(e) =>
-                                            setApptData((prev) => ({
-                                                ...prev,
-                                                date: e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
+                            {/* DATE */}
+                            <div className="mb-3">
+                                <label className="form-label">Date</label>
+                                <input
+                                    type="date"
+                                    className="form-control"
+                                    value={apptData.date}
+                                    onChange={(e) =>
+                                        setApptData((prev) => ({
+                                            ...prev,
+                                            date: e.target.value,
+                                        }))
+                                    }
+                                />
+                            </div>
 
-                                {/* SERVICES */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Services
-                                    </label>
-                                    <ServiceList
-                                        onSelect={(serviceObj, checked) => {
-                                            let updatedServices = [
-                                                ...apptData.service,
-                                            ];
-                                            let updatedAmounts = [
-                                                ...apptServiceAmounts,
-                                            ];
+                            {/* SERVICES */}
+                            <div className="mb-3">
+                                <label className="form-label">Services</label>
+                                <ServiceList
+                                    services={availableServices}
+                                    selectedServices={apptData.service}
+                                    onSelect={(serviceObj, checked) => {
+                                        let updated = [...apptData.service];
 
-                                            if (checked) {
-                                                updatedServices.push(
-                                                    serviceObj
-                                                );
-                                                updatedAmounts.push(
-                                                    serviceObj.amount || 0
-                                                );
-                                            } else {
-                                                const i =
-                                                    updatedServices.findIndex(
-                                                        (s) =>
-                                                            s.name ===
-                                                            serviceObj.name
-                                                    );
-                                                updatedServices.splice(i, 1);
-                                                updatedAmounts.splice(i, 1);
-                                            }
-
-                                            const total = updatedAmounts.reduce(
-                                                (sum, a) => sum + a,
-                                                0
+                                        if (checked) updated.push(serviceObj);
+                                        else
+                                            updated = updated.filter(
+                                                (s) =>
+                                                    s.name !== serviceObj.name
                                             );
 
-                                            setApptServiceAmounts(
-                                                updatedAmounts
-                                            );
-                                            setApptData((prev) => ({
-                                                ...prev,
-                                                service: updatedServices,
-                                                amount: total,
-                                            }));
-                                        }}
-                                        selectedServices={apptData.service}
-                                        services={availableServices}
-                                    />
-                                </div>
+                                        setApptData((prev) => ({
+                                            ...prev,
+                                            service: updated,
+                                        }));
+                                    }}
+                                />
+                            </div>
 
-                                {/* AMOUNT DISPLAY */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Total Amount
+                            {/* SERVICE AMOUNT BREAKDOWN */}
+                            {apptData.service.length > 0 && (
+                                <>
+                                    <label className="form-label fw-bold">
+                                        Bill Details
                                     </label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        value={apptData.amount}
-                                        readOnly
-                                    />
-                                </div>
 
-                                {/* PAYMENT TYPE */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Payment Type
-                                    </label>
-                                    <select
-                                        className="form-select"
-                                        value={apptData.payment_type}
-                                        onChange={(e) =>
-                                            setApptData((prev) => ({
-                                                ...prev,
-                                                payment_type: e.target.value,
-                                            }))
-                                        }
-                                    >
-                                        <option value="">Select Payment</option>
-                                        <option value="Cash">Cash</option>
-                                        <option value="Card">Card</option>
-                                        <option value="UPI">UPI</option>
-                                        <option value="ICICI">ICICI</option>
-                                        <option value="HDFC">HDFC</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </form>
+                                    <ul className="list-group mb-3">
+                                        {apptData.service.map((s) => (
+                                            <li
+                                                key={s.id || s._id}
+                                                className="list-group-item d-flex justify-content-between align-items-center"
+                                            >
+                                                <span>{s.name}</span>
+                                                <input
+                                                    type="number"
+                                                    className="form-control w-25"
+                                                    value={
+                                                        serviceAmounts[
+                                                            s.id || s._id
+                                                        ] ??
+                                                        s.amount ??
+                                                        0
+                                                    }
+                                                    onChange={(e) =>
+                                                        setServiceAmounts(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                [s.id || s._id]:
+                                                                    Number(
+                                                                        e.target
+                                                                            .value
+                                                                    ),
+                                                            })
+                                                        )
+                                                    }
+                                                />
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    {/* DISCOUNT */}
+                                    <div className="mb-3">
+                                        <label className="form-label fw-bold">
+                                            Discount
+                                        </label>
+
+                                        <div className="d-flex gap-2">
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                style={{ maxWidth: "200px" }}
+                                                value={discount}
+                                                onChange={(e) =>
+                                                    setDiscount(
+                                                        Number(e.target.value)
+                                                    )
+                                                }
+                                            />
+
+                                            <div className="form-check d-flex align-items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-check-input"
+                                                    checked={isPercent}
+                                                    onChange={(e) =>
+                                                        setIsPercent(
+                                                            e.target.checked
+                                                        )
+                                                    }
+                                                />
+                                                <label className="form-check-label ms-1">
+                                                    %
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SUMMARY */}
+                                    <table className="table table-bordered">
+                                        <tbody>
+                                            <tr>
+                                                <th>Total Before Discount</th>
+                                                <td className="text-end">
+                                                    ₹{serviceTotal}
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <th>
+                                                    Discount{" "}
+                                                    {isPercent
+                                                        ? `(${discount}%)`
+                                                        : discount > 0
+                                                        ? `(${discount})`
+                                                        : ""}
+                                                </th>
+                                                <td className="text-end">
+                                                    ₹
+                                                    {serviceTotal - finalAmount}
+                                                </td>
+                                            </tr>
+
+                                            <tr className="table-primary fw-bold">
+                                                <th>Final Amount</th>
+                                                <td className="text-end">
+                                                    ₹{finalAmount}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
+
+                            {/* PAYMENT */}
+                            <div className="mb-3">
+                                <label className="form-label">
+                                    Payment Type
+                                </label>
+                                <select
+                                    className="form-select"
+                                    value={apptData.payment_type}
+                                    onChange={(e) =>
+                                        setApptData((prev) => ({
+                                            ...prev,
+                                            payment_type: e.target.value,
+                                        }))
+                                    }
+                                >
+                                    <option value="">Select Payment</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card">Card</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="ICICI">ICICI</option>
+                                    <option value="HDFC">HDFC</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="modal-footer">
