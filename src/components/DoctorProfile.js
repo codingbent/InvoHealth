@@ -127,52 +127,84 @@ export default function DoctorProfile() {
 
     return (
         <div className="container mt-4">
-            <h2 className="mb-3">Doctor Profile</h2>
+            <h2 className="mb-4 fw-bold">Doctor Profile</h2>
 
-            <div className="card p-3 shadow">
-                <h4>{doctor.name}</h4>
-                <p>
-                    <strong>Clinic:</strong> {doctor.clinicName}
-                </p>
-                <p>
-                    <strong>Email:</strong> {doctor.email}
-                </p>
-                <p>
-                    <strong>Phone:</strong> {doctor.phone}
-                </p>
-                <p>
-                    <strong>Reg No:</strong> {doctor.regNumber || "N/A"}
-                </p>
-                <p>
-                    <strong>Degree:</strong> {doctor.degree?.join(", ")}
-                </p>
+            {/* ================= PROFILE CARD ================= */}
+            <div className="card shadow-sm border-0 mb-4">
+                <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h4 className="mb-1">{doctor.name}</h4>
+                            <small className="text-muted">
+                                {doctor.clinicName}
+                            </small>
+                        </div>
+                        <button
+                            className="btn btn-outline-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editDocModal"
+                        >
+                            Edit Profile
+                        </button>
+                    </div>
 
-                <h5 className="mt-3">Address</h5>
-                <p>{doctor.address.line1}</p>
-                {doctor.address.line2 && <p>{doctor.address.line2}</p>}
-                <p>
-                    {doctor.address.city}, {doctor.address.state},{" "}
-                    {doctor.address.pincode}
-                </p>
+                    <hr />
 
-                {/* Edit Button */}
-                <button
-                    className="btn btn-primary mt-3"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editDocModal"
-                >
-                    Edit Profile
-                </button>
+                    <div className="row g-4">
+                        {/* Contact Info */}
+                        <div className="col-md-6">
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Contact Information
+                            </h6>
+                            <p>
+                                <strong>Email:</strong> {doctor.email}
+                            </p>
+                            <p>
+                                <strong>Phone:</strong> {doctor.phone}
+                            </p>
+                            <p>
+                                <strong>Reg No:</strong>{" "}
+                                {doctor.regNumber || "N/A"}
+                            </p>
+                        </div>
+
+                        {/* Professional Info */}
+                        <div className="col-md-6">
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Professional Details
+                            </h6>
+                            <p>
+                                <strong>Degree:</strong>{" "}
+                                {doctor.degree?.join(", ")}
+                            </p>
+                        </div>
+
+                        {/* Address */}
+                        <div className="col-12">
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Clinic Address
+                            </h6>
+                            <p className="mb-1">{doctor.address.line1}</p>
+                            {doctor.address.line2 && (
+                                <p className="mb-1">{doctor.address.line2}</p>
+                            )}
+                            <p className="mb-0">
+                                {doctor.address.city}, {doctor.address.state} –{" "}
+                                {doctor.address.pincode}
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* ------------------ EDIT MODAL ------------------ */}
+            {/* ================= EDIT MODAL ================= */}
             <div
                 className="modal fade"
                 id="editDocModal"
                 tabIndex="-1"
                 aria-hidden="true"
             >
-                <div className="modal-dialog modal-lg">
+                <div className="modal-dialog modal-lg modal-dialog-scrollable">
                     <div className="modal-content">
                         <div className="modal-header">
                             <h5 className="modal-title">Edit Doctor Profile</h5>
@@ -183,125 +215,135 @@ export default function DoctorProfile() {
                         </div>
 
                         <div className="modal-body">
-                            <form>
-                                {/* Name */}
-                                <div className="mb-3">
-                                    <label className="form-label">Name</label>
-                                    <input
-                                        className="form-control"
-                                        name="name"
-                                        value={editData.name}
-                                        onChange={handleEditChange}
-                                    />
+                            <form className="px-2">
+                                {/* BASIC INFO */}
+                                <h6 className="text-uppercase text-muted mb-3">
+                                    Basic Information
+                                </h6>
+
+                                <div className="row g-3 mb-4">
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            Name
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="name"
+                                            value={editData.name}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            Clinic Name
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="clinicName"
+                                            value={editData.clinicName}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            Phone
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="phone"
+                                            value={editData.phone}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-6">
+                                        <label className="form-label">
+                                            Registration No
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="regNumber"
+                                            value={editData.regNumber}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Clinic */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Clinic Name
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="clinicName"
-                                        value={editData.clinicName}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
+                                {/* DEGREE */}
+                                <h6 className="text-uppercase text-muted mb-3">
+                                    Qualifications
+                                </h6>
 
-                                {/* Phone */}
-                                <div className="mb-3">
-                                    <label className="form-label">Phone</label>
-                                    <input
-                                        className="form-control"
-                                        name="phone"
-                                        value={editData.phone}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-
-                                {/* Reg Number */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Registration No
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="regNumber"
-                                        value={editData.regNumber}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-
-                                {/* Degree */}
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Degree(s)
-                                    </label>
-
-                                    {editData.degree.map((deg, index) => (
-                                        <div
-                                            key={index}
-                                            className="d-flex mb-2"
+                                {editData.degree.map((deg, index) => (
+                                    <div key={index} className="d-flex mb-2">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Enter degree"
+                                            value={deg}
+                                            onChange={(e) =>
+                                                handleDegreeChange(
+                                                    index,
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-danger ms-2"
+                                            onClick={() =>
+                                                removeDegreeField(index)
+                                            }
+                                            disabled={
+                                                editData.degree.length === 1
+                                            }
                                         >
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Enter degree"
-                                                value={deg}
-                                                onChange={(e) =>
-                                                    handleDegreeChange(
-                                                        index,
-                                                        e.target.value
-                                                    )
-                                                }
-                                                required
-                                            />
-                                            <button
-                                                type="button"
-                                                className="btn btn-danger ms-2"
-                                                onClick={() =>
-                                                    removeDegreeField(index)
-                                                }
-                                                disabled={
-                                                    editData.degree.length === 1
-                                                }
-                                            >
-                                                X
-                                            </button>
-                                        </div>
-                                    ))}
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
 
-                                    <button
-                                        type="button"
-                                        className="btn btn-primary mt-2"
-                                        onClick={addDegreeField}
-                                    >
-                                        + Add Degree
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary mt-2 mb-4"
+                                    onClick={addDegreeField}
+                                >
+                                    + Add Degree
+                                </button>
 
-                                {/* Address */}
-                                <h5>Address</h5>
-                                <div className="mb-3">
-                                    <label className="form-label">Line 1</label>
-                                    <input
-                                        className="form-control"
-                                        name="line1"
-                                        value={editData.address.line1}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">Line 2</label>
-                                    <input
-                                        className="form-control"
-                                        name="line2"
-                                        value={editData.address.line2}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                                <div className="row">
-                                    <div className="col-4 mb-3">
+                                {/* ADDRESS */}
+                                <h6 className="text-uppercase text-muted mb-3">
+                                    Address
+                                </h6>
+
+                                <div className="row g-3">
+                                    <div className="col-12">
+                                        <label className="form-label">
+                                            Line 1
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="line1"
+                                            value={editData.address.line1}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-12">
+                                        <label className="form-label">
+                                            Line 2
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="line2"
+                                            value={editData.address.line2}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-4">
                                         <label className="form-label">
                                             City
                                         </label>
@@ -312,7 +354,8 @@ export default function DoctorProfile() {
                                             onChange={handleAddressChange}
                                         />
                                     </div>
-                                    <div className="col-4 mb-3">
+
+                                    <div className="col-md-4">
                                         <label className="form-label">
                                             State
                                         </label>
@@ -323,7 +366,8 @@ export default function DoctorProfile() {
                                             onChange={handleAddressChange}
                                         />
                                     </div>
-                                    <div className="col-4 mb-3">
+
+                                    <div className="col-md-4">
                                         <label className="form-label">
                                             Pincode
                                         </label>
@@ -340,10 +384,10 @@ export default function DoctorProfile() {
 
                         <div className="modal-footer">
                             <button
-                                className="btn btn-secondary"
+                                className="btn btn-outline-secondary"
                                 data-bs-dismiss="modal"
                             >
-                                Close
+                                Cancel
                             </button>
                             <button
                                 className="btn btn-primary"
