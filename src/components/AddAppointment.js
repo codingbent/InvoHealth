@@ -137,8 +137,18 @@ const AddAppointment = (props) => {
     const handleAddAppointment = async (e) => {
         e.preventDefault();
 
+        // ✅ Patient check
         if (!selectedPatient) {
-            alert("Please select a patient first");
+            props.showAlert("Please select a patient first", "warning");
+            return;
+        }
+
+        // ✅ Service check (NEW)
+        if (services.length === 0) {
+            props.showAlert(
+                "Please select at least one service before saving appointment",
+                "warning"
+            );
             return;
         }
 
@@ -171,7 +181,7 @@ const AddAppointment = (props) => {
             if (res.ok && result.success) {
                 props.showAlert("Appointment added successfully!", "success");
 
-                // Reset fields
+                // Reset
                 setServices([]);
                 setServiceAmounts({});
                 setServiceTotal(0);
@@ -412,7 +422,11 @@ const AddAppointment = (props) => {
                     </div>
 
                     {/* Submit */}
-                    <button type="submit" className="btn btn-primary">
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={services.length === 0}
+                    >
                         Save Appointment
                     </button>
                 </form>
