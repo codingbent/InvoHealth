@@ -381,19 +381,23 @@ export default function PatientDetails() {
             appointmentId,
             _id: visit._id,
         });
+        const normalizedServices = (visit.service || []).map((s) => ({
+            _id: s._id || s.id,
+            id: s._id || s.id,
+            name: s.name,
+            amount: s.amount || 0,
+        }));
 
         setApptData({
             date: visit.date?.slice(0, 10),
-            service: visit.service || [],
+            service: normalizedServices,
             payment_type: visit.payment_type || "",
-            discount: visit.discount || 0,
-            isPercent: !!visit.isPercent,
         });
 
         // Service amount map
         const amountMap = {};
-        (visit.service || []).forEach((s) => {
-            amountMap[s.id || s._id] = s.amount || 0;
+        normalizedServices.forEach((s) => {
+            amountMap[s._id] = s.amount || 0;
         });
 
         setServiceAmounts(amountMap);
@@ -401,9 +405,6 @@ export default function PatientDetails() {
         setIsPercent(!!visit.isPercent);
 
         document.getElementById("editAppointmentModalBtn").click();
-        setTimeout(() => {
-            setServiceAmounts(amountMap);
-        }, 0);
     };
 
     const handleUpdateAppt = async () => {
@@ -634,7 +635,8 @@ export default function PatientDetails() {
                                         else
                                             updated = updated.filter(
                                                 (s) =>
-                                                    s.name !== serviceObj.name
+                                                    (s._id || s.id) !==
+                                                    serviceObj._id
                                             );
 
                                         setApptData((prev) => ({
