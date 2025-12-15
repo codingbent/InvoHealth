@@ -361,7 +361,7 @@ const AddPatient = ({ showAlert }) => {
 
                                     <tr className="table-primary fw-bold">
                                         <th>Final Amount After Discount</th>
-                                        <td className="text-end">  {amount}</td>
+                                        <td className="text-end"> {amount}</td>
                                     </tr>
                                 </tbody>
                             </table>

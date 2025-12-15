@@ -13,8 +13,8 @@ const ServiceSchema = new Schema({
     },
     doctor: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "doc", // reference to the Doc model
-        required: true, // each service must have a doctor
+        ref: "doc", 
+        required: true, 
     },
 });
 

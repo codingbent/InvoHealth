@@ -18,25 +18,10 @@ const Signup = (props) => {
         pincode: "",
         regNumber: "",
         experience: "",
-        // timings: [], // user types "10:00-12:00" etc.,
         degrees: [""],
     });
 
     let navigate = useNavigate();
-
-    // Convert slot string "10:00-12:00" to {start, end}
-    // const formatTimingsForBackend = () => {
-    //     return credentials.timings.map((entry) => ({
-    //         days: entry.days, // now supports multiple days like ["Mon", "Tue"]
-    //         slots: entry.slots
-    //             .filter((slot) => slot.start && slot.end) // only keep valid slots
-    //             .map((slot) => ({
-    //                 start: slot.start,
-    //                 end: slot.end,
-    //             })),
-    //         note: entry.note || "",
-    //     }));
-    // };
 
     const handlesubmit = async (e) => {
         e.preventDefault();
@@ -63,7 +48,6 @@ const Signup = (props) => {
                 state: credentials.state,
                 pincode: credentials.pincode,
             },
-            // timings: formatTimingsForBackend(),
             degree: credentials.degrees.filter((d) => d.trim() !== ""),
         };
 
@@ -125,68 +109,6 @@ const Signup = (props) => {
         updated.splice(index, 1);
         setcredentials({ ...credentials, degrees: updated });
     };
-
-    // const toggleDay = (entryIndex, day) => {
-    //     setcredentials((prev) => {
-    //         const updated = [...prev.timings];
-    //         if (updated[entryIndex].days.includes(day)) {
-    //             updated[entryIndex].days = updated[entryIndex].days.filter(
-    //                 (d) => d !== day
-    //             );
-    //         } else {
-    //             updated[entryIndex].days.push(day);
-    //         }
-    //         return { ...prev, timings: updated };
-    //     });
-    // };
-
-    // const addEntry = () => {
-    //     setcredentials((prev) => ({
-    //         ...prev,
-    //         timings: [...prev.timings, { days: [], slots: [], note: "" }],
-    //     }));
-    // };
-
-    // const removeEntry = (entryIndex) => {
-    //     setcredentials((prev) => ({
-    //         ...prev,
-    //         timings: prev.timings.filter((_, i) => i !== entryIndex),
-    //     }));
-    // };
-
-    // const addSlot = (entryIndex) => {
-    //     setcredentials((prev) => {
-    //         const updated = [...prev.timings];
-    //         updated[entryIndex].slots.push("");
-    //         return { ...prev, timings: updated };
-    //     });
-    // };
-
-    // const updateSlot = (entryIndex, slotIndex, value) => {
-    //     setcredentials((prev) => {
-    //         const updated = [...prev.timings];
-    //         updated[entryIndex].slots[slotIndex] = value;
-    //         return { ...prev, timings: updated };
-    //     });
-    // };
-
-    // const removeSlot = (entryIndex, slotIndex) => {
-    //     setcredentials((prev) => {
-    //         const updated = [...prev.timings];
-    //         updated[entryIndex].slots = updated[entryIndex].slots.filter(
-    //             (_, i) => i !== slotIndex
-    //         );
-    //         return { ...prev, timings: updated };
-    //     });
-    // };
-
-    // const updateNote = (entryIndex, value) => {
-    //     setcredentials((prev) => {
-    //         const updated = [...prev.timings];
-    //         updated[entryIndex].note = value;
-    //         return { ...prev, timings: updated };
-    //     });
-    // };
 
     return (
         <div className="container mt-3">
@@ -343,124 +265,6 @@ const Signup = (props) => {
                         onChange={onChange}
                     />
                 </div>
-
-                {/* Timings UI */}
-                {/* <div className="mb-3"> */}
-                    {/* <h5>Doctor Timings</h5> */}
-
-                    {/* {credentials.timings.map((entry, entryIndex) => ( */}
-                        {/* <div */}
-                            {/* key={entryIndex}
-                            className="border p-3 mb-2 rounded" */}
-                        {/* > */}
-                            {/* Multi-select days */}
-                            {/* <div className="d-flex flex-wrap mb-3">
-                                {[
-                                    "Mon",
-                                    "Tue",
-                                    "Wed",
-                                    "Thu",
-                                    "Fri",
-                                    "Sat",
-                                    "Sun",
-                                ].map((d) => (
-                                    <button
-                                        type="button"
-                                        key={d}
-                                        className={`btn btn-sm me-2 mb-2 ${
-                                            entry.days.includes(d)
-                                                ? "btn-primary"
-                                                : "btn-outline-primary"
-                                        }`}
-                                        onClick={() => toggleDay(entryIndex, d)}
-                                    >
-                                        {d}
-                                    </button>
-                                ))}
-                            </div> */}
-
-                            {/* Slots for this set of days */}
-                            {/* {entry.slots.map((slot, slotIndex) => (
-                                <div
-                                    key={slotIndex}
-                                    className="d-flex mb-2 align-items-center"
-                                >
-                                    <label className="me-2">From:</label>
-                                    <input
-                                        type="time"
-                                        className="form-control"
-                                        value={slot.start || ""}
-                                        onChange={(e) =>
-                                            updateSlot(entryIndex, slotIndex, {
-                                                ...slot,
-                                                start: e.target.value,
-                                            })
-                                        }
-                                    />
-
-                                    <label className="ms-3 me-2">To:</label>
-                                    <input
-                                        type="time"
-                                        className="form-control"
-                                        value={slot.end || ""}
-                                        onChange={(e) =>
-                                            updateSlot(entryIndex, slotIndex, {
-                                                ...slot,
-                                                end: e.target.value,
-                                            })
-                                        }
-                                    />
-
-                                    <button
-                                        type="button"
-                                        className="btn btn-danger btn-sm ms-2"
-                                        onClick={() =>
-                                            removeSlot(entryIndex, slotIndex)
-                                        }
-                                    >
-                                        X
-                                    </button>
-                                </div>
-                            ))} */}
-
-                            {/* <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => addSlot(entryIndex)}
-                            >
-                                + Add Slot
-                            </button> */}
-
-                            {/* <input
-                                type="text"
-                                className="form-control mt-2"
-                                placeholder="Optional note (e.g. On Call)"
-                                value={entry.note || ""}
-                                onChange={(e) =>
-                                    updateNote(entryIndex, e.target.value)
-                                }
-                            /> */}
-
-                            {/* <div className="text-end mt-2">
-                                <button
-                                    type="button"
-                                    className="btn btn-danger btn-sm"
-                                    onClick={() => removeEntry(entryIndex)}
-                                >
-                                    Remove
-                                </button>
-                            </div> */}
-                        {/* </div> */}
-
-                    {/* Add new set of days */}
-                    {/* <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={addEntry}
-                    >
-                        + Add Another Timing Group
-                    </button> */}
-                {/* </div> */}
 
                 <div className="mb-3">
                     <label className="form-label">Degree(s)</label>

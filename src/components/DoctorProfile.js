@@ -77,11 +77,21 @@ export default function DoctorProfile() {
 
             <div className="card p-3 shadow">
                 <h4>{doctor.name}</h4>
-                <p><strong>Clinic:</strong> {doctor.clinicName}</p>
-                <p><strong>Email:</strong> {doctor.email}</p>
-                <p><strong>Phone:</strong> {doctor.phone}</p>
-                <p><strong>Reg No:</strong> {doctor.regNumber || "N/A"}</p>
-                <p><strong>Degree:</strong> {doctor.degree?.join(", ")}</p>
+                <p>
+                    <strong>Clinic:</strong> {doctor.clinicName}
+                </p>
+                <p>
+                    <strong>Email:</strong> {doctor.email}
+                </p>
+                <p>
+                    <strong>Phone:</strong> {doctor.phone}
+                </p>
+                <p>
+                    <strong>Reg No:</strong> {doctor.regNumber || "N/A"}
+                </p>
+                <p>
+                    <strong>Degree:</strong> {doctor.degree?.join(", ")}
+                </p>
 
                 <h5 className="mt-3">Address</h5>
                 <p>{doctor.address.line1}</p>
@@ -112,7 +122,10 @@ export default function DoctorProfile() {
                     <div className="modal-content">
                         <div className="modal-header">
                             <h5 className="modal-title">Edit Doctor Profile</h5>
-                            <button className="btn-close" data-bs-dismiss="modal"></button>
+                            <button
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            ></button>
                         </div>
 
                         <div className="modal-body">
@@ -130,7 +143,9 @@ export default function DoctorProfile() {
 
                                 {/* Clinic */}
                                 <div className="mb-3">
-                                    <label className="form-label">Clinic Name</label>
+                                    <label className="form-label">
+                                        Clinic Name
+                                    </label>
                                     <input
                                         className="form-control"
                                         name="clinicName"
@@ -152,7 +167,9 @@ export default function DoctorProfile() {
 
                                 {/* Reg Number */}
                                 <div className="mb-3">
-                                    <label className="form-label">Registration No</label>
+                                    <label className="form-label">
+                                        Registration No
+                                    </label>
                                     <input
                                         className="form-control"
                                         name="regNumber"
@@ -163,7 +180,9 @@ export default function DoctorProfile() {
 
                                 {/* Degree */}
                                 <div className="mb-3">
-                                    <label className="form-label">Degree (comma separated)</label>
+                                    <label className="form-label">
+                                        Degree (comma separated)
+                                    </label>
                                     <input
                                         className="form-control"
                                         name="degree"
@@ -171,7 +190,9 @@ export default function DoctorProfile() {
                                         onChange={(e) =>
                                             setEditData({
                                                 ...editData,
-                                                degree: e.target.value.split(","),
+                                                degree: e.target.value.split(
+                                                    ","
+                                                ),
                                             })
                                         }
                                     />
@@ -199,7 +220,9 @@ export default function DoctorProfile() {
                                 </div>
                                 <div className="row">
                                     <div className="col-4 mb-3">
-                                        <label className="form-label">City</label>
+                                        <label className="form-label">
+                                            City
+                                        </label>
                                         <input
                                             className="form-control"
                                             name="city"
@@ -208,7 +231,9 @@ export default function DoctorProfile() {
                                         />
                                     </div>
                                     <div className="col-4 mb-3">
-                                        <label className="form-label">State</label>
+                                        <label className="form-label">
+                                            State
+                                        </label>
                                         <input
                                             className="form-control"
                                             name="state"
@@ -217,7 +242,9 @@ export default function DoctorProfile() {
                                         />
                                     </div>
                                     <div className="col-4 mb-3">
-                                        <label className="form-label">Pincode</label>
+                                        <label className="form-label">
+                                            Pincode
+                                        </label>
                                         <input
                                             className="form-control"
                                             name="pincode"
@@ -230,7 +257,10 @@ export default function DoctorProfile() {
                         </div>
 
                         <div className="modal-footer">
-                            <button className="btn btn-secondary" data-bs-dismiss="modal">
+                            <button
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
                                 Close
                             </button>
                             <button

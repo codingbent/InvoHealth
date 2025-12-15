@@ -136,7 +136,6 @@ router.post(
     }
 );
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
-
 router.post(
     "/createservice",
     fetchuser,
