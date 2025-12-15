@@ -629,35 +629,38 @@ export default function PatientDetails() {
                                     services={availableServices}
                                     selectedServices={apptData.service}
                                     onSelect={(serviceObj, checked) => {
-                                        let updated = [...apptData.service];
+                                        setApptData((prev) => {
+                                            let updated;
 
-                                        if (checked) {
-                                            if (
-                                                !updated.some(
+                                            if (checked) {
+                                                // ADD only if not present
+                                                if (
+                                                    prev.service.some(
+                                                        (s) =>
+                                                            s.serviceId ===
+                                                            serviceObj.serviceId
+                                                    )
+                                                ) {
+                                                    return prev;
+                                                }
+                                                updated = [
+                                                    ...prev.service,
+                                                    serviceObj,
+                                                ];
+                                            } else {
+                                                // REMOVE exactly one
+                                                updated = prev.service.filter(
                                                     (s) =>
-                                                        (s._id || s.id) ===
-                                                        serviceObj._id
-                                                )
-                                            ) {
-                                                updated.push({
-                                                    _id: serviceObj._id,
-                                                    id: serviceObj._id,
-                                                    name: serviceObj.name,
-                                                    amount:
-                                                        serviceObj.amount || 0,
-                                                });
+                                                        s.serviceId !==
+                                                        serviceObj.serviceId
+                                                );
                                             }
-                                        } else
-                                            updated = updated.filter(
-                                                (s) =>
-                                                    (s._id || s.id) !==
-                                                    serviceObj._id
-                                            );
 
-                                        setApptData((prev) => ({
-                                            ...prev,
-                                            service: updated,
-                                        }));
+                                            return {
+                                                ...prev,
+                                                service: updated,
+                                            };
+                                        });
                                     }}
                                 />
                             </div>
@@ -672,25 +675,22 @@ export default function PatientDetails() {
                                     <ul className="list-group mb-3">
                                         {apptData.service.map((s) => (
                                             <li
-                                                key={s.id || s._id}
-                                                className="list-group-item d-flex justify-content-between align-items-center"
+                                                key={s.serviceId}
+                                                className="list-group-item d-flex justify-content-between"
                                             >
                                                 <span>{s.name}</span>
                                                 <input
                                                     type="number"
-                                                    className="form-control w-25"
                                                     value={
                                                         serviceAmounts[
-                                                            s.id || s._id
-                                                        ] ??
-                                                        s.amount ??
-                                                        0
+                                                            s.serviceId
+                                                        ] ?? s.amount
                                                     }
                                                     onChange={(e) =>
                                                         setServiceAmounts(
                                                             (prev) => ({
                                                                 ...prev,
-                                                                [s.id || s._id]:
+                                                                [s.serviceId]:
                                                                     Number(
                                                                         e.target
                                                                             .value
@@ -761,7 +761,10 @@ export default function PatientDetails() {
                                                 </th>
                                                 <td className="text-end">
                                                     ₹
-                                                    {(serviceTotal - finalAmount).toFixed(2)}
+                                                    {(
+                                                        serviceTotal -
+                                                        finalAmount
+                                                    ).toFixed(2)}
                                                 </td>
                                             </tr>
 
