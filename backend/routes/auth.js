@@ -882,14 +882,31 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
 });
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
     try {
-        const patients = await Patient.find({ doctor: req.user.id })
-            .select("name number age gender") // ⚡ only needed fields
-            .sort({ name: 1 }); // alphabetical
-
-        res.json(patients);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Server error" });
+        const patients = await Patient.find({ doctor: req.doc.id });
+        const patientsWithLast = await Promise.all(
+            patients.map(async (p) => {
+                const appointment = await Appointment.findOne({
+                    patient: p._id,
+                });
+                let lastDate = null;
+                let lastpayment_type = null;
+                if (appointment && appointment.visits.length > 0) {
+                    const lastVisit =
+                        appointment.visits[appointment.visits.length - 1];
+                    lastDate = lastVisit.date;
+                    lastpayment_type = lastVisit.payment_type; // <-- add this
+                }
+                return {
+                    ...p.toObject(),
+                    lastAppointment: lastDate,
+                    lastpayment_type, // <-- return it
+                };
+            })
+        );
+        res.json(patientsWithLast);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server error");
     }
 });
 module.exports = router;
