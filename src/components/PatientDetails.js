@@ -91,6 +91,27 @@ export default function PatientDetails() {
             console.error("Error fetching services:", err);
         }
     };
+    useEffect(() => {
+        if (!availableServices.length) return;
+
+        setApptData((prev) => {
+            if (!prev.service.length) return prev;
+
+            const normalized = prev.service.map((s) => {
+                const match = availableServices.find(
+                    (as) => as._id === s._id || as._id === s.id
+                );
+
+                return {
+                    ...s,
+                    _id: match?._id || s._id,
+                    amount: s.amount ?? match?.amount ?? 0,
+                };
+            });
+
+            return { ...prev, service: normalized };
+        });
+    }, [availableServices]);
 
     // ------------------------------------------------------------
     // FETCH PATIENT + APPOINTMENTS
@@ -381,11 +402,17 @@ export default function PatientDetails() {
             appointmentId,
             _id: visit._id,
         });
-        const normalizedServices = (visit.service || []).map((s) => ({
-            _id: s._id || s.id,
-            name: s.name,
-            amount: s.amount || 0,
-        }));
+        const normalizedServices = (visit.service || []).map((s) => {
+            const realService = availableServices.find(
+                (as) => as._id === (s._id || s.id)
+            );
+
+            return {
+                _id: realService?._id || s._id || s.id,
+                name: s.name,
+                amount: s.amount ?? realService?.amount ?? 0,
+            };
+        });
 
         setApptData({
             date: visit.date?.slice(0, 10),
