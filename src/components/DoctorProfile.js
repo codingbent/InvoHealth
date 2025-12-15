@@ -28,6 +28,7 @@ export default function DoctorProfile() {
                     address: {
                         line1: doc.address?.line1 || "",
                         line2: doc.address?.line2 || "",
+                        line3: doc.address?.line3 || "",
                         city: doc.address?.city || "",
                         state: doc.address?.state || "",
                         pincode: doc.address?.pincode || "",
@@ -89,6 +90,7 @@ export default function DoctorProfile() {
                     address: {
                         line1: doc.address?.line1 || "",
                         line2: doc.address?.line2 || "",
+                        line3: doc.address?.line3 || "",
                         city: doc.address?.city || "",
                         state: doc.address?.state || "",
                         pincode: doc.address?.pincode || "",
@@ -187,6 +189,9 @@ export default function DoctorProfile() {
                             <p className="mb-1">{doctor.address.line1}</p>
                             {doctor.address.line2 && (
                                 <p className="mb-1">{doctor.address.line2}</p>
+                            )}
+                            {doctor.address.line3 && (
+                                <p className="mb-1">{doctor.address.line3}</p>
                             )}
                             <p className="mb-0">
                                 {doctor.address.city}, {doctor.address.state} –{" "}
@@ -321,7 +326,7 @@ export default function DoctorProfile() {
                                 <div className="row g-3">
                                     <div className="col-12">
                                         <label className="form-label">
-                                            Line 1
+                                            Address Line 1
                                         </label>
                                         <input
                                             className="form-control"
@@ -333,12 +338,24 @@ export default function DoctorProfile() {
 
                                     <div className="col-12">
                                         <label className="form-label">
-                                            Line 2
+                                            Address Line 2 (optional)
                                         </label>
                                         <input
                                             className="form-control"
                                             name="line2"
                                             value={editData.address.line2}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+
+                                    <div className="col-12">
+                                        <label className="form-label">
+                                            Address Line 3 (optional)
+                                        </label>
+                                        <input
+                                            className="form-control"
+                                            name="line3"
+                                            value={editData.address.line3 || ""}
                                             onChange={handleAddressChange}
                                         />
                                     </div>
