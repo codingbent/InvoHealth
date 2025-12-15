@@ -246,35 +246,16 @@ const AddAppointment = (props) => {
                         <label className="form-label">Services</label>
                         <ServiceList
                             services={allServices}
-                            selectedServices={services}
-                            onAdd={(serviceObj) => {
-                                setServices((prev) => {
-                                    if (
-                                        prev.some(
-                                            (s) => s._id === serviceObj._id
-                                        )
-                                    ) {
-                                        return prev;
-                                    }
-                                    return [...prev, serviceObj];
-                                });
-
-                                setServiceAmounts((prev) => ({
-                                    ...prev,
-                                    [serviceObj._id]: serviceObj.amount ?? 0,
-                                }));
-                            }}
-                            onRemove={(id) => {
+                            onSelect={(serviceObj, checked) => {
                                 setServices((prev) =>
-                                    prev.filter((s) => s._id !== id)
+                                    checked
+                                        ? [...prev, serviceObj]
+                                        : prev.filter(
+                                              (s) => s._id !== serviceObj._id
+                                          )
                                 );
-
-                                setServiceAmounts((prev) => {
-                                    const copy = { ...prev };
-                                    delete copy[id];
-                                    return copy;
-                                });
                             }}
+                            selectedServices={services}
                         />
                     </div>
 
@@ -353,7 +334,7 @@ const AddAppointment = (props) => {
                                     <tr>
                                         <th>Total Before Discount</th>
                                         <td className="text-end">
-                                            {serviceTotal}
+                                              {serviceTotal}
                                         </td>
                                     </tr>
 
@@ -367,7 +348,7 @@ const AddAppointment = (props) => {
                                                 : ""}
                                         </th>
                                         <td className="text-end">
-                                            {" "}
+                                             {" "}
                                             {(() => {
                                                 if (discount <= 0) return 0;
                                                 if (isPercent)
@@ -383,7 +364,7 @@ const AddAppointment = (props) => {
                                     <tr className="table-primary fw-bold">
                                         <th>Final Amount</th>
                                         <td className="text-end">
-                                            {finalAmount}
+                                              {finalAmount}
                                         </td>
                                     </tr>
                                 </tbody>

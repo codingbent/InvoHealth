@@ -4,51 +4,45 @@ export default function ServiceList({
     onAdd,
     onRemove,
 }) {
-    const selectedIds = new Set(selectedServices.map((s) => s._id));
+    const selectedIds = new Set(selectedServices.map(s => s._id));
 
     return (
         <>
-            {/* AVAILABLE SERVICES */}
-            <div className="d-flex flex-wrap gap-2 mb-3">
-                {services.map((service) => {
-                    const isSelected = selectedIds.has(service._id);
-
-                    return (
+            {/* Available services to ADD */}
+            <div className="mb-2 d-flex flex-wrap gap-2">
+                {services
+                    .filter(s => !selectedIds.has(s._id)) // 🔥 KEY FIX
+                    .map(service => (
                         <button
                             key={service._id}
                             type="button"
-                            className={`btn btn-sm ${
-                                isSelected
-                                    ? "btn-secondary"
-                                    : "btn-outline-primary"
-                            }`}
-                            disabled={isSelected}
+                            className="btn btn-outline-primary btn-sm"
                             onClick={() => onAdd(service)}
                         >
-                            {service.name} ₹{service.amount}
+                            {service.name} ₹{service.amount ?? 0}
                         </button>
-                    );
-                })}
+                    ))}
             </div>
 
-            {/* SELECTED TAGS */}
-            <div className="d-flex flex-wrap gap-2">
-                {selectedServices.map((s) => (
-                    <span
-                        key={s._id}
-                        className="badge bg-primary d-flex align-items-center"
-                        style={{ gap: "6px", padding: "8px 10px" }}
-                    >
-                        {s.name}
-                        <button
-                            type="button"
-                            className="btn-close btn-close-white"
-                            style={{ fontSize: "0.6rem" }}
-                            onClick={() => onRemove(s._id)}
-                        />
-                    </span>
-                ))}
-            </div>
+            {/* Selected services as TAGS */}
+            {selectedServices.length > 0 && (
+                <div className="d-flex flex-wrap gap-2">
+                    {selectedServices.map(service => (
+                        <span
+                            key={service._id}
+                            className="badge bg-primary d-flex align-items-center gap-2"
+                            style={{ padding: "8px 10px" }}
+                        >
+                            {service.name}
+                            <button
+                                type="button"
+                                className="btn-close btn-close-white btn-sm"
+                                onClick={() => onRemove(service._id)}
+                            />
+                        </span>
+                    ))}
+                </div>
+            )}
         </>
     );
 }
