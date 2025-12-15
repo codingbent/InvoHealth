@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Modal } from "bootstrap";
 
 export default function DoctorProfile() {
     const API_BASE_URL =
@@ -95,11 +94,6 @@ export default function DoctorProfile() {
                         pincode: doc.address?.pincode || "",
                     },
                 });
-
-                // ✅ close modal ONLY on success
-                const modalEl = document.getElementById("editDocModal");
-                const modal = Modal.getInstance(modalEl);
-                modal?.hide();
             } else {
                 alert("Update failed");
             }
@@ -354,6 +348,7 @@ export default function DoctorProfile() {
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSave}
+                                data-bs-dismiss="modal"
                             >
                                 Save Changes
                             </button>
