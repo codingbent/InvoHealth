@@ -83,9 +83,19 @@ const AddAppointment = (props) => {
 
     // FILTER PATIENTS
     useEffect(() => {
-        const filtered = patientsList.filter((p) =>
-            p.name.toLowerCase().includes(searchText.toLowerCase())
+        const text = searchText.trim().toLowerCase();
+
+        if (!text) {
+            setFilteredPatients(patientsList);
+            return;
+        }
+
+        const filtered = patientsList.filter(
+            (p) =>
+                p.name?.toLowerCase().includes(text) ||
+                p.number?.toString().includes(text)
         );
+
         setFilteredPatients(filtered);
     }, [searchText, patientsList]);
 
@@ -200,7 +210,7 @@ const AddAppointment = (props) => {
                     onChange={(e) => setSearchText(e.target.value)}
                 />
 
-                {searchText && (
+                {searchText && !selectedPatient && (
                     <ul className="list-group mt-1">
                         {filteredPatients.map((p) => (
                             <li
