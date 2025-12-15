@@ -126,12 +126,6 @@ const AddAppointment = (props) => {
         setSearchText("");
     };
 
-    const handleSearchChange = (e) => {
-        setSearchText(e.target.value);
-        setSelectedPatient(null);
-        localStorage.removeItem("patient");
-    };
-
     const handleServiceAmountChange = (id, value) => {
         setServiceAmounts((prev) => ({
             ...prev,
@@ -213,7 +207,11 @@ const AddAppointment = (props) => {
                     id="patientSearch"
                     placeholder="Type to search patient..."
                     value={searchText}
-                    onChange={handleSearchChange}
+                    onChange={(e) => {
+                        setSearchText(e.target.value);
+                        setSelectedPatient(null); // 🔥 allow re-search
+                        localStorage.removeItem("patient");
+                    }}
                 />
 
                 {searchText && (
@@ -222,6 +220,7 @@ const AddAppointment = (props) => {
                             <li
                                 key={p._id}
                                 className="list-group-item list-group-item-action"
+                                style={{ cursor: "pointer" }}
                                 onClick={() => handleSelectPatient(p)}
                             >
                                 {p.name} - {p.number}
@@ -261,24 +260,16 @@ const AddAppointment = (props) => {
                         <label className="form-label">Services</label>
                         <ServiceList
                             services={allServices}
-                            selectedServices={services}
-                            onAdd={(service) => {
-                                setServices((prev) => {
-                                    if (prev.some((s) => s._id === service._id))
-                                        return prev;
-                                    return [...prev, service];
-                                });
-                            }}
-                            onRemove={(id) => {
+                            onSelect={(serviceObj, checked) => {
                                 setServices((prev) =>
-                                    prev.filter((s) => s._id !== id)
+                                    checked
+                                        ? [...prev, serviceObj]
+                                        : prev.filter(
+                                              (s) => s._id !== serviceObj._id
+                                          )
                                 );
-                                setServiceAmounts((prev) => {
-                                    const copy = { ...prev };
-                                    delete copy[id];
-                                    return copy;
-                                });
                             }}
+                            selectedServices={services}
                         />
                     </div>
 
