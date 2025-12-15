@@ -225,62 +225,63 @@ export default function PatientList() {
 
         rows.push({}); // empty line
 
-        Object.keys(appointmentsByMonth).forEach((month) => {
-            const daysObj = appointmentsByMonth[month];
+        Object.keys(appointmentsByMonth)
+            .sort((a, b) => {
+                const da = new Date(`01 ${a}`);
+                const db = new Date(`01 ${b}`);
+                return db - da; // month DESC
+            })
+            .forEach((month) => {
+                const daysObj = appointmentsByMonth[month];
 
-            Object.keys(daysObj)
-                .sort((a, b) => new Date(b) - new Date(a))
-                .forEach((day) => {
-                    const dayApps = daysObj[day];
-                    let dayTotal = 0;
-
-                    // ================= DATE ROW =================
-                    rows.push({
-                        Patient: useBold
-                            ? boldCell(new Date(day).toLocaleDateString())
-                            : new Date(day).toLocaleDateString(),
-                    });
-
-                    rows.push({
-                        Patient: useBold ? boldCell("Patient") : "Patient",
-                        Number: useBold ? boldCell("Number") : "Number",
-                        Date: useBold ? boldCell("Date") : "Date",
-                        Payment: useBold ? boldCell("Payment") : "Payment",
-                        Invoice: useBold ? boldCell("Invoice") : "Invoice",
-                        Amount: useBold ? boldCell("Amount") : "Amount",
-                        Services: useBold ? boldCell("Services") : "Services",
-                    });
-
-                    // ================= DATA ROWS =================
-                    dayApps.forEach((a) => {
-                        dayTotal += Number(a.amount || 0);
+                Object.keys(daysObj)
+                    .sort((a, b) => new Date(b) - new Date(a)) // day DESC
+                    .forEach((day) => {
+                        const dayApps = daysObj[day];
+                        let dayTotal = 0;
 
                         rows.push({
-                            Patient: a.name,
-                            Number: a.number || "",
-                            Date: new Date(a.date).toLocaleDateString(),
-                            Payment: a.payment_type,
-                            Invoice: a.invoiceNumber || "",
-                            Amount: a.amount,
-                            Services: (a.services || [])
-                                .map((s) =>
-                                    typeof s === "object" ? s.name : s
-                                )
-                                .join(", "),
+                            Patient: boldCell(
+                                new Date(day).toLocaleDateString()
+                            ),
                         });
-                    });
 
-                    // ================= TOTAL ROW =================
-                    rows.push({
-                        Payment: useBold ? boldCell("TOTAL") : "TOTAL",
-                        Amount: useBold ? boldCell(dayTotal) : dayTotal,
-                        Services: "",
-                    });
+                        rows.push({
+                            Patient: boldCell("Patient"),
+                            Number: boldCell("Number"),
+                            Date: boldCell("Date"),
+                            Payment: boldCell("Payment"),
+                            Invoice: boldCell("Invoice"),
+                            Amount: boldCell("Amount"),
+                            Services: boldCell("Services"),
+                        });
 
-                    // ================= EMPTY ROW =================
-                    rows.push({});
-                });
-        });
+                        dayApps.forEach((a) => {
+                            dayTotal += Number(a.amount || 0);
+
+                            rows.push({
+                                Patient: a.name,
+                                Number: a.number || "",
+                                Date: new Date(a.date).toLocaleDateString(),
+                                Payment: a.payment_type,
+                                Invoice: a.invoiceNumber || "",
+                                Amount: a.amount,
+                                Services: (a.services || [])
+                                    .map((s) =>
+                                        typeof s === "object" ? s.name : s
+                                    )
+                                    .join(", "),
+                            });
+                        });
+
+                        rows.push({
+                            Payment: boldCell("TOTAL"),
+                            Amount: boldCell(dayTotal),
+                        });
+
+                        rows.push({});
+                    });
+            });
 
         const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
         const wb = XLSX.utils.book_new();
