@@ -16,6 +16,7 @@ export default function PatientList() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
+    const [doctor, setDoctor] = useState(null);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -94,6 +95,26 @@ export default function PatientList() {
         );
     });
 
+    // ------------------------------------------------------------
+    // FETCH DOCTOR DETAILS
+    // ------------------------------------------------------------
+    const fetchDoctor = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
+                headers: { "auth-token": token },
+            });
+            const data = await res.json();
+            if (data.success) setDoctor(data.doctor);
+        } catch (err) {
+            console.error("Error fetching doctor:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchDoctor();
+    }, []);
+
     const hasAnyFilter =
         searchTerm ||
         selectedPayments.length > 0 ||
@@ -159,6 +180,29 @@ export default function PatientList() {
         s: { font: { bold: true } },
     });
 
+    const getDateRangeText = () => {
+        let fromDate, toDate;
+
+        if (hasAnyFilter && (startDate || endDate)) {
+            fromDate = startDate;
+            toDate = endDate;
+        } else {
+            // derive from all data being exported
+            const dates = dataToShow
+                .map((a) => new Date(a.date))
+                .sort((a, b) => a - b);
+
+            if (dates.length === 0) return "";
+
+            fromDate = dates[0];
+            toDate = dates[dates.length - 1];
+        }
+
+        const format = (d) => new Date(d).toLocaleDateString();
+
+        return `From: ${format(fromDate)}   To: ${format(toDate)}`;
+    };
+
     const downloadExcel = () => {
         if (dataToShow.length === 0) {
             alert("No data to export");
@@ -168,11 +212,24 @@ export default function PatientList() {
         const rows = [];
         const useBold = !hasAnyFilter;
 
+        const dateRangeText = getDateRangeText();
+
+        // 🔝 TOP HEADER ROWS
+        rows.push({
+            Patient: boldCell(`Doctor: ${doctor?.name || ""}`),
+        });
+
+        rows.push({
+            Patient: boldCell(dateRangeText),
+        });
+
+        rows.push({}); // empty line
+
         Object.keys(appointmentsByMonth).forEach((month) => {
             const daysObj = appointmentsByMonth[month];
 
             Object.keys(daysObj)
-                .sort((a, b) => new Date(a) - new Date(b))
+                .sort((a, b) => new Date(b) - new Date(a))
                 .forEach((day) => {
                     const dayApps = daysObj[day];
                     let dayTotal = 0;
@@ -187,7 +244,6 @@ export default function PatientList() {
                     rows.push({
                         Patient: useBold ? boldCell("Patient") : "Patient",
                         Number: useBold ? boldCell("Number") : "Number",
-                        Doctor: useBold ? boldCell("Doctor") : "Doctor",
                         Date: useBold ? boldCell("Date") : "Date",
                         Payment: useBold ? boldCell("Payment") : "Payment",
                         Invoice: useBold ? boldCell("Invoice") : "Invoice",
@@ -202,7 +258,6 @@ export default function PatientList() {
                         rows.push({
                             Patient: a.name,
                             Number: a.number || "",
-                            Doctor: a.doctorName || "abhed",
                             Date: new Date(a.date).toLocaleDateString(),
                             Payment: a.payment_type,
                             Invoice: a.invoiceNumber || "",
