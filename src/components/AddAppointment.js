@@ -126,6 +126,12 @@ const AddAppointment = (props) => {
         setSearchText("");
     };
 
+    const handleSearchChange = (e) => {
+        setSearchText(e.target.value);
+        setSelectedPatient(null);
+        localStorage.removeItem("patient");
+    };
+
     const handleServiceAmountChange = (id, value) => {
         setServiceAmounts((prev) => ({
             ...prev,
@@ -207,16 +213,15 @@ const AddAppointment = (props) => {
                     id="patientSearch"
                     placeholder="Type to search patient..."
                     value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
+                    onChange={handleSearchChange}
                 />
 
-                {searchText && !selectedPatient && (
+                {searchText && (
                     <ul className="list-group mt-1">
                         {filteredPatients.map((p) => (
                             <li
                                 key={p._id}
                                 className="list-group-item list-group-item-action"
-                                style={{ cursor: "pointer" }}
                                 onClick={() => handleSelectPatient(p)}
                             >
                                 {p.name} - {p.number}
