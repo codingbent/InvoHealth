@@ -15,7 +15,7 @@ const AddPatient = ({ showAlert }) => {
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
 
-    // 🆕 Discount States
+    // Discount
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
 
@@ -31,16 +31,22 @@ const AddPatient = ({ showAlert }) => {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // Fetch Services
+    // =========================
+    // FETCH SERVICES
+    // =========================
     useEffect(() => {
         const fetchServices = async () => {
             try {
                 const res = await fetch(
                     `${API_BASE_URL}/api/auth/fetchallservice`,
-                    { headers: { "auth-token": localStorage.getItem("token") } }
+                    {
+                        headers: {
+                            "auth-token": localStorage.getItem("token"),
+                        },
+                    }
                 );
                 const data = await res.json();
-                setAvailableServices(data);
+                setAvailableServices(data || []);
             } catch (err) {
                 console.error("Error fetching services:", err);
             }
@@ -48,21 +54,19 @@ const AddPatient = ({ showAlert }) => {
         fetchServices();
     }, []);
 
+    // =========================
+    // CALCULATE TOTAL
+    // =========================
     useEffect(() => {
-        const prices = service.map(
-            (s) => serviceAmounts[s._id] ?? s.amount ?? 0
+        const serviceTotal = service.reduce(
+            (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
+            0
         );
-
-        const serviceTotal = prices.reduce((sum, x) => sum + x, 0);
 
         let final = serviceTotal;
 
         if (discount > 0) {
-            if (isPercent) {
-                final -= serviceTotal * (discount / 100);
-            } else {
-                final -= discount;
-            }
+            final -= isPercent ? serviceTotal * (discount / 100) : discount;
         }
 
         if (final < 0) final = 0;
@@ -70,38 +74,45 @@ const AddPatient = ({ showAlert }) => {
         setPatient((prev) => ({ ...prev, amount: final }));
     }, [service, serviceAmounts, discount, isPercent]);
 
-    const handleServiceAmountChange = (index, value) => {
-        const newAmounts = [...serviceAmounts];
-        newAmounts[index] = Number(value);
-        setServiceAmounts(newAmounts);
+    // =========================
+    // INPUT HANDLER
+    // =========================
+    const onChange = (e) => {
+        setPatient({ ...patient, [e.target.name]: e.target.value });
     };
 
-    const onChange = (e) =>
-        setPatient({ ...patient, [e.target.name]: e.target.value });
-
-    // Submit Form
+    // =========================
+    // SUBMIT
+    // =========================
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // 🚨 SERVICE REQUIRED
+        if (!service || service.length === 0) {
+            showAlert("Please select at least one service", "warning");
+            return;
+        }
+
         let finalNumber = number.trim();
 
-        // 🚨 If number is empty
+        // 🚨 MOBILE NUMBER LOGIC
         if (!finalNumber) {
             const wantsToAdd = window.confirm(
                 "Mobile number is not entered.\n\nClick OK to add a mobile number.\nClick Cancel to continue without it."
             );
 
-            // User wants to ADD number → stop submit
             if (wantsToAdd) {
                 showAlert("Please enter a mobile number", "warning");
                 return;
             }
 
-            // User DENIES adding → save placeholder
             finalNumber = "0000000000";
         }
 
         try {
-            // Create Patient
+            // =========================
+            // CREATE PATIENT
+            // =========================
             const patientRes = await fetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
@@ -128,6 +139,7 @@ const AddPatient = ({ showAlert }) => {
             );
 
             const patientJson = await patientRes.json();
+
             if (!patientJson.success) {
                 showAlert(
                     patientJson.error || "Failed to add patient",
@@ -138,7 +150,9 @@ const AddPatient = ({ showAlert }) => {
 
             const newPatientId = patientJson.patient._id;
 
-            // Create Appointment
+            // =========================
+            // CREATE APPOINTMENT
+            // =========================
             const token = localStorage.getItem("token");
             const decoded = jwtDecode(token);
             const doctorId = decoded.doc?.id;
@@ -152,10 +166,10 @@ const AddPatient = ({ showAlert }) => {
                         "auth-token": token,
                     },
                     body: JSON.stringify({
-                        service: service.map((s, index) => ({
+                        service: service.map((s) => ({
                             id: s._id,
                             name: s.name,
-                            amount: serviceAmounts[index] ?? s.amount ?? 0,
+                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         amount,
                         date: appointmentDate,
@@ -168,14 +182,17 @@ const AddPatient = ({ showAlert }) => {
             );
 
             const appointmentJson = await appointmentRes.json();
+
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
-                document.querySelector("#patientModal .btn-close").click();
+                document.querySelector("#patientModal .btn-close")?.click();
             } else {
                 showAlert("Patient added but appointment failed", "warning");
             }
 
-            // Reset Form
+            // =========================
+            // RESET FORM
+            // =========================
             setPatient({
                 name: "",
                 service: [],
@@ -185,10 +202,9 @@ const AddPatient = ({ showAlert }) => {
                 gender: "Male",
             });
 
-            setServiceAmounts([]);
+            setServiceAmounts({});
             setDiscount(0);
             setIsPercent(false);
-
             setAppointmentDate(new Date().toISOString().slice(0, 10));
             setPaymentType("Cash");
         } catch (err) {
@@ -241,7 +257,10 @@ const AddPatient = ({ showAlert }) => {
 
                     {/* Services */}
                     <div className="mb-3">
-                        <label className="form-label">Services</label>
+                        <label className="form-label">
+                            Services <span className="text-danger">*</span>
+                        </label>
+
                         <ServiceList
                             services={availableServices}
                             selectedServices={service}
@@ -469,7 +488,11 @@ const AddPatient = ({ showAlert }) => {
                     >
                         Close
                     </button>
-                    <button type="submit" className="btn btn-primary">
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={service.length === 0}
+                    >
                         Add Patient & Appointment
                     </button>
                 </div>
