@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useNavigate } from "react-router-dom";
 
 export default function PatientDetails() {
+    const navigate = useNavigate();
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -19,6 +21,7 @@ export default function PatientDetails() {
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const [finalAmount, setFinalAmount] = useState(0);
+    const [deleting, setDeleting] = useState(false);
 
     const [apptData, setApptData] = useState({
         date: "",
@@ -54,23 +57,6 @@ export default function PatientDetails() {
         } catch (err) {
             console.error("Error fetching doctor:", err);
         }
-    };
-
-    // ------------------------------------------------------------
-    // DATE HELPERS
-    // ------------------------------------------------------------
-    const toISTDateTime = (dateStr) => {
-        if (!dateStr) return "";
-        const date = new Date(dateStr);
-        const istOffset = 5.5 * 60;
-        const istDate = new Date(date.getTime() + istOffset * 60000);
-        return istDate.toISOString().slice(0, 10);
-    };
-
-    const fromISTToUTC = (istDate) => {
-        if (!istDate) return null;
-        const [year, month, day] = istDate.split("-").map(Number);
-        return new Date(Date.UTC(year, month - 1, day));
     };
 
     // ------------------------------------------------------------
@@ -112,6 +98,44 @@ export default function PatientDetails() {
             return { ...prev, service: normalized };
         });
     }, [availableServices]);
+
+    const handleDeletePatient = async () => {
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete patient "${details?.name}"?\nThis will remove all related appointments.`
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+            setDeleting(true);
+            const res = await fetch(
+                `${API_BASE_URL}/api/auth/deletepatient/${id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                }
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                alert("Patient deleted successfully");
+
+                // ✅ Redirect after delete
+                navigate("/patients");
+                // or use navigate() if you prefer
+            } else {
+                alert(data.message || "Failed to delete patient");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Server error while deleting patient");
+        }finally {
+        setDeleting(false);
+    }
+    };
 
     // ------------------------------------------------------------
     // FETCH PATIENT + APPOINTMENTS
@@ -521,13 +545,23 @@ export default function PatientDetails() {
                     <h3>Gender: {details?.gender || "N/A"}</h3>
                 </div>
 
-                <button
-                    className="btn btn-primary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editPatientModal"
-                >
-                    Edit Details
-                </button>
+                <div className="d-flex gap-2">
+                    <button
+                        className="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editPatientModal"
+                    >
+                        ✏️ Edit
+                    </button>
+
+                    <button
+                        className="btn btn-danger"
+                        disabled={deleting}
+                        onClick={handleDeletePatient}
+                    >
+                        {deleting ? "Deleting..." : "🗑 Delete"}
+                    </button>
+                </div>
 
                 {/* ================= APPOINTMENTS ================= */}
                 <div className="mt-4">
