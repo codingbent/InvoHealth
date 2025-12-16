@@ -209,7 +209,7 @@ export default function PatientDetails() {
             const result = await response.json();
             if (response.ok) {
                 alert("Patient updated successfully");
-                setDetails(patient);
+                setDetails((prev) => ({ ...prev, ...patient }));
             } else {
                 alert(result.message || "Update failed");
             }
@@ -520,6 +520,14 @@ export default function PatientDetails() {
                     <h3>Age: {details?.age}</h3>
                     <h3>Gender: {details?.gender || "N/A"}</h3>
                 </div>
+
+                <button
+                    className="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editPatientModal"
+                >
+                    Edit Details
+                </button>
 
                 {/* ================= APPOINTMENTS ================= */}
                 <div className="mt-4">
@@ -916,6 +924,104 @@ export default function PatientDetails() {
                                 className="btn btn-primary"
                                 data-bs-dismiss="modal"
                                 onClick={handleUpdateAppt}
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/* ================= EDIT PATIENT MODAL ================= */}
+            <div
+                className="modal fade"
+                id="editPatientModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">
+                                Edit Patient Details
+                            </h5>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            />
+                        </div>
+
+                        <div className="modal-body">
+                            {/* NAME */}
+                            <div className="mb-3">
+                                <label className="form-label">Name</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    name="name"
+                                    value={patient.name}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* MOBILE */}
+                            <div className="mb-3">
+                                <label className="form-label">
+                                    Mobile Number
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    name="number"
+                                    value={patient.number}
+                                    onChange={handleChange}
+                                    maxLength={10}
+                                    minLength={10}
+                                />
+                            </div>
+
+                            {/* AGE */}
+                            <div className="mb-3">
+                                <label className="form-label">Age</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    name="age"
+                                    value={patient.age}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            {/* GENDER */}
+                            <div className="mb-3">
+                                <label className="form-label">Gender</label>
+                                <select
+                                    className="form-select"
+                                    name="gender"
+                                    value={patient.gender}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Select</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                                onClick={() => setPatient(details)}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                className="btn btn-primary"
+                                data-bs-dismiss="modal"
+                                onClick={handleSave}
                             >
                                 Save Changes
                             </button>
