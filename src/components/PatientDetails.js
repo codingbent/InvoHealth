@@ -379,7 +379,7 @@ export default function PatientDetails() {
             // ================= TABLE ROWS =================
             const tableRows = services.map((s) => [
                 typeof s === "object" ? s.name : s,
-                `₹${(typeof s === "object" ? s.amount : Number(s)).toFixed(2)}`,
+                `Rs ${(typeof s === "object" ? s.amount : Number(s)).toFixed(2)}`,
             ]);
 
             // Discount row
@@ -388,14 +388,14 @@ export default function PatientDetails() {
                     `Discount ${
                         visit.isPercent
                             ? `(${visit.discount}%)`
-                            : `(₹${visit.discount})`
+                            : `(Rs ${visit.discount})`
                     }`,
-                    `- ₹${discountValue.toFixed(2)}`,
+                    `- Rs ${discountValue.toFixed(2)}`,
                 ]);
             }
 
             // Final total row
-            tableRows.push(["TOTAL AMOUNT", `₹${finalAmount.toFixed(2)}`]);
+            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
 
             // ================= TABLE =================
             const tableStartY = Math.max(leftY, rightY) + 10;
