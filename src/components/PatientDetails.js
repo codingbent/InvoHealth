@@ -132,9 +132,9 @@ export default function PatientDetails() {
         } catch (err) {
             console.error(err);
             alert("Server error while deleting patient");
-        }finally {
-        setDeleting(false);
-    }
+        } finally {
+            setDeleting(false);
+        }
     };
 
     // ------------------------------------------------------------
@@ -244,9 +244,23 @@ export default function PatientDetails() {
     };
 
     // ------------------------------------------------------------
-    // INVOICE GENERATOR  (unchanged)
+    // INVOICE GENERATOR
     // ------------------------------------------------------------
-    const generateInvoice = (appointmentId, visit, details) => {
+
+    const handleInvoiceClick = (appointmentId, visit, details) => {
+        let includeDiscount = true;
+
+        // Ask only if discount exists
+        if (visit.discount && visit.discount > 0) {
+            includeDiscount = window.confirm(
+                `This invoice has a discount applied.\n\nDo you want to include the discount in the invoice?`
+            );
+        }
+
+        generateInvoicePDF(visit, details, includeDiscount);
+    };
+
+    const generateInvoicePDF = (visit, details, includeDiscount) => {
         try {
             if (!doctor) {
                 alert("Doctor details not loaded yet!");
@@ -263,21 +277,18 @@ export default function PatientDetails() {
             let leftY = 20;
             let rightY = 20;
 
-            // --------------------------------------------------
-            // LEFT SECTION (Doctor & Patient Info)
-            // --------------------------------------------------
+            // ==================================================
+            // HEADER – DOCTOR & PATIENT INFO
+            // ==================================================
 
-            // Clinic Name
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
             leftY += 10;
 
-            // Doctor Name
             docPdf.setFontSize(14);
             docPdf.text(doctor.name, margin, leftY);
             leftY += 8;
 
-            // Degree
             docPdf.setFontSize(11);
             if (doctor.degree?.length) {
                 docPdf.text(
@@ -288,17 +299,14 @@ export default function PatientDetails() {
                 leftY += 6;
             }
 
-            // Registration Number
             if (doctor.regNumber) {
                 docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
                 leftY += 6;
             }
 
-            // Invoice Number
             docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
             leftY += 8;
 
-            // Patient Info
             docPdf.text(
                 `Patient: ${details.name} | Age: ${
                     details.age || "N/A"
@@ -308,19 +316,20 @@ export default function PatientDetails() {
             );
             leftY += 10;
 
-            // --------------------------------------------------
-            // RIGHT SECTION (Address + Phone + Date)
-            // --------------------------------------------------
+            // ==================================================
+            // RIGHT SECTION – ADDRESS & DATE
+            // ==================================================
 
             docPdf.setFontSize(10.5);
 
-            if (doctor.address.line1) {
+            if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
                 });
                 rightY += 5;
             }
-            if (doctor.address.line2) {
+
+            if (doctor.address?.line2) {
                 docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
                     align: "right",
                 });
@@ -352,9 +361,9 @@ export default function PatientDetails() {
                 { align: "right" }
             );
 
-            // --------------------------------------------------
-            // TABLE
-            // --------------------------------------------------
+            // ==================================================
+            // SERVICE TABLE
+            // ==================================================
 
             const tableStartY = Math.max(leftY, rightY) + 10;
 
@@ -370,13 +379,11 @@ export default function PatientDetails() {
                 headStyles: { fillColor: [0, 0, 0] },
             });
 
-            const afterTableY = docPdf.lastAutoTable.finalY + 8;
+            let y = docPdf.lastAutoTable.finalY + 8;
 
-            // --------------------------------------------------
-            // FOOTER TEXT (RECEIVED MESSAGE)
-            // --------------------------------------------------
-
-            docPdf.setFontSize(11);
+            // ==================================================
+            // TOTAL / DISCOUNT / FINAL AMOUNT
+            // ==================================================
 
             const total = (visit.service || []).reduce(
                 (sum, s) =>
@@ -384,25 +391,65 @@ export default function PatientDetails() {
                 0
             );
 
+            let discountValue = 0;
+            let finalAmount = total;
+
+            if (includeDiscount && visit.discount > 0) {
+                discountValue = visit.isPercent
+                    ? (total * visit.discount) / 100
+                    : visit.discount;
+
+                if (discountValue > total) discountValue = total;
+                finalAmount = total - discountValue;
+            }
+
+            docPdf.setFontSize(11);
+            docPdf.text(`Total Amount: ₹${total.toFixed(2)}`, margin, y);
+            y += 6;
+
+            if (includeDiscount && visit.discount > 0) {
+                docPdf.text(
+                    `Discount ${
+                        visit.isPercent
+                            ? `(${visit.discount}%)`
+                            : `(₹${visit.discount})`
+                    }: -₹${discountValue.toFixed(2)}`,
+                    margin,
+                    y
+                );
+                y += 6;
+            }
+
+            docPdf.setFont(undefined, "bold");
+            docPdf.text(`Final Amount: ₹${finalAmount.toFixed(2)}`, margin, y);
+            docPdf.setFont(undefined, "normal");
+
+            y += 10;
+
+            // ==================================================
+            // FOOTER TEXT
+            // ==================================================
+
             docPdf.text(
-                `Received with thanks from ${details.name} the sum of Rupees ${total} on account of services.`,
+                `Received with thanks from ${
+                    details.name
+                } the sum of Rupees ${finalAmount.toFixed(
+                    2
+                )} on account of services.`,
                 margin,
-                afterTableY
+                y
             );
 
-            // --------------------------------------------------
-            // FIXED STAMP AREA AT BOTTOM RIGHT (ALWAYS)
-            // --------------------------------------------------
+            // ==================================================
+            // STAMP / SIGNATURE AREA
+            // ==================================================
 
             docPdf.setFontSize(12);
-
-            // Doctor Name (1st line)
             docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
                 align: "right",
             });
 
-            // Degrees (2nd line, supports multiple degrees)
-            if (doctor.degree && doctor.degree.length > 0) {
+            if (doctor.degree?.length) {
                 docPdf.text(
                     doctor.degree.join(", "),
                     pageWidth - margin,
@@ -411,9 +458,9 @@ export default function PatientDetails() {
                 );
             }
 
-            // --------------------------------------------------
+            // ==================================================
             // SAVE PDF
-            // --------------------------------------------------
+            // ==================================================
 
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
@@ -616,7 +663,7 @@ export default function PatientDetails() {
                                                     <button
                                                         className="btn btn-sm btn-success me-1"
                                                         onClick={() =>
-                                                            generateInvoice(
+                                                            handleInvoiceClick(
                                                                 id,
                                                                 visit,
                                                                 details
@@ -699,7 +746,7 @@ export default function PatientDetails() {
                                         <button
                                             className="btn btn-sm btn-success w-100"
                                             onClick={() =>
-                                                generateInvoice(
+                                                handleInvoiceClick(
                                                     id,
                                                     visit,
                                                     details
