@@ -124,7 +124,7 @@ export default function PatientDetails() {
                 alert("Patient deleted successfully");
 
                 // ✅ Redirect after delete
-                navigate("/patients");
+                navigate("/");
                 // or use navigate() if you prefer
             } else {
                 alert(data.message || "Failed to delete patient");
