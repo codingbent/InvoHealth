@@ -277,10 +277,7 @@ export default function PatientDetails() {
             let leftY = 20;
             let rightY = 20;
 
-            // ==================================================
-            // HEADER – DOCTOR & PATIENT INFO
-            // ==================================================
-
+            // ================= HEADER =================
             docPdf.setFontSize(16);
             docPdf.text(doctor.clinicName, margin, leftY);
             leftY += 10;
@@ -316,10 +313,7 @@ export default function PatientDetails() {
             );
             leftY += 10;
 
-            // ==================================================
-            // RIGHT SECTION – ADDRESS & DATE
-            // ==================================================
-
+            // ================= RIGHT INFO =================
             docPdf.setFontSize(10.5);
 
             if (doctor.address?.line1) {
@@ -361,31 +355,10 @@ export default function PatientDetails() {
                 { align: "right" }
             );
 
-            // ==================================================
-            // SERVICE TABLE
-            // ==================================================
+            // ================= BILL CALCULATION =================
+            const services = visit.service || [];
 
-            const tableStartY = Math.max(leftY, rightY) + 10;
-
-            autoTable(docPdf, {
-                startY: tableStartY,
-                head: [["Service", "Amount (Rs.)"]],
-                body: (visit.service || []).map((s) => [
-                    typeof s === "object" ? s.name : s,
-                    typeof s === "object" ? s.amount : Number(s),
-                ]),
-                theme: "grid",
-                styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [0, 0, 0] },
-            });
-
-            let y = docPdf.lastAutoTable.finalY + 8;
-
-            // ==================================================
-            // TOTAL / DISCOUNT / FINAL AMOUNT
-            // ==================================================
-
-            const total = (visit.service || []).reduce(
+            const total = services.reduce(
                 (sum, s) =>
                     sum + (typeof s === "object" ? s.amount : Number(s)),
                 0
@@ -403,33 +376,49 @@ export default function PatientDetails() {
                 finalAmount = total - discountValue;
             }
 
-            docPdf.setFontSize(11);
-            docPdf.text(`Total Amount: ₹${total.toFixed(2)}`, margin, y);
-            y += 6;
+            // ================= TABLE ROWS =================
+            const tableRows = services.map((s) => [
+                typeof s === "object" ? s.name : s,
+                `₹${(typeof s === "object" ? s.amount : Number(s)).toFixed(2)}`,
+            ]);
 
+            // Discount row
             if (includeDiscount && visit.discount > 0) {
-                docPdf.text(
+                tableRows.push([
                     `Discount ${
                         visit.isPercent
                             ? `(${visit.discount}%)`
                             : `(₹${visit.discount})`
-                    }: -₹${discountValue.toFixed(2)}`,
-                    margin,
-                    y
-                );
-                y += 6;
+                    }`,
+                    `- ₹${discountValue.toFixed(2)}`,
+                ]);
             }
 
-            docPdf.setFont(undefined, "bold");
-            docPdf.text(`Final Amount: ₹${finalAmount.toFixed(2)}`, margin, y);
-            docPdf.setFont(undefined, "normal");
+            // Final total row
+            tableRows.push(["TOTAL AMOUNT", `₹${finalAmount.toFixed(2)}`]);
 
-            y += 10;
+            // ================= TABLE =================
+            const tableStartY = Math.max(leftY, rightY) + 10;
 
-            // ==================================================
-            // FOOTER TEXT
-            // ==================================================
+            autoTable(docPdf, {
+                startY: tableStartY,
+                head: [["Service", "Amount"]],
+                body: tableRows,
+                theme: "grid",
+                styles: { fontSize: 11, cellPadding: 3 },
+                headStyles: { fillColor: [0, 0, 0] },
+                didParseCell: function (data) {
+                    // Make TOTAL row bold
+                    if (data.row.index === tableRows.length - 1) {
+                        data.cell.styles.fontStyle = "bold";
+                    }
+                },
+            });
 
+            let y = docPdf.lastAutoTable.finalY + 10;
+
+            // ================= FOOTER TEXT =================
+            docPdf.setFontSize(11);
             docPdf.text(
                 `Received with thanks from ${
                     details.name
@@ -440,10 +429,7 @@ export default function PatientDetails() {
                 y
             );
 
-            // ==================================================
-            // STAMP / SIGNATURE AREA
-            // ==================================================
-
+            // ================= SIGNATURE =================
             docPdf.setFontSize(12);
             docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
                 align: "right",
@@ -458,10 +444,7 @@ export default function PatientDetails() {
                 );
             }
 
-            // ==================================================
-            // SAVE PDF
-            // ==================================================
-
+            // ================= SAVE =================
             docPdf.save(`Invoice_${details.name}.pdf`);
         } catch (err) {
             console.error(err);
