@@ -305,6 +305,43 @@ export default function PatientList() {
         XLSX.writeFile(wb, "visit-records.xlsx");
     };
 
+    const handleDeletePatient = async (patientId, patientName, e) => {
+        e.stopPropagation(); // ⛔ prevent row click navigation
+
+        const confirmDelete = window.confirm(
+            `Are you sure you want to delete patient "${patientName}"?\nThis will remove all related appointments.`
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/auth/deletepatient/${patientId}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                }
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                // ✅ Remove deleted patient appointments from UI
+                setAppointments((prev) =>
+                    prev.filter((a) => a.patientId !== patientId)
+                );
+                alert("Patient deleted successfully");
+            } else {
+                alert(data.message || "Failed to delete patient");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Server error while deleting patient");
+        }
+    };
+
     // =========================
     // UI
     // =========================
@@ -509,9 +546,10 @@ export default function PatientList() {
                                         <table className="table table-bordered table-striped">
                                             {/* COLUMN WIDTHS */}
                                             <colgroup>
-                                                <col style={{ width: "40%" }} />
-                                                <col style={{ width: "30%" }} />
-                                                <col style={{ width: "30%" }} />
+                                                <col style={{ width: "35%" }} />
+                                                <col style={{ width: "25%" }} />
+                                                <col style={{ width: "25%" }} />
+                                                <col style={{ width: "25%" }} />
                                             </colgroup>
 
                                             {/* TABLE HEADER */}
@@ -520,6 +558,7 @@ export default function PatientList() {
                                                     <th>Name</th>
                                                     <th>Payment</th>
                                                     <th>Amount</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
 
@@ -542,6 +581,20 @@ export default function PatientList() {
                                                             {a.payment_type}
                                                         </td>
                                                         <td>₹ {a.amount}</td>
+                                                        <td>
+                                                            <button
+                                                                className="btn btn-sm btn-danger"
+                                                                onClick={(e) =>
+                                                                    handleDeletePatient(
+                                                                        a.patientId,
+                                                                        a.name,
+                                                                        e
+                                                                    )
+                                                                }
+                                                            >
+                                                                🗑 Delete
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
