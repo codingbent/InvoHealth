@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadMore from "./LoadMore";
 import * as XLSX from "xlsx";
@@ -46,7 +46,6 @@ export default function PatientList() {
                 );
 
                 const data = await res.json();
-                console.log(typeof data);
                 setAppointments(data.data || []);
                 setTotal(data.total || 0);
             } catch (err) {
@@ -99,35 +98,47 @@ export default function PatientList() {
     // =========================
     // APPLY FILTERS
     // =========================
-    const filteredAppointments = appointments.filter((a) => {
-        const searchMatch =
-            a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            a.number?.includes(searchTerm);
+    const filteredAppointments = useMemo(() => {
+        return appointments.filter((a) => {
+            const searchMatch =
+                a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                a.number?.includes(searchTerm);
 
-        const paymentMatch =
-            selectedPayments.length === 0 ||
-            selectedPayments.includes(a.payment_type);
+            const paymentMatch =
+                selectedPayments.length === 0 ||
+                selectedPayments.includes(a.payment_type);
 
-        const genderMatch = !selectedGender || a.gender === selectedGender;
+            const genderMatch = !selectedGender || a.gender === selectedGender;
 
-        const dateMatch =
-            (!startDate || new Date(String(a.date)) >= new Date(startDate)) &&
-            (!endDate || new Date(String(a.date)) <= new Date(endDate));
+            const dateMatch =
+                (!startDate || new Date(a.date) >= new Date(startDate)) &&
+                (!endDate || new Date(a.date) <= new Date(endDate));
 
-        const serviceMatch =
-            selectedServices.length === 0 ||
-            (a.services || []).some((s) =>
-                selectedServices.includes(typeof s === "object" ? s.name : s)
+            const serviceMatch =
+                selectedServices.length === 0 ||
+                (a.services || []).some((s) =>
+                    selectedServices.includes(
+                        typeof s === "object" ? s.name : s
+                    )
+                );
+
+            return (
+                searchMatch &&
+                paymentMatch &&
+                genderMatch &&
+                dateMatch &&
+                serviceMatch
             );
-
-        return (
-            searchMatch &&
-            paymentMatch &&
-            genderMatch &&
-            dateMatch &&
-            serviceMatch
-        );
-    });
+        });
+    }, [
+        appointments,
+        searchTerm,
+        selectedPayments,
+        selectedGender,
+        startDate,
+        endDate,
+        selectedServices,
+    ]);
 
     // ------------------------------------------------------------
     // FETCH DOCTOR DETAILS
@@ -158,7 +169,9 @@ export default function PatientList() {
         endDate ||
         selectedFY;
 
-    const dataToShow = hasAnyFilter ? filteredAppointments : appointments;
+    const dataToShow = useMemo(() => {
+        return hasAnyFilter ? filteredAppointments : appointments;
+    }, [hasAnyFilter, filteredAppointments, appointments]);
 
     // =========================
     // HELPERS
@@ -174,21 +187,25 @@ export default function PatientList() {
     // =========================
     // GROUP BY MONTH → DAY
     // =========================
-    const appointmentsByMonth = {};
+    const appointmentsByMonth = useMemo(() => {
+        const grouped = {};
 
-    dataToShow.forEach((a) => {
-        const monthKey = getMonthKey(a.date);
-        const dayKey = getDateKey(a.date);
+        dataToShow.forEach((a) => {
+            const monthKey = new Date(a.date).toLocaleString("default", {
+                month: "long",
+                year: "numeric",
+            });
+            const dayKey = new Date(a.date).toISOString().split("T")[0];
 
-        if (!appointmentsByMonth[monthKey]) {
-            appointmentsByMonth[monthKey] = {};
-        }
-        if (!appointmentsByMonth[monthKey][dayKey]) {
-            appointmentsByMonth[monthKey][dayKey] = [];
-        }
+            if (!grouped[monthKey]) grouped[monthKey] = {};
+            if (!grouped[monthKey][dayKey]) grouped[monthKey][dayKey] = [];
 
-        appointmentsByMonth[monthKey][dayKey].push(a);
-    });
+            grouped[monthKey][dayKey].push(a);
+        });
+
+        return grouped;
+    }, [dataToShow]);
+
     // =========================
     // EXCEL EXPORT
     // =========================
@@ -321,6 +338,23 @@ export default function PatientList() {
 
         XLSX.writeFile(wb, "visit-records.xlsx");
     };
+    const monthTotals = useMemo(() => {
+        const totals = {};
+
+        Object.keys(appointmentsByMonth).forEach((month) => {
+            totals[month] = Object.values(appointmentsByMonth[month]).reduce(
+                (sum, dayApps) =>
+                    sum +
+                    dayApps.reduce(
+                        (daySum, a) => daySum + Number(a.amount || 0),
+                        0
+                    ),
+                0
+            );
+        });
+
+        return totals;
+    }, [appointmentsByMonth]);
 
     // =========================
     // UI
@@ -478,25 +512,13 @@ export default function PatientList() {
 
             {/* DATA VIEW */}
             {Object.keys(appointmentsByMonth).map((month) => {
-                const monthTotal = Object.values(
-                    appointmentsByMonth[month]
-                ).reduce(
-                    (sum, dayApps) =>
-                        sum +
-                        dayApps.reduce(
-                            (daySum, a) => daySum + Number(a.amount || 0),
-                            0
-                        ),
-                    0
-                );
-
                 return (
                     <div key={month} className="mb-3">
                         {/* MONTH HEADER WITH TOTAL */}
                         <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
                             <span>{month}</span>
                             <span className="fw-bold">
-                                ₹ {monthTotal.toFixed(2)}
+                                ₹ {monthTotals[month].toFixed(2)}
                             </span>
                         </h4>
 
