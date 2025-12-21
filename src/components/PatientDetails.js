@@ -61,7 +61,7 @@ export default function PatientDetails() {
     // ------------------------------------------------------------
     // FETCH SERVICES
     // ------------------------------------------------------------
-    const fetchServices = useCallback(async () => {
+    const fetchServices = async () => {
         try {
             const token = localStorage.getItem("token");
             const res = await fetch(
@@ -75,8 +75,7 @@ export default function PatientDetails() {
         } catch (err) {
             console.error("Error fetching services:", err);
         }
-    }, [API_BASE_URL]);
-
+    };
     useEffect(() => {
         if (!availableServices.length) return;
 
@@ -176,7 +175,7 @@ export default function PatientDetails() {
         } finally {
             setLoading(false);
         }
-    }, [id, API_BASE_URL,fetchServices]);
+    }, [id, API_BASE_URL]);
 
     useEffect(() => {
         fetchData();
@@ -629,7 +628,9 @@ export default function PatientDetails() {
                                 <tbody>
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
-                                            <td>{visit.formattedDate}</td>
+                                            <td>
+                                                {visit.formattedDate}
+                                            </td>
 
                                             <td>
                                                 {(visit.service || [])

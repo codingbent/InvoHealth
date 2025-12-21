@@ -1,34 +1,16 @@
-import { Link, useNavigate, NavLink } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar(props) {
     const navigate = useNavigate();
 
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [doctorName, setDoctorName] = useState(null);
-    useEffect(() => {
-        setIsLoggedIn(Boolean(localStorage.getItem("token")));
-        setDoctorName(localStorage.getItem("name"));
-    }, []);
-
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("name");
-
-        setIsLoggedIn(false);
-        setDoctorName(null);
-
         props.showAlert("Logged out successfully", "success");
         navigate("/");
     };
 
-//     const closeNavbar = () => {
-//     const navbar = document.getElementById("navbarSupportedContent");
-//     if (navbar?.classList.contains("show")) {
-//         navbar.classList.remove("show");
-//     }
-// };
-
+    const doctorName = localStorage.getItem("name");
 
     return (
         <>
@@ -55,34 +37,29 @@ export default function Navbar(props) {
                     >
                         <ul className="navbar-nav me-auto mb-2 mb-lg-0">
                             <li className="nav-item">
-                                <NavLink
+                                <Link
+                                    className="nav-link active"
+                                    aria-current="page"
                                     to="/"
-                                    end
-                                    className={({ isActive }) =>
-                                        `nav-link ${isActive ? "active" : ""}`
-                                    }
                                 >
                                     Home
-                                </NavLink>
+                                </Link>
                             </li>
 
                             <li className="nav-item">
-                                <NavLink
-                                    to="/about"
-                                    className={({ isActive }) =>
-                                        `nav-link ${isActive ? "active" : ""}`
-                                    }
-                                >
+                                <Link className="nav-link" to="/about">
                                     About
-                                </NavLink>
+                                </Link>
                             </li>
                         </ul>
 
-                        {isLoggedIn ? (
+                        {localStorage.getItem("token") ? (
                             <div className="dropdown">
                                 <button
                                     className="btn btn-light dropdown-toggle fw-semibold"
+                                    type="button"
                                     data-bs-toggle="dropdown"
+                                    aria-expanded="false"
                                 >
                                     👤 {doctorName}
                                 </button>
@@ -110,7 +87,7 @@ export default function Navbar(props) {
                                 </ul>
                             </div>
                         ) : (
-                            <div className="d-flex">
+                            <form className="d-flex" role="search">
                                 <Link
                                     className="btn btn-primary mx-2"
                                     to="/login"
@@ -123,7 +100,7 @@ export default function Navbar(props) {
                                 >
                                     Sign Up
                                 </Link>
-                            </div>
+                            </form>
                         )}
                     </div>
                 </div>
