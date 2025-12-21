@@ -99,37 +99,6 @@ export default function DoctorProfile() {
         }
     };
 
-    // ================= CHANGE PASSWORD =================
-    const handlePasswordChange = async () => {
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            alert("Passwords do not match");
-            return;
-        }
-
-        const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
-            },
-            body: JSON.stringify({
-                currentPassword: passwordData.currentPassword,
-                newPassword: passwordData.newPassword,
-            }),
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            alert("Password updated successfully");
-            setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-            });
-        } else {
-            alert(data.message || "Password update failed");
-        }
-    };
 
     if (loading) return <p className="text-center mt-4">Loading...</p>;
     if (!doctor)
@@ -157,13 +126,6 @@ export default function DoctorProfile() {
                                 ✏️ Edit Profile
                             </button>
 
-                            <button
-                                className="btn btn-outline-danger btn-sm"
-                                data-bs-toggle="modal"
-                                data-bs-target="#changePasswordModal"
-                            >
-                                🔒 Change Password
-                            </button>
                         </div>
                     </div>
 
@@ -206,7 +168,6 @@ export default function DoctorProfile() {
                 </div>
             </div>
 
-            {/* ================= EDIT PROFILE MODAL ================= */}
             {/* ================= EDIT PROFILE MODAL ================= */}
             <div
                 className="modal fade"
@@ -403,73 +364,6 @@ export default function DoctorProfile() {
                                 onClick={handleSaveProfile}
                             >
                                 Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ================= CHANGE PASSWORD MODAL ================= */}
-            <div className="modal fade" id="changePasswordModal" tabIndex="-1">
-                <div className="modal-dialog modal-dialog-centered">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h5 className="modal-title">Change Password</h5>
-                            <button
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            ></button>
-                        </div>
-
-                        <div className="modal-body">
-                            <input
-                                type="password"
-                                className="form-control mb-2"
-                                placeholder="Current Password"
-                                onChange={(e) =>
-                                    setPasswordData({
-                                        ...passwordData,
-                                        currentPassword: e.target.value,
-                                    })
-                                }
-                            />
-                            <input
-                                type="password"
-                                className="form-control mb-2"
-                                placeholder="New Password"
-                                onChange={(e) =>
-                                    setPasswordData({
-                                        ...passwordData,
-                                        newPassword: e.target.value,
-                                    })
-                                }
-                            />
-                            <input
-                                type="password"
-                                className="form-control"
-                                placeholder="Confirm Password"
-                                onChange={(e) =>
-                                    setPasswordData({
-                                        ...passwordData,
-                                        confirmPassword: e.target.value,
-                                    })
-                                }
-                            />
-                        </div>
-
-                        <div className="modal-footer">
-                            <button
-                                className="btn btn-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="btn btn-danger"
-                                data-bs-dismiss="modal"
-                                onClick={handlePasswordChange}
-                            >
-                                Update Password
                             </button>
                         </div>
                     </div>
