@@ -1,20 +1,20 @@
 .App {
-  text-align: center;
+    text-align: center;
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+    background-color: #282c34;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
 }
 
 .App-link {
-  color: #61dafb;
+    color: #61dafb;
 }
 
 /* ACTION SHEET UI */
@@ -30,9 +30,9 @@
     left: 0;
     right: 0;
     background: #fff;
-    box-shadow: 0 -5px 20px rgba(0,0,0,0.15);
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.15);
     border-radius: 20px 20px 0 0;
-    transition: bottom 0.35s ease;
+    transition: bottom 1.3s ease;
     z-index: 9999;
 }
 
@@ -82,62 +82,60 @@ body.freeze-scroll {
    ============================ */
 
 .patient-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  padding-bottom: 5px;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 5px;
 }
 
 /* Prevent table from expanding */
 .patient-table.table-fixed {
-  table-layout: fixed;
-  width: 100%;
+    table-layout: fixed;
+    width: 100%;
 }
 
 /* Global cell wrapping */
 .patient-table th,
 .patient-table td {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
-  vertical-align: middle;
-  font-size: 14px;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    vertical-align: middle;
+    font-size: 14px;
 }
 
 /* Column widths */
 .patient-table th:nth-child(1),
 .patient-table td:nth-child(1) {
-  width: 30%;   /* Name */
+    width: 30%; /* Name */
 }
-
-
 
 .patient-table th:nth-child(2),
 .patient-table td:nth-child(2) {
-  width: 25%;    /* Gender */
-  text-align: center;
+    width: 25%; /* Gender */
+    text-align: center;
 }
 
 .patient-table th:nth-child(3),
 .patient-table td:nth-child(3) {
-  width: 25%;    /* Payment */
-  text-align: center;
+    width: 25%; /* Payment */
+    text-align: center;
 }
 
 .patient-table th:nth-child(4),
 .patient-table td:nth-child(4) {
-  width: 20%;   /* Action */
+    width: 20%; /* Action */
 }
 
 /* Delete button shrink */
 .patient-table .btn-danger {
-  font-size: 12px;
-  padding: 4px 6px;
+    font-size: 12px;
+    padding: 4px 6px;
 }
 
 /* Heading styling */
 .patient-table thead th {
-  background: #f8f9fa;
-  font-weight: 600;
+    background: #f8f9fa;
+    font-weight: 600;
 }
 
 /* Hide table and show card on screens < 576px */
@@ -178,27 +176,27 @@ body.freeze-scroll {
 }
 /* Allow dropdowns to overflow out of table */
 .table-responsive {
-  overflow: visible !important;
+    overflow: visible !important;
 }
 
 .table {
-  overflow: visible !important;
+    overflow: visible !important;
 }
 
 .patient-visit-table {
-  overflow: visible !important;
+    overflow: visible !important;
 }
 
 td,
 th,
 tr {
-  overflow: visible !important;
-  position: static !important;
+    overflow: visible !important;
+    position: static !important;
 }
 
 /* Ensure dropdown appears above everything */
 .dropdown-menu {
-  position: absolute !important;
-  transform: translate3d(0, 0, 0) !important;
-  z-index: 9999 !important;
+    position: absolute !important;
+    transform: translate3d(0, 0, 0) !important;
+    z-index: 9999 !important;
 }

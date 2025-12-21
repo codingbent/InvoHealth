@@ -8,9 +8,14 @@ export default function DoctorProfile() {
 
     const [doctor, setDoctor] = useState(null);
     const [editData, setEditData] = useState({});
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+    });
     const [loading, setLoading] = useState(true);
 
-    // Fetch doctor details
+    // ================= FETCH DOCTOR =================
     const fetchDoctor = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
@@ -20,7 +25,6 @@ export default function DoctorProfile() {
             const data = await res.json();
             if (data.success) {
                 const doc = data.doctor;
-
                 setDoctor(doc);
                 setEditData({
                     ...doc,
@@ -36,7 +40,7 @@ export default function DoctorProfile() {
                 });
             }
         } catch (err) {
-            console.error("Error fetching doctor:", err);
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -46,64 +50,15 @@ export default function DoctorProfile() {
         fetchDoctor();
     }, []);
 
-    const handleEditChange = (e) => {
+    // ================= EDIT PROFILE =================
+    const handleEditChange = (e) =>
         setEditData({ ...editData, [e.target.name]: e.target.value });
-    };
 
-    const handleAddressChange = (e) => {
+    const handleAddressChange = (e) =>
         setEditData({
             ...editData,
             address: { ...editData.address, [e.target.name]: e.target.value },
         });
-    };
-
-    const handleSave = async () => {
-        try {
-            const payload = {
-                ...editData,
-                degree: editData.degree.filter((d) => d.trim() !== ""),
-            };
-
-            if (payload.degree.length === 0) {
-                alert("Please add at least one degree");
-                return;
-            }
-
-            const res = await fetch(`${API_BASE_URL}/api/auth/updatedoc`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "auth-token": localStorage.getItem("token"),
-                },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                const doc = data.doctor;
-
-                setDoctor(doc);
-                setEditData({
-                    ...doc,
-                    degree: doc.degree?.length ? doc.degree : [""],
-                    address: {
-                        line1: doc.address?.line1 || "",
-                        line2: doc.address?.line2 || "",
-                        line3: doc.address?.line3 || "",
-                        city: doc.address?.city || "",
-                        state: doc.address?.state || "",
-                        pincode: doc.address?.pincode || "",
-                    },
-                });
-            } else {
-                alert("Update failed");
-            }
-        } catch (err) {
-            console.error("Error updating doctor:", err);
-            alert("Server error");
-        }
-    };
 
     const handleDegreeChange = (index, value) => {
         const updated = [...editData.degree];
@@ -111,12 +66,8 @@ export default function DoctorProfile() {
         setEditData({ ...editData, degree: updated });
     };
 
-    const addDegreeField = () => {
-        setEditData({
-            ...editData,
-            degree: [...editData.degree, ""],
-        });
-    };
+    const addDegreeField = () =>
+        setEditData({ ...editData, degree: [...editData.degree, ""] });
 
     const removeDegreeField = (index) => {
         const updated = [...editData.degree];
@@ -124,40 +75,102 @@ export default function DoctorProfile() {
         setEditData({ ...editData, degree: updated });
     };
 
-    if (loading) return <p>Loading...</p>;
-    if (!doctor) return <p>Error loading profile</p>;
+    const handleSaveProfile = async () => {
+        const payload = {
+            ...editData,
+            degree: editData.degree.filter((d) => d.trim() !== ""),
+        };
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/updatedoc`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            setDoctor(data.doctor);
+            alert("Profile updated successfully");
+        } else {
+            alert("Profile update failed");
+        }
+    };
+
+    // ================= CHANGE PASSWORD =================
+    const handlePasswordChange = async () => {
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            alert("Passwords do not match");
+            return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify({
+                currentPassword: passwordData.currentPassword,
+                newPassword: passwordData.newPassword,
+            }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert("Password updated successfully");
+            setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+            });
+        } else {
+            alert(data.message || "Password update failed");
+        }
+    };
+
+    if (loading) return <p className="text-center mt-4">Loading...</p>;
+    if (!doctor)
+        return <p className="text-center mt-4">Error loading profile</p>;
 
     return (
         <div className="container mt-4">
-            <h2 className="mb-4 fw-bold">Doctor Profile</h2>
-
             {/* ================= PROFILE CARD ================= */}
-            <div className="card shadow-sm border-0 mb-4">
+            <div className="card shadow-sm border-0">
                 <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div className="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-3">
                         <div>
                             <h4 className="mb-1">{doctor.name}</h4>
                             <small className="text-muted">
                                 {doctor.clinicName}
                             </small>
                         </div>
-                        <button
-                            className="btn btn-outline-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editDocModal"
-                        >
-                            Edit Profile
-                        </button>
+
+                        <div className="d-flex gap-2">
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editProfileModal"
+                            >
+                                ✏️ Edit Profile
+                            </button>
+
+                            <button
+                                className="btn btn-outline-danger btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal"
+                            >
+                                🔒 Change Password
+                            </button>
+                        </div>
                     </div>
 
                     <hr />
 
                     <div className="row g-4">
-                        {/* Contact Info */}
                         <div className="col-md-6">
-                            <h6 className="text-uppercase text-muted mb-3">
-                                Contact Information
-                            </h6>
                             <p>
                                 <strong>Email:</strong> {doctor.email}
                             </p>
@@ -170,49 +183,41 @@ export default function DoctorProfile() {
                             </p>
                         </div>
 
-                        {/* Professional Info */}
                         <div className="col-md-6">
-                            <h6 className="text-uppercase text-muted mb-3">
-                                Professional Details
-                            </h6>
                             <p>
                                 <strong>Degree:</strong>{" "}
                                 {doctor.degree?.join(", ")}
                             </p>
                         </div>
 
-                        {/* Address */}
                         <div className="col-12">
-                            <h6 className="text-uppercase text-muted mb-3">
-                                Clinic Address
-                            </h6>
-                            <p className="mb-1">{doctor.address.line1}</p>
-                            {doctor.address.line2 && (
-                                <p className="mb-1">{doctor.address.line2}</p>
-                            )}
-                            {doctor.address.line3 && (
-                                <p className="mb-1">{doctor.address.line3}</p>
-                            )}
                             <p className="mb-0">
-                                {doctor.address.city}, {doctor.address.state} –{" "}
-                                {doctor.address.pincode}
+                                <strong>Address:</strong>
+                                <br />
+                                {doctor.address?.line1}
+                                <br />
+                                {doctor.address?.line2}
+                                <br />
+                                {doctor.address?.city}, {doctor.address?.state}{" "}
+                                - {doctor.address?.pincode}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ================= EDIT MODAL ================= */}
+            {/* ================= EDIT PROFILE MODAL ================= */}
+            {/* ================= EDIT PROFILE MODAL ================= */}
             <div
                 className="modal fade"
-                id="editDocModal"
+                id="editProfileModal"
                 tabIndex="-1"
                 aria-hidden="true"
             >
                 <div className="modal-dialog modal-lg modal-dialog-scrollable">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h5 className="modal-title">Edit Doctor Profile</h5>
+                            <h5 className="modal-title">Edit Profile</h5>
                             <button
                                 className="btn-close"
                                 data-bs-dismiss="modal"
@@ -220,183 +225,169 @@ export default function DoctorProfile() {
                         </div>
 
                         <div className="modal-body">
-                            <form className="px-2">
-                                {/* BASIC INFO */}
-                                <h6 className="text-uppercase text-muted mb-3">
-                                    Basic Information
-                                </h6>
+                            {/* BASIC INFO */}
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Basic Information
+                            </h6>
 
-                                <div className="row g-3 mb-4">
-                                    <div className="col-md-6">
-                                        <label className="form-label">
-                                            Name
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="name"
-                                            value={editData.name}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-6">
-                                        <label className="form-label">
-                                            Clinic Name
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="clinicName"
-                                            value={editData.clinicName}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-6">
-                                        <label className="form-label">
-                                            Phone
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="phone"
-                                            value={editData.phone}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-6">
-                                        <label className="form-label">
-                                            Registration No
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="regNumber"
-                                            value={editData.regNumber}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
+                            <div className="row g-3 mb-4">
+                                <div className="col-md-6">
+                                    <label className="form-label">Name</label>
+                                    <input
+                                        className="form-control"
+                                        name="name"
+                                        value={editData.name}
+                                        onChange={handleEditChange}
+                                    />
                                 </div>
 
-                                {/* DEGREE */}
-                                <h6 className="text-uppercase text-muted mb-3">
-                                    Qualifications
-                                </h6>
-
-                                {editData.degree.map((deg, index) => (
-                                    <div key={index} className="d-flex mb-2">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Enter degree"
-                                            value={deg}
-                                            onChange={(e) =>
-                                                handleDegreeChange(
-                                                    index,
-                                                    e.target.value
-                                                )
-                                            }
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-danger ms-2"
-                                            onClick={() =>
-                                                removeDegreeField(index)
-                                            }
-                                            disabled={
-                                                editData.degree.length === 1
-                                            }
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary mt-2 mb-4"
-                                    onClick={addDegreeField}
-                                >
-                                    + Add Degree
-                                </button>
-
-                                {/* ADDRESS */}
-                                <h6 className="text-uppercase text-muted mb-3">
-                                    Address
-                                </h6>
-
-                                <div className="row g-3">
-                                    <div className="col-12">
-                                        <label className="form-label">
-                                            Address Line 1
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="line1"
-                                            value={editData.address.line1}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-12">
-                                        <label className="form-label">
-                                            Address Line 2 (optional)
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="line2"
-                                            value={editData.address.line2}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-12">
-                                        <label className="form-label">
-                                            Address Line 3 (optional)
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="line3"
-                                            value={editData.address.line3 || ""}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-4">
-                                        <label className="form-label">
-                                            City
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="city"
-                                            value={editData.address.city}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-4">
-                                        <label className="form-label">
-                                            State
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="state"
-                                            value={editData.address.state}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-4">
-                                        <label className="form-label">
-                                            Pincode
-                                        </label>
-                                        <input
-                                            className="form-control"
-                                            name="pincode"
-                                            value={editData.address.pincode}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
+                                <div className="col-md-6">
+                                    <label className="form-label">
+                                        Clinic Name
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="clinicName"
+                                        value={editData.clinicName}
+                                        onChange={handleEditChange}
+                                    />
                                 </div>
-                            </form>
+
+                                <div className="col-md-6">
+                                    <label className="form-label">Phone</label>
+                                    <input
+                                        className="form-control"
+                                        name="phone"
+                                        value={editData.phone}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-6">
+                                    <label className="form-label">
+                                        Registration Number
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="regNumber"
+                                        value={editData.regNumber}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* DEGREE */}
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Qualifications
+                            </h6>
+
+                            {editData.degree.map((deg, index) => (
+                                <div key={index} className="d-flex mb-2">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Enter degree"
+                                        value={deg}
+                                        onChange={(e) =>
+                                            handleDegreeChange(
+                                                index,
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger ms-2"
+                                        onClick={() => removeDegreeField(index)}
+                                        disabled={editData.degree.length === 1}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary mt-2 mb-4"
+                                onClick={addDegreeField}
+                            >
+                                + Add Degree
+                            </button>
+
+                            {/* ADDRESS */}
+                            <h6 className="text-uppercase text-muted mb-3">
+                                Clinic Address
+                            </h6>
+
+                            <div className="row g-3">
+                                <div className="col-12">
+                                    <label className="form-label">
+                                        Address Line 1
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="line1"
+                                        value={editData.address.line1}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+
+                                <div className="col-12">
+                                    <label className="form-label">
+                                        Address Line 2 (optional)
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="line2"
+                                        value={editData.address.line2}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+
+                                <div className="col-12">
+                                    <label className="form-label">
+                                        Address Line 3 (optional)
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="line3"
+                                        value={editData.address.line3}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <label className="form-label">City</label>
+                                    <input
+                                        className="form-control"
+                                        name="city"
+                                        value={editData.address.city}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <label className="form-label">State</label>
+                                    <input
+                                        className="form-control"
+                                        name="state"
+                                        value={editData.address.state}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <label className="form-label">
+                                        Pincode
+                                    </label>
+                                    <input
+                                        className="form-control"
+                                        name="pincode"
+                                        value={editData.address.pincode}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="modal-footer">
@@ -408,10 +399,77 @@ export default function DoctorProfile() {
                             </button>
                             <button
                                 className="btn btn-primary"
-                                onClick={handleSave}
                                 data-bs-dismiss="modal"
+                                onClick={handleSaveProfile}
                             >
                                 Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ================= CHANGE PASSWORD MODAL ================= */}
+            <div className="modal fade" id="changePasswordModal" tabIndex="-1">
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Change Password</h5>
+                            <button
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            ></button>
+                        </div>
+
+                        <div className="modal-body">
+                            <input
+                                type="password"
+                                className="form-control mb-2"
+                                placeholder="Current Password"
+                                onChange={(e) =>
+                                    setPasswordData({
+                                        ...passwordData,
+                                        currentPassword: e.target.value,
+                                    })
+                                }
+                            />
+                            <input
+                                type="password"
+                                className="form-control mb-2"
+                                placeholder="New Password"
+                                onChange={(e) =>
+                                    setPasswordData({
+                                        ...passwordData,
+                                        newPassword: e.target.value,
+                                    })
+                                }
+                            />
+                            <input
+                                type="password"
+                                className="form-control"
+                                placeholder="Confirm Password"
+                                onChange={(e) =>
+                                    setPasswordData({
+                                        ...passwordData,
+                                        confirmPassword: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-danger"
+                                data-bs-dismiss="modal"
+                                onClick={handlePasswordChange}
+                            >
+                                Update Password
                             </button>
                         </div>
                     </div>

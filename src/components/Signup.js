@@ -20,6 +20,10 @@ const Signup = (props) => {
         experience: "",
         degrees: [""],
     });
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
 
     let navigate = useNavigate();
 
@@ -31,11 +35,6 @@ const Signup = (props) => {
             props.showAlert("Passwords do not match", "danger");
             return;
         }
-
-        const API_BASE_URL =
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001";
 
         // Prepare body with formatted timings
         const bodyToSend = {
@@ -74,22 +73,22 @@ const Signup = (props) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
-    const handleadddegree = () => {
-        const divEle = document.getElementById("inputFields");
-        const wrapper = document.createElement("div");
-        const iFeild = document.createElement("input");
-        iFeild.setAttribute("type", "text");
-        iFeild.setAttribute("placeholder", "Enter degree");
-        iFeild.classList.add("form-control");
-        iFeild.setAttribute("name", "degree");
-        wrapper.appendChild(iFeild);
-        wrapper.classList.add("pt-2");
-        divEle.appendChild(wrapper);
-        const allDegrees = document.querySelectorAll("input[name='degree']");
-        allDegrees.forEach((input) => {
-            console.log(input.value);
-        });
-    };
+    // const handleadddegree = () => {
+    //     const divEle = document.getElementById("inputFields");
+    //     const wrapper = document.createElement("div");
+    //     const iFeild = document.createElement("input");
+    //     iFeild.setAttribute("type", "text");
+    //     iFeild.setAttribute("placeholder", "Enter degree");
+    //     iFeild.classList.add("form-control");
+    //     iFeild.setAttribute("name", "degree");
+    //     wrapper.appendChild(iFeild);
+    //     wrapper.classList.add("pt-2");
+    //     divEle.appendChild(wrapper);
+    //     const allDegrees = document.querySelectorAll("input[name='degree']");
+    //     allDegrees.forEach((input) => {
+    //         console.log(input.value);
+    //     });
+    // };
 
     const handleDegreeChange = (index, value) => {
         const updated = [...credentials.degrees];
@@ -245,7 +244,9 @@ const Signup = (props) => {
 
                 {/* GST */}
                 <div className="mb-3">
-                    <label className="form-label">Registration Number (optional)</label>
+                    <label className="form-label">
+                        Registration Number (optional)
+                    </label>
                     <input
                         type="text"
                         className="form-control"

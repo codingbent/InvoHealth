@@ -176,13 +176,13 @@ export default function PatientList() {
     // =========================
     // HELPERS
     // =========================
-    const getMonthKey = (date) =>
-        new Date(date).toLocaleString("default", {
-            month: "long",
-            year: "numeric",
-        });
+    // const getMonthKey = (date) =>
+    //     new Date(date).toLocaleString("default", {
+    //         month: "long",
+    //         year: "numeric",
+    //     });
 
-    const getDateKey = (date) => new Date(date).toISOString().split("T")[0];
+    // const getDateKey = (date) => new Date(date).toISOString().split("T")[0];
 
     // =========================
     // GROUP BY MONTH → DAY
@@ -605,8 +605,13 @@ export default function PatientList() {
                     </div>
                 );
             })}
-            {appointments.length < total && (
+            {!hasAnyFilter && appointments.length < total && (
                 <LoadMore onLoadMore={IncreaseLimit} />
+            )}
+            {hasAnyFilter && filteredAppointments.length === 0 && (
+                <p className="text-center text-muted mt-3">
+                    No records match the selected filters
+                </p>
             )}
         </div>
     );

@@ -13,10 +13,12 @@ const Patient = (props) => {
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const closeNavbarIfOpen = () => {
+        const navbar = document.getElementById("navbarSupportedContent");
+        if (navbar?.classList.contains("show")) {
+            navbar.classList.remove("show");
+        }
+    };
 
     const updateclose = () => {
         setShowAppointment(false);
@@ -33,9 +35,9 @@ const Patient = (props) => {
         setSelectedPatientId(null);
     };
 
-
     // ========== OPEN MODAL (close sheet first) ==========
     const openModal = (id) => {
+        closeNavbarIfOpen();
         const sheet = document.getElementById("actionSheet");
 
         // close sheet smoothly
@@ -53,6 +55,7 @@ const Patient = (props) => {
 
     // ========== SHOW ACTION SHEET ==========
     const showActionSheet = () => {
+        closeNavbarIfOpen();
         const sheet = document.getElementById("actionSheet");
         sheet.classList.remove("hidden");
         sheet.classList.add("open");
@@ -75,7 +78,10 @@ const Patient = (props) => {
             {localStorage.getItem("token") ? (
                 <>
                     {/* ACTION BUTTON */}
-                    <div className="w-75 mx-auto d-flex justify-content-center m-3 " id="actionsWrapper">
+                    <div
+                        className="w-75 mx-auto d-flex justify-content-center m-3 "
+                        id="actionsWrapper"
+                    >
                         <button
                             className="btn btn-primary actions-button w-100"
                             onClick={showActionSheet}
@@ -86,8 +92,12 @@ const Patient = (props) => {
 
                     {/* ACTION SHEET */}
                     <div id="actionSheet" className="action-sheet hidden">
-                        <button onClick={() => openModal("patientModal")}>➕ Add Patient</button>
-                        <button onClick={() => openModal("serviceModal")}>🧾 Add Service</button>
+                        <button onClick={() => openModal("patientModal")}>
+                            ➕ Add Patient
+                        </button>
+                        <button onClick={() => openModal("serviceModal")}>
+                            🧾 Add Service
+                        </button>
 
                         <button
                             onClick={() => {
@@ -98,9 +108,14 @@ const Patient = (props) => {
                             📅 Add Appointment
                         </button>
 
-                        <button onClick={() => openModal("editServiceModal")}>✏️ Edit Service</button>
+                        <button onClick={() => openModal("editServiceModal")}>
+                            ✏️ Edit Service
+                        </button>
 
-                        <button className="action-sheet-close" onClick={hideActionSheet}>
+                        <button
+                            className="action-sheet-close"
+                            onClick={hideActionSheet}
+                        >
                             Close
                         </button>
                     </div>
@@ -118,7 +133,11 @@ const Patient = (props) => {
                         </div>
                     </div>
 
-                    <div className="modal fade" id="editServiceModal" tabIndex="-1">
+                    <div
+                        className="modal fade"
+                        id="editServiceModal"
+                        tabIndex="-1"
+                    >
                         <div className="modal-dialog">
                             <EditService showAlert={showAlert} />
                         </div>
@@ -128,14 +147,19 @@ const Patient = (props) => {
                     <div>
                         {!showAppointment && !showPatientDetails && (
                             <div className="patient-list">
-                                <PatientList openPatientDetails={openPatientDetails} />
+                                <PatientList
+                                    openPatientDetails={openPatientDetails}
+                                />
                             </div>
                         )}
 
                         {showAppointment && (
                             <div className="appointment container">
                                 <AddAppointment showAlert={props.showAlert} />
-                                <button className="btn btn-secondary mt-2" onClick={updateclose}>
+                                <button
+                                    className="btn btn-secondary mt-2"
+                                    onClick={updateclose}
+                                >
                                     Close
                                 </button>
                             </div>
