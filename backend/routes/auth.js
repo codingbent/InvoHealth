@@ -789,14 +789,6 @@ router.put(
         }
     }
 );
-
-function computeServiceTotal(serviceArr = []) {
-    return serviceArr.reduce((sum, s) => {
-        if (!s) return sum;
-        if (typeof s === "object") return sum + (Number(s.amount) || 0);
-        return sum + (Number(s) || 0);
-    }, 0);
-}
 router.delete(
     "/delete-invoice/:appointmentId/:visitId",
     fetchuser,
@@ -845,14 +837,14 @@ router.delete(
 
 router.get("/fetchallappointments", fetchuser, async (req, res) => {
     try {
-        // 1️⃣ Get all appointments for logged-in doctor
+        const limit = parseInt(req.query.limit) || 10;
+
         const appointments = await Appointment.find({
             doctor: req.doc.id,
         }).populate("patient");
 
         const allVisits = [];
 
-        // 2️⃣ FLATTEN visits (VERY IMPORTANT)
         appointments.forEach((appt) => {
             if (!appt.patient) return;
 
@@ -871,8 +863,49 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             });
         });
 
-        // 3️⃣ Sort by date DESC (latest first)
+        // 3️⃣ Sort newest first
         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // 4️⃣ Apply limit
+        const limitedVisits = allVisits.slice(0, limit);
+
+        res.json({
+            total: allVisits.length,
+            data: limitedVisits,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+router.get("/exportappointments", fetchuser, async (req, res) => {
+    try {
+        const appointments = await Appointment.find({
+            doctor: req.doc.id,
+        }).populate("patient");
+
+        const allVisits = [];
+
+        appointments.forEach((appt) => {
+            if (!appt.patient) return;
+
+            appt.visits.forEach((visit) => {
+                allVisits.push({
+                    patientId: appt.patient._id,
+                    name: appt.patient.name,
+                    number: appt.patient.number || "",
+                    gender: appt.patient.gender || "",
+                    date: visit.date,
+                    payment_type: visit.payment_type,
+                    amount: visit.amount,
+                    services: visit.service || [],
+                    invoiceNumber: visit.invoiceNumber || "",
+                });
+            });
+        });
+
+        allVisits.sort((a, b) => new Date(a.date) - new Date(b.date)); // ASC for excel
 
         res.json(allVisits);
     } catch (err) {
@@ -880,6 +913,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
 router.get("/fetchallpatients", fetchuser, async (req, res) => {
     try {
         const patients = await Patient.find({ doctor: req.doc.id });

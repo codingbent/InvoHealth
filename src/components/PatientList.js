@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import LoadMore from "./LoadMore";
 import * as XLSX from "xlsx";
 
 export default function PatientList() {
@@ -18,12 +19,17 @@ export default function PatientList() {
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
     const [doctor, setDoctor] = useState(null);
+    const [limit, setLimit] = useState(10);
+    const [total, setTotal] = useState(0);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
+    const IncreaseLimit = () => {
+        setLimit((prev) => prev + 10);
+    };
     // =========================
     // FETCH ALL APPOINTMENTS
     // =========================
@@ -31,7 +37,7 @@ export default function PatientList() {
         const fetchAppointments = async () => {
             try {
                 const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallappointments`,
+                    `${API_BASE_URL}/api/auth/fetchallappointments?limit=${limit}`,
                     {
                         headers: {
                             "auth-token": localStorage.getItem("token"),
@@ -40,7 +46,9 @@ export default function PatientList() {
                 );
 
                 const data = await res.json();
-                setAppointments(Array.isArray(data) ? data : []);
+                console.log(typeof data);
+                setAppointments(data.data || []);
+                setTotal(data.total || 0);
             } catch (err) {
                 console.error(err);
                 setAppointments([]);
@@ -48,7 +56,7 @@ export default function PatientList() {
         };
 
         fetchAppointments();
-    }, []);
+    }, [limit]);
 
     useEffect(() => {
         const fetchServices = async () => {
@@ -163,9 +171,6 @@ export default function PatientList() {
 
     const getDateKey = (date) => new Date(date).toISOString().split("T")[0];
 
-    const getDayTotal = (apps) =>
-        apps.reduce((sum, a) => sum + Number(a.amount || 0), 0);
-
     // =========================
     // GROUP BY MONTH → DAY
     // =========================
@@ -184,67 +189,81 @@ export default function PatientList() {
 
         appointmentsByMonth[monthKey][dayKey].push(a);
     });
-
-    // =========================
-    // SERVICES LIST (DYNAMIC)
-    // =========================
-    // const allServices = Array.from(
-    //     new Set(
-    //         appointments.flatMap((a) =>
-    //             (a.services || []).map((s) =>
-    //                 typeof s === "object" ? s.name : s
-    //             )
-    //         )
-    //     )
-    // ).sort();
-
     // =========================
     // EXCEL EXPORT
     // =========================
-    const boldCell = (value) => ({
-        v: value,
-        s: { font: { bold: true } },
-    });
+    const applyFilters = (data) => {
+        return data.filter((a) => {
+            const searchMatch =
+                a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                a.number?.includes(searchTerm);
 
-    const getDateRangeText = () => {
-        let fromDate, toDate;
+            const paymentMatch =
+                selectedPayments.length === 0 ||
+                selectedPayments.includes(a.payment_type);
 
-        if (hasAnyFilter && (startDate || endDate)) {
-            fromDate = startDate;
-            toDate = endDate;
-        } else {
-            // derive from all data being exported
-            const dates = dataToShow
-                .map((a) => new Date(String(a.date)))
-                .sort((a, b) => a - b);
+            const genderMatch = !selectedGender || a.gender === selectedGender;
 
-            if (dates.length === 0) return "";
+            const dateMatch =
+                (!startDate || new Date(a.date) >= new Date(startDate)) &&
+                (!endDate || new Date(a.date) <= new Date(endDate));
 
-            fromDate = dates[0];
-            toDate = dates[dates.length - 1];
-        }
+            const serviceMatch =
+                selectedServices.length === 0 ||
+                (a.services || []).some((s) =>
+                    selectedServices.includes(
+                        typeof s === "object" ? s.name : s
+                    )
+                );
 
-        const format = (d) => new Date(d).toLocaleDateString();
-
-        return `From: ${format(fromDate)}   To: ${format(toDate)}`;
+            return (
+                searchMatch &&
+                paymentMatch &&
+                genderMatch &&
+                dateMatch &&
+                serviceMatch
+            );
+        });
     };
 
-    const downloadExcel = () => {
-        if (dataToShow.length === 0) {
-            alert("No data to export");
-            return;
+    const downloadExcel = async () => {
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/auth/exportappointments`,
+                {
+                    headers: {
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                }
+            );
+
+            const allData = await res.json();
+
+            const filteredForExport = applyFilters(allData);
+
+            if (filteredForExport.length === 0) {
+                alert("No data to export");
+                return;
+            }
+
+            exportToExcel(filteredForExport);
+        } catch (err) {
+            console.error("Export failed", err);
         }
+    };
+
+    const exportToExcel = (data) => {
+        if (data.length === 0) return;
 
         // ✅ sort ALL records by date DESC
-        const sorted = [...dataToShow].sort(
-            (a, b) => new Date(b.date) - new Date(String(a.date))
+        const sorted = [...data].sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
         );
 
         const rows = [];
 
         // ===== HEADER =====
         rows.push({ Patient: `Doctor: ${doctor?.name || ""}` });
-        rows.push({ Patient: getDateRangeText() });
         rows.push({});
 
         let currentDay = null;
@@ -253,7 +272,6 @@ export default function PatientList() {
         sorted.forEach((a, index) => {
             const day = new Date(String(a.date)).toISOString().split("T")[0];
 
-            // 🔄 New day block
             if (day !== currentDay) {
                 if (currentDay !== null) {
                     rows.push({ Payment: "TOTAL", Amount: dayTotal });
@@ -292,7 +310,6 @@ export default function PatientList() {
                     .join(", "),
             });
 
-            // 🔚 Last row total
             if (index === sorted.length - 1) {
                 rows.push({ Payment: "TOTAL", Amount: dayTotal });
             }
@@ -474,7 +491,7 @@ export default function PatientList() {
                 );
 
                 return (
-                    <div key={month} className="mb-5">
+                    <div key={month} className="mb-3">
                         {/* MONTH HEADER WITH TOTAL */}
                         <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
                             <span>{month}</span>
@@ -509,9 +526,21 @@ export default function PatientList() {
                                         <table className="table table-bordered table-striped">
                                             {/* COLUMN WIDTHS */}
                                             <colgroup>
-                                                <col style={{ width: "40%" }} />
-                                                <col style={{ width: "30%" }} />
-                                                <col style={{ width: "30%" }} />
+                                                <col
+                                                    style={{
+                                                        width: "40%",
+                                                    }}
+                                                />
+                                                <col
+                                                    style={{
+                                                        width: "30%",
+                                                    }}
+                                                />
+                                                <col
+                                                    style={{
+                                                        width: "30%",
+                                                    }}
+                                                />
                                             </colgroup>
 
                                             {/* TABLE HEADER */}
@@ -527,7 +556,9 @@ export default function PatientList() {
                                             <tbody>
                                                 {dayApps.map((a, i) => (
                                                     <tr
-                                                        key={i}
+                                                        key={
+                                                            a._id || a.patientId
+                                                        }
                                                         onClick={() =>
                                                             navigate(
                                                                 `/patient/${a.patientId}`
@@ -552,6 +583,9 @@ export default function PatientList() {
                     </div>
                 );
             })}
+            {appointments.length < total && (
+                <LoadMore onLoadMore={IncreaseLimit} />
+            )}
         </div>
     );
 }
