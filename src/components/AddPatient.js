@@ -92,22 +92,12 @@ const AddPatient = ({ showAlert }) => {
             showAlert("Please select at least one service", "warning");
             return;
         }
+        if (number.length !== 10) {
+            alert("Mobile number must be exactly 10 digits");
+            return;
+        }
 
         let finalNumber = number.trim();
-
-        // 🚨 MOBILE NUMBER LOGIC
-        if (!finalNumber) {
-            const wantsToAdd = window.confirm(
-                "Mobile number is not entered.\n\nClick OK to add a mobile number.\nClick Cancel to continue without it."
-            );
-
-            if (wantsToAdd) {
-                showAlert("Please enter a mobile number", "warning");
-                return;
-            }
-
-            finalNumber = "0000000000";
-        }
 
         try {
             // =========================
@@ -186,6 +176,9 @@ const AddPatient = ({ showAlert }) => {
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
                 document.querySelector("#patientModal .btn-close")?.click();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
             } else {
                 showAlert("Patient added but appointment failed", "warning");
             }
@@ -462,8 +455,20 @@ const AddPatient = ({ showAlert }) => {
                             className="form-control"
                             name="number"
                             value={number}
-                            placeholder="Enter mobile number"
-                            onChange={onChange}
+                            placeholder="Enter 10-digit mobile number"
+                            onChange={(e) => {
+                                const onlyDigits = e.target.value.replace(
+                                    /\D/g,
+                                    ""
+                                );
+                                if (onlyDigits.length <= 10) {
+                                    setPatient({
+                                        ...patient,
+                                        number: onlyDigits,
+                                    });
+                                }
+                            }}
+                            inputMode="numeric"
                         />
                     </div>
 
