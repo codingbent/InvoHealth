@@ -1,89 +1,244 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-export default function Login(props) {
-    let navigate = useNavigate();
-    const [details, setDetails] = useState({
-        email: "",
-        password: "",
-    });
-    const handlesubmit = async (e) => {
-        e.preventDefault();
 
+export default function Login(props) {
+    const navigate = useNavigate();
+
+    // ================= STATES =================
+    const [identifier, setIdentifier] = useState("");
+    const [otp, setOtp] = useState("");
+    const [sessionId, setSessionId] = useState("");
+    const [password, setPassword] = useState("");
+    const [isOtpLogin, setIsOtpLogin] = useState(false);
+    const [inputType, setInputType] = useState(""); // email | phone | invalid
+
+    // ================= VALIDATE EMAIL / PHONE =================
+    const handleIdentifierChange = (e) => {
+        const value = e.target.value;
+        setIdentifier(value);
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[6-9]\d{9}$/;
+
+        if (emailRegex.test(value)) {
+            setInputType("email");
+        } else if (phoneRegex.test(value)) {
+            setInputType("phone");
+        } else {
+            setInputType("invalid");
+        }
+    };
+    const sendOtp = async () => {
+        if (inputType !== "phone") {
+            alert("Enter a valid phone number");
+            return;
+        }
+
+        const res = await fetch("http://localhost:5001/api/auth/send-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: identifier }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            setSessionId(data.sessionId);
+            alert("OTP sent");
+        } else {
+            alert("Failed to send OTP");
+        }
+    };
+
+    const verifyOtp = async () => {
+        const res = await fetch("http://localhost:5001/api/auth/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                phone: identifier,
+                otp,
+                sessionId,
+            }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            localStorage.setItem("token", data.authtoken);
+            localStorage.setItem("name", data.name);
+            navigate("/");
+        } else {
+            alert(data.error);
+        }
+    };
+
+    const loginWithPassword = async () => {
         const API_BASE_URL =
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001";
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                email: details.email,
-                password: details.password,
+                identifier,
+                password,
+                loginType: "password",
+                identifierType: inputType,
             }),
         });
-        const json = await response.json();
+
+        const json = await res.json();
 
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", json.name);
             navigate("/");
-            props.showAlert("Successfully logged in", "success");
         } else {
-            props.showAlert("Enter correct credentials", "danger");
+            props.showAlert(json.error || "Login failed", "danger");
         }
     };
 
-    const onChange = (e) => {
-        setDetails({ ...details, [e.target.name]: e.target.value });
+    // ================= FORM SUBMIT =================
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (inputType === "invalid") {
+            props.showAlert("Enter valid email or phone number", "danger");
+            return;
+        }
+
+        if (!isOtpLogin) {
+            if (!password) {
+                props.showAlert("Password required", "danger");
+                return;
+            }
+            loginWithPassword();
+        }
     };
+
     return (
-        <div className="container mt-5">
-            <form onSubmit={handlesubmit}>
+        <div className="container mt-5" style={{ maxWidth: "420px" }}>
+            <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
+                <h4 className="text-center mb-4 fw-semibold">Login</h4>
+
+                {/* IDENTIFIER (shown always) */}
                 <div className="mb-3">
-                    <label htmlFor="exampleInputEmail1" className="form-label">
-                        Email address
+                    <label className="form-label">
+                        {isOtpLogin ? "Phone Number" : "Email or Phone"}
                     </label>
-                    <input
-                        type="email"
-                        className="form-control"
-                        name="email"
-                        id="exampleInputEmail1"
-                        aria-describedby="emailHelp"
-                        onChange={onChange}
-                        required
-                    />
-                    <div id="emailHelp" className="form-text">
-                        We'll never share your email with anyone else.
+
+                    <div className={isOtpLogin ? "input-group" : ""}>
+                        {isOtpLogin && (
+                            <span className="input-group-text">🇮🇳 +91</span>
+                        )}
+
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder={
+                                isOtpLogin
+                                    ? "Enter 10-digit phone number"
+                                    : "Enter email or phone"
+                            }
+                            value={identifier}
+                            onChange={handleIdentifierChange}
+                            required
+                        />
                     </div>
+
+                    {inputType === "invalid" && (
+                        <small className="text-danger">
+                            Enter a valid email or phone number
+                        </small>
+                    )}
+
+                    <small className="text-muted">
+                        We’ll never share your details.
+                    </small>
                 </div>
-                <div className="mb-3">
-                    <label
-                        htmlFor="exampleInputPassword1"
-                        className="form-label"
-                    >
-                        Password
-                    </label>
+
+                {/* SWITCH */}
+                <div className="form-check form-switch mb-3">
                     <input
-                        type="password"
-                        className="form-control"
-                        name="password"
-                        id="exampleInputPassword1"
-                        onChange={onChange}
-                        required
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={isOtpLogin}
+                        onChange={(e) => setIsOtpLogin(e.target.checked)}
                     />
+                    <label className="form-check-label">
+                        Login with {isOtpLogin ? "OTP" : "Password"}
+                    </label>
                 </div>
-                <button type="submit" className="btn btn-primary">
-                    Login
-                </button>
+
+                {/* PASSWORD LOGIN */}
+                {!isOtpLogin && (
+                    <div className="mb-3">
+                        <label className="form-label">Password</label>
+                        <input
+                            type="password"
+                            className="form-control"
+                            placeholder="Enter password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {/* OTP LOGIN */}
+                {isOtpLogin && (
+                    <div className="border rounded-3 p-3 bg-light mb-3">
+                        {/* Send OTP */}
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary w-100 mb-3"
+                            onClick={sendOtp}
+                            disabled={inputType !== "phone"}
+                        >
+                            📤 Send OTP
+                        </button>
+
+                        {/* OTP INPUT */}
+                        <div className="mb-3">
+                            <label className="form-label text-center w-100">
+                                Enter OTP
+                            </label>
+                            <input
+                                type="text"
+                                className="form-control text-center fs-5 letter-spacing"
+                                placeholder="● ● ● ● ● ●"
+                                maxLength={6}
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                            />
+                        </div>
+
+                        {/* VERIFY */}
+                        <button
+                            type="button"
+                            className="btn btn-success w-100"
+                            onClick={verifyOtp}
+                            disabled={otp.length !== 6}
+                        >
+                            ✅ Verify OTP
+                        </button>
+                    </div>
+                )}
+
+                {/* SUBMIT BUTTON (PASSWORD ONLY) */}
+                {!isOtpLogin && (
+                    <button type="submit" className="btn btn-primary w-100">
+                        Login
+                    </button>
+                )}
+
+                {/* FOOTER */}
+                <div className="text-center mt-3">
+                    <span>New user? </span>
+                    <Link to="/signup">Create an account</Link>
+                </div>
             </form>
-            <div className="mt-3">
-                <span>New user? </span>
-                <Link to="/signup">Create an account</Link>
-            </div>
         </div>
     );
 }

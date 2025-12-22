@@ -578,9 +578,9 @@ export default function PatientList() {
                                             <tbody>
                                                 {dayApps.map((a, i) => (
                                                     <tr
-                                                        key={
+                                                        key={`${month}-${day}-${
                                                             a._id || a.patientId
-                                                        }
+                                                        }-${i}`}
                                                         onClick={() =>
                                                             navigate(
                                                                 `/patient/${a.patientId}`

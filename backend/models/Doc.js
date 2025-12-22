@@ -8,7 +8,7 @@ const DocSchema = new Schema({
 
     clinicName: { type: String, required: true },
 
-    phone: { type: String, required: true }, // Doctor main contact
+    phone: { type: String, required: true, unique:true }, // Doctor main contact
     appointmentPhone: { type: String }, // Secondary contact
 
     address: {
