@@ -14,6 +14,10 @@ export default function DoctorProfile() {
         confirmPassword: "",
     });
     const [loading, setLoading] = useState(true);
+    const [staffName, setStaffName] = useState("");
+    const [staffPhone, setStaffPhone] = useState("");
+    const [staffRole, setStaffRole] = useState("");
+    const [staffList, setStaffList] = useState([]);
 
     // ================= FETCH DOCTOR =================
     const fetchDoctor = async () => {
@@ -74,6 +78,48 @@ export default function DoctorProfile() {
         updated.splice(index, 1);
         setEditData({ ...editData, degree: updated });
     };
+    const fetchStaff = async () => {
+        const res = await fetch(`${API_BASE_URL}/api/staff`, {
+            headers: { "auth-token": localStorage.getItem("token") },
+        });
+        const data = await res.json();
+        if (data.success) setStaffList(data.staff);
+    };
+
+    useEffect(() => {
+        fetchStaff();
+    }, []);
+
+    const handleAddStaff = async () => {
+        if (!staffName || !staffPhone || !staffRole) {
+            alert("All fields required");
+            return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/staff/add`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify({
+                name: staffName,
+                phone: staffPhone.replace(/\D/g, "").slice(-10),
+                role: staffRole,
+            }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            fetchStaff();
+            setStaffName("");
+            setStaffPhone("");
+            setStaffRole("");
+        } else {
+            alert(data.error);
+        }
+    };
 
     const handleSaveProfile = async () => {
         const payload = {
@@ -98,7 +144,60 @@ export default function DoctorProfile() {
             alert("Profile update failed");
         }
     };
+const handleChangePassword = async () => {
+    const { currentPassword, newPassword, confirmPassword } = passwordData;
 
+    // ✅ validations
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        alert("All password fields are required");
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        alert("New password must be at least 6 characters");
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        alert("New password and confirm password do not match");
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${API_BASE_URL}/api/auth/change-password`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "auth-token": localStorage.getItem("token"),
+                },
+                body: JSON.stringify({
+                    currentPassword,
+                    newPassword,
+                }),
+            }
+        );
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert("Password updated successfully ✅");
+
+            // reset fields
+            setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+            });
+        } else {
+            alert(data.error || "Password update failed");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Server error while changing password");
+    }
+};
 
     if (loading) return <p className="text-center mt-4">Loading...</p>;
     if (!doctor)
@@ -107,9 +206,9 @@ export default function DoctorProfile() {
     return (
         <div className="container mt-4">
             {/* ================= PROFILE CARD ================= */}
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 mb-3">
                 <div className="card-body">
-                    <div className="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
                         <div>
                             <h4 className="mb-1">{doctor.name}</h4>
                             <small className="text-muted">
@@ -117,16 +216,13 @@ export default function DoctorProfile() {
                             </small>
                         </div>
 
-                        <div className="d-flex gap-2">
-                            <button
-                                className="btn btn-outline-primary btn-sm"
-                                data-bs-toggle="modal"
-                                data-bs-target="#editProfileModal"
-                            >
-                                ✏️ Edit Profile
-                            </button>
-
-                        </div>
+                        <button
+                            className="btn btn-outline-primary btn-sm"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editProfileModal"
+                        >
+                            ✏️ Edit Profile
+                        </button>
                     </div>
 
                     <hr />
@@ -163,6 +259,191 @@ export default function DoctorProfile() {
                                 {doctor.address?.city}, {doctor.address?.state}{" "}
                                 - {doctor.address?.pincode}
                             </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ================= ACCORDION ================= */}
+            <div className="accordion" id="doctorAccordion">
+                {/* ================= STAFF MANAGEMENT ================= */}
+                <div className="accordion-item">
+                    <h2 className="accordion-header">
+                        <button
+                            className="accordion-button collapsed"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#staffSection"
+                        >
+                            👥 Staff Management
+                        </button>
+                    </h2>
+
+                    <div
+                        id="staffSection"
+                        className="accordion-collapse collapse"
+                        data-bs-parent="#doctorAccordion"
+                    >
+                        <div className="accordion-body">
+                            <h6 className="fw-semibold mb-3">Add Staff</h6>
+
+                            <div className="row g-2 mb-3">
+                                <div className="col-md-4">
+                                    <input
+                                        className="form-control"
+                                        placeholder="Staff Name"
+                                        value={staffName}
+                                        onChange={(e) =>
+                                            setStaffName(e.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <input
+                                        className="form-control"
+                                        placeholder="Phone (10 digits)"
+                                        value={staffPhone}
+                                        onChange={(e) =>
+                                            setStaffPhone(e.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <select
+                                        className="form-select"
+                                        value={staffRole}
+                                        onChange={(e) =>
+                                            setStaffRole(e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select Role</option>
+                                        <option value="receptionist">
+                                            Receptionist
+                                        </option>
+                                        <option value="assistant">
+                                            Assistant
+                                        </option>
+                                        <option value="nurse">Nurse</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                className="btn btn-outline-primary btn-sm mb-3"
+                                onClick={handleAddStaff}
+                            >
+                                ➕ Add Staff
+                            </button>
+
+                            <hr />
+
+                            <h6 className="fw-semibold mb-2">Staff List</h6>
+
+                            {staffList.length === 0 ? (
+                                <p className="text-muted">No staff added yet</p>
+                            ) : (
+                                <table className="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Phone</th>
+                                            <th>Role</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {staffList.map((s) => (
+                                            <tr key={s._id}>
+                                                <td>{s.name}</td>
+                                                <td>{s.phone}</td>
+                                                <td>{s.role}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+
+                            <small className="text-muted">
+                                Staff can login using OTP with their phone
+                                number
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ================= CHANGE PASSWORD ================= */}
+                <div className="accordion-item">
+                    <h2 className="accordion-header">
+                        <button
+                            className="accordion-button collapsed"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#passwordSection"
+                        >
+                            🔒 Change Password
+                        </button>
+                    </h2>
+
+                    <div
+                        id="passwordSection"
+                        className="accordion-collapse collapse"
+                        data-bs-parent="#doctorAccordion"
+                    >
+                        <div className="accordion-body">
+                            <div className="row g-3">
+                                <div className="col-md-4">
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        placeholder="Current Password"
+                                        value={passwordData.currentPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                currentPassword: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        placeholder="New Password"
+                                        value={passwordData.newPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                newPassword: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        placeholder="Confirm Password"
+                                        value={passwordData.confirmPassword}
+                                        onChange={(e) =>
+                                            setPasswordData({
+                                                ...passwordData,
+                                                confirmPassword: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                className="btn btn-outline-danger btn-sm mt-3"
+                                onClick={handleChangePassword}
+                            >
+                                🔄 Update Password
+                            </button>
                         </div>
                     </div>
                 </div>
