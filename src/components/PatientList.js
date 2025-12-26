@@ -518,7 +518,7 @@ export default function PatientList() {
                         <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
                             <span>{month}</span>
                             <span className="fw-bold">
-                                ₹ {monthTotals[month].toFixed(2)}
+                                ₹ {monthTotals[month]}
                             </span>
                         </h4>
 
@@ -541,7 +541,7 @@ export default function PatientList() {
                                                 ).toLocaleDateString()}
                                             </span>
                                             <span className="fw-semibold">
-                                                ₹ {dayTotal.toFixed(2)}
+                                                ₹ {dayTotal}
                                             </span>
                                         </h6>
 
