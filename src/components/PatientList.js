@@ -605,7 +605,7 @@ export default function PatientList() {
                     </div>
                 );
             })}
-            {!hasAnyFilter && appointments.length < total && (
+            {appointments.length < total && (
                 <LoadMore onLoadMore={IncreaseLimit} />
             )}
             {hasAnyFilter && filteredAppointments.length === 0 && (
