@@ -587,9 +587,11 @@ export default function PatientList() {
                 </div>
             </div>
             <div className="d-flex justify-content-center mb-3">
-                <button className="btn btn-success" onClick={downloadExcel}>
-                    📥 Download Excel
-                </button>
+                {localStorage.getItem("role") === "doctor" && (
+                    <button className="btn btn-success" onClick={downloadExcel}>
+                        📥 Download Excel
+                    </button>
+                )}
             </div>
             {/* ================= DATA VIEW ================= */}
             {Object.keys(appointmentsByMonth).map((month) => (
