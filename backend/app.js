@@ -8,6 +8,7 @@ require("./models/Doc");
 require("./models/Patient");
 require("./models/Service");
 require("./models/Appointment");
+require("./models/Staff");
 console.log("Loaded models:", Object.keys(require("mongoose").models));
 
 const app = express();

@@ -36,65 +36,71 @@ const AddServices = (props) => {
     };
     return (
         <form onSubmit={handlesubmit}>
-            <div className="modal-content">
-                <div className="modal-header">
-                    <h1 className="modal-title fs-5" id="exampleModalLabel">
-                        Add Service
-                    </h1>
+            <div className="modal-content border-0 shadow-lg rounded-4">
+                {/* HEADER */}
+                <div className="modal-header border-0 pb-0">
+                    <h5 className="modal-title fw-semibold d-flex align-items-center gap-2">
+                        🧾 Add New Service
+                    </h5>
                     <button
                         type="button"
                         className="btn-close"
                         data-bs-dismiss="modal"
                         aria-label="Close"
-                    ></button>
+                    />
                 </div>
-                <div className="modal-body">
-                    <div className="mb-3">
-                        <label
-                            htmlFor="formGroupExampleInput"
-                            className="form-label"
-                        >
-                            Service Name
-                        </label>
+
+                {/* BODY */}
+                <div className="modal-body pt-2">
+                    {/* Service Name */}
+                    <div className="form-floating mb-3">
                         <input
                             type="text"
-                            className="form-control"
-                            id="formGroupExampleInput"
-                            placeholder="Enter Service Name"
+                            className="form-control rounded-3"
+                            id="serviceName"
+                            placeholder="Service Name"
                             name="name"
                             required
                             onChange={onChange}
                             value={name}
                         />
+                        <label htmlFor="serviceName">Service Name *</label>
                     </div>
-                    <div className="mb-3">
-                        <label
-                            htmlFor="formGroupExampleInput2"
-                            className="form-label"
-                        >
-                            Amount
-                        </label>
+
+                    {/* Amount */}
+                    <div className="form-floating">
                         <input
-                            type="text"
-                            className="form-control"
-                            id="formGroupExampleInput2"
-                            placeholder="Enter amount (optional)"
+                            type="number"
+                            className="form-control rounded-3"
+                            id="serviceAmount"
+                            placeholder="Amount"
                             name="amount"
+                            min="0"
                             onChange={onChange}
                             value={amount}
                         />
+                        <label htmlFor="serviceAmount">Amount (optional)</label>
                     </div>
+
+                    <small className="text-muted d-block mt-2">
+                        Leave amount empty if service price varies
+                    </small>
                 </div>
-                <div className="modal-footer">
+
+                {/* FOOTER */}
+                <div className="modal-footer border-0 pt-0">
                     <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-outline-secondary rounded-3"
                         data-bs-dismiss="modal"
                     >
-                        Close
+                        Cancel
                     </button>
-                    <button type="submit" className="btn btn-primary">
-                        Add Service
+                    <button
+                        type="submit"
+                        className="btn btn-primary rounded-3 px-4"
+                    >
+                        ➕ Add Service
                     </button>
                 </div>
             </div>

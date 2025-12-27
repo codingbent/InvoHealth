@@ -71,7 +71,7 @@ export default function PatientDetails() {
                 }
             );
             const data = await res.json();
-            setAvailableServices(data);
+            setAvailableServices(Array.isArray(data) ? data : data.services || []);
         } catch (err) {
             console.error("Error fetching services:", err);
         }

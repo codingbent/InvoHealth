@@ -1,42 +1,33 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import ServiceList from "./ServiceList";
 
-const AddAppointment = (props) => {
-    const [patientsList, setPatientsList] = useState([]);
-    const [filteredPatients, setFilteredPatients] = useState([]);
+const API_BASE_URL =
+    process.env.NODE_ENV === "production"
+        ? "https://gmsc-backend.onrender.com"
+        : "http://localhost:5001";
+
+export default function AddAppointment({ showAlert }) {
+    /* ===================== STATES ===================== */
+    const [searchText, setSearchText] = useState("");
+    const [patients, setPatients] = useState([]);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+
+    const [allServices, setAllServices] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
-    const [searchText, setSearchText] = useState("");
 
-    const [selectedPatient, setSelectedPatient] = useState(
-        localStorage.getItem("patient")
-            ? JSON.parse(localStorage.getItem("patient"))
-            : null
-    );
-
-    const [payment_type, setpayment_type] = useState("Cash");
-    const [allServices, setAllServices] = useState([]);
-
-    const [serviceTotal, setServiceTotal] = useState(0);
-
-    // 🆕 DISCOUNT FIELDS
-    const [discount, setDiscount] = useState(0);
-    const [isPercent, setIsPercent] = useState(false);
-
-    // 🆕 Final payable amount
-    const [finalAmount, setFinalAmount] = useState(0);
-
-    // 🆕 Appointment Date
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
     );
+    const [paymentType, setPaymentType] = useState("Cash");
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const [discount, setDiscount] = useState(0);
+    const [isPercent, setIsPercent] = useState(false);
 
-    // FETCH SERVICES
+    const [total, setTotal] = useState(0);
+    const [finalAmount, setFinalAmount] = useState(0);
+
+    /* ===================== FETCH SERVICES ===================== */
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -44,111 +35,95 @@ const AddAppointment = (props) => {
                     `${API_BASE_URL}/api/auth/fetchallservice`,
                     {
                         headers: {
-                            "Content-Type": "application/json",
                             "auth-token": localStorage.getItem("token") || "",
                         },
                     }
                 );
                 const data = await res.json();
-                setAllServices(data);
+                setAllServices(data.services || data || []);
             } catch (err) {
-                console.error("Error fetching services:", err);
+                console.error(err);
             }
         };
         fetchServices();
     }, []);
 
-    // FETCH PATIENTS
+    /* ===================== PATIENT SEARCH (DEBOUNCED) ===================== */
     useEffect(() => {
-        const fetchPatients = async () => {
+        const delay = setTimeout(async () => {
+            if (!searchText.trim()) {
+                setPatients([]);
+                return;
+            }
+
             try {
                 const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallpatients`,
+                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`,
                     {
                         headers: {
-                            "Content-Type": "application/json",
                             "auth-token": localStorage.getItem("token") || "",
                         },
                     }
                 );
                 const data = await res.json();
-                setPatientsList(data);
-                setFilteredPatients(data);
+                setPatients(data);
             } catch (err) {
-                console.error("Error fetching patients:", err);
+                console.error(err);
             }
-        };
-        fetchPatients();
-    }, []);
+        }, 300);
 
-    // FILTER PATIENTS
+        return () => clearTimeout(delay);
+    }, [searchText]);
+
+    /* ===================== CALCULATE TOTAL ===================== */
     useEffect(() => {
-        const text = searchText.trim().toLowerCase();
-
-        if (!text) {
-            setFilteredPatients(patientsList);
-            return;
-        }
-
-        const filtered = patientsList.filter(
-            (p) =>
-                p.name?.toLowerCase().includes(text) ||
-                p.number?.toString().includes(text)
-        );
-
-        setFilteredPatients(filtered);
-    }, [searchText, patientsList]);
-
-    // CALCULATE TOTALS
-    useEffect(() => {
-        const total = services.reduce(
-            (acc, s) => acc + (serviceAmounts[s._id] ?? s.amount ?? 0),
+        const t = services.reduce(
+            (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
             0
         );
-        setServiceTotal(total);
+        setTotal(t);
 
         let discountValue = 0;
-
         if (discount > 0) {
-            if (isPercent) discountValue = total * (discount / 100);
-            else discountValue = discount;
+            discountValue = isPercent ? (t * discount) / 100 : discount;
         }
 
-        if (discountValue > total) discountValue = total;
-        if (discountValue < 0) discountValue = 0;
-
-        setFinalAmount(total - discountValue);
+        if (discountValue > t) discountValue = t;
+        setFinalAmount(t - discountValue);
     }, [services, serviceAmounts, discount, isPercent]);
 
-    const handleSelectPatient = (patient) => {
-        setSelectedPatient(patient);
-        localStorage.setItem("patient", JSON.stringify(patient));
+    /* ===================== HANDLERS ===================== */
+    const selectPatient = (p) => {
+        setSelectedPatient(p);
         setSearchText("");
+        setPatients([]);
     };
 
-    const handleServiceAmountChange = (id, value) => {
-        setServiceAmounts((prev) => ({
-            ...prev,
-            [id]: Number(value),
-        }));
+    const changeServiceAmount = (id, value) => {
+        setServiceAmounts((prev) => ({ ...prev, [id]: Number(value) }));
     };
 
-    // SUBMIT APPOINTMENT
-    const handleAddAppointment = async (e) => {
+    const resetForm = () => {
+        setSelectedPatient(null);
+        setServices([]);
+        setServiceAmounts({});
+        setDiscount(0);
+        setIsPercent(false);
+        setPaymentType("Cash");
+        setAppointmentDate(new Date().toISOString().slice(0, 10));
+    };
+
+    /* ===================== SUBMIT ===================== */
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // ✅ Patient check
         if (!selectedPatient) {
-            props.showAlert("Please select a patient first", "warning");
+            showAlert("Please select a patient", "warning");
             return;
         }
 
-        // ✅ Service check (NEW)
         if (services.length === 0) {
-            props.showAlert(
-                "Please select at least one service before saving appointment",
-                "warning"
-            );
+            showAlert("Select at least one service", "warning");
             return;
         }
 
@@ -165,10 +140,10 @@ const AddAppointment = (props) => {
                         service: services.map((s) => ({
                             id: s._id,
                             name: s.name,
-                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
+                            amount: serviceAmounts[s._id] ?? s.amount,
                         })),
                         amount: finalAmount,
-                        payment_type,
+                        payment_type: paymentType,
                         discount,
                         isPercent,
                         date: appointmentDate,
@@ -176,145 +151,119 @@ const AddAppointment = (props) => {
                 }
             );
 
-            const result = await res.json();
+            const data = await res.json();
 
-            if (res.ok && result.success) {
-                props.showAlert("Appointment added successfully!", "success");
-
-                // Reset
-                setServices([]);
-                setServiceAmounts({});
-                setServiceTotal(0);
-                setFinalAmount(0);
-                setDiscount(0);
-                setIsPercent(false);
-                setSelectedPatient(null);
-                localStorage.removeItem("patient");
-                setpayment_type("Cash");
-                setAppointmentDate(new Date().toISOString().slice(0, 10));
+            if (data.success) {
+                showAlert("Appointment added successfully", "success");
+                resetForm();
             } else {
-                props.showAlert(
-                    result.error || "Failed to add appointment",
-                    "danger"
-                );
+                showAlert(data.error || "Failed to add appointment", "danger");
             }
         } catch (err) {
             console.error(err);
-            props.showAlert("Server error", "danger");
+            showAlert("Server error", "danger");
         }
     };
 
+    /* ===================== UI ===================== */
     return (
-        <>
-            {/* Patient search */}
-            <div className="mb-3">
-                <label htmlFor="patientSearch" className="form-label">
-                    Patient Name
-                </label>
+        <div className="card shadow-sm border-0 rounded-4">
+            <div className="card-body">
+                <h5 className="fw-bold mb-3">➕ Add Appointment</h5>
+
+                {/* PATIENT SEARCH */}
+                <label className="form-label fw-semibold">Patient</label>
                 <input
-                    type="text"
-                    className="form-control"
-                    id="patientSearch"
-                    placeholder="Type to search patient..."
+                    className="form-control mb-2"
+                    placeholder="Search by name or phone"
                     value={searchText}
                     onChange={(e) => {
                         setSearchText(e.target.value);
-                        setSelectedPatient(null); // 🔥 allow re-search
-                        localStorage.removeItem("patient");
+                        setSelectedPatient(null);
                     }}
                 />
 
-                {searchText && (
-                    <ul className="list-group mt-1">
-                        {filteredPatients.map((p) => (
+                {patients.length > 0 && (
+                    <ul className="list-group mb-3">
+                        {patients.map((p) => (
                             <li
                                 key={p._id}
                                 className="list-group-item list-group-item-action"
                                 style={{ cursor: "pointer" }}
-                                onClick={() => handleSelectPatient(p)}
+                                onClick={() => selectPatient(p)}
                             >
-                                {p.name} - {p.number}
+                                {p.name} — {p.number}
                             </li>
                         ))}
-                        {filteredPatients.length === 0 && (
-                            <li className="list-group-item">
-                                No patients found
-                            </li>
-                        )}
                     </ul>
                 )}
 
                 {selectedPatient && (
-                    <div className="mt-2">
-                        <strong>Selected Patient:</strong>{" "}
-                        {selectedPatient.name}
+                    <div className="alert alert-success py-2">
+                        Selected: <strong>{selectedPatient.name}</strong>
                     </div>
                 )}
-            </div>
 
-            {selectedPatient && (
-                <form onSubmit={handleAddAppointment}>
-                    {/* Appointment Date */}
-                    <div className="mb-3">
-                        <label className="form-label">Appointment Date</label>
-                        <input
-                            type="date"
-                            className="form-control"
-                            value={appointmentDate}
-                            onChange={(e) => setAppointmentDate(e.target.value)}
-                        />
-                    </div>
+                {selectedPatient && (
+                    <form onSubmit={handleSubmit}>
+                        {/* DATE */}
+                        <div className="mb-3">
+                            <label className="form-label">Appointment Date</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={appointmentDate}
+                                onChange={(e) =>
+                                    setAppointmentDate(e.target.value)
+                                }
+                            />
+                        </div>
 
-                    {/* Services */}
-                    <div className="mb-3">
-                        <label className="form-label">Services</label>
+                        {/* SERVICES */}
+                        <label className="form-label fw-semibold">
+                            Services
+                        </label>
                         <ServiceList
                             services={allServices}
                             selectedServices={services}
-                            onAdd={(service) => {
-                                setServices((prev) => {
-                                    if (prev.some((s) => s._id === service._id))
-                                        return prev;
-                                    return [...prev, service];
-                                });
-                            }}
+                            onAdd={(s) =>
+                                setServices((prev) =>
+                                    prev.some((x) => x._id === s._id)
+                                        ? prev
+                                        : [...prev, s]
+                                )
+                            }
                             onRemove={(id) => {
                                 setServices((prev) =>
                                     prev.filter((s) => s._id !== id)
                                 );
                                 setServiceAmounts((prev) => {
-                                    const copy = { ...prev };
-                                    delete copy[id];
-                                    return copy;
+                                    const c = { ...prev };
+                                    delete c[id];
+                                    return c;
                                 });
                             }}
                         />
-                    </div>
 
-                    {services.length > 0 && (
-                        <>
-                            {/* Service Amount Table */}
-                            <div className="mb-3">
-                                <label className="form-label">
-                                    Bill Details
-                                </label>
-                                <ul className="list-group mb-2">
+                        {/* BILL */}
+                        {services.length > 0 && (
+                            <>
+                                <ul className="list-group my-3">
                                     {services.map((s) => (
                                         <li
                                             key={s._id}
                                             className="list-group-item d-flex justify-content-between align-items-center"
                                         >
-                                            <span>{s.name}</span>
+                                            {s.name}
                                             <input
                                                 type="number"
                                                 className="form-control w-25"
                                                 value={
                                                     serviceAmounts[s._id] ??
-                                                    s.amount ??
-                                                    0
+                                                    s.amount
                                                 }
                                                 onChange={(e) =>
-                                                    handleServiceAmountChange(
+                                                    changeServiceAmount(
                                                         s._id,
                                                         e.target.value
                                                     )
@@ -323,116 +272,82 @@ const AddAppointment = (props) => {
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
 
-                            {/* 🔥 DISCOUNT SECTION */}
-                            <div className="mb-3">
-                                <label className="form-label fw-bold">
-                                    Discount
-                                </label>
-
-                                <div className="d-flex gap-2">
+                                {/* DISCOUNT */}
+                                <div className="mb-3 d-flex gap-2 align-items-center">
                                     <input
                                         type="number"
-                                        className="form-control"
-                                        placeholder="Enter discount"
-                                        style={{ maxWidth: "200px" }}
+                                        className="form-control w-50"
+                                        placeholder="Discount"
                                         value={discount}
                                         onChange={(e) =>
-                                            setDiscount(Number(e.target.value))
+                                            setDiscount(
+                                                Number(e.target.value)
+                                            )
                                         }
                                     />
-
-                                    <div className="form-check d-flex align-items-center">
+                                    <div className="form-check">
                                         <input
-                                            type="checkbox"
                                             className="form-check-input"
+                                            type="checkbox"
                                             checked={isPercent}
                                             onChange={(e) =>
                                                 setIsPercent(e.target.checked)
                                             }
-                                            style={{ marginRight: "5px" }}
                                         />
                                         <label className="form-check-label">
                                             %
                                         </label>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Summary Table */}
-                            <table className="table table-bordered mb-3">
-                                <tbody>
-                                    <tr>
-                                        <th>Total Before Discount</th>
-                                        <td className="text-end">
-                                            {serviceTotal}
-                                        </td>
-                                    </tr>
+                                {/* SUMMARY */}
+                                <div className="alert alert-light border">
+                                    <div>Total: ₹ {total}</div>
+                                    <div>
+                                        Discount: ₹{" "}
+                                        {isPercent
+                                            ? ((total * discount) / 100).toFixed(
+                                                  2
+                                              )
+                                            : discount}
+                                    </div>
+                                    <div className="fw-bold">
+                                        Final: ₹ {finalAmount}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
-                                    <tr>
-                                        <th>
-                                            Discount{" "}
-                                            {isPercent
-                                                ? `(${discount}%)`
-                                                : discount > 0
-                                                ? `( ${discount})`
-                                                : ""}
-                                        </th>
-                                        <td className="text-end">
-                                            {" "}
-                                            {(() => {
-                                                if (discount <= 0) return 0;
-                                                if (isPercent)
-                                                    return (
-                                                        serviceTotal *
-                                                        (discount / 100)
-                                                    ).toFixed(2);
-                                                return discount;
-                                            })()}
-                                        </td>
-                                    </tr>
+                        {/* PAYMENT */}
+                        <div className="mb-3">
+                            <label className="form-label">Payment Type</label>
+                            <select
+                                className="form-select"
+                                value={paymentType}
+                                onChange={(e) =>
+                                    setPaymentType(e.target.value)
+                                }
+                            >
+                                <option>Cash</option>
+                                <option>Card</option>
+                                <option>UPI</option>
+                                <option>ICICI</option>
+                                <option>HDFC</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
 
-                                    <tr className="table-primary fw-bold">
-                                        <th>Final Amount</th>
-                                        <td className="text-end">
-                                            {finalAmount}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </>
-                    )}
-
-                    {/* Payment */}
-                    <div className="mb-3">
-                        <label className="form-label">Payment Type</label>
-                        <select
-                            className="form-control"
-                            value={payment_type}
-                            onChange={(e) => setpayment_type(e.target.value)}
+                        <button
+                            className="btn btn-primary w-100"
+                            type="submit"
+                            disabled={services.length === 0}
                         >
-                            <option value="Cash">Cash</option>
-                            <option value="Card">Card</option>
-                            <option value="UPI">UPI</option>
-                            <option value="ICICI">ICICI</option>
-                            <option value="HDFC">HDFC</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={services.length === 0}
-                    >
-                        Save Appointment
-                    </button>
-                </form>
-            )}
-        </>
+                            Save Appointment
+                        </button>
+                    </form>
+                )}
+            </div>
+        </div>
     );
-};
-
-export default AddAppointment;
+}

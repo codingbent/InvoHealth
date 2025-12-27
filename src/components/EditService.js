@@ -23,16 +23,25 @@ const EditService = ({ showAlert }) => {
                         },
                     }
                 );
+
                 const data = await response.json();
+
+                // ✅ HANDLE BOTH RESPONSE TYPES
                 if (Array.isArray(data)) {
                     setServices(data);
+                } else if (Array.isArray(data.services)) {
+                    setServices(data.services);
+                } else {
+                    setServices([]);
                 }
             } catch (err) {
                 console.error("Error fetching services:", err);
+                setServices([]);
             }
         };
+
         fetchServices();
-    }, [API_BASE_URL]);
+    }, []);
 
     // Set form fields when selecting a service
     const handleSelect = (id) => {
@@ -78,63 +87,94 @@ const EditService = ({ showAlert }) => {
     };
 
     return (
-        <div className="modal-content">
-            <div className="modal-header">
-                <h5 className="modal-title" id="editServiceModalLabel">
-                    Edit Service
+        <div className="modal-content border-0 shadow-lg rounded-4">
+            {/* HEADER */}
+            <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title fw-semibold d-flex align-items-center gap-2">
+                    ✏️ Edit Service
                 </h5>
                 <button
                     type="button"
                     className="btn-close"
                     data-bs-dismiss="modal"
                     aria-label="Close"
-                ></button>
+                />
             </div>
-            <div className="modal-body">
-                {/* Dropdown to select a service */}
-                <select
-                    className="form-select mb-2"
-                    value={selectedService}
-                    onChange={(e) => handleSelect(e.target.value)}
-                >
-                    <option value="">Select Service</option>
-                    {services.map((s) => (
-                        <option key={s._id} value={s._id}>
-                            {s.name}
-                        </option>
-                    ))}
-                </select>
 
-                {/* Editable fields */}
-                <input
-                    type="text"
-                    className="form-control mb-2"
-                    placeholder="Service Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
-                <input
-                    type="number"
-                    className="form-control mb-2"
-                    placeholder="Service Amount"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                />
+            {/* BODY */}
+            <div className="modal-body pt-2">
+                {/* Service Selector */}
+                <div className="mb-3">
+                    <label className="form-label small text-muted">
+                        Select Service
+                    </label>
+                    <select
+                        className="form-select rounded-3"
+                        value={selectedService}
+                        onChange={(e) => handleSelect(e.target.value)}
+                    >
+                        <option value="">Choose a service</option>
+                        {services.map((s) => (
+                            <option key={s._id} value={s._id}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Editable Fields */}
+                <div className="form-floating mb-3">
+                    <input
+                        type="text"
+                        className="form-control rounded-3"
+                        id="editServiceName"
+                        placeholder="Service Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={!selectedService}
+                    />
+                    <label htmlFor="editServiceName">Service Name</label>
+                </div>
+
+                <div className="form-floating">
+                    <input
+                        type="number"
+                        className="form-control rounded-3"
+                        id="editServiceAmount"
+                        placeholder="Service Amount"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        min="0"
+                        disabled={!selectedService}
+                    />
+                    <label htmlFor="editServiceAmount">
+                        Service Amount (₹)
+                    </label>
+                </div>
+
+                {!selectedService && (
+                    <small className="text-muted d-block mt-2">
+                        Please select a service to edit its details
+                    </small>
+                )}
             </div>
-            <div className="modal-footer">
+
+            {/* FOOTER */}
+            <div className="modal-footer border-0 pt-0">
                 <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-outline-secondary rounded-3"
                     data-bs-dismiss="modal"
                 >
-                    Close
+                    Cancel
                 </button>
                 <button
                     type="button"
-                    className="btn btn-success"
+                    className="btn btn-success rounded-3 px-4"
                     onClick={handleSubmit}
+                    disabled={!selectedService}
                 >
-                    Update
+                    💾 Update Service
                 </button>
             </div>
         </div>

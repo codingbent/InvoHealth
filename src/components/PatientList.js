@@ -72,7 +72,9 @@ export default function PatientList() {
 
                 // normalize service names
                 setAllServices(
-                    Array.isArray(data) ? data.map((s) => s.name).sort() : []
+                    Array.isArray(data.services)
+                        ? data.services.map((s) => s.name).sort()
+                        : []
                 );
             } catch (err) {
                 console.error("Error fetching services", err);
@@ -338,7 +340,7 @@ export default function PatientList() {
 
         XLSX.writeFile(wb, "visit-records.xlsx");
     };
-    const monthTotals = useMemo(() => {
+    const monthTotal = useMemo(() => {
         const totals = {};
 
         Object.keys(appointmentsByMonth).forEach((month) => {
@@ -355,6 +357,14 @@ export default function PatientList() {
 
         return totals;
     }, [appointmentsByMonth]);
+    const paymentColor = {
+        Cash: "bg-warning-subtle text-dark",
+        UPI: "bg-success-subtle text-success",
+        Card: "bg-primary-subtle text-primary",
+        ICICI: "bg-info-subtle text-info",
+        HDFC: "bg-secondary-subtle text-secondary",
+        Other: "bg-light text-dark border",
+    };
 
     // =========================
     // UI
@@ -371,137 +381,209 @@ export default function PatientList() {
                     🔍 Filters
                 </button>
             </div>
-
             {/* FILTER PANEL */}
-            <div className="offcanvas offcanvas-end" id="filterPanel">
-                <div className="offcanvas-header">
-                    <h5>Filters</h5>
-                    <button className="btn-close" data-bs-dismiss="offcanvas" />
+            <div
+                className="offcanvas offcanvas-end shadow-lg"
+                tabIndex="-1"
+                id="filterPanel"
+            >
+                {/* HEADER */}
+                <div className="offcanvas-header border-bottom">
+                    <h5 className="fw-semibold mb-0">🔍 Filters</h5>
+                    <button
+                        type="button"
+                        className="btn-close"
+                        data-bs-dismiss="offcanvas"
+                    />
                 </div>
 
+                {/* BODY */}
                 <div className="offcanvas-body">
-                    <label>Search</label>
-                    <input
-                        className="form-control mb-3"
-                        placeholder="Search name or phone"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                    {/* SEARCH */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Search Patient
+                        </label>
+                        <input
+                            className="form-control rounded-3"
+                            placeholder="Name or phone number"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
 
-                    <label className="fw-semibold">Payment Types</label>
-                    {["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].map(
-                        (type) => (
-                            <div className="form-check" key={type}>
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={selectedPayments.includes(type)}
-                                    onChange={(e) =>
+                    {/* PAYMENT TYPES */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Payment Method
+                        </label>
+
+                        <div className="d-flex flex-wrap gap-2">
+                            {[
+                                "Cash",
+                                "Card",
+                                "UPI",
+                                "ICICI",
+                                "HDFC",
+                                "Other",
+                            ].map((type) => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={`btn btn-sm rounded-pill ${
+                                        selectedPayments.includes(type)
+                                            ? "btn-primary"
+                                            : "btn-outline-secondary"
+                                    }`}
+                                    onClick={() =>
                                         setSelectedPayments(
-                                            e.target.checked
-                                                ? [...selectedPayments, type]
-                                                : selectedPayments.filter(
+                                            selectedPayments.includes(type)
+                                                ? selectedPayments.filter(
                                                       (p) => p !== type
                                                   )
+                                                : [...selectedPayments, type]
                                         )
                                     }
-                                />
-                                <label className="form-check-label">
+                                >
                                     {type}
-                                </label>
-                            </div>
-                        )
-                    )}
-                    <label className="fw-semibold mt-2">Gender</label>
-                    <select
-                        className="form-select mb-3"
-                        value={selectedGender}
-                        onChange={(e) => setSelectedGender(e.target.value)}
-                    >
-                        <option value="">All</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-
-                    <hr />
-
-                    <label className="fw-semibold">Services</label>
-                    <div style={{ maxHeight: 200, overflowY: "auto" }}>
-                        {allServices.map((s) => (
-                            <div className="form-check" key={s}>
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    checked={selectedServices.includes(s)}
-                                    onChange={(e) =>
-                                        setSelectedServices(
-                                            e.target.checked
-                                                ? [...selectedServices, s]
-                                                : selectedServices.filter(
-                                                      (x) => x !== s
-                                                  )
-                                        )
-                                    }
-                                />
-                                <label className="form-check-label">{s}</label>
-                            </div>
-                        ))}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <hr />
 
-                    <label className="fw-semibold">Start Date</label>
-                    <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={startDate}
-                        onChange={(e) => {
-                            setSelectedFY(""); // clear FY when manual date used
-                            setStartDate(e.target.value);
-                        }}
-                    />
-
-                    <label className="fw-semibold">End Date</label>
-                    <input
-                        type="date"
-                        className="form-control mb-3"
-                        value={endDate}
-                        onChange={(e) => {
-                            setSelectedFY(""); // clear FY when manual date used
-                            setEndDate(e.target.value);
-                        }}
-                    />
-                    <hr />
-                    <label className="fw-semibold">Financial Year</label>
-                    <select
-                        className="form-select mb-3"
-                        value={selectedFY}
-                        onChange={(e) => {
-                            setSelectedFY(e.target.value);
-                        }}
-                    >
-                        <option value="">All Years</option>
-                        <option value="2025">FY 2025-26</option>
-                        <option value="2026">FY 2026-27</option>
-                        <option value="2027">FY 2027-28</option>
-                        <option value="2028">FY 2028-29</option>
-                    </select>
+                    {/* GENDER */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Gender
+                        </label>
+                        <select
+                            className="form-select rounded-3"
+                            value={selectedGender}
+                            onChange={(e) => setSelectedGender(e.target.value)}
+                        >
+                            <option value="">All</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
 
                     <hr />
 
-                    <button
-                        className="btn btn-outline-secondary w-100 mt-2"
-                        onClick={() => {
-                            setSearchTerm("");
-                            setSelectedPayments([]);
-                            setSelectedServices([]);
-                            setSelectedGender("");
-                            setStartDate("");
-                            setEndDate("");
-                            setSelectedFY("");
-                        }}
-                    >
-                        Reset Filters
-                    </button>
+                    {/* SERVICES */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Services
+                        </label>
+
+                        <div
+                            className="d-flex flex-wrap gap-2 border rounded-3 p-2"
+                            style={{ maxHeight: 180, overflowY: "auto" }}
+                        >
+                            {allServices.map((s) => {
+                                const active = selectedServices.includes(s);
+
+                                return (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill ${
+                                            active
+                                                ? "btn-primary"
+                                                : "btn-outline-secondary"
+                                        }`}
+                                        onClick={() =>
+                                            setSelectedServices(
+                                                active
+                                                    ? selectedServices.filter(
+                                                          (x) => x !== s
+                                                      )
+                                                    : [...selectedServices, s]
+                                            )
+                                        }
+                                    >
+                                        {s}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedServices.length > 0 && (
+                            <small className="text-muted d-block mt-2">
+                                Selected: {selectedServices.length}
+                            </small>
+                        )}
+                    </div>
+
+                    <hr />
+
+                    {/* DATE RANGE */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Date Range
+                        </label>
+
+                        <div className="row g-2">
+                            <div className="col-6">
+                                <input
+                                    type="date"
+                                    className="form-control rounded-3"
+                                    value={startDate}
+                                    onChange={(e) => {
+                                        setSelectedFY("");
+                                        setStartDate(e.target.value);
+                                    }}
+                                />
+                            </div>
+
+                            <div className="col-6">
+                                <input
+                                    type="date"
+                                    className="form-control rounded-3"
+                                    value={endDate}
+                                    onChange={(e) => {
+                                        setSelectedFY("");
+                                        setEndDate(e.target.value);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* FINANCIAL YEAR */}
+                    <div className="mb-4">
+                        <label className="form-label small fw-semibold text-muted">
+                            Financial Year
+                        </label>
+                        <select
+                            className="form-select rounded-3"
+                            value={selectedFY}
+                            onChange={(e) => setSelectedFY(e.target.value)}
+                        >
+                            <option value="">All Years</option>
+                            <option value="2025">FY 2025–26</option>
+                            <option value="2026">FY 2026–27</option>
+                            <option value="2027">FY 2027–28</option>
+                            <option value="2028">FY 2028–29</option>
+                        </select>
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div className="d-grid gap-2 mt-4">
+                        <button
+                            className="btn btn-outline-secondary rounded-3"
+                            onClick={() => {
+                                setSearchTerm("");
+                                setSelectedPayments([]);
+                                setSelectedServices([]);
+                                setSelectedGender("");
+                                setStartDate("");
+                                setEndDate("");
+                                setSelectedFY("");
+                            }}
+                        >
+                            ♻ Reset Filters
+                        </button>
+                    </div>
                 </div>
             </div>
             <div className="d-flex justify-content-center mb-3">
@@ -509,102 +591,162 @@ export default function PatientList() {
                     📥 Download Excel
                 </button>
             </div>
+            {/* ================= DATA VIEW ================= */}
+            {Object.keys(appointmentsByMonth).map((month) => (
+                <div key={month} className="container-fluid px-3 px-lg-5 py-3">
+                    {/* ================= MONTH HEADER ================= */}
+                    <div
+                        className="d-flex justify-content-between align-items-center 
+                bg-primary bg-gradient text-white 
+                rounded-4 px-3 py-3 mb-3 shadow"
+                    >
+                        <div>
+                            <h5 className="mb-0 fw-semibold">{month}</h5>
+                            <small className="opacity-75">
+                                Total Collection
+                            </small>
+                        </div>
 
-            {/* DATA VIEW */}
-            {Object.keys(appointmentsByMonth).map((month) => {
-                return (
-                    <div key={month} className="mb-3">
-                        {/* MONTH HEADER WITH TOTAL */}
-                        <h4 className="bg-primary text-white p-2 rounded d-flex justify-content-between">
-                            <span>{month}</span>
-                            <span className="fw-bold">
-                                ₹ {monthTotals[month].toFixed(2)}
-                            </span>
+                        <h4 className="mb-0 fw-bold">
+                            ₹ {monthTotal[month]?.toFixed(2)}
                         </h4>
+                    </div>
 
-                        {Object.keys(appointmentsByMonth[month])
-                            .sort((a, b) => new Date(b) - new Date(a))
-                            .map((day) => {
-                                const dayApps = appointmentsByMonth[month][day];
-                                const dayTotal = dayApps.reduce(
-                                    (sum, a) => sum + Number(a.amount || 0),
-                                    0
-                                );
+                    {/* ================= DAY LOOP ================= */}
+                    {Object.keys(appointmentsByMonth[month]).map((day) => {
+                        const dayApps = appointmentsByMonth[month][day];
 
-                                return (
-                                    <div key={day}>
-                                        {/* DAY HEADER WITH TOTAL */}
-                                        <h6 className="bg-light p-2 d-flex justify-content-between">
-                                            <span>
-                                                {new Date(
-                                                    day
-                                                ).toLocaleDateString()}
-                                            </span>
-                                            <span className="fw-semibold">
-                                                ₹ {dayTotal.toFixed(2)}
-                                            </span>
-                                        </h6>
+                        const dayTotal = dayApps.reduce(
+                            (sum, a) => sum + Number(a.amount || 0),
+                            0
+                        );
 
-                                        <table className="table table-bordered table-striped">
-                                            {/* COLUMN WIDTHS */}
-                                            <colgroup>
-                                                <col
-                                                    style={{
-                                                        width: "40%",
-                                                    }}
-                                                />
-                                                <col
-                                                    style={{
-                                                        width: "30%",
-                                                    }}
-                                                />
-                                                <col
-                                                    style={{
-                                                        width: "30%",
-                                                    }}
-                                                />
-                                            </colgroup>
+                        return (
+                            <div key={day} className="mb-4">
+                                {/* ================= DATE HEADER ================= */}
+                                <div className="d-flex justify-content-between align-items-center bg-light rounded-3 px-3 py-2 mb-2">
+                                    <h6 className="mb-0 fw-semibold">
+                                        {new Date(day).toLocaleDateString(
+                                            "en-IN",
+                                            {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                            }
+                                        )}
+                                    </h6>
 
-                                            {/* TABLE HEADER */}
+                                    <span className="fw-bold text-success">
+                                        ₹ {dayTotal.toFixed(2)}
+                                    </span>
+                                </div>
+
+                                {/* ================= DESKTOP TABLE ================= */}
+                                <div className="d-none d-lg-block">
+                                    <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+                                        <table className="table table-hover align-middle mb-0">
                                             <thead className="table-light">
                                                 <tr>
-                                                    <th>Name</th>
+                                                    <th>Patient</th>
                                                     <th>Payment</th>
-                                                    <th>Amount</th>
+                                                    <th className="text-end">
+                                                        Amount
+                                                    </th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
 
-                                            {/* TABLE BODY */}
                                             <tbody>
                                                 {dayApps.map((a, i) => (
-                                                    <tr
-                                                        key={`${month}-${day}-${
-                                                            a._id || a.patientId
-                                                        }-${i}`}
-                                                        onClick={() =>
-                                                            navigate(
-                                                                `/patient/${a.patientId}`
-                                                            )
-                                                        }
-                                                        style={{
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        <td>{a.name}</td>
-                                                        <td>
-                                                            {a.payment_type}
+                                                    <tr key={i}>
+                                                        <td className="fw-semibold">
+                                                            {a.name}
                                                         </td>
-                                                        <td>₹ {a.amount}</td>
+
+                                                        <td>
+                                                            <span
+                                                                className={`badge rounded-pill ${
+                                                                    paymentColor[
+                                                                        a
+                                                                            .payment_type
+                                                                    ] ||
+                                                                    "bg-secondary-subtle text-dark"
+                                                                }`}
+                                                            >
+                                                                {a.payment_type}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="text-end fw-bold text-success">
+                                                            ₹ {a.amount}
+                                                        </td>
+
+                                                        <td className="text-end">
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary"
+                                                                onClick={() =>
+                                                                    navigate(
+                                                                        `/patient/${a.patientId}`
+                                                                    )
+                                                                }
+                                                            >
+                                                                View
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
-                                );
-                            })}
-                    </div>
-                );
-            })}
+                                </div>
+
+                                {/* ================= MOBILE CARDS ================= */}
+                                <div className="d-lg-none">
+                                    {dayApps.map((a, i) => (
+                                        <div
+                                            key={i}
+                                            className="card border-0 shadow-sm rounded-4 mb-2"
+                                            onClick={() =>
+                                                navigate(
+                                                    `/patient/${a.patientId}`
+                                                )
+                                            }
+                                            style={{ cursor: "pointer" }}
+                                        >
+                                            <div className="card-body">
+                                                <div className="d-flex justify-content-between">
+                                                    <div>
+                                                        <h6 className="fw-semibold mb-1">
+                                                            {a.name}
+                                                        </h6>
+
+                                                        <span
+                                                            className={`badge rounded-pill ${
+                                                                paymentColor[
+                                                                    a
+                                                                        .payment_type
+                                                                ] ||
+                                                                "bg-secondary-subtle text-dark"
+                                                            }`}
+                                                        >
+                                                            {a.payment_type}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="fw-bold text-success">
+                                                        ₹ {a.amount}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
+
             {appointments.length < total && (
                 <LoadMore onLoadMore={IncreaseLimit} />
             )}

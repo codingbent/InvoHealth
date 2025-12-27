@@ -1,40 +1,30 @@
 import { useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
+
 
 export default function DoctorProfile() {
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
     const [doctor, setDoctor] = useState(null);
-    const [editData, setEditData] = useState({});
+    const [staffList, setStaffList] = useState([]);
+    const [staffName, setStaffName] = useState("");
+    const [staffPhone, setStaffPhone] = useState("");
+    const [staffRole, setStaffRole] = useState("");
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
     });
-    const [loading, setLoading] = useState(true);
-    const [staffName, setStaffName] = useState("");
-    const [staffPhone, setStaffPhone] = useState("");
-    const [staffRole, setStaffRole] = useState("");
-    const [staffList, setStaffList] = useState([]);
-    const [role, setRole] = useState(null);
-
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        try {
-            const decoded = jwtDecode(token);
-            setRole(decoded.role);
-        } catch (err) {
-            console.error("Invalid token");
-            setRole(null);
-        }
-    }, []);
-
+    const [editStaffData, setEditStaffData] = useState({
+        _id: "",
+        name: "",
+        phone: "",
+        role: "",
+    });
+    const [editData, setEditData] = useState({});
+    
     // ================= FETCH DOCTOR =================
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     const fetchDoctor = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
@@ -60,8 +50,6 @@ export default function DoctorProfile() {
             }
         } catch (err) {
             console.error(err);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -69,7 +57,6 @@ export default function DoctorProfile() {
         fetchDoctor();
     }, []);
 
-    // ================= EDIT PROFILE =================
     const handleEditChange = (e) =>
         setEditData({ ...editData, [e.target.name]: e.target.value });
 
@@ -93,49 +80,6 @@ export default function DoctorProfile() {
         updated.splice(index, 1);
         setEditData({ ...editData, degree: updated });
     };
-    const fetchStaff = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetch-staff`, {
-            headers: { "auth-token": localStorage.getItem("token") },
-        });
-        const data = await res.json();
-        if (data.success) setStaffList(data.staff);
-    };
-
-    useEffect(() => {
-        fetchStaff();
-    }, []);
-
-    const handleAddStaff = async () => {
-        if (!staffName || !staffPhone || !staffRole) {
-            alert("All fields required");
-            return;
-        }
-
-        const res = await fetch(`${API_BASE_URL}/api/auth/add-staff`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
-            },
-            body: JSON.stringify({
-                name: staffName,
-                phone: staffPhone.replace(/\D/g, "").slice(-10),
-                role: staffRole,
-            }),
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            fetchStaff();
-            setStaffName("");
-            setStaffPhone("");
-            setStaffRole("");
-        } else {
-            alert(data.error);
-        }
-    };
-
     const handleSaveProfile = async () => {
         const payload = {
             ...editData,
@@ -159,68 +103,148 @@ export default function DoctorProfile() {
             alert("Profile update failed");
         }
     };
-    const handleChangePassword = async () => {
-        const { currentPassword, newPassword, confirmPassword } = passwordData;
+    // ================= FETCH STAFF =================
+    const fetchStaff = async () => {
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetch-staff`, {
+            headers: { "auth-token": localStorage.getItem("token") },
+        });
+        const data = await res.json();
+        if (data.success) setStaffList(data.staff);
+    };
 
-        // ✅ validations
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            alert("All password fields are required");
+    useEffect(() => {
+        fetchDoctor();
+        fetchStaff();
+    }, []);
+
+    // ================= ADD STAFF =================
+    const handleAddStaff = async () => {
+        if (!staffName || !staffPhone || !staffRole) {
+            alert("All fields required");
             return;
         }
 
-        if (newPassword.length < 6) {
-            alert("New password must be at least 6 characters");
-            return;
-        }
+        const res = await fetch(`${API_BASE_URL}/api/auth/add-staff`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify({
+                name: staffName,
+                phone: staffPhone.replace(/\D/g, "").slice(-10),
+                role: staffRole,
+            }),
+        });
 
-        if (newPassword !== confirmPassword) {
-            alert("New password and confirm password do not match");
-            return;
-        }
-
-        try {
-            const res = await fetch(
-                `${API_BASE_URL}/api/auth/change-password`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token"),
-                    },
-                    body: JSON.stringify({
-                        currentPassword,
-                        newPassword,
-                    }),
-                }
-            );
-
-            const data = await res.json();
-
-            if (data.success) {
-                alert("Password updated successfully ✅");
-
-                // reset fields
-                setPasswordData({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmPassword: "",
-                });
-            } else {
-                alert(data.error || "Password update failed");
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Server error while changing password");
+        const data = await res.json();
+        if (data.success) {
+            fetchStaff();
+            setStaffName("");
+            setStaffPhone("");
+            setStaffRole("");
+        } else {
+            alert(data.error);
         }
     };
 
-    if (loading) return <p className="text-center mt-4">Loading...</p>;
-    if (!doctor)
-        return <p className="text-center mt-4">Error loading profile</p>;
+    // ================= CHANGE PASSWORD =================
+    const handleChangePassword = async () => {
+        const { currentPassword, newPassword, confirmPassword } = passwordData;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            alert("All fields required");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert("Passwords do not match");
+            return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "auth-token": localStorage.getItem("token"),
+            },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert("Password updated");
+            setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+            });
+        } else {
+            alert(data.error);
+        }
+    };
+    const deletestaff = async (staffId) => {
+        const confirmDelete = window.confirm(
+            "Do you want to delete this staff member?"
+        );
+        if (!confirmDelete) return;
+        const res = await fetch(
+            `${API_BASE_URL}/api/auth/delete-staff/${staffId}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "auth-token": localStorage.getItem("token"),
+                },
+            }
+        );
+
+        const data = await res.json();
+        if (data.success) {
+            fetchStaff();
+        } else {
+            alert(data.error);
+        }
+    };
+    const openEditStaffModal = (staff) => {
+        setEditStaffData({
+            _id: staff._id,
+            name: staff.name,
+            phone: staff.phone,
+            role: staff.role,
+        });
+    };
+
+    const editstaff = async () => {
+        const res = await fetch(
+            `${API_BASE_URL}/api/auth/edit-staff/${editStaffData._id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "auth-token": localStorage.getItem("token"),
+                },
+                body: JSON.stringify({
+                    name: editStaffData.name,
+                    phone: editStaffData.phone,
+                    role: editStaffData.role,
+                }),
+            }
+        );
+
+        const data = await res.json();
+
+        if (data.success) {
+            fetchStaff();
+            document.getElementById("editStaffModalClose").click();
+        } else {
+            alert(data.error);
+        }
+    };
+
+    if (!doctor) return <p className="text-center mt-4">Loading...</p>;
 
     return (
-        <div className="container mt-4">
-            {/* ================= PROFILE CARD ================= */}
+        <div className="container py-3 py-md-4">
+            {/* ================= DOCTOR PROFILE ================= */}
             <div className="card shadow-sm border-0 mb-3">
                 <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
@@ -263,7 +287,7 @@ export default function DoctorProfile() {
                             </p>
                         </div>
 
-                        <div className="col-12">
+                        {/* <div className="col-12">
                             <p className="mb-0">
                                 <strong>Address:</strong>
                                 <br />
@@ -274,133 +298,252 @@ export default function DoctorProfile() {
                                 {doctor.address?.city}, {doctor.address?.state}{" "}
                                 - {doctor.address?.pincode}
                             </p>
+                        </div> */}
+                    </div>
+                </div>
+            </div>
+
+            {/* ================= STAFF MANAGEMENT ================= */}
+            <div className="accordion my-4" id="staffAccordion">
+                <div className="accordion-item border-0 shadow-sm rounded-4">
+                    <h2 className="accordion-header">
+                        <button
+                            className="accordion-button collapsed fw-semibold rounded-4"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#staffSection"
+                            aria-expanded="false"
+                            aria-controls="staffSection"
+                        >
+                            👥 Staff Management
+                        </button>
+                    </h2>
+
+                    <div
+                        id="staffSection"
+                        className="accordion-collapse collapse"
+                        data-bs-parent="#staffAccordion"
+                    >
+                        <div className="accordion-body">
+                            {/* ================= ADD STAFF ================= */}
+                            <div className="row g-3 mb-3">
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        Staff Name
+                                    </label>
+                                    <input
+                                        className="form-control rounded-3"
+                                        placeholder="Enter name"
+                                        value={staffName}
+                                        onChange={(e) =>
+                                            setStaffName(e.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        Phone Number
+                                    </label>
+                                    <input
+                                        className="form-control rounded-3"
+                                        placeholder="10 digit number"
+                                        value={staffPhone}
+                                        onChange={(e) =>
+                                            setStaffPhone(e.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        Role
+                                    </label>
+                                    <select
+                                        className="form-select rounded-3"
+                                        value={staffRole}
+                                        onChange={(e) =>
+                                            setStaffRole(e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select Role</option>
+                                        <option value="receptionist">
+                                            Receptionist
+                                        </option>
+                                        <option value="assistant">
+                                            Assistant
+                                        </option>
+                                        <option value="nurse">Nurse</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                className="btn btn-primary w-100 w-md-auto mb-4 rounded-3"
+                                onClick={handleAddStaff}
+                            >
+                                ➕ Add Staff
+                            </button>
+
+                            <hr />
+
+                            {/* ================= STAFF LIST ================= */}
+                            {staffList.length === 0 ? (
+                                <p className="text-muted text-center mb-0">
+                                    No staff added yet
+                                </p>
+                            ) : (
+                                <div className="row g-3">
+                                    {staffList.map((s) => (
+                                        <div
+                                            key={s._id}
+                                            className="col-12 col-md-6"
+                                        >
+                                            <div className="card h-100 border-0 shadow-sm rounded-4">
+                                                <div className="card-body">
+                                                    <h6 className="fw-bold mb-1">
+                                                        {s.name}
+                                                    </h6>
+
+                                                    <div className="small text-muted mb-2">
+                                                        📞 {s.phone}
+                                                    </div>
+
+                                                    <span className="badge bg-light text-dark border mb-3">
+                                                        {s.role}
+                                                    </span>
+
+                                                    <div className="d-flex gap-2 mt-3">
+                                                        <button
+                                                            className="btn btn-sm btn-outline-warning flex-fill rounded-3"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editStaffModal"
+                                                            onClick={() =>
+                                                                openEditStaffModal(
+                                                                    s
+                                                                )
+                                                            }
+                                                        >
+                                                            ✏️ Edit
+                                                        </button>
+
+                                                        <button
+                                                            className="btn btn-sm btn-outline-danger flex-fill rounded-3"
+                                                            onClick={() =>
+                                                                deletestaff(
+                                                                    s._id
+                                                                )
+                                                            }
+                                                        >
+                                                            🗑 Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* ================= ACCORDION ================= */}
-            <div className="accordion" id="doctorAccordion">
-                {/* ================= STAFF MANAGEMENT ================= */}
-                {role === "doctor" && (
-                    <div className="accordion-item">
-                        <h2 className="accordion-header">
+            {/* ================= EDIT STAFF MODAL ================= */}
+            <div className="modal fade" id="editStaffModal" tabIndex="-1" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered modal-sm modal-md">
+                    <div className="modal-content border-0 shadow">
+                        <div className="modal-header">
+                            <h5 className="modal-title fw-semibold">
+                                Edit Staff
+                            </h5>
                             <button
-                                className="accordion-button collapsed"
                                 type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#staffSection"
-                            >
-                                👥 Staff Management
-                            </button>
-                        </h2>
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                                id="editStaffModalClose"
+                            />
+                        </div>
 
-                        <div
-                            id="staffSection"
-                            className="accordion-collapse collapse"
-                            data-bs-parent="#doctorAccordion"
-                        >
-                            <div className="accordion-body">
-                                <h6 className="fw-semibold mb-3">Add Staff</h6>
+                        <div className="modal-body">
+                            <div className="mb-3">
+                                <label className="form-label">Name</label>
+                                <input
+                                    className="form-control"
+                                    value={editStaffData.name}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            name: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
 
-                                <div className="row g-2 mb-3">
-                                    <div className="col-md-4">
-                                        <input
-                                            className="form-control"
-                                            placeholder="Staff Name"
-                                            value={staffName}
-                                            onChange={(e) =>
-                                                setStaffName(e.target.value)
-                                            }
-                                        />
-                                    </div>
+                            <div className="mb-3">
+                                <label className="form-label">Phone</label>
+                                <input
+                                    className="form-control"
+                                    value={editStaffData.phone}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            phone: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
 
-                                    <div className="col-md-4">
-                                        <input
-                                            className="form-control"
-                                            placeholder="Phone (10 digits)"
-                                            value={staffPhone}
-                                            onChange={(e) =>
-                                                setStaffPhone(e.target.value)
-                                            }
-                                        />
-                                    </div>
-
-                                    <div className="col-md-4">
-                                        <select
-                                            className="form-select"
-                                            value={staffRole}
-                                            onChange={(e) =>
-                                                setStaffRole(e.target.value)
-                                            }
-                                        >
-                                            <option value="">
-                                                Select Role
-                                            </option>
-                                            <option value="receptionist">
-                                                Receptionist
-                                            </option>
-                                            <option value="assistant">
-                                                Assistant
-                                            </option>
-                                            <option value="nurse">Nurse</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <button
-                                    className="btn btn-outline-primary btn-sm mb-3"
-                                    onClick={handleAddStaff}
+                            <div className="mb-3">
+                                <label className="form-label">Role</label>
+                                <select
+                                    className="form-select"
+                                    value={editStaffData.role}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            role: e.target.value,
+                                        })
+                                    }
                                 >
-                                    ➕ Add Staff
-                                </button>
-
-                                <hr />
-
-                                <h6 className="fw-semibold mb-2">Staff List</h6>
-
-                                {staffList.length === 0 ? (
-                                    <p className="text-muted">
-                                        No staff added yet
-                                    </p>
-                                ) : (
-                                    <table className="table table-sm table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Phone</th>
-                                                <th>Role</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {staffList.map((s) => (
-                                                <tr key={s._id}>
-                                                    <td>{s.name}</td>
-                                                    <td>{s.phone}</td>
-                                                    <td>{s.role}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-
-                                <small className="text-muted">
-                                    Staff can login using OTP with their phone
-                                    number
-                                </small>
+                                    <option value="receptionist">
+                                        Receptionist
+                                    </option>
+                                    <option value="assistant">Assistant</option>
+                                    <option value="nurse">Nurse</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* ================= CHANGE PASSWORD ================= */}
-                <div className="accordion-item">
+                        <div className="modal-footer flex-nowrap">
+                            <button
+                                className="btn btn-outline-secondary w-50"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary w-50"
+                                onClick={editstaff}
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ================= CHANGE PASSWORD ================= */}
+            <div className="accordion my-4" id="doctorAccordion">
+                <div className="accordion-item border-0 shadow-sm rounded-4">
                     <h2 className="accordion-header">
                         <button
-                            className="accordion-button collapsed"
+                            className="accordion-button collapsed fw-semibold rounded-4"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#passwordSection"
+                            aria-expanded="false"
+                            aria-controls="passwordSection"
                         >
                             🔒 Change Password
                         </button>
@@ -413,11 +556,15 @@ export default function DoctorProfile() {
                     >
                         <div className="accordion-body">
                             <div className="row g-3">
-                                <div className="col-md-4">
+                                {/* Current Password */}
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        Current Password
+                                    </label>
                                     <input
                                         type="password"
-                                        className="form-control"
-                                        placeholder="Current Password"
+                                        className="form-control rounded-3"
+                                        placeholder="••••••••"
                                         value={passwordData.currentPassword}
                                         onChange={(e) =>
                                             setPasswordData({
@@ -428,11 +575,15 @@ export default function DoctorProfile() {
                                     />
                                 </div>
 
-                                <div className="col-md-4">
+                                {/* New Password */}
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        New Password
+                                    </label>
                                     <input
                                         type="password"
-                                        className="form-control"
-                                        placeholder="New Password"
+                                        className="form-control rounded-3"
+                                        placeholder="Minimum 6 characters"
                                         value={passwordData.newPassword}
                                         onChange={(e) =>
                                             setPasswordData({
@@ -443,11 +594,15 @@ export default function DoctorProfile() {
                                     />
                                 </div>
 
-                                <div className="col-md-4">
+                                {/* Confirm Password */}
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small text-muted">
+                                        Confirm Password
+                                    </label>
                                     <input
                                         type="password"
-                                        className="form-control"
-                                        placeholder="Confirm Password"
+                                        className="form-control rounded-3"
+                                        placeholder="Re-enter password"
                                         value={passwordData.confirmPassword}
                                         onChange={(e) =>
                                             setPasswordData({
@@ -459,24 +614,22 @@ export default function DoctorProfile() {
                                 </div>
                             </div>
 
-                            <button
-                                className="btn btn-outline-danger btn-sm mt-3"
-                                onClick={handleChangePassword}
-                            >
-                                🔄 Update Password
-                            </button>
+                            {/* Action */}
+                            <div className="d-flex justify-content-end mt-4">
+                                <button
+                                    className="btn btn-danger px-4 rounded-3"
+                                    onClick={handleChangePassword}
+                                >
+                                    🔄 Update Password
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* ================= EDIT PROFILE MODAL ================= */}
-            <div
-                className="modal fade"
-                id="editProfileModal"
-                tabIndex="-1"
-                aria-hidden="true"
-            >
+            <div className="modal fade" id="editProfileModal" tabIndex="-1" aria-hidden="true">
                 <div className="modal-dialog modal-lg modal-dialog-scrollable">
                     <div className="modal-content">
                         <div className="modal-header">

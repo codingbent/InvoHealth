@@ -5,6 +5,7 @@ const Patient = require("../models/Patient");
 const Service = require("../models/Service");
 const Appointment = require("../models/Appointment");
 const Counter = require("../models/Counter");
+const Staff = require("../models/Staff");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
@@ -17,47 +18,139 @@ const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
+router.post(
+    "/createdoc",
+    [
+        body("name").isLength({ min: 3 }),
+        body("email").isEmail(),
+        body("password").isLength({ min: 5 }),
+        body("clinicName").notEmpty(),
+        body("phone").isLength({ min: 10 }),
+        body("address.line1").notEmpty(),
+        body("address.city").notEmpty(),
+        body("address.state").notEmpty(),
+        body("address.pincode").isLength({ min: 4 }),
+        body("experience").notEmpty(),
+        // body("timings").isArray(),
+        body("degree").isArray(),
+    ],
+    async (req, res) => {
+        let success = false;
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ success, errors: errors.array() });
+        }
+
+        try {
+            let doc = await Doc.findOne({
+                $or: [{ email: req.body.email }, { phone: req.body.phone }],
+            });
+
+            if (doc) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Email or phone already registered",
+                });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(req.body.password, salt);
+            let degrees = Array.isArray(req.body.degree)
+                ? req.body.degree
+                : [req.body.degree];
+            // Create doctor
+            doc = await Doc.create({
+                name: req.body.name,
+                email: req.body.email,
+                password: hashedPassword,
+                clinicName: req.body.clinicName,
+                phone: req.body.phone,
+                appointmentPhone: req.body.appointmentPhone || "",
+                address: req.body.address,
+                regNumber: req.body.regNumber || "",
+                experience: req.body.experience,
+                // timings: req.body.timings.map((t) => ({
+                //     day: t.day,
+                //     slots: t.slots || [],
+                //     note: t.note || "",
+                // })),
+                degree: degrees,
+                role: "doctor",
+            });
+
+            const payload = {
+                user: {
+                    id: doc._id,
+                    role: "doctor",
+                    doctorId: doc._id,
+                },
+            };
+
+            const authtoken = jwt.sign(payload, JWT_SECRET);
+
+            success = true;
+            res.json({ success, authtoken });
+        } catch (error) {
+            console.error(error.message);
+            res.status(500).json({
+                success: false,
+                error: "Internal server error",
+            });
+        }
+    }
+);
+
 router.post("/login", async (req, res) => {
-    let success = false;
     const { identifier, password, loginType, identifierType } = req.body;
 
     try {
-        let doc;
+        let user = null;
+        let userRole = null;
 
-        // 🔍 Find user by email or phone
+        // ======================
+        // 1️⃣ TRY DOCTOR FIRST
+        // ======================
         if (identifierType === "email") {
-            doc = await Doc.findOne({ email: identifier });
-        } else if (identifierType === "phone") {
-            doc = await Doc.findOne({ phone: identifier });
-        } else {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid identifier type",
-            });
+            user = await Doc.findOne({ email: identifier });
+            if (user) userRole = "doctor";
         }
 
-        if (!doc) {
+        if (!user && identifierType === "phone") {
+            user = await Doc.findOne({ phone: identifier });
+            if (user) userRole = "doctor";
+        }
+
+        // ======================
+        // 2️⃣ IF NOT DOCTOR → STAFF
+        // ======================
+        if (!user && identifierType === "phone") {
+            user = await Staff.findOne({
+                phone: identifier,
+                isActive: true,
+            });
+            if (user) userRole = user.role;
+        }
+
+        if (!user) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid credentials",
             });
         }
 
-        // 🔐 PASSWORD LOGIN
+        // ======================
+        // 3️⃣ PASSWORD LOGIN (DOCTOR ONLY)
+        // ======================
         if (loginType === "password") {
-            if (!password) {
-                return res.status(400).json({
+            if (userRole !== "doctor") {
+                return res.status(403).json({
                     success: false,
-                    error: "Password required",
+                    error: "Password login not allowed for staff",
                 });
             }
 
-            const passwordCompare = await bcrypt.compare(
-                password,
-                doc.password
-            );
-
-            if (!passwordCompare) {
+            const match = await bcrypt.compare(password, user.password);
+            if (!match) {
                 return res.status(400).json({
                     success: false,
                     error: "Invalid credentials",
@@ -65,23 +158,30 @@ router.post("/login", async (req, res) => {
             }
         }
 
-        // 🔑 OTP LOGIN (already verified)
-        if (loginType === "otp") {
-            // nothing extra to check here
-        }
+        // ======================
+        // 4️⃣ JWT
+        // ======================
+        const payload = {
+            user: {
+                id: user._id,
+                role: userRole,
+                doctorId: userRole === "doctor" ? user._id : user.doctorId,
+            },
+        };
 
-        // ✅ Generate token
-        const payload = { doc: { id: doc.id } };
-        const authtoken = jwt.sign(payload, JWT_SECRET);
+        const authtoken = jwt.sign(payload, JWT_SECRET, {
+            expiresIn: "7d",
+        });
 
         res.json({
             success: true,
             authtoken,
-            name: doc.name,
-            email: doc.email,
+            role: userRole,
+            name: user.name,
+            doctorId: userRole === "doctor" ? user._id : user.doctorId,
         });
-    } catch (error) {
-        console.error(error.message);
+    } catch (err) {
+        console.error(err);
         res.status(500).json({
             success: false,
             error: "Internal server error",
@@ -89,7 +189,6 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// Creating a Patient using : POST "/API/AUTH" Doesn't require auth
 router.post(
     "/addpatient",
     fetchuser,
@@ -117,7 +216,7 @@ router.post(
         }
 
         try {
-            const doctorId = req.doc.id; // fetched from JWT
+            const doctorId = req.user.doctorId; // fetched from JWT
             const patient = await Patient.create({
                 name: req.body.name,
                 service: req.body.service,
@@ -151,7 +250,7 @@ router.post(
             // 🔑 Use req.doc.id (from fetchuser), not req.doc
             const existingService = await Service.findOne({
                 name: req.body.name,
-                doctor: req.doc.id, // consistent with schema
+                doctor: req.user.doctorId, // consistent with schema
             });
 
             if (existingService) {
@@ -164,7 +263,7 @@ router.post(
             const service = await Service.create({
                 name: req.body.name,
                 amount: req.body.amount,
-                doctor: req.doc.id, // consistent with schema
+                doctor: req.user.doctorId, // consistent with schema
             });
 
             res.status(200).json({
@@ -185,11 +284,22 @@ router.post(
 // Fetch all services for the logged-in doctor
 router.get("/fetchallservice", fetchuser, async (req, res) => {
     try {
-        const services = await Service.find({ doctor: req.doc.id });
-        res.json(services);
+        // 🔑 Resolve doctorId from token
+        const doctorId =
+            req.user.role === "doctor" ? req.user.id : req.user.doctorId;
+
+        const services = await Service.find({ doctor: doctorId });
+
+        res.json({
+            success: true,
+            services,
+        });
     } catch (error) {
         console.error(error.message);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
     }
 });
 
@@ -616,89 +726,23 @@ router.get("/appointments/:patientId", fetchuser, async (req, res) => {
     }
 });
 
-router.post("/login", async (req, res) => {
-    const { identifier, password, loginType, identifierType } = req.body;
-
-    try {
-        let doc;
-
-        // 🔍 Find user
-        if (identifierType === "email") {
-            doc = await Doc.findOne({ email: identifier });
-        } else if (identifierType === "phone") {
-            doc = await Doc.findOne({ phone: identifier });
-        } else {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid identifier type",
-            });
-        }
-
-        if (!doc) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid credentials",
-            });
-        }
-
-        // 🔐 PASSWORD LOGIN
-        if (loginType === "password") {
-            if (!password) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Password required",
-                });
-            }
-
-            const passwordCompare = await bcrypt.compare(
-                password,
-                doc.password
-            );
-
-            if (!passwordCompare) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Invalid credentials",
-                });
-            }
-        }
-
-        // 🔑 OTP LOGIN
-        // Firebase already verified phone → no password check
-        if (loginType !== "password" && loginType !== "otp") {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid login type",
-            });
-        }
-
-        // ✅ ISSUE JWT
-        const payload = { doc: { id: doc.id } };
-        const authtoken = jwt.sign(payload, JWT_SECRET);
-
-        return res.json({
-            success: true,
-            authtoken,
-            name: doc.name,
-            email: doc.email,
-        });
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send("Internal server error");
-    }
-});
-
 router.get("/getdoc", fetchuser, async (req, res) => {
     try {
-        const doc = await Doc.findById(req.doc.id).select("-password");
+        // 🔑 doctorId works for BOTH doctor & staff
+        const doctorId =
+            req.user.role === "doctor" ? req.user.id : req.user.doctorId;
+
+        const doc = await Doc.findById(doctorId).select("-password");
+
         if (!doc) {
-            return res
-                .status(404)
-                .json({ success: false, error: "Doctor not found" });
+            return res.status(404).json({
+                success: false,
+                error: "Doctor not found",
+            });
         }
         res.json({ success: true, doctor: doc });
     } catch (error) {
-        console.error(error.message);
+        console.error(error);
         res.status(500).json({
             success: false,
             error: "Internal server error",
@@ -709,7 +753,7 @@ router.get("/getdoc", fetchuser, async (req, res) => {
 router.put("/updatedoc", fetchuser, async (req, res) => {
     try {
         const updated = await Doc.findByIdAndUpdate(
-            req.doc.id,
+            req.user.doctorId,
             { $set: req.body },
             { new: true }
         );
@@ -871,8 +915,12 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 10;
 
+        // 🔑 Determine doctorId safely
+        const doctorId =
+            req.user.role === "doctor" ? req.user.id : req.user.doctorId;
+
         const appointments = await Appointment.find({
-            doctor: req.doc.id,
+            doctor: doctorId,
         }).populate("patient");
 
         const allVisits = [];
@@ -895,26 +943,27 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             });
         });
 
-        // 3️⃣ Sort newest first
+        // 🔽 Newest first
         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // 4️⃣ Apply limit
+        // 🔢 Apply limit
         const limitedVisits = allVisits.slice(0, limit);
 
         res.json({
+            success: true,
             total: allVisits.length,
             data: limitedVisits,
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ success: false, error: "Server error" });
     }
 });
 
 router.get("/exportappointments", fetchuser, async (req, res) => {
     try {
         const appointments = await Appointment.find({
-            doctor: req.doc.id,
+            doctor: req.user.doctorId,
         }).populate("patient");
 
         const allVisits = [];
@@ -946,35 +995,32 @@ router.get("/exportappointments", fetchuser, async (req, res) => {
     }
 });
 
-router.get("/fetchallpatients", fetchuser, async (req, res) => {
+// GET /api/auth/search-patients?q=rahul
+router.get("/search-patients", fetchuser, async (req, res) => {
     try {
-        const patients = await Patient.find({ doctor: req.doc.id });
-        const patientsWithLast = await Promise.all(
-            patients.map(async (p) => {
-                const appointment = await Appointment.findOne({
-                    patient: p._id,
-                });
-                let lastDate = null;
-                let lastpayment_type = null;
-                if (appointment && appointment.visits.length > 0) {
-                    const lastVisit =
-                        appointment.visits[appointment.visits.length - 1];
-                    lastDate = lastVisit.date;
-                    lastpayment_type = lastVisit.payment_type; // <-- add this
-                }
-                return {
-                    ...p.toObject(),
-                    lastAppointment: lastDate,
-                    lastpayment_type, // <-- return it
-                };
-            })
-        );
-        res.json(patientsWithLast);
+        const q = req.query.q?.trim();
+
+        if (!q) {
+            return res.json([]);
+        }
+
+        const patients = await Patient.find({
+            doctor: req.user.doctorId,
+            $or: [
+                { name: { $regex: q, $options: "i" } },
+                { number: { $regex: q } }
+            ]
+        })
+        .limit(10) // 🔥 IMPORTANT: limit results
+        .select("name number gender age");
+
+        res.json(patients);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: "Server error" });
     }
 });
+
 
 router.post("/send-otp", async (req, res) => {
     const phone = String(req.body.phone || "").replace(/\D/g, "");
@@ -1038,7 +1084,14 @@ router.post("/verify-otp", async (req, res) => {
             });
         }
 
-        const payload = { doc: { id: doc.id } };
+        const payload = {
+            user: {
+                id: doc._id,
+                role: "doctor",
+                doctorId: doc._id,
+            },
+        };
+
         const authtoken = jwt.sign(payload, JWT_SECRET);
 
         res.json({
@@ -1066,7 +1119,7 @@ router.put("/change-password", fetchuser, async (req, res) => {
             });
         }
 
-        const doc = await Doc.findById(req.doc.id);
+        const doc = await Doc.findById(req.user.doctorId);
 
         if (!doc) {
             return res.status(404).json({
@@ -1076,10 +1129,7 @@ router.put("/change-password", fetchuser, async (req, res) => {
         }
 
         // ✅ compare old password
-        const isMatch = await bcrypt.compare(
-            currentPassword,
-            doc.password
-        );
+        const isMatch = await bcrypt.compare(currentPassword, doc.password);
 
         if (!isMatch) {
             return res.status(400).json({
@@ -1105,6 +1155,335 @@ router.put("/change-password", fetchuser, async (req, res) => {
             success: false,
             error: "Internal server error",
         });
+    }
+});
+
+router.post("/add-staff", fetchuser, async (req, res) => {
+    try {
+        const doctorId = req.user.doctorId;
+
+        if (!doctorId) {
+            return res.status(401).json({
+                success: false,
+                error: "Unauthorized",
+            });
+        }
+
+        let { name, phone, role } = req.body;
+
+        phone = phone.replace(/\D/g, "").slice(-10);
+
+        if (!name || !phone || !role) {
+            return res.status(400).json({
+                success: false,
+                error: "All fields are required",
+            });
+        }
+
+        if (!["receptionist", "assistant", "nurse"].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid role",
+            });
+        }
+
+        const existing = await Staff.findOne({ phone });
+        if (existing) {
+            return res.status(400).json({
+                success: false,
+                error: "Staff with this number already exists",
+            });
+        }
+
+        const staff = await Staff.create({
+            doctorId: doctorId,
+            name,
+            phone,
+            role,
+        });
+
+        res.json({
+            success: true,
+            staff,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: err,
+        });
+    }
+});
+router.get("/fetch-staff", fetchuser, async (req, res) => {
+    try {
+        const doctorId = req.user.doctorId;
+
+        const staff = await Staff.find({
+            doctorId: doctorId,
+            isActive: true,
+        }).sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            staff,
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
+    }
+});
+router.delete("/delete-staff/:id", fetchuser, async (req, res) => {
+    try {
+        const doctorId = req.user.doctorId;
+
+        const staff = await Staff.findOneAndUpdate(
+            { _id: req.params.id, doctorId },
+            { isActive: false },
+            { new: true }
+        );
+
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                error: "Staff not found",
+            });
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
+    }
+});
+router.post("/staff/send-otp", async (req, res) => {
+    let phone = String(req.body.phone || "")
+        .replace(/\D/g, "")
+        .slice(-10);
+
+    const staff = await Staff.findOne({ phone, active: true });
+    if (!staff) {
+        return res.status(400).json({
+            success: false,
+            error: "Staff not registered",
+        });
+    }
+
+    const response = await axios.get(
+        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN/STAFF_LOGIN`
+    );
+
+    res.json({
+        success: true,
+        sessionId: response.data.Details,
+    });
+});
+router.post("/staff/verify-otp", async (req, res) => {
+    const { sessionId, otp, phone } = req.body;
+
+    const response = await axios.get(
+        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`
+    );
+
+    if (response.data.Status !== "Success") {
+        return res.status(400).json({
+            success: false,
+            error: "Invalid OTP",
+        });
+    }
+
+    const staff = await Staff.findOne({ phone });
+
+    const payload = {
+        user: {
+            id: staff._id,
+            role: "staff",
+            staffRole: staff.role,
+            doctorId: staff.doctorId,
+        },
+    };
+
+    const authtoken = jwt.sign(payload, JWT_SECRET);
+
+    res.json({
+        success: true,
+        authtoken,
+        role: staff.role,
+        name: staff.name,
+    });
+});
+router.post("/staff/login", async (req, res) => {
+    try {
+        const { phone, password } = req.body;
+
+        const staff = await Staff.findOne({
+            phone,
+            isActive: true,
+        });
+
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                error: "Staff not found",
+            });
+        }
+
+        // 🔹 FIRST LOGIN (NO PASSWORD YET)
+        if (!staff.password) {
+            return res.json({
+                success: true,
+                firstLogin: true,
+                staffId: staff._id,
+            });
+        }
+
+        // 🔹 NORMAL LOGIN
+        const match = await bcrypt.compare(password, staff.password);
+        if (!match) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid password",
+            });
+        }
+
+        const token = jwt.sign(
+            {
+                user: {
+                    id: staff._id,
+                    role: "staff",
+                    staffRole: staff.role,
+                    doctorId: staff.doctorId,
+                },
+            },
+            JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.json({
+            success: true,
+            token,
+            role: staff.role, // receptionist | nurse | assistant
+            name: staff.name, // ✅ REQUIRED
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+});
+
+router.post("/staff/set-password", async (req, res) => {
+    const { staffId, password } = req.body;
+
+    if (!password || password.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: "Password must be at least 6 characters",
+        });
+    }
+
+    const staff = await Staff.findById(staffId);
+    if (!staff || staff.password) {
+        return res.status(400).json({
+            success: false,
+            error: "Invalid request",
+        });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    staff.password = await bcrypt.hash(password, salt);
+    await staff.save();
+
+    const token = jwt.sign(
+        {
+            user: {
+                id: staff._id,
+                role: "staff",
+                staffRole: staff.role,
+                doctorId: staff.doctorId,
+            },
+        },
+        JWT_SECRET,
+        { expiresIn: "1d" }
+    );
+
+    res.json({ success: true, token, role: "staff", name: staff.name });
+});
+// ================= GET LOGGED-IN STAFF PROFILE =================
+router.get("/staff", fetchuser, async (req, res) => {
+    try {
+        if (!req.user || req.user.role === "doctor") {
+            return res.status(403).json({
+                success: false,
+                error: "Not staff",
+            });
+        }
+
+        const staff = await Staff.findById(req.user.id).select("-password");
+
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                error: "Staff not found",
+            });
+        }
+
+        res.json({
+            success: true,
+            staff,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
+    }
+});
+
+// UPDATE STAFF
+router.put("/edit-staff/:id", fetchuser, async (req, res) => {
+    try {
+        const doctorId = req.user.doctorId;
+        const { name, phone, role } = req.body;
+
+        const staff = await Staff.findOne({
+            _id: req.params.id,
+            doctorId: doctorId,
+            isActive: true,
+        });
+
+        if (!staff) {
+            return res.status(404).json({
+                success: false,
+                error: "Staff not found",
+            });
+        }
+
+        if (name) staff.name = name;
+        if (phone) staff.phone = phone.replace(/\D/g, "").slice(-10);
+        if (role) staff.role = role;
+
+        await staff.save();
+
+        res.json({
+            success: true,
+            staff,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
+    }
+});
+
+
+router.post("/addservice", fetchuser, async (req, res) => {
+    if (req.user.role !== "doctor") {
+        return res.status(403).json({ error: "Doctor only" });
     }
 });
 

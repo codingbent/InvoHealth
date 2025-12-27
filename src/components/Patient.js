@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import AddServices from "./AddServices";
 import AddPatient from "./AddPatient";
@@ -6,13 +6,29 @@ import PatientList from "./PatientList";
 import AddAppointment from "./AddAppointment";
 import PatientDetails from "./PatientDetails";
 import EditService from "./EditService";
+import { jwtDecode } from "jwt-decode";
 
 const Patient = (props) => {
     const { showAlert } = props;
+    const [role, setRole] = useState(null); // 🔑 role state
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
 
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const decoded = jwtDecode(token);
+            setRole(decoded.user.role); // ✅ CORRECT
+        } catch (err) {
+            console.error("Invalid token");
+            setRole(null);
+        }
+    }, []);
+
+    // ========== CLOSE NAVBAR IF OPEN ==========
     const closeNavbarIfOpen = () => {
         const navbar = document.getElementById("navbarSupportedContent");
         if (navbar?.classList.contains("show")) {
@@ -92,25 +108,40 @@ const Patient = (props) => {
 
                     {/* ACTION SHEET */}
                     <div id="actionSheet" className="action-sheet hidden">
-                        <button onClick={() => openModal("patientModal")}>
-                            ➕ Add Patient
-                        </button>
-                        <button onClick={() => openModal("serviceModal")}>
-                            🧾 Add Service
-                        </button>
+                        {/* ADD PATIENT — doctor + staff */}
+                        {role && (
+                            <button onClick={() => openModal("patientModal")}>
+                                ➕ Add Patient
+                            </button>
+                        )}
 
-                        <button
-                            onClick={() => {
-                                hideActionSheet();
-                                setShowAppointment(true);
-                            }}
-                        >
-                            📅 Add Appointment
-                        </button>
+                        {/* ADD SERVICE — ONLY DOCTOR */}
+                        {role === "doctor" && (
+                            <button onClick={() => openModal("serviceModal")}>
+                                🧾 Add Service
+                            </button>
+                        )}
 
-                        <button onClick={() => openModal("editServiceModal")}>
-                            ✏️ Edit Service
-                        </button>
+                        {/* ADD APPOINTMENT — doctor + staff */}
+                        {role && (
+                            <button
+                                onClick={() => {
+                                    hideActionSheet();
+                                    setShowAppointment(true);
+                                }}
+                            >
+                                📅 Add Appointment
+                            </button>
+                        )}
+
+                        {/* EDIT SERVICE — ONLY DOCTOR */}
+                        {role === "doctor" && (
+                            <button
+                                onClick={() => openModal("editServiceModal")}
+                            >
+                                ✏️ Edit Service
+                            </button>
+                        )}
 
                         <button
                             className="action-sheet-close"

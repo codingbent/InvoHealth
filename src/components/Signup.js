@@ -80,6 +80,7 @@ const Signup = (props) => {
             regNumber: credentials.regNumber,
             experience: credentials.experience,
             degree: credentials.degrees.filter((d) => d.trim() !== ""),
+            role: "doctor",
         };
 
         const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {

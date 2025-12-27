@@ -1,3 +1,4 @@
+const { type } = require("@testing-library/user-event/dist/type");
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
@@ -8,7 +9,7 @@ const DocSchema = new Schema({
 
     clinicName: { type: String, required: true },
 
-    phone: { type: String, required: true, unique:true }, // Doctor main contact
+    phone: { type: String, required: true, unique: true }, // Doctor main contact
     appointmentPhone: { type: String }, // Secondary contact
 
     address: {
@@ -28,9 +29,18 @@ const DocSchema = new Schema({
     },
 
     degree: {
-        type: [String], 
+        type: [String],
         required: true,
     },
+    role: {
+        type: String,
+        default: "doctor",
+        enum: ["doctor"],
+    },
+    staff: [{
+        type: Schema.Types.ObjectId,
+        ref: "Staff",
+    }],
 });
 
 const Doc = mongoose.model("Doc", DocSchema);

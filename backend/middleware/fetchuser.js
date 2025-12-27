@@ -1,22 +1,24 @@
-var jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "abhedagarwal%male";
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const fetchuser = (req, res, next) => {
-    //Get the user from the jwt token and add id to req object
     const token = req.header("auth-token");
     if (!token) {
-        res.status(401).send({
-            error: "Please Uthenticate using a valid token",
-        });
+        return res.status(401).json({ error: "No token provided" });
     }
+
     try {
         const data = jwt.verify(token, JWT_SECRET);
-        req.doc = data.doc;
+
+        if (!data.user) {
+            return res.status(401).json({ error: "Invalid token structure" });
+        }
+
+        req.user = data.user; // ✅ ONLY THIS
         next();
-    } catch (error) {
-        res.status(401).send({
-            error: "Please Uthenticate using a valid token",
-        });
+    } catch (err) {
+        return res.status(401).json({ error: "Invalid token" });
     }
 };
+
 module.exports = fetchuser;

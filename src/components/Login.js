@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Login(props) {
@@ -10,8 +10,12 @@ export default function Login(props) {
     const [sessionId, setSessionId] = useState("");
     const [password, setPassword] = useState("");
     const [isOtpLogin, setIsOtpLogin] = useState(false);
-    const [inputType, setInputType] = useState(""); // email | phone | invalid
-
+    const [inputType, setInputType] = useState("");
+    const [loginAs, setLoginAs] = useState("doctor");
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
         const value = e.target.value;
@@ -73,11 +77,6 @@ export default function Login(props) {
     };
 
     const loginWithPassword = async () => {
-        const API_BASE_URL =
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001";
-
         const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -99,38 +98,105 @@ export default function Login(props) {
             props.showAlert(json.error || "Login failed", "danger");
         }
     };
+    const staffLogin = async () => {
+        const res = await fetch(`${API_BASE_URL}/api/auth/staff/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                phone: identifier,
+                password,
+            }),
+        });
 
+        const data = await res.json();
+
+        if (data.firstLogin) {
+            navigate("/set-staff-password", {
+                state: { staffId: data.staffId },
+            });
+            return;
+        }
+
+        if (data.success) {
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("name", data.name);
+            localStorage.setItem("role", data.role);
+            navigate("/"); // or /staff-dashboard
+        } else {
+            alert(data.error);
+        }
+    };
+
+    useEffect(() => {
+        if (loginAs === "staff") {
+            setIsOtpLogin(false);
+        }
+    }, [loginAs]);
     // ================= FORM SUBMIT =================
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (inputType === "invalid") {
-            props.showAlert("Enter valid email or phone number", "danger");
+        if (loginAs === "staff") {
+            if (inputType !== "phone") {
+                alert("Staff must login using phone number");
+                return;
+            }
+            staffLogin();
             return;
         }
 
-        if (!isOtpLogin) {
-            if (!password) {
-                props.showAlert("Password required", "danger");
-                return;
-            }
-            loginWithPassword();
-        }
+        // existing doctor login
+        loginWithPassword();
     };
 
     return (
         <div className="container mt-5" style={{ maxWidth: "420px" }}>
             <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
                 <h4 className="text-center mb-4 fw-semibold">Login</h4>
+                <div className="btn-group w-100 mb-3">
+                    <button
+                        type="button"
+                        className={`btn ${
+                            loginAs === "doctor"
+                                ? "btn-primary"
+                                : "btn-outline-primary"
+                        }`}
+                        onClick={() => setLoginAs("doctor")}
+                    >
+                        Doctor
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`btn ${
+                            loginAs === "staff"
+                                ? "btn-primary"
+                                : "btn-outline-primary"
+                        }`}
+                        onClick={() => setLoginAs("staff")}
+                    >
+                        Staff
+                    </button>
+                </div>
 
                 {/* IDENTIFIER (shown always) */}
                 <div className="mb-3">
                     <label className="form-label">
-                        {isOtpLogin ? "Phone Number" : "Email or Phone"}
+                        {loginAs === "staff"
+                            ? "Phone Number"
+                            : isOtpLogin
+                            ? "Phone Number"
+                            : "Email or Phone"}
                     </label>
 
-                    <div className={isOtpLogin ? "input-group" : ""}>
-                        {isOtpLogin && (
+                    <div
+                        className={
+                            loginAs === "staff" || isOtpLogin
+                                ? "input-group"
+                                : ""
+                        }
+                    >
+                        {(loginAs === "staff" || isOtpLogin) && (
                             <span className="input-group-text">🇮🇳 +91</span>
                         )}
 
@@ -138,7 +204,9 @@ export default function Login(props) {
                             type="text"
                             className="form-control"
                             placeholder={
-                                isOtpLogin
+                                loginAs === "staff"
+                                    ? "Enter 10-digit phone number"
+                                    : isOtpLogin
                                     ? "Enter 10-digit phone number"
                                     : "Enter email or phone"
                             }
@@ -153,24 +221,22 @@ export default function Login(props) {
                             Enter a valid email or phone number
                         </small>
                     )}
-
-                    <small className="text-muted">
-                        We’ll never share your details.
-                    </small>
                 </div>
 
                 {/* SWITCH */}
-                <div className="form-check form-switch mb-3">
-                    <input
-                        className="form-check-input"
-                        type="checkbox"
-                        checked={isOtpLogin}
-                        onChange={(e) => setIsOtpLogin(e.target.checked)}
-                    />
-                    <label className="form-check-label">
-                        Login with {isOtpLogin ? "OTP" : "Password"}
-                    </label>
-                </div>
+                {loginAs === "doctor" && (
+                    <div className="form-check form-switch mb-3">
+                        <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={isOtpLogin}
+                            onChange={(e) => setIsOtpLogin(e.target.checked)}
+                        />
+                        <label className="form-check-label">
+                            Login with {isOtpLogin ? "OTP" : "Password"}
+                        </label>
+                    </div>
+                )}
 
                 {/* PASSWORD LOGIN */}
                 {!isOtpLogin && (
@@ -187,7 +253,7 @@ export default function Login(props) {
                 )}
 
                 {/* OTP LOGIN */}
-                {isOtpLogin && (
+                {loginAs === "doctor" && isOtpLogin && (
                     <div className="border rounded-3 p-3 bg-light mb-3">
                         {/* Send OTP */}
                         <button

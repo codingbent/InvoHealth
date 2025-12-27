@@ -1,22 +1,26 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const ServiceSchema = new Schema({
-    name: {
-        type: String,
-        required: true,
+const ServiceSchema = new Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        amount: {
+            type: Number,
+            default: 0,
+        },
+        doctor: {
+            type: Schema.Types.ObjectId,
+            ref: "Doc",
+            required: true,
+        },
     },
-    amount: {
-        type: Number,
-        required: false,
-        default: 0,
-    },
-    doctor: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "doc", 
-        required: true, 
-    },
-});
+    { timestamps: true }
+);
 
-const Service = mongoose.model("service", ServiceSchema);
-module.exports = Service;
+ServiceSchema.index({ doctor: 1 });
+
+module.exports = mongoose.model("Service", ServiceSchema);

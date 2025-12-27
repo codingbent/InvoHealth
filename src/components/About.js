@@ -1,133 +1,170 @@
 export default function About() {
     return (
-        <div className="container py-5">
-            <div className="card shadow-sm p-4">
-                <h2 className="text-center mb-3">About InvoHealth</h2>
-
-                <p className="lead text-center text-muted">
-                    A simple and lightweight record-keeping system for personal
-                    clinic use.
-                </p>
-
-                <hr />
-
-                <h4>📌 What is InvoHealth?</h4>
-                <p>
-                    InvoHealth is a basic clinic management and invoicing
-                    application developed for personal and educational purposes.
-                    It helps maintain:
-                </p>
-                <ul>
-                    <li>✔ Patient records</li>
-                    <li>✔ Appointment & visit history</li>
-                    <li>✔ Services and billing amounts</li>
-                    <li>✔ Auto-generated PDF invoices</li>
-                    <li>✔ Downloadable Excel records</li>
-                </ul>
-
-                <hr />
-
-                <h4>🎯 Purpose of This Software</h4>
-                <p>
-                    This system was built specifically for a single private
-                    clinic (my father's clinic) to make daily management easier.
-                    It is NOT intended for hospitals, commercial distribution,
-                    or multi-doctor setups.
-                </p>
-
-                <div className="alert alert-warning mt-3">
-                    <strong>⚠ Disclaimer:</strong>
-                    <br />
-                    This application is strictly for{" "}
-                    <strong>personal and educational use</strong>. It does NOT
-                    meet medical record standards (HIPAA, etc.) and should NOT
-                    be used for storing sensitive patient data in a
-                    professional/public environment.
+        <div className="container py-4 py-lg-5">
+            <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
+                {/* HEADER */}
+                <div className="bg-primary text-white text-center px-4 py-5">
+                    <h2 className="fw-bold mb-2">InvoHealth</h2>
+                    <p className="mb-0 opacity-75">
+                        Lightweight clinic management & invoicing system
+                    </p>
                 </div>
 
-                <hr />
+                <div className="card-body p-4 p-lg-5">
+                    {/* INTRO */}
+                    <p className="lead text-center text-muted mb-4">
+                        A simple, fast, and practical record-keeping solution
+                        built specifically for small personal clinics.
+                    </p>
 
-                <h4>🧾 ITR & Accounting Support</h4>
-                <p>
-                    InvoHealth provides simple downloadable reports (Excel + PDF
-                    invoices), which can be used as a reference for:
-                </p>
-                <ul>
-                    <li>• Tracking monthly/annual clinic income</li>
-                    <li>
-                        • Reviewing total consultations and services provided
-                    </li>
-                    <li>
-                        • Supporting calculations during income tax return (ITR)
-                        filing
-                    </li>
-                </ul>
+                    {/* WHAT IS */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-2">
+                            📌 What is InvoHealth?
+                        </h5>
+                        <p className="text-muted">
+                            InvoHealth is a personal clinic management and
+                            billing application designed to simplify everyday
+                            clinic operations. It helps doctors maintain
+                            structured records without complex hospital-grade
+                            systems.
+                        </p>
+                    </section>
 
-                <div className="alert alert-info mt-2">
-                    <strong>Note:</strong>
-                    <br />
-                    While InvoHealth helps maintain clean and organized records
-                    that can assist during ITR filing, it is{" "}
-                    <strong>not an official accounting or GST tool</strong>.
-                    Final tax calculations should be reviewed by a CA or tax
-                    professional.
-                </div>
+                    {/* FEATURES */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-3">🚀 Key Features</h5>
 
-                <hr />
+                        <div className="row g-3">
+                            <div className="col-md-6">
+                                <ul className="list-group list-group-flush">
+                                    <li className="list-group-item">
+                                        ✔ Patient profile management
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Appointment & visit history
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Service-based billing system
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Discounts (flat & percentage)
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Multiple payment modes (Cash, UPI,
+                                        Card, Bank)
+                                    </li>
+                                </ul>
+                            </div>
 
-                <h4>🚀 Features</h4>
-                <ul>
-                    <li>➤ Add, view, and update patient profiles</li>
-                    <li>➤ Manage appointments and billing</li>
-                    <li>➤ Generate professional PDF invoices</li>
-                    <li>➤ Export filtered records for reporting</li>
-                    <li>➤ Works smoothly on both mobile and desktop</li>
-                </ul>
+                            <div className="col-md-6">
+                                <ul className="list-group list-group-flush">
+                                    <li className="list-group-item">
+                                        ✔ Day-wise & month-wise income view
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Advanced filters (date, gender,
+                                        service, payment)
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ PDF invoice generation
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Excel export for records
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Fully responsive (mobile & desktop)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
 
-                <hr />
+                    {/* PURPOSE */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-2">🎯 Purpose</h5>
+                        <p className="text-muted">
+                            This software was built for a single private clinic
+                            (my father’s clinic) to reduce manual paperwork and
+                            make daily accounting easier. It is not intended for
+                            hospitals or commercial SaaS usage.
+                        </p>
 
-                <h4>🔐 Security Note</h4>
-                <p>
-                    The system uses a token-based login for basic security.
-                    However, it is{" "}
-                    <strong>
-                        not designed for large-scale sensitive medical data
-                        storage
-                    </strong>
-                    .
-                </p>
+                        <div className="alert alert-warning rounded-3 mt-3">
+                            <strong>⚠ Disclaimer</strong>
+                            <br />
+                            InvoHealth is for{" "}
+                            <strong>personal & educational use</strong>. It does
+                            not comply with medical data regulations such as
+                            HIPAA and should not be used for sensitive
+                            large-scale patient data storage.
+                        </div>
+                    </section>
 
-                <p className="text-muted">
-                    All data entered into the system remains the sole property
-                    of the clinic. Users are advised to regularly export and
-                    back up their records.
-                </p>
+                    {/* ACCOUNTING */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-2">
+                            🧾 Accounting & ITR Support
+                        </h5>
+                        <p className="text-muted">
+                            InvoHealth helps maintain clean financial records
+                            that can be referenced during accounting and income
+                            tax filing.
+                        </p>
 
-                <hr />
+                        <ul className="text-muted">
+                            <li>• Monthly & yearly income tracking</li>
+                            <li>• Payment-mode wise summaries</li>
+                            <li>• Exportable Excel sheets for CA review</li>
+                        </ul>
 
-                <h4>📧 Contact</h4>
-                <p>
-                    For support, feedback, or feature requests:
-                    <br />
-                    <strong>Email:</strong> abhed.agl@gmail.com
-                </p>
+                        <div className="alert alert-info rounded-3 mt-3">
+                            <strong>Note:</strong>
+                            <br />
+                            This is not a GST or official accounting tool.
+                            Always consult a certified CA for final filings.
+                        </div>
+                    </section>
 
-                <hr />
+                    {/* SECURITY */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-2">🔐 Security</h5>
+                        <p className="text-muted">
+                            The system uses token-based authentication for
+                            controlled access. Regular data exports and backups
+                            are recommended.
+                        </p>
+                    </section>
 
-                <h4>👨‍💻 Developer Note</h4>
-                <p>
-                    InvoHealth was developed by Abhed Agarwal as a personal
-                    project to help his father manage clinic operations more
-                    efficiently. If you wish to add new features or customize
-                    the system, feel free to reach out.
-                </p>
+                    {/* CONTACT */}
+                    <section className="mb-5">
+                        <h5 className="fw-semibold mb-2">📧 Contact</h5>
+                        <p className="text-muted mb-0">
+                            For feedback, feature suggestions, or support:
+                        </p>
+                        <strong>abhed.agl@gmail.com</strong>
+                    </section>
 
-                <div className="text-center mt-4">
-                    <small className="text-muted">
-                        App Version: v1.0.0
-                        <br />© {new Date().getFullYear()} InvoHealth — Personal
-                        & Educational Use Only.
-                    </small>
+                    {/* DEV NOTE */}
+                    <section className="mb-4">
+                        <h5 className="fw-semibold mb-2">👨‍💻 Developer Note</h5>
+                        <p className="text-muted">
+                            InvoHealth was developed by{" "}
+                            <strong>Abhed Agarwal</strong>
+                            {" "}as a real-world project to solve an actual clinic
+                            workflow problem. The project focuses on simplicity,
+                            performance, and usability.
+                        </p>
+                    </section>
+
+                    {/* FOOTER */}
+                    <div className="text-center pt-3 border-top">
+                        <small className="text-muted">
+                            App Version: v1.0.0
+                            <br />© {new Date().getFullYear()} InvoHealth —
+                            Personal & Educational Use Only
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
