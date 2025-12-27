@@ -645,6 +645,12 @@ export default function PatientList() {
                                 <div className="d-none d-lg-block">
                                     <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                                         <table className="table table-hover align-middle mb-0">
+                                            <colgroup>
+                                                <col style={{ width: "30%" }} />
+                                                <col style={{ width: "25%" }} />
+                                                <col style={{ width: "25%" }} />
+                                                <col style={{ width: "20%" }} />
+                                            </colgroup>
                                             <thead className="table-light">
                                                 <tr>
                                                     <th>Patient</th>
