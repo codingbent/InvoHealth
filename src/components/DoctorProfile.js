@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 
 export default function DoctorProfile() {
     const API_BASE_URL =
@@ -18,6 +19,20 @@ export default function DoctorProfile() {
     const [staffPhone, setStaffPhone] = useState("");
     const [staffRole, setStaffRole] = useState("");
     const [staffList, setStaffList] = useState([]);
+    const [role, setRole] = useState(null);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const decoded = jwtDecode(token);
+            setRole(decoded.role);
+        } catch (err) {
+            console.error("Invalid token");
+            setRole(null);
+        }
+    }, []);
 
     // ================= FETCH DOCTOR =================
     const fetchDoctor = async () => {
@@ -79,7 +94,7 @@ export default function DoctorProfile() {
         setEditData({ ...editData, degree: updated });
     };
     const fetchStaff = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/staff`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/fetch-staff`, {
             headers: { "auth-token": localStorage.getItem("token") },
         });
         const data = await res.json();
@@ -96,7 +111,7 @@ export default function DoctorProfile() {
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/staff/add`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/add-staff`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -144,60 +159,60 @@ export default function DoctorProfile() {
             alert("Profile update failed");
         }
     };
-const handleChangePassword = async () => {
-    const { currentPassword, newPassword, confirmPassword } = passwordData;
+    const handleChangePassword = async () => {
+        const { currentPassword, newPassword, confirmPassword } = passwordData;
 
-    // ✅ validations
-    if (!currentPassword || !newPassword || !confirmPassword) {
-        alert("All password fields are required");
-        return;
-    }
-
-    if (newPassword.length < 6) {
-        alert("New password must be at least 6 characters");
-        return;
-    }
-
-    if (newPassword !== confirmPassword) {
-        alert("New password and confirm password do not match");
-        return;
-    }
-
-    try {
-        const res = await fetch(
-            `${API_BASE_URL}/api/auth/change-password`,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "auth-token": localStorage.getItem("token"),
-                },
-                body: JSON.stringify({
-                    currentPassword,
-                    newPassword,
-                }),
-            }
-        );
-
-        const data = await res.json();
-
-        if (data.success) {
-            alert("Password updated successfully ✅");
-
-            // reset fields
-            setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-            });
-        } else {
-            alert(data.error || "Password update failed");
+        // ✅ validations
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            alert("All password fields are required");
+            return;
         }
-    } catch (err) {
-        console.error(err);
-        alert("Server error while changing password");
-    }
-};
+
+        if (newPassword.length < 6) {
+            alert("New password must be at least 6 characters");
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            alert("New password and confirm password do not match");
+            return;
+        }
+
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/auth/change-password`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": localStorage.getItem("token"),
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword,
+                    }),
+                }
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                alert("Password updated successfully ✅");
+
+                // reset fields
+                setPasswordData({
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                });
+            } else {
+                alert(data.error || "Password update failed");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Server error while changing password");
+        }
+    };
 
     if (loading) return <p className="text-center mt-4">Loading...</p>;
     if (!doctor)
@@ -267,110 +282,116 @@ const handleChangePassword = async () => {
             {/* ================= ACCORDION ================= */}
             <div className="accordion" id="doctorAccordion">
                 {/* ================= STAFF MANAGEMENT ================= */}
-                <div className="accordion-item">
-                    <h2 className="accordion-header">
-                        <button
-                            className="accordion-button collapsed"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#staffSection"
-                        >
-                            👥 Staff Management
-                        </button>
-                    </h2>
-
-                    <div
-                        id="staffSection"
-                        className="accordion-collapse collapse"
-                        data-bs-parent="#doctorAccordion"
-                    >
-                        <div className="accordion-body">
-                            <h6 className="fw-semibold mb-3">Add Staff</h6>
-
-                            <div className="row g-2 mb-3">
-                                <div className="col-md-4">
-                                    <input
-                                        className="form-control"
-                                        placeholder="Staff Name"
-                                        value={staffName}
-                                        onChange={(e) =>
-                                            setStaffName(e.target.value)
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <input
-                                        className="form-control"
-                                        placeholder="Phone (10 digits)"
-                                        value={staffPhone}
-                                        onChange={(e) =>
-                                            setStaffPhone(e.target.value)
-                                        }
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <select
-                                        className="form-select"
-                                        value={staffRole}
-                                        onChange={(e) =>
-                                            setStaffRole(e.target.value)
-                                        }
-                                    >
-                                        <option value="">Select Role</option>
-                                        <option value="receptionist">
-                                            Receptionist
-                                        </option>
-                                        <option value="assistant">
-                                            Assistant
-                                        </option>
-                                        <option value="nurse">Nurse</option>
-                                    </select>
-                                </div>
-                            </div>
-
+                {role === "doctor" && (
+                    <div className="accordion-item">
+                        <h2 className="accordion-header">
                             <button
-                                className="btn btn-outline-primary btn-sm mb-3"
-                                onClick={handleAddStaff}
+                                className="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#staffSection"
                             >
-                                ➕ Add Staff
+                                👥 Staff Management
                             </button>
+                        </h2>
 
-                            <hr />
+                        <div
+                            id="staffSection"
+                            className="accordion-collapse collapse"
+                            data-bs-parent="#doctorAccordion"
+                        >
+                            <div className="accordion-body">
+                                <h6 className="fw-semibold mb-3">Add Staff</h6>
 
-                            <h6 className="fw-semibold mb-2">Staff List</h6>
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-4">
+                                        <input
+                                            className="form-control"
+                                            placeholder="Staff Name"
+                                            value={staffName}
+                                            onChange={(e) =>
+                                                setStaffName(e.target.value)
+                                            }
+                                        />
+                                    </div>
 
-                            {staffList.length === 0 ? (
-                                <p className="text-muted">No staff added yet</p>
-                            ) : (
-                                <table className="table table-sm table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Phone</th>
-                                            <th>Role</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {staffList.map((s) => (
-                                            <tr key={s._id}>
-                                                <td>{s.name}</td>
-                                                <td>{s.phone}</td>
-                                                <td>{s.role}</td>
+                                    <div className="col-md-4">
+                                        <input
+                                            className="form-control"
+                                            placeholder="Phone (10 digits)"
+                                            value={staffPhone}
+                                            onChange={(e) =>
+                                                setStaffPhone(e.target.value)
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="col-md-4">
+                                        <select
+                                            className="form-select"
+                                            value={staffRole}
+                                            onChange={(e) =>
+                                                setStaffRole(e.target.value)
+                                            }
+                                        >
+                                            <option value="">
+                                                Select Role
+                                            </option>
+                                            <option value="receptionist">
+                                                Receptionist
+                                            </option>
+                                            <option value="assistant">
+                                                Assistant
+                                            </option>
+                                            <option value="nurse">Nurse</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button
+                                    className="btn btn-outline-primary btn-sm mb-3"
+                                    onClick={handleAddStaff}
+                                >
+                                    ➕ Add Staff
+                                </button>
+
+                                <hr />
+
+                                <h6 className="fw-semibold mb-2">Staff List</h6>
+
+                                {staffList.length === 0 ? (
+                                    <p className="text-muted">
+                                        No staff added yet
+                                    </p>
+                                ) : (
+                                    <table className="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Phone</th>
+                                                <th>Role</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
+                                        </thead>
+                                        <tbody>
+                                            {staffList.map((s) => (
+                                                <tr key={s._id}>
+                                                    <td>{s.name}</td>
+                                                    <td>{s.phone}</td>
+                                                    <td>{s.role}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
 
-                            <small className="text-muted">
-                                Staff can login using OTP with their phone
-                                number
-                            </small>
+                                <small className="text-muted">
+                                    Staff can login using OTP with their phone
+                                    number
+                                </small>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* ================= CHANGE PASSWORD ================= */}
                 <div className="accordion-item">
