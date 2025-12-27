@@ -10,6 +10,7 @@ import Alert from "./components/Alert";
 import PatientDetails from "./components/PatientDetails";
 import Profile from "./components/Profile";
 import SetStaffPassword from "./components/set-staff-password";
+import Dashboard from "./components/Dashboard";
 
 function App() {
     const [alert, setalert] = useState(null);
@@ -43,6 +44,7 @@ function App() {
                     />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/set-staff-password" element={<SetStaffPassword />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                 </Routes>
             </BrowserRouter>
         </>

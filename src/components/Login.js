@@ -70,6 +70,7 @@ export default function Login(props) {
         if (data.success) {
             localStorage.setItem("token", data.authtoken);
             localStorage.setItem("name", data.name);
+            localStorage.setItem("role", data.role);
             navigate("/");
         } else {
             alert(data.error);
@@ -93,6 +94,7 @@ export default function Login(props) {
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", json.name);
+            localStorage.setItem("role", json.role);
             navigate("/");
         } else {
             props.showAlert(json.error || "Login failed", "danger");
@@ -121,7 +123,7 @@ export default function Login(props) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("name", data.name);
             localStorage.setItem("role", data.role);
-            navigate("/"); // or /staff-dashboard
+            navigate("/");
         } else {
             alert(data.error);
         }
@@ -145,7 +147,6 @@ export default function Login(props) {
             return;
         }
 
-        // existing doctor login
         loginWithPassword();
     };
 

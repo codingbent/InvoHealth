@@ -39,6 +39,13 @@ export default function Navbar(props) {
                                 Home
                             </Link>
                         </li>
+                        {role === "doctor" && (
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/dashboard">
+                                    Dashboard
+                                </Link>
+                            </li>
+                        )}
                         <li className="nav-item">
                             <Link className="nav-link" to="/about">
                                 About
