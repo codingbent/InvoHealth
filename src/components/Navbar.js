@@ -54,40 +54,23 @@ export default function Navbar(props) {
                     </ul>
 
                     {token ? (
-                        <div className="dropdown">
-                            <button
-                                className="btn btn-light dropdown-toggle fw-semibold"
-                                data-bs-toggle="dropdown"
-                            >
-                                👤 {name}
+                        <div className="dropdown user-dropdown">
+                            <button className="btn btn-outline-primary dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown" data-bs-display="static">
+                                <span className="avatar">👤</span>
+                                <span className="d-none d-sm-inline">
+                                    {name}
+                                </span>
                             </button>
 
-                            <ul className="dropdown-menu dropdown-menu-end">
-                                {/* 👨‍⚕️ Doctor only */}
-                                {role === "doctor" && (
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={() => navigate("/profile")}
-                                        >
-                                            My Profile
-                                        </button>
-                                    </li>
-                                )}
-
-                                {/* 👩‍💼 Staff dashboard */}
-                                {role !== "doctor" && (
-                                    <li>
-                                        <button
-                                            className="dropdown-item"
-                                            onClick={() =>
-                                                navigate("/profile")
-                                            }
-                                        >
-                                            My Profile
-                                        </button>
-                                    </li>
-                                )}
+                            <ul className="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={() => navigate("/profile")}
+                                    >
+                                        👨‍⚕️ My Profile
+                                    </button>
+                                </li>
 
                                 <li>
                                     <hr className="dropdown-divider" />
@@ -98,7 +81,7 @@ export default function Navbar(props) {
                                         className="dropdown-item text-danger"
                                         onClick={handleLogout}
                                     >
-                                        Logout
+                                        🚪 Logout
                                     </button>
                                 </li>
                             </ul>

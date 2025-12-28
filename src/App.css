@@ -1,23 +1,9 @@
 .App {
     text-align: center;
 }
-
-.App-header {
-    background-color: #282c34;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
-
-.App-link {
-    color: #61dafb;
-}
-
-/* ACTION SHEET UI */
+/* =========================
+   Action Sheet
+   ========================= */
 .actions-button {
     border-radius: 25px;
     font-weight: 600;
@@ -32,15 +18,12 @@
     background: #fff;
     box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.15);
     border-radius: 20px 20px 0 0;
-    transition: bottom 1.3s ease;
-    z-index: 9999;
+    transition: bottom 0.35s ease;
+    z-index: 1055;
 }
 
 .action-sheet.open {
     bottom: 0;
-}
-.action-sheet.hidden {
-    display: none !important;
 }
 
 .action-sheet button {
@@ -60,88 +43,50 @@
 .action-sheet-close {
     background: #e9ecef !important;
     text-align: center !important;
-    font-weight: bold !important;
-}
-
-/* Only disable dropdown inside Actions button */
-#actionsWrapper .dropdown,
-#actionsWrapper .dropdown-menu,
-#actionsWrapper .dropdown-toggle {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
+    font-weight: 600 !important;
 }
 
 body.freeze-scroll {
-    overflow: hidden !important;
+    overflow: hidden;
 }
 
-/* ============================
-   Patient Table Layout Fix
-   ============================ */
-
+/* =========================
+   Patient Table
+   ========================= */
 .patient-table-wrapper {
     width: 100%;
     overflow-x: auto;
-    padding-bottom: 5px;
 }
 
-/* Prevent table from expanding */
-.patient-table.table-fixed {
+.patient-table {
     table-layout: fixed;
     width: 100%;
 }
 
-/* Global cell wrapping */
 .patient-table th,
 .patient-table td {
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
+    white-space: normal;
+    word-wrap: break-word;
     vertical-align: middle;
     font-size: 14px;
 }
 
-/* Column widths */
-.patient-table th:nth-child(1),
-.patient-table td:nth-child(1) {
-    width: 30%; /* Name */
-}
-
-.patient-table th:nth-child(2),
-.patient-table td:nth-child(2) {
-    width: 25%; /* Gender */
-    text-align: center;
-}
-
-.patient-table th:nth-child(3),
-.patient-table td:nth-child(3) {
-    width: 25%; /* Payment */
-    text-align: center;
-}
-
-.patient-table th:nth-child(4),
-.patient-table td:nth-child(4) {
-    width: 20%; /* Action */
-}
-
-/* Delete button shrink */
-.patient-table .btn-danger {
-    font-size: 12px;
-    padding: 4px 6px;
-}
-
-/* Heading styling */
 .patient-table thead th {
     background: #f8f9fa;
     font-weight: 600;
 }
 
-/* Hide table and show card on screens < 576px */
+.patient-table .btn-danger {
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+/* =========================
+   Mobile Card Layout
+   ========================= */
 @media (max-width: 576px) {
     .patient-visit-table {
-        display: none !important;
+        display: none;
     }
 
     .visit-card {
@@ -174,29 +119,37 @@ body.freeze-scroll {
         flex: 1;
     }
 }
-/* Allow dropdowns to overflow out of table */
-.table-responsive {
-    overflow: visible !important;
+
+/* =========================
+   User Dropdown (Navbar)
+   ========================= */
+.user-dropdown .dropdown-menu {
+    border-radius: 12px;
+    padding: 8px;
+    min-width: 180px;
 }
 
-.table {
-    overflow: visible !important;
+@media (max-width: 576px) {
+    .user-dropdown .dropdown-menu {
+        position: static;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .user-dropdown .dropdown-item {
+        padding: 12px 16px;
+        font-size: 15px;
+    }
 }
 
-.patient-visit-table {
-    overflow: visible !important;
-}
-
-td,
-th,
-tr {
-    overflow: visible !important;
-    position: static !important;
-}
-
-/* Ensure dropdown appears above everything */
-.dropdown-menu {
-    position: absolute !important;
-    transform: translate3d(0, 0, 0) !important;
-    z-index: 9999 !important;
+.avatar {
+    background: #0d6efd;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
 }
