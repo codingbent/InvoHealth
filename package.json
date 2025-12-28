@@ -14,6 +14,7 @@
     "exceljs": "^4.4.0",
     "express-validator": "^7.2.1",
     "firebaseui": "^6.1.0",
+    "framer-motion": "^12.23.26",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
     "jspdf-autotable": "^5.0.2",
