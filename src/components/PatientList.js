@@ -8,6 +8,7 @@ export default function PatientList() {
 
     // DATA
     const [appointments, setAppointments] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // FILTER STATES
     const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +48,7 @@ export default function PatientList() {
 
                 const data = await res.json();
                 setAppointments(data.data || []);
+                setLoading(false);
                 setTotal(data.total || 0);
             } catch (err) {
                 console.error(err);
@@ -369,6 +371,23 @@ export default function PatientList() {
     // =========================
     // UI
     // =========================
+    if (loading) {
+        return (
+            <div className="mt-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                        key={i}
+                        className="d-flex justify-content-between align-items-center p-3 mb-2 rounded bg-light"
+                    >
+                        <div className="placeholder col-4" />
+                        <div className="placeholder col-2" />
+                        <div className="placeholder col-2" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
     return (
         <div className="container mt-3">
             {/* FILTER BUTTON */}
