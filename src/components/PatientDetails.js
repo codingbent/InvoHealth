@@ -307,7 +307,7 @@ export default function PatientDetails() {
             docPdf.setFontSize(11);
             if (doctor.degree?.length) {
                 docPdf.text(
-                    `Degree: ${doctor.degree.join(", ")}`,
+                    `${doctor.degree.join(",")}`,
                     margin,
                     leftY
                 );

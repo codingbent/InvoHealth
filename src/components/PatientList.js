@@ -560,10 +560,10 @@ export default function PatientList() {
                             onChange={(e) => setSelectedFY(e.target.value)}
                         >
                             <option value="">All Years</option>
-                            <option value="2025">FY 2025–26</option>
-                            <option value="2026">FY 2026–27</option>
-                            <option value="2027">FY 2027–28</option>
-                            <option value="2028">FY 2028–29</option>
+                            <option value="2025">FY 2025-26</option>
+                            <option value="2026">FY 2026-27</option>
+                            <option value="2027">FY 2027-28</option>
+                            <option value="2028">FY 2028-29</option>
                         </select>
                     </div>
 
