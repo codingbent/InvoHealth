@@ -55,7 +55,7 @@ export default function Navbar(props) {
 
                     {token ? (
                         <div className="dropdown user-dropdown">
-                            <button className="btn btn-outline-primary dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown" data-bs-display="static">
+                            <button className="btn dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown" data-bs-display="static">
                                 <span className="avatar">👤</span>
                                 <span className="d-none d-sm-inline">
                                     {name}
