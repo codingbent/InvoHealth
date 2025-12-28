@@ -253,6 +253,17 @@ export default function Login(props) {
                     </div>
                 )}
 
+                {!isOtpLogin && (
+                    <div className="text-end mt-2">
+                        <Link
+                            to="/forgot-password"
+                            className="text-decoration-none text-primary small fw-medium"
+                        >
+                            Forgot your password?
+                        </Link>
+                    </div>
+                )}
+
                 {/* OTP LOGIN */}
                 {loginAs === "doctor" && isOtpLogin && (
                     <div className="border rounded-3 p-3 bg-light mb-3">
@@ -295,7 +306,7 @@ export default function Login(props) {
 
                 {/* SUBMIT BUTTON (PASSWORD ONLY) */}
                 {!isOtpLogin && (
-                    <button type="submit" className="btn btn-primary w-100">
+                    <button type="submit" className="btn btn-primary w-100 mt-2">
                         Login
                     </button>
                 )}

@@ -1008,11 +1008,11 @@ router.get("/search-patients", fetchuser, async (req, res) => {
             doctor: req.user.doctorId,
             $or: [
                 { name: { $regex: q, $options: "i" } },
-                { number: { $regex: q } }
-            ]
+                { number: { $regex: q } },
+            ],
         })
-        .limit(10) // 🔥 IMPORTANT: limit results
-        .select("name number gender age");
+            .limit(10) // 🔥 IMPORTANT: limit results
+            .select("name number gender age");
 
         res.json(patients);
     } catch (err) {
@@ -1020,7 +1020,6 @@ router.get("/search-patients", fetchuser, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
 
 router.post("/send-otp", async (req, res) => {
     const phone = String(req.body.phone || "").replace(/\D/g, "");
@@ -1154,6 +1153,57 @@ router.put("/change-password", fetchuser, async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Internal server error",
+        });
+    }
+});
+
+// RESET PASSWORD
+router.post("/reset-password", async (req, res) => {
+    try {
+        let { phone, newPassword, sessionId } = req.body;
+
+        phone = String(phone || "")
+            .replace(/\D/g, "")
+            .slice(-10);
+
+        if (!phone || !newPassword || !sessionId) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing required fields",
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: "Password must be at least 6 characters",
+            });
+        }
+
+        // 🔍 Verify user
+        const doc = await Doc.findOne({ phone });
+
+        if (!doc) {
+            return res.status(404).json({
+                success: false,
+                error: "User not found",
+            });
+        }
+
+        // 🔐 Hash new password
+        const salt = await bcrypt.genSalt(10);
+        doc.password = await bcrypt.hash(newPassword, salt);
+        await doc.save();
+
+        res.json({
+            success: true,
+            message: "Password reset successfully",
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
         });
     }
 });
@@ -1479,7 +1529,6 @@ router.put("/edit-staff/:id", fetchuser, async (req, res) => {
         });
     }
 });
-
 
 router.post("/addservice", fetchuser, async (req, res) => {
     if (req.user.role !== "doctor") {
