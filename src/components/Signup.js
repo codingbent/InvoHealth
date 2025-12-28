@@ -173,7 +173,6 @@ const Signup = (props) => {
         if (data.success) {
             setPhoneVerified(true);
             props.showAlert("Phone number verified ✅", "success");
-            
         } else {
             props.showAlert(data.error || "Invalid OTP", "danger");
         }
@@ -199,242 +198,295 @@ const Signup = (props) => {
     };
 
     return (
-        <div className="container mt-3">
-            <form onSubmit={handlesubmit}>
-                {/* Name */}
-                <div className="mb-3">
-                    <label className="form-label">Full Name</label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        name="name"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
+        <div className="container d-flex justify-content-center align-items-center my-5">
+            <div
+                className="card shadow-sm border-0 rounded-4 w-100"
+                style={{ maxWidth: "720px" }}
+            >
+                <div className="card-body p-4 p-md-5">
+                    {/* Header */}
+                    <div className="text-center mb-4">
+                        <h3 className="fw-semibold mb-1">
+                            Create Your Account
+                        </h3>
+                        <p className="text-muted">
+                            Set up your clinic profile to get started
+                        </p>
+                    </div>
 
-                {/* Email */}
-                <div className="mb-3">
-                    <label className="form-label">Email address</label>
-                    <input
-                        type="email"
-                        className="form-control"
-                        name="email"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
+                    <form onSubmit={handlesubmit}>
+                        {/* ================= ACCOUNT INFO ================= */}
+                        <h5 className="mb-3">Account Information</h5>
 
-                {/* Password */}
-                <div className="mb-3">
-                    <label className="form-label">Password</label>
-                    <input
-                        type="password"
-                        className="form-control"
-                        name="password"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
+                        <div className="row">
+                            <div className="col-md-6 mb-3">
+                                <label className="form-label">Full Name</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    name="name"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
 
-                {/* Confirm Password */}
-                <div className="mb-3">
-                    <label className="form-label">Confirm Password</label>
-                    <input
-                        type="password"
-                        className="form-control"
-                        name="cpassword"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
-
-                {/* Clinic */}
-                <div className="mb-3">
-                    <label className="form-label">Clinic / Hospital Name</label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        name="clinicName"
-                        required
-                        onChange={onChange}
-                    />
-                </div>
-
-                {/* Phone */}
-                <div className="mb-3">
-                    <label className="form-label">Doctor Contact</label>
-                    <input
-                        type="text"
-                        className="form-control mb-2"
-                        name="phone"
-                        value={credentials.phone}
-                        onChange={onChange}
-                        disabled={phoneVerified}
-                        placeholder="Enter 10-digit phone number"
-                    />
-
-                    {!phoneVerified && (
-                        <>
-                            {!sessionId ? (
-                                <button
-                                    type="button"
-                                    className="btn btn-outline-primary"
-                                    onClick={sendOTP}
-                                    disabled={sendingOtp || otpCooldown > 0}
-                                >
-                                    {sendingOtp
-                                        ? "Sending OTP..."
-                                        : otpCooldown > 0
-                                        ? `Resend OTP in ${otpCooldown}s`
-                                        : "Send OTP"}
-                                </button>
-                            ) : (
-                                <>
-                                    <input
-                                        type="text"
-                                        className="form-control mt-2 text-center fs-5"
-                                        placeholder="Enter OTP"
-                                        value={otp}
-                                        onChange={(e) =>
-                                            setOtp(
-                                                e.target.value.replace(
-                                                    /\D/g,
-                                                    ""
-                                                )
-                                            )
-                                        }
-                                        maxLength={6}
-                                        autoFocus
-                                    />
-
-                                    <button
-                                        className="btn btn-outline-primary"
-                                        type="button"
-                                        onClick={verifyNumber}
-                                        disabled={otp.length !== 6}
-                                    >
-                                        Verify OTP
-                                    </button>
-                                </>
-                            )}
-                        </>
-                    )}
-
-                    {phoneVerified && (
-                        <div className="text-success fw-semibold mt-2">
-                            ✅ Phone number verified
+                            <div className="col-md-6 mb-3">
+                                <label className="form-label">
+                                    Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    className="form-control"
+                                    name="email"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
                         </div>
-                    )}
-                </div>
 
-                <div className="mb-3">
-                    <label className="form-label">Appointment Contact</label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        name="secondaryPhone"
-                        onChange={onChange}
-                    />
-                </div>
+                        <div className="row">
+                            <div className="col-md-6 mb-3">
+                                <label className="form-label">Password</label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    name="password"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
 
-                {/* Address */}
-                <h5>Address</h5>
-                <input
-                    className="form-control mb-2"
-                    placeholder="Address Line 1"
-                    name="street"
-                    required
-                    onChange={onChange}
-                />
-                <input
-                    className="form-control mb-2"
-                    placeholder="Address Line 2"
-                    name="street2"
-                    onChange={onChange}
-                />
-                <input
-                    className="form-control mb-2"
-                    placeholder="Address Line 3"
-                    name="street3"
-                    onChange={onChange}
-                />
-                <input
-                    className="form-control mb-2"
-                    placeholder="City"
-                    name="city"
-                    required
-                    onChange={onChange}
-                />
-                <input
-                    className="form-control mb-2"
-                    placeholder="State"
-                    name="state"
-                    required
-                    onChange={onChange}
-                />
-                <input
-                    className="form-control mb-3"
-                    placeholder="Pincode"
-                    name="pincode"
-                    required
-                    onChange={onChange}
-                />
+                            <div className="col-md-6 mb-3">
+                                <label className="form-label">
+                                    Confirm Password
+                                </label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    name="cpassword"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
+                        </div>
 
-                {/* Experience */}
-                <div className="mb-3">
-                    <label className="form-label">Experience</label>
-                    <input
-                        className="form-control"
-                        name="experience"
-                        onChange={onChange}
-                    />
-                </div>
+                        {/* ================= CLINIC INFO ================= */}
+                        <h5 className="mt-4 mb-3">Clinic Information</h5>
 
-                {/* Degrees */}
-                <div className="mb-3">
-                    <label className="form-label">Degree(s)</label>
-                    {credentials.degrees.map((degree, index) => (
-                        <div key={index} className="d-flex mb-2">
+                        <div className="mb-3">
+                            <label className="form-label">
+                                Clinic / Hospital Name
+                            </label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                name="clinicName"
+                                required
+                                onChange={onChange}
+                            />
+                        </div>
+
+                        {/* ================= PHONE VERIFICATION ================= */}
+                        <h5 className="mt-4 mb-3">Contact Verification</h5>
+
+                        <div className="mb-3">
+                            <label className="form-label">Doctor Contact</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                name="phone"
+                                value={credentials.phone}
+                                onChange={onChange}
+                                disabled={phoneVerified}
+                                placeholder="Enter 10-digit phone number"
+                            />
+
+                            {!phoneVerified && (
+                                <div className="mt-2">
+                                    {!sessionId ? (
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary"
+                                            onClick={sendOTP}
+                                            disabled={
+                                                sendingOtp || otpCooldown > 0
+                                            }
+                                        >
+                                            {sendingOtp
+                                                ? "Sending OTP..."
+                                                : otpCooldown > 0
+                                                ? `Resend OTP in ${otpCooldown}s`
+                                                : "Send OTP"}
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <input
+                                                type="text"
+                                                className="form-control mt-3 text-center fs-5"
+                                                placeholder="Enter OTP"
+                                                value={otp}
+                                                onChange={(e) =>
+                                                    setOtp(
+                                                        e.target.value.replace(
+                                                            /\D/g,
+                                                            ""
+                                                        )
+                                                    )
+                                                }
+                                                maxLength={6}
+                                                autoFocus
+                                            />
+
+                                            <button
+                                                className="btn btn-outline-primary mt-2"
+                                                type="button"
+                                                onClick={verifyNumber}
+                                                disabled={otp.length !== 6}
+                                            >
+                                                Verify OTP
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {phoneVerified && (
+                                <div className="text-success fw-semibold mt-2">
+                                    ✅ Phone number verified
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label">
+                                Appointment Contact
+                            </label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                name="secondaryPhone"
+                                onChange={onChange}
+                            />
+                        </div>
+
+                        {/* ================= ADDRESS ================= */}
+                        <h5 className="mt-4 mb-3">Clinic Address</h5>
+
+                        <input
+                            className="form-control mb-2"
+                            placeholder="Address Line 1"
+                            name="street"
+                            required
+                            onChange={onChange}
+                        />
+                        <input
+                            className="form-control mb-2"
+                            placeholder="Address Line 2"
+                            name="street2"
+                            onChange={onChange}
+                        />
+                        <input
+                            className="form-control mb-2"
+                            placeholder="Address Line 3"
+                            name="street3"
+                            onChange={onChange}
+                        />
+                        <div className="row">
+                            <div className="col-md-6 mb-2">
+                                <input
+                                    className="form-control"
+                                    placeholder="City"
+                                    name="city"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
+                            <div className="col-md-6 mb-2">
+                                <input
+                                    className="form-control"
+                                    placeholder="State"
+                                    name="state"
+                                    required
+                                    onChange={onChange}
+                                />
+                            </div>
+                        </div>
+                        <input
+                            className="form-control mb-3"
+                            placeholder="Pincode"
+                            name="pincode"
+                            required
+                            onChange={onChange}
+                        />
+
+                        {/* ================= PROFESSIONAL ================= */}
+                        <h5 className="mt-4 mb-3">Professional Details</h5>
+
+                        <div className="mb-3">
+                            <label className="form-label">Experience</label>
                             <input
                                 className="form-control"
-                                value={degree}
-                                onChange={(e) =>
-                                    handleDegreeChange(index, e.target.value)
-                                }
-                                required
+                                name="experience"
+                                onChange={onChange}
                             />
+                        </div>
+
+                        <div className="mb-3">
+                            <label className="form-label">Degree(s)</label>
+
+                            {credentials.degrees.map((degree, index) => (
+                                <div key={index} className="d-flex mb-2">
+                                    <input
+                                        className="form-control"
+                                        value={degree}
+                                        onChange={(e) =>
+                                            handleDegreeChange(
+                                                index,
+                                                e.target.value
+                                            )
+                                        }
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger ms-2"
+                                        onClick={() => removeDegreeField(index)}
+                                        disabled={
+                                            credentials.degrees.length === 1
+                                        }
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+
                             <button
                                 type="button"
-                                className="btn btn-danger ms-2"
-                                onClick={() => removeDegreeField(index)}
-                                disabled={credentials.degrees.length === 1}
+                                className="btn btn-outline-primary mt-2"
+                                onClick={addDegreeField}
                             >
-                                X
+                                + Add Degree
                             </button>
                         </div>
-                    ))}
-                    <button
-                        type="button"
-                        className="btn btn-primary mt-2"
-                        onClick={addDegreeField}
-                    >
-                        + Add Degree
-                    </button>
+
+                        {/* ================= SUBMIT ================= */}
+                        <button
+                            type="submit"
+                            className="btn btn-success w-100 mt-3"
+                            disabled={!phoneVerified}
+                        >
+                            Create Account
+                        </button>
+
+                        <p className="text-center mt-4 mb-0">
+                            Already have an account?{" "}
+                            <Link to="/login" className="text-decoration-none">
+                                Login
+                            </Link>
+                        </p>
+                    </form>
                 </div>
-
-                <button
-                    type="submit"
-                    className="btn btn-success"
-                    disabled={!phoneVerified}
-                >
-                    Sign Up
-                </button>
-
-                <p className="mt-3">
-                    Already have an account? <Link to="/login">Login</Link>
-                </p>
-            </form>
+            </div>
         </div>
     );
 };
