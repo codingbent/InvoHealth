@@ -1,70 +1,164 @@
-# Getting Started with Create React App
+🏥 Clinic Management System (MERN)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack **Clinic & Patient Management Web Application** built using the **MERN stack**, designed for doctors and small clinics to manage patients, appointments, billing, and reports efficiently.
 
-## Available Scripts
+This project goes beyond a basic CRUD app and focuses on **real-world clinic workflows**, including OTP-based authentication, secure password recovery, role-based access, and Excel-friendly reporting.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+✨ Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+-   👨‍⚕️ Doctor signup & login
+-   📱 OTP-based phone verification (2Factor)
+-   🔐 Forgot password with OTP reset flow
+-   📋 Patient records management
+-   📅 Appointment scheduling
+-   💳 Billing & invoice generation
+-   📊 Excel / CSV export for reports
+-   🔍 Filters (date, service, payment mode, etc.)
+-   📱 Fully responsive UI
+-   ☁️ Cloud-hosted backend & database
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+🛠 Tech Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Frontend
 
-### `npm run build`
+-   React.js (Create React App)
+-   Bootstrap 5
+-   React Router DOM
+-   Fetch API
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Backend
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+-   Node.js
+-   Express.js
+-   MongoDB Atlas
+-   JWT Authentication
+-   OTP Service (2Factor)
+-   bcrypt (password hashing)
 
 ### Deployment
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+-   Frontend: **Vercel**
+-   Backend: **Render**
+-   Database: **MongoDB Atlas**
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+📦 Required npm Packages
+
+### Frontend Dependencies
+
+```bash
+npm install react react-dom react-router-dom bootstrap axios
+
+### Backend Dependencies
+npm install express mongoose cors dotenv jsonwebtoken bcryptjs axios
+
+### Dev Dependency
+npm install nodemon --save-dev
+
+### Backend (/backend/.env)
+PORT=5001
+MONGO_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_jwt_secret
+OTP_API_KEY=your_2factor_api_key
+
+### Frontend (/frontend/.env)
+REACT_APP_API_URL=http://localhost:5001
+
+🗄 MongoDB Atlas Setup
+
+Go to https://www.mongodb.com/atlas
+
+Create a free cluster
+
+Create a database user
+
+Whitelist IP (0.0.0.0/0 for development)
+
+Copy the connection string
+
+Paste it into MONGO_URI in .env
+
+Running the Project Locally
+1️⃣ Clone the Repository
+git clone https://github.com/codingbent/InvoHealth.git
+cd clinic-management-system
+
+2️⃣ Start Backend
+cd backend
+npm install
+nodemon index.js
+
+Backend runs at:
+
+http://localhost:5001
+
+3️⃣ Start Frontend
+cd frontend
+npm install
+npm start
+
+Frontend runs at:
+
+http://localhost:3000
+
+☁️ Deployment Guide
+Backend (Render)
+
+Create a new Web Service
+
+Connect your GitHub repository
+
+Build command:
+
+npm install
+
+
+Start command:
+
+node index.js
+
+
+Add environment variables in Render dashboard
+
+Frontend (Vercel)
+
+Import the GitHub repository
+
+Select the frontend folder
+
+Add environment variable:
+
+REACT_APP_API_URL=https://your-render-backend-url
+
+
+Deploy
+🔐 Authentication Flow
+
+Signup → Phone OTP verification
+
+Login → Email + password
+
+Forgot password → OTP → Reset password
+
+JWT-based protected routes
+
+📈 Future Enhancements
+
+Offline-first support (IndexedDB)
+
+Analytics dashboard
+
+Progressive Web App (PWA)
+
+Dark mode
+
+👨‍💻 Author
+
+Abhed Agarwal
+Full Stack Developer (MERN)
+📧 Email: abhed.agl@gmail.com
