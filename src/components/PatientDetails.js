@@ -71,7 +71,9 @@ export default function PatientDetails() {
                 }
             );
             const data = await res.json();
-            setAvailableServices(Array.isArray(data) ? data : data.services || []);
+            setAvailableServices(
+                Array.isArray(data) ? data : data.services || []
+            );
         } catch (err) {
             console.error("Error fetching services:", err);
         }
@@ -163,7 +165,7 @@ export default function PatientDetails() {
                 service: patientData.service || [],
                 number: patientData.number || "",
                 age: patientData.age || "",
-                gender: patientData.gender || "", // ✅ ADDED
+                gender: patientData.gender || "",
                 amount: patientData.amount || 0,
             });
 
@@ -306,11 +308,7 @@ export default function PatientDetails() {
 
             docPdf.setFontSize(11);
             if (doctor.degree?.length) {
-                docPdf.text(
-                    `${doctor.degree.join(",")}`,
-                    margin,
-                    leftY
-                );
+                docPdf.text(`${doctor.degree.join(",")}`, margin, leftY);
                 leftY += 6;
             }
 
@@ -568,85 +566,156 @@ export default function PatientDetails() {
         }
     };
 
-    if (loading) return <p>Loading patient details...</p>;
+    if (loading)
+        return (
+            <div className="d-flex flex-column justify-content-center align-items-center py-5">
+                <div
+                    className="spinner-border text-primary mb-3"
+                    role="status"
+                />
+                <span className="text-muted">Loading patient details…</span>
+            </div>
+        );
 
     return (
         <>
             {/* Hidden button to trigger edit appointment modal */}
             <button
                 id="editAppointmentModalBtn"
-                style={{ display: "none" }}
+                className="d-none"
                 data-bs-toggle="modal"
                 data-bs-target="#editAppointmentModal"
             />
 
-            <div className="container">
-                {/* ================= PATIENT INFO ================= */}
-                <div className="m-2">
-                    <h3>Name: {details?.name}</h3>
-                    <h3>Number: {details?.number}</h3>
-                    <h3>Age: {details?.age}</h3>
-                    <h3>Gender: {details?.gender || "N/A"}</h3>
+            <div className="container my-4">
+                <div className="card shadow-sm border-0 rounded-4">
+                    <div className="card-body">
+                        {/* Header */}
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <div className="d-flex align-items-center gap-3">
+                                {/* Avatar */}
+                                <div className="avatar-circle">
+                                    {details?.name?.charAt(0)?.toUpperCase()}
+                                </div>
+
+                                <div>
+                                    <h5 className="fw-semibold mb-0">
+                                        {details?.name}
+                                    </h5>
+                                    <small className="text-muted">
+                                        {details?.number}
+                                    </small>
+                                </div>
+                            </div>
+
+                            <span
+                                className={`badge rounded-pill px-3 py-2 ${
+                                    details?.gender === "Male"
+                                        ? "bg-primary-subtle text-primary"
+                                        : details?.gender === "Female"
+                                        ? "bg-danger-subtle text-danger"
+                                        : "bg-secondary-subtle text-secondary"
+                                }`}
+                            >
+                                {details?.gender || "N/A"}
+                            </span>
+                        </div>
+
+                        {/* Info Grid */}
+                        <div className="row g-3 mb-4">
+                            <div className="col-6 col-md-4">
+                                <div className="info-box">
+                                    <span className="label">Age</span>
+                                    <span className="value">
+                                        {details?.age}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="col-6 col-md-4">
+                                <div className="info-box">
+                                    <span className="label">Gender</span>
+                                    <span className="value">
+                                        {details?.gender || "N/A"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="col-6 col-md-4">
+                                <div className="info-box">
+                                    <span className="label">Contact</span>
+                                    <span className="value">
+                                        {details?.number}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="d-flex gap-2 justify-content-end">
+                            <button
+                                className="btn btn-primary rounded-pill px-4"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editPatientModal"
+                            >
+                                ✏️ Edit Patient
+                            </button>
+
+                            <button
+                                className="btn btn-outline-danger rounded-pill px-4"
+                                disabled={deleting}
+                                onClick={handleDeletePatient}
+                            >
+                                {deleting ? "Deleting..." : "🗑 Delete"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
+                <div className="mt-5">
+                    <h5 className="fw-semibold mb-3">Previous Appointments</h5>
 
-                <div className="d-flex gap-2">
-                    <button
-                        className="btn btn-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#editPatientModal"
-                    >
-                        ✏️ Edit
-                    </button>
-
-                    <button
-                        className="btn btn-danger"
-                        disabled={deleting}
-                        onClick={handleDeletePatient}
-                    >
-                        {deleting ? "Deleting..." : "🗑 Delete"}
-                    </button>
-                </div>
-
-                {/* ================= APPOINTMENTS ================= */}
-                <div className="mt-4">
-                    <h3>Previous Appointment Details</h3>
                     <div className="d-none d-md-block">
                         {appointments.length === 0 ? (
-                            <p>No appointments found</p>
+                            <div className="text-muted">
+                                No appointments found
+                            </div>
                         ) : (
-                            <table className="table table-bordered mt-2">
-                                <thead>
+                            <table className="table align-middle table-hover">
+                                <thead className="table-light">
                                     <tr>
                                         <th>Date</th>
                                         <th>Services</th>
                                         <th>Amount</th>
                                         <th>Payment</th>
-                                        <th>Actions</th>
+                                        <th className="text-end">Actions</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
-                                            <td>
-                                                {visit.formattedDate}
-                                            </td>
+                                            <td>{visit.formattedDate}</td>
 
-                                            <td>
+                                            <td className="text-muted">
                                                 {(visit.service || [])
                                                     .map((s) => s.name)
                                                     .join(", ")}
                                             </td>
 
-                                            <td>₹{visit.amount}</td>
-
-                                            <td>
-                                                {visit.payment_type || "N/A"}
+                                            <td className="fw-semibold">
+                                                ₹{visit.amount}
                                             </td>
 
-                                            <td className="text-nowrap">
+                                            <td>
+                                                <span className="badge bg-secondary-subtle text-secondary">
+                                                    {visit.payment_type ||
+                                                        "N/A"}
+                                                </span>
+                                            </td>
+
+                                            <td className="text-end">
                                                 <button
-                                                    className="btn btn-sm btn-success me-1"
+                                                    className="btn btn-sm btn-success me-2"
                                                     onClick={() =>
                                                         handleInvoiceClick(
                                                             id,
@@ -659,7 +728,7 @@ export default function PatientDetails() {
                                                 </button>
 
                                                 <button
-                                                    className="btn btn-sm btn-warning me-1"
+                                                    className="btn btn-sm btn-outline-warning me-2"
                                                     onClick={() =>
                                                         editInvoice(
                                                             appointmentId,
@@ -671,7 +740,7 @@ export default function PatientDetails() {
                                                 </button>
 
                                                 <button
-                                                    className="btn btn-sm btn-danger"
+                                                    className="btn btn-sm btn-outline-danger"
                                                     onClick={() =>
                                                         deleteInvoice(
                                                             appointmentId,
@@ -689,72 +758,62 @@ export default function PatientDetails() {
                         )}
                     </div>
                 </div>
-                {/* ================= MOBILE VIEW ================= */}
-                <div className="d-block d-md-none">
-                    {appointmentsForView.map((visit) => (
-                        <div key={visit._id} className="card mb-3 shadow-sm">
-                            <div className="card-body">
-                                {/* DATE */}
-                                <h6 className="fw-bold mb-1">
-                                    {visit.formattedDate}
-                                </h6>
+            </div>
+            <div className="d-block d-md-none mt-3">
+                {appointmentsForView.map((visit) => (
+                    <div
+                        key={visit._id}
+                        className="card mb-3 shadow-sm rounded-4"
+                    >
+                        <div className="card-body">
+                            <div className="d-flex justify-content-between mb-2">
+                                <strong>{visit.formattedDate}</strong>
+                                <span className="fw-semibold">
+                                    ₹{visit.amount}
+                                </span>
+                            </div>
 
-                                {/* SERVICES */}
-                                <p className="mb-1">
-                                    <strong>Services:</strong>{" "}
-                                    {(visit.service || [])
-                                        .map((s) => s.name)
-                                        .join(", ")}
-                                </p>
+                            <p className="text-muted mb-1">
+                                {(visit.service || [])
+                                    .map((s) => s.name)
+                                    .join(", ")}
+                            </p>
 
-                                {/* PAYMENT + TOTAL */}
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span>
-                                        <strong>Payment:</strong>{" "}
-                                        {visit.payment_type || "N/A"}
-                                    </span>
-                                    <span className="fw-bold">
-                                        ₹{visit.amount}
-                                    </span>
-                                </div>
+                            <span className="badge bg-secondary-subtle text-secondary mb-3">
+                                {visit.payment_type || "N/A"}
+                            </span>
 
-                                {/* ACTION BUTTONS */}
-                                <div className="d-flex justify-content-between gap-2">
-                                    <button
-                                        className="btn btn-sm btn-success w-100"
-                                        onClick={() =>
-                                            handleInvoiceClick(
-                                                id,
-                                                visit,
-                                                details
-                                            )
-                                        }
-                                    >
-                                        Invoice
-                                    </button>
+                            <div className="d-flex gap-2">
+                                <button
+                                    className="btn btn-success w-100"
+                                    onClick={() =>
+                                        handleInvoiceClick(id, visit, details)
+                                    }
+                                >
+                                    Invoice
+                                </button>
 
-                                    <button
-                                        className="btn btn-sm btn-warning w-100"
-                                        onClick={() =>
-                                            editInvoice(appointmentId, visit)
-                                        }
-                                    >
-                                        Edit
-                                    </button>
+                                <button
+                                    className="btn btn-outline-warning w-100"
+                                    onClick={() =>
+                                        editInvoice(appointmentId, visit)
+                                    }
+                                >
+                                    Edit
+                                </button>
 
-                                    <button
-                                        className="btn btn-sm btn-danger w-100"
-                                        onClick={() =>
-                                            deleteInvoice(appointmentId, visit)
-                                        }
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
+                                <button
+                                    className="btn btn-outline-danger w-100"
+                                    onClick={() =>
+                                        deleteInvoice(appointmentId, visit)
+                                    }
+                                >
+                                    Delete
+                                </button>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
 
             {/* ================= EDIT APPOINTMENT MODAL ================= */}

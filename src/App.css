@@ -204,3 +204,48 @@ body.freeze-scroll {
 .alert-text {
     flex: 1;
 }
+.info-box {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.info-box .label {
+  display: block;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.info-box .value {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.avatar-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.info-box {
+  background: #f8f9fa;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.info-box .label {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.info-box .value {
+  font-size: 15px;
+  font-weight: 600;
+}
+

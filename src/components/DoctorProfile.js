@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-
 export default function DoctorProfile() {
     const [doctor, setDoctor] = useState(null);
     const [staffList, setStaffList] = useState([]);
@@ -19,7 +18,7 @@ export default function DoctorProfile() {
         role: "",
     });
     const [editData, setEditData] = useState({});
-    
+
     // ================= FETCH DOCTOR =================
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -240,7 +239,40 @@ export default function DoctorProfile() {
         }
     };
 
-    if (!doctor) return <p className="text-center mt-4">Loading...</p>;
+    if (!doctor)
+        return (
+            <div className="container my-4">
+                <div className="card shadow-sm border-0 rounded-4">
+                    <div className="card-body">
+                        {/* Header Skeleton */}
+                        <div className="d-flex align-items-center gap-3 mb-4">
+                            <div
+                                className="placeholder rounded-circle"
+                                style={{ width: 44, height: 44 }}
+                            />
+                            <div className="flex-grow-1">
+                                <div className="placeholder col-5 mb-2" />
+                                <div className="placeholder col-3" />
+                            </div>
+                        </div>
+
+                        {/* Info Skeleton */}
+                        <div className="row g-3">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="col-6 col-md-4">
+                                    <div className="placeholder-glow">
+                                        <div
+                                            className="placeholder col-12 rounded-3"
+                                            style={{ height: 56 }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
 
     return (
         <div className="container py-3 py-md-4">
@@ -450,7 +482,12 @@ export default function DoctorProfile() {
             </div>
 
             {/* ================= EDIT STAFF MODAL ================= */}
-            <div className="modal fade" id="editStaffModal" tabIndex="-1" aria-hidden="true">
+            <div
+                className="modal fade"
+                id="editStaffModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
                 <div className="modal-dialog modal-dialog-centered modal-sm modal-md">
                     <div className="modal-content border-0 shadow">
                         <div className="modal-header">
@@ -629,7 +666,12 @@ export default function DoctorProfile() {
             </div>
 
             {/* ================= EDIT PROFILE MODAL ================= */}
-            <div className="modal fade" id="editProfileModal" tabIndex="-1" aria-hidden="true">
+            <div
+                className="modal fade"
+                id="editProfileModal"
+                tabIndex="-1"
+                aria-hidden="true"
+            >
                 <div className="modal-dialog modal-lg modal-dialog-scrollable">
                     <div className="modal-content">
                         <div className="modal-header">

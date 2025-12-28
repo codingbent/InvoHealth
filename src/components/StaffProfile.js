@@ -66,7 +66,16 @@ export default function StaffProfile() {
         }
     };
 
-    if (!staff) return <p className="text-center mt-4">Loading...</p>;
+    if (!staff)
+        return (
+            <div className="d-flex flex-column justify-content-center align-items-center py-5">
+                <div
+                    className="spinner-border text-primary mb-3"
+                    role="status"
+                />
+                <span className="text-muted">Loading patient details…</span>
+            </div>
+        );
 
     return (
         <div className="container py-3 py-md-4" style={{ maxWidth: "900px" }}>

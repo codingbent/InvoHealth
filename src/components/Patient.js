@@ -208,11 +208,65 @@ const Patient = (props) => {
                     </div>
                 </>
             ) : (
-                <div className="text-center mt-5">
-                    <h3 className="mb-3">Login to see Patients</h3>
-                    <Link to="/login" className="btn btn-primary">
-                        Go to Login
-                    </Link>
+                <div className="container text-center mt-5">
+                    {/* Hero */}
+                    <h1 className="fw-bold mb-3">Manage Your Clinic Smarter</h1>
+
+                    <p className="text-muted mb-4">
+                        Patient records, appointments, billing, and Excel
+                        reports — all in one simple system.
+                    </p>
+
+                    <div className="d-flex justify-content-center gap-3 mb-5">
+                        <Link to="/login" className="btn btn-primary px-4">
+                            Login
+                        </Link>
+                        <Link
+                            to="/signup"
+                            className="btn btn-outline-primary px-4"
+                        >
+                            Create Account
+                        </Link>
+                    </div>
+
+                    {/* Features */}
+                    <div className="row justify-content-center g-4 mt-4">
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm h-100">
+                                <div className="card-body">
+                                    <h5>🧾 Patient Records</h5>
+                                    <p className="text-muted small">
+                                        Securely manage patient details and
+                                        visit history.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm h-100">
+                                <div className="card-body">
+                                    <h5>📅 Appointments</h5>
+                                    <p className="text-muted small">
+                                        Track visits, services, and doctor
+                                        assignments.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3">
+                            <div className="card border-0 shadow-sm h-100">
+                                <div className="card-body">
+                                    <h5>📊 Excel Reports</h5>
+                                    <p className="text-muted small">
+                                        Export filtered reports for accounting
+                                        and analysis.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </>
