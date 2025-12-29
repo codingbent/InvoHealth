@@ -132,6 +132,19 @@ const AddPatient = ({ showAlert }) => {
                 return;
             }
 
+            if (patientJson.alreadyExists) {
+                alert("Patient with same name and mobile number already exists");
+                return; // 🚫 stop further execution
+            }
+
+            if (!patientJson.success) {
+                showAlert(
+                    patientJson.error || "Failed to add patient",
+                    "danger"
+                );
+                return;
+            }
+
             const newPatientId = patientJson.patient._id;
 
             // =========================
