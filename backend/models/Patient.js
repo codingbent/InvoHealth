@@ -63,6 +63,6 @@ const PatientSchema = new Schema({
         default: [],
     },
 });
-
+PatientSchema.index({ doctor: 1, name: 1, number: 1 }, { unique: true });
 const Patient = mongoose.model("Patient", PatientSchema);
 module.exports = Patient;
