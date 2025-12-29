@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { authFetch } from "./authfetch";
 
 export default function SetStaffPassword(props) {
     const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function SetStaffPassword(props) {
 
         setLoading(true);
 
-        const res = await fetch(
+        const res = await authFetch(
             `${API_BASE_URL}/api/auth/staff/set-password`,
             {
                 method: "POST",

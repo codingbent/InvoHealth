@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { authFetch } from "./authfetch";
 
 export default function Login(props) {
     const navigate = useNavigate();
@@ -10,16 +11,44 @@ export default function Login(props) {
     const [sessionId, setSessionId] = useState("");
     const [password, setPassword] = useState("");
     const [isOtpLogin, setIsOtpLogin] = useState(false);
-    const [inputType, setInputType] = useState("");
+    const [inputType, setInputType] = useState("typing");
     const [loginAs, setLoginAs] = useState("doctor");
+
+    const [showInvalid, setShowInvalid] = useState(false);
+
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
+
+    useEffect(() => {
+        if (inputType !== "invalid") {
+            setShowInvalid(false);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setShowInvalid(true);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [inputType]);
+
     // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
-        const value = e.target.value;
+        let value = e.target.value;
+
+        // 🔒 Restrict to digits for staff / OTP
+        if (loginAs === "staff" || isOtpLogin) {
+            value = value.replace(/\D/g, "");
+        }
+
         setIdentifier(value);
+
+        if (!value || value.length < 4) {
+            setInputType("typing");
+            return;
+        }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const phoneRegex = /^[6-9]\d{9}$/;
@@ -34,7 +63,7 @@ export default function Login(props) {
     };
 
     const sendOtp = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ phone: identifier }),
@@ -43,14 +72,14 @@ export default function Login(props) {
         const data = await res.json();
         if (data.success) {
             setSessionId(data.sessionId);
-            alert("OTP sent");
+            props.showAlert("OTP sent", "success");
         } else {
-            alert(data.error);
+            props.showAlert(data.error, "danger");
         }
     };
 
     const verifyOtp = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -71,8 +100,23 @@ export default function Login(props) {
             alert(data.error);
         }
     };
+    const getIdentifierTypeForApi = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[6-9]\d{9}$/;
+
+        if (emailRegex.test(identifier)) return "email";
+        if (phoneRegex.test(identifier)) return "phone";
+        return null;
+    };
 
     const loginWithPassword = async () => {
+        const identifierTypeForApi = getIdentifierTypeForApi();
+
+        if (!identifierTypeForApi) {
+            props.showAlert("Enter a valid email or phone number", "danger");
+            return;
+        }
+
         const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -80,7 +124,7 @@ export default function Login(props) {
                 identifier,
                 password,
                 loginType: "password",
-                identifierType: inputType,
+                identifierType: identifierTypeForApi,
             }),
         });
 
@@ -95,8 +139,9 @@ export default function Login(props) {
             props.showAlert(json.error || "Login failed", "danger");
         }
     };
+
     const staffLogin = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/staff/login`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/staff/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -133,14 +178,16 @@ export default function Login(props) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (inputType !== "email" && inputType !== "phone") {
-            props.showAlert("Enter a valid email or phone number", "danger");
+        const identifierTypeForApi = getIdentifierTypeForApi();
+
+        if (!identifierTypeForApi) {
+            alert("Enter a valid email or phone number");
             return;
         }
 
         if (loginAs === "staff") {
-            if (inputType !== "phone") {
-                alert("Staff must login using phone number");
+            if (identifierTypeForApi !== "phone") {
+                alert("Login using phone number");
                 return;
             }
             staffLogin();
@@ -202,22 +249,28 @@ export default function Login(props) {
                         )}
 
                         <input
-                            type="text"
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             className="form-control"
                             placeholder={
-                                loginAs === "staff"
-                                    ? "Enter 10-digit phone number"
-                                    : isOtpLogin
+                                loginAs === "staff" || isOtpLogin
                                     ? "Enter 10-digit phone number"
                                     : "Enter email or phone"
                             }
                             value={identifier}
+                            maxLength={
+                                loginAs === "staff" || isOtpLogin
+                                    ? 10
+                                    : undefined
+                            }
+                            onWheel={(e) => e.target.blur()}
                             onChange={handleIdentifierChange}
                             required
                         />
                     </div>
 
-                    {inputType === "invalid" && (
+                    {showInvalid && (
                         <small className="text-danger">
                             Enter a valid email or phone number
                         </small>

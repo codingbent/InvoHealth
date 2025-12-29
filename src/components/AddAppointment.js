@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ServiceList from "./ServiceList";
+import { authFetch } from "./authfetch";
 
 const API_BASE_URL =
     process.env.NODE_ENV === "production"
@@ -31,13 +32,8 @@ export default function AddAppointment({ showAlert }) {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token") || "",
-                        },
-                    }
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/auth/fetchallservice`
                 );
                 const data = await res.json();
                 setAllServices(data.services || data || []);
@@ -57,13 +53,8 @@ export default function AddAppointment({ showAlert }) {
             }
 
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token") || "",
-                        },
-                    }
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`
                 );
                 const data = await res.json();
                 setPatients(data);
@@ -128,13 +119,12 @@ export default function AddAppointment({ showAlert }) {
         }
 
         try {
-            const res = await fetch(
+            const res = await authFetch(
                 `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token") || "",
                     },
                     body: JSON.stringify({
                         service: services.map((s) => ({
@@ -208,7 +198,9 @@ export default function AddAppointment({ showAlert }) {
                     <form onSubmit={handleSubmit}>
                         {/* DATE */}
                         <div className="mb-3">
-                            <label className="form-label">Appointment Date</label>
+                            <label className="form-label">
+                                Appointment Date
+                            </label>
                             <input
                                 type="date"
                                 className="form-control"
@@ -281,9 +273,7 @@ export default function AddAppointment({ showAlert }) {
                                         placeholder="Discount"
                                         value={discount}
                                         onChange={(e) =>
-                                            setDiscount(
-                                                Number(e.target.value)
-                                            )
+                                            setDiscount(Number(e.target.value))
                                         }
                                     />
                                     <div className="form-check">
@@ -307,9 +297,10 @@ export default function AddAppointment({ showAlert }) {
                                     <div>
                                         Discount: ₹{" "}
                                         {isPercent
-                                            ? ((total * discount) / 100).toFixed(
-                                                  2
-                                              )
+                                            ? (
+                                                  (total * discount) /
+                                                  100
+                                              ).toFixed(2)
                                             : discount}
                                     </div>
                                     <div className="fw-bold">
@@ -325,9 +316,7 @@ export default function AddAppointment({ showAlert }) {
                             <select
                                 className="form-select"
                                 value={paymentType}
-                                onChange={(e) =>
-                                    setPaymentType(e.target.value)
-                                }
+                                onChange={(e) => setPaymentType(e.target.value)}
                             >
                                 <option>Cash</option>
                                 <option>Card</option>

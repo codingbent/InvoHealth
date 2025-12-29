@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./authfetch";
 
 const API_BASE_URL =
     process.env.NODE_ENV === "production"
@@ -15,11 +16,7 @@ export default function StaffProfile(props) {
 
     // ✅ Fetch staff ONLY
     const fetchStaff = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/staff`, {
-            headers: {
-                "auth-token": localStorage.getItem("token"),
-            },
-        });
+        const res = await authFetch(`${API_BASE_URL}/api/auth/staff`);
 
         const data = await res.json();
         if (data.success) setStaff(data.staff);
@@ -41,13 +38,12 @@ export default function StaffProfile(props) {
             return;
         }
 
-        const res = await fetch(
+        const res = await authFetch(
             `${API_BASE_URL}/api/auth/staff/change-password`,
             {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "auth-token": localStorage.getItem("token"),
                 },
                 body: JSON.stringify({ currentPassword, newPassword }),
             }

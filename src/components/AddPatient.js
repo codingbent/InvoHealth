@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
+import { authFetch } from "./authfetch";
 
 const AddPatient = ({ showAlert }) => {
     const [patient, setPatient] = useState({
@@ -37,13 +38,8 @@ const AddPatient = ({ showAlert }) => {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token"),
-                        },
-                    }
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/auth/fetchallservice`
                 );
                 const data = await res.json();
                 setAvailableServices(
@@ -105,14 +101,10 @@ const AddPatient = ({ showAlert }) => {
             // =========================
             // CREATE PATIENT
             // =========================
-            const patientRes = await fetch(
+            const patientRes = await authFetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token"),
-                    },
                     body: JSON.stringify({
                         name,
                         gender,
@@ -149,14 +141,10 @@ const AddPatient = ({ showAlert }) => {
             const decoded = jwtDecode(token);
             const doctorId = decoded.user?.doctorId;
 
-            const appointmentRes = await fetch(
+            const appointmentRes = await authFetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "auth-token": token,
-                    },
                     body: JSON.stringify({
                         service: service.map((s) => ({
                             id: s._id,

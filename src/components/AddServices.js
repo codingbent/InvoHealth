@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authFetch } from "./authfetch";
 
 const AddServices = (props) => {
     const [service, setService] = useState({ name: "", amount: "" });
@@ -9,33 +10,47 @@ const AddServices = (props) => {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    const handlesubmit = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const response = await fetch(`${API_BASE_URL}/api/auth/createservice`, {
-            method: "POST",
-            headers: {
-                "Content-type": "application/json",
-                "auth-token": localStorage.getItem("token"),
-            },
-            body: JSON.stringify({ name, amount }),
-        });
-        const json = await response.json();
-        //console.log(json);
-        if (json.success) {
-            setService({ name: "", amount: "" });
-            props.showAlert("Successfully Added", "success");
-            document.querySelector("#serviceModal .btn-close").click();
-        } else {
-            setService({ name: "", amount: "" });
-            props.showAlert("Already exists", "danger");
-            document.querySelector("#serviceModal .btn-close").click();
+
+        try {
+            const response = await authFetch(
+                `${API_BASE_URL}/api/auth/createservice`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ name, amount }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Request failed");
+            }
+
+            const json = await response.json();
+
+            if (json.success) {
+                setService({ name: "", amount: "" });
+                props.showAlert("Service added successfully", "success");
+                document.querySelector("#serviceModal .btn-close")?.click();
+            } else {
+                props.showAlert(
+                    json.error || "Service already exists",
+                    "danger"
+                );
+            }
+        } catch (err) {
+            console.error("Create service error:", err);
+            props.showAlert("Server error. Try again.", "danger");
         }
     };
     const onChange = (e) => {
         setService({ ...service, [e.target.name]: e.target.value });
     };
     return (
-        <form onSubmit={handlesubmit}>
+        <form onSubmit={handleSubmit}>
             <div className="modal-content border-0 shadow-lg rounded-4">
                 {/* HEADER */}
                 <div className="modal-header border-0 pb-0">

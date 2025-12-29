@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./authfetch";
 
 export default function DoctorProfile(props) {
     const [doctor, setDoctor] = useState(null);
@@ -26,9 +27,7 @@ export default function DoctorProfile(props) {
             : "http://localhost:5001";
     const fetchDoctor = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
-                headers: { "auth-token": localStorage.getItem("token") },
-            });
+            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
 
             const data = await res.json();
             if (data.success) {
@@ -85,11 +84,10 @@ export default function DoctorProfile(props) {
             degree: editData.degree.filter((d) => d.trim() !== ""),
         };
 
-        const res = await fetch(`${API_BASE_URL}/api/auth/updatedoc`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/updatedoc`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
             },
             body: JSON.stringify(payload),
         });
@@ -104,9 +102,7 @@ export default function DoctorProfile(props) {
     };
     // ================= FETCH STAFF =================
     const fetchStaff = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/fetch-staff`, {
-            headers: { "auth-token": localStorage.getItem("token") },
-        });
+        const res = await authFetch(`${API_BASE_URL}/api/auth/fetch-staff`);
         const data = await res.json();
         if (data.success) setStaffList(data.staff);
     };
@@ -123,11 +119,10 @@ export default function DoctorProfile(props) {
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/auth/add-staff`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/add-staff`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
             },
             body: JSON.stringify({
                 name: staffName,
@@ -160,11 +155,10 @@ export default function DoctorProfile(props) {
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/change-password`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "auth-token": localStorage.getItem("token"),
             },
             body: JSON.stringify({ currentPassword, newPassword }),
         });
@@ -186,13 +180,10 @@ export default function DoctorProfile(props) {
             "Do you want to delete this staff member?"
         );
         if (!confirmDelete) return;
-        const res = await fetch(
+        const res = await authFetch(
             `${API_BASE_URL}/api/auth/delete-staff/${staffId}`,
             {
                 method: "DELETE",
-                headers: {
-                    "auth-token": localStorage.getItem("token"),
-                },
             }
         );
 
@@ -213,13 +204,12 @@ export default function DoctorProfile(props) {
     };
 
     const editstaff = async () => {
-        const res = await fetch(
+        const res = await authFetch(
             `${API_BASE_URL}/api/auth/edit-staff/${editStaffData._id}`,
             {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    "auth-token": localStorage.getItem("token"),
                 },
                 body: JSON.stringify({
                     name: editStaffData.name,

@@ -108,7 +108,7 @@ router.post("/login", async (req, res) => {
         let userRole = null;
 
         // ======================
-        // 1️⃣ TRY DOCTOR FIRST
+        // 1️⃣ DOCTOR FIRST
         // ======================
         if (identifierType === "email") {
             user = await Doc.findOne({ email: identifier });
@@ -121,45 +121,25 @@ router.post("/login", async (req, res) => {
         }
 
         // ======================
-        // 2️⃣ IF NOT DOCTOR → STAFF
+        // 2️⃣ IF NOT DOCTOR then STAFF
         // ======================
         if (!user && identifierType === "phone") {
-            user = await Staff.findOne({
-                phone: identifier,
-                isActive: true,
-            });
+            user = await Staff.findOne({ phone: identifier, isActive: true });
             if (user) userRole = user.role;
         }
 
         if (!user) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid credentials",
-            });
+            return res.status(400).json({ error: "Invalid credentials" });
+        }
+
+        const match = await bcrypt.compare(password, user.password);
+
+        if (!match) {
+            return res.status(400).json({ error: "Invalid credentials" });
         }
 
         // ======================
-        // 3️⃣ PASSWORD LOGIN (DOCTOR ONLY)
-        // ======================
-        if (loginType === "password") {
-            if (userRole !== "doctor") {
-                return res.status(403).json({
-                    success: false,
-                    error: "Password login not allowed for staff",
-                });
-            }
-
-            const match = await bcrypt.compare(password, user.password);
-            if (!match) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Invalid credentials",
-                });
-            }
-        }
-
-        // ======================
-        // 4️⃣ JWT
+        // 3️⃣ JWT
         // ======================
         const payload = {
             user: {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { authFetch } from "./authfetch";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
@@ -83,7 +84,7 @@ const Signup = (props) => {
             role: "doctor",
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/createdoc`, {
+        const response = await authFetch(`${API_BASE_URL}/api/auth/createdoc`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bodyToSend),
@@ -130,7 +131,7 @@ const Signup = (props) => {
         try {
             setSendingOtp(true);
 
-            const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ phone }),
@@ -158,7 +159,7 @@ const Signup = (props) => {
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

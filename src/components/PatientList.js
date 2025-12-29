@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadMore from "./LoadMore";
 import * as XLSX from "xlsx";
+import { authFetch } from "./authfetch";
 
 export default function PatientList() {
     const navigate = useNavigate();
@@ -37,15 +38,7 @@ export default function PatientList() {
     useEffect(() => {
         const fetchAppointments = async () => {
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallappointments?limit=${limit}`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token"),
-                        },
-                    }
-                );
-
+                const res = await authFetch(`${API_BASE_URL}/api/auth/fetchallappointments?limit=${limit}`);
                 const data = await res.json();
                 setAppointments(data.data || []);
                 setLoading(false);
@@ -62,14 +55,7 @@ export default function PatientList() {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token"),
-                        },
-                    }
-                );
+                const res = await authFetch(`${API_BASE_URL}/api/auth/fetchallservice`);
                 const data = await res.json();
 
                 // normalize service names
@@ -149,10 +135,7 @@ export default function PatientList() {
     // ------------------------------------------------------------
     const fetchDoctor = async () => {
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
-                headers: { "auth-token": token },
-            });
+            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
             const data = await res.json();
             if (data.success) setDoctor(data.doctor);
         } catch (err) {
@@ -249,14 +232,7 @@ export default function PatientList() {
 
     const downloadExcel = async () => {
         try {
-            const res = await fetch(
-                `${API_BASE_URL}/api/auth/exportappointments`,
-                {
-                    headers: {
-                        "auth-token": localStorage.getItem("token"),
-                    },
-                }
-            );
+            const res = await authFetch(`${API_BASE_URL}/api/auth/exportappointments`);
 
             const allData = await res.json();
 

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { authFetch } from "./authfetch";
 
 export default function ForgotPassword(props) {
     const navigate = useNavigate();
@@ -26,7 +27,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ phone }),
@@ -53,7 +54,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -97,7 +98,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+            const res = await authFetch(`${API_BASE_URL}/api/auth/reset-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

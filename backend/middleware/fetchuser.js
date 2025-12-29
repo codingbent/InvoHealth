@@ -4,20 +4,36 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const fetchuser = (req, res, next) => {
     const token = req.header("auth-token");
     if (!token) {
-        return res.status(401).json({ error: "No token provided" });
+        return res.status(401).json({
+            success: false,
+            error: "NO_TOKEN",
+        });
     }
 
     try {
         const data = jwt.verify(token, JWT_SECRET);
 
         if (!data.user) {
-            return res.status(401).json({ error: "Invalid token structure" });
+            return res.status(401).json({
+                success: false,
+                error: "INVALID_TOKEN",
+            });
         }
 
-        req.user = data.user; // ✅ ONLY THIS
+        req.user = data.user;
         next();
     } catch (err) {
-        return res.status(401).json({ error: "Invalid token" });
+        if (err.name === "TokenExpiredError") {
+            return res.status(401).json({
+                success: false,
+                error: "TOKEN_EXPIRED",
+            });
+        }
+
+        return res.status(401).json({
+            success: false,
+            error: "INVALID_TOKEN",
+        });
     }
 };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authFetch } from "./authfetch";
 
 const EditService = ({ showAlert }) => {
     const [services, setServices] = useState([]);
@@ -15,14 +16,8 @@ const EditService = ({ showAlert }) => {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                const response = await fetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
-                    {
-                        headers: {
-                            "auth-token": localStorage.getItem("token"),
-                        },
-                    }
-                );
+                const response = await authFetch(
+                    `${API_BASE_URL}/api/auth/fetchallservice`,);
 
                 const data = await response.json();
 
@@ -61,13 +56,12 @@ const EditService = ({ showAlert }) => {
         }
 
         try {
-            const response = await fetch(
+            const response = await authFetch(
                 `${API_BASE_URL}/api/auth/updateservice/${selectedService}`,
                 {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": localStorage.getItem("token"),
                     },
                     body: JSON.stringify({ name, amount }),
                 }

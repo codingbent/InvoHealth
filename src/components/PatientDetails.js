@@ -4,6 +4,7 @@ import ServiceList from "./ServiceList";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from "./authfetch";
 
 export default function PatientDetails() {
     const navigate = useNavigate();
@@ -47,10 +48,7 @@ export default function PatientDetails() {
     // ------------------------------------------------------------
     const fetchDoctor = useCallback(async () => {
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}/api/auth/getdoc`, {
-                headers: { "auth-token": token },
-            });
+            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
             const data = await res.json();
             if (data.success) setDoctor(data.doctor);
         } catch (err) {
@@ -63,13 +61,8 @@ export default function PatientDetails() {
     // ------------------------------------------------------------
     const fetchServices = async () => {
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`,
-                {
-                    headers: { "auth-token": token },
-                }
-            );
+            const res = await authFetch(
+                `${API_BASE_URL}/api/auth/fetchallservice`,);
             const data = await res.json();
             setAvailableServices(
                 Array.isArray(data) ? data : data.services || []
@@ -109,13 +102,10 @@ export default function PatientDetails() {
 
         try {
             setDeleting(true);
-            const res = await fetch(
+            const res = await authFetch(
                 `${API_BASE_URL}/api/auth/deletepatient/${id}`,
                 {
                     method: "DELETE",
-                    headers: {
-                        "auth-token": localStorage.getItem("token"),
-                    },
                 }
             );
 
@@ -144,15 +134,10 @@ export default function PatientDetails() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
 
             const [patientRes, appointmentsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`, {
-                    headers: { "auth-token": token },
-                }),
-                fetch(`${API_BASE_URL}/api/auth/appointments/${id}`, {
-                    headers: { "auth-token": token },
-                }),
+                authFetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`),
+                authFetch(`${API_BASE_URL}/api/auth/appointments/${id}`),
             ]);
 
             const patientData = await patientRes.json();
@@ -216,15 +201,12 @@ export default function PatientDetails() {
         }
 
         try {
-            const token = localStorage.getItem("token");
-
-            const response = await fetch(
+            const response = await authFetch(
                 `${API_BASE_URL}/api/auth/updatepatientdetails/${id}`,
                 {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": token,
                     },
                     body: JSON.stringify(patient),
                 }
@@ -505,15 +487,13 @@ export default function PatientDetails() {
             return;
         }
         try {
-            const token = localStorage.getItem("token");
 
-            const response = await fetch(
+            const response = await authFetch(
                 `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
                 {
                     method: "PUT",
                     headers: {
-                        "Content-Type": "application/json",
-                        "auth-token": token,
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
                         date: apptData.date,
@@ -546,13 +526,10 @@ export default function PatientDetails() {
     const deleteInvoice = async (appointmentId, visit) => {
         if (!window.confirm("Delete this invoice?")) return;
 
-        const token = localStorage.getItem("token");
-
-        const response = await fetch(
+        const response = await authFetch(
             `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
             {
                 method: "DELETE",
-                headers: { "auth-token": token },
             }
         );
 
