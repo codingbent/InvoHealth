@@ -20,9 +20,11 @@ const AppointmentDay = memo(function AppointmentDay({
                     })}
                 </h6>
 
-                <span className="fw-bold text-success">
-                    ₹ {dayTotal.toFixed(2)}
-                </span>
+                {localStorage.getItem("role") === "doctor" && (
+                    <span className="fw-bold text-success">
+                        ₹ {dayTotal.toFixed(2)}
+                    </span>
+                )}
             </div>
 
             {/* DESKTOP TABLE */}

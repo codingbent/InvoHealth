@@ -11,6 +11,7 @@ export default function AppointmentList({
     IncreaseLimit,
     loading,
 }) {
+    const role = localStorage.getItem("role");
     return (
         <>
             {/* INITIAL LOADING ONLY */}
@@ -36,14 +37,18 @@ export default function AppointmentList({
                     <div className="d-flex justify-content-between align-items-center bg-primary bg-gradient text-white rounded-4 px-3 py-3 mb-3 shadow">
                         <div>
                             <h5 className="mb-0 fw-semibold">{month}</h5>
-                            <small className="opacity-75">
-                                Total Collection
-                            </small>
+                            {role === "doctor" && (
+                                <small className="opacity-75">
+                                    Total Collection
+                                </small>
+                            )}
                         </div>
 
-                        <h4 className="mb-0 fw-bold">
-                            ₹ {monthTotal[month]?.toFixed(2)}
-                        </h4>
+                        {role === "doctor" && (
+                            <h4 className="mb-0 fw-bold">
+                                ₹ {monthTotal[month]?.toFixed(2)}
+                            </h4>
+                        )}
                     </div>
 
                     {/* DAYS */}
