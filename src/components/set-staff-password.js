@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-export default function SetStaffPassword() {
+export default function SetStaffPassword(props) {
     const navigate = useNavigate();
     const location = useLocation();
     const { staffId } = location.state || {};
@@ -21,12 +21,12 @@ export default function SetStaffPassword() {
 
     const submitPassword = async () => {
         if (password.length < 6) {
-            alert("Password must be at least 6 characters");
+            props.showAlert("Password must be at least 6 characters", "danger");
             return;
         }
 
         if (password !== confirm) {
-            alert("Passwords do not match");
+            props.showAlert("Passwords do not match", "danger");
             return;
         }
 
@@ -45,10 +45,10 @@ export default function SetStaffPassword() {
         setLoading(false);
 
         if (data.success) {
-            alert("Password set successfully. Please login.");
+            props.showAlert("Password set successfully. Please login.", "success");
             navigate("/login");
         } else {
-            alert(data.error);
+            props.showAlert(data.error||"Server Error try again later", "danger");
         }
     };
 

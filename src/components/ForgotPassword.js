@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-export default function ForgotPassword() {
+export default function ForgotPassword(props) {
     const navigate = useNavigate();
 
     const [phone, setPhone] = useState("");
@@ -19,7 +19,7 @@ export default function ForgotPassword() {
 
     const sendOtp = async () => {
         if (phone.length !== 10) {
-            alert("Enter a valid 10-digit phone number");
+            props.showAlert("Enter a valid 10-digit phone number", "warning");
             return;
         }
 
@@ -36,12 +36,12 @@ export default function ForgotPassword() {
 
             if (data.success) {
                 setSessionId(data.sessionId);
-                alert("OTP sent successfully");
+                props.showAlert("OTP sent successfully", "success");
             } else {
-                alert(data.error || "Failed to send OTP");
+                props.showAlert(data.error || "Failed to send OTP", "danger");
             }
         } catch (err) {
-            alert("Server error. Try again.");
+            props.showAlert("Server error. Try again.", "danger");
         } finally {
             setLoading(false);
         }
@@ -69,28 +69,28 @@ export default function ForgotPassword() {
                 if (data.success) {
                     setIsVerified(true);
                 } else {
-                    alert(data.error || "Invalid OTP");
+                    props.showAlert(data.error || "Invalid OTP", "danger");
                 }
 
                 localStorage.setItem("name", data.name);
                 localStorage.setItem("role", data.role);
             } else {
-                alert(data.error || "Invalid OTP");
+                props.showAlert(data.error || "Invalid OTP", "danger");
             }
         } catch (err) {
-            alert("Verification failed");
+            props.showAlert("Verification failed", "danger");
         } finally {
             setLoading(false);
         }
     };
     const resetPassword = async () => {
         if (newPassword.length < 6) {
-            alert("Password must be at least 6 characters");
+            props.showAlert("Password must be at least 6 characters", "danger");
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            alert("Passwords do not match");
+            props.showAlert("Passwords do not match");
             return;
         }
 
@@ -110,13 +110,13 @@ export default function ForgotPassword() {
             const data = await res.json();
 
             if (data.success) {
-                alert("Password reset successfully");
+                props.showAlert("Password reset successfully", "success");
                 navigate("/login");
             } else {
-                alert(data.error || "Failed to reset password");
+                props.showAlert(data.error || "Failed to reset password", "danger");
             }
         } catch (err) {
-            alert("Server error");
+            props.showAlert("Server error Try again later", "danger");
         } finally {
             setLoading(false);
         }

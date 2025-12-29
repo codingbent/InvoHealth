@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Home from "./components/Home";
@@ -20,7 +20,7 @@ function App() {
             msg: message,
             type: type,
         });
-        setTimeout(() => setalert(null), 10000);
+        setTimeout(() => setalert(null), 7000);
     };
 
     return (
@@ -44,9 +44,18 @@ function App() {
                         element={<Signup showAlert={showAlert} />}
                     />
                     <Route path="/profile" element={<Profile />} />
-                    <Route path="/set-staff-password" element={<SetStaffPassword />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route
+                        path="/set-staff-password"
+                        element={<SetStaffPassword showAlert={showAlert} />}
+                    />
+                    <Route
+                        path="/dashboard"
+                        element={<Dashboard showAlert={showAlert} />}
+                    />
+                    <Route
+                        path="/forgot-password"
+                        element={<ForgotPassword showAlert={showAlert} />}
+                    />
                 </Routes>
             </BrowserRouter>
         </>

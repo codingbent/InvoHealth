@@ -5,7 +5,7 @@ const API_BASE_URL =
         ? "https://gmsc-backend.onrender.com"
         : "http://localhost:5001";
 
-export default function StaffProfile() {
+export default function StaffProfile(props) {
     const [staff, setStaff] = useState(null);
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
@@ -33,11 +33,11 @@ export default function StaffProfile() {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            alert("All fields required");
+            props.showAlert("All fields required", "danger");
             return;
         }
         if (newPassword !== confirmPassword) {
-            alert("Passwords do not match");
+            props.showAlert("Passwords do not match", "danger");
             return;
         }
 
@@ -55,14 +55,14 @@ export default function StaffProfile() {
 
         const data = await res.json();
         if (data.success) {
-            alert("Password updated");
+            props.showAlert("Password updated", "success");
             setPasswordData({
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: "",
             });
         } else {
-            alert(data.error);
+            props.showAlert(data.error||"Server Error try again later", "danger");
         }
     };
 
