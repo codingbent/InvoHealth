@@ -43,7 +43,10 @@ function App() {
                         path="/signup"
                         element={<Signup showAlert={showAlert} />}
                     />
-                    <Route path="/profile" element={<Profile />} />
+                    <Route
+                        path="/profile"
+                        element={<Profile showAlert={showAlert} />}
+                    />
                     <Route
                         path="/set-staff-password"
                         element={<SetStaffPassword showAlert={showAlert} />}

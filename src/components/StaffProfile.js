@@ -60,7 +60,7 @@ export default function StaffProfile(props) {
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: "",
-            });
+            }); 
         } else {
             props.showAlert(data.error||"Server Error try again later", "danger");
         }

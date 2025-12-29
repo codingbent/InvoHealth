@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function DoctorProfile() {
+export default function DoctorProfile(props) {
     const [doctor, setDoctor] = useState(null);
     const [staffList, setStaffList] = useState([]);
     const [staffName, setStaffName] = useState("");
@@ -97,9 +97,9 @@ export default function DoctorProfile() {
         const data = await res.json();
         if (data.success) {
             setDoctor(data.doctor);
-            alert("Profile updated successfully");
+            props.showAlert("Profile updated successfully", "success");
         } else {
-            alert("Profile update failed");
+            props.showAlert("Profile update failed", "danger");
         }
     };
     // ================= FETCH STAFF =================
@@ -119,7 +119,7 @@ export default function DoctorProfile() {
     // ================= ADD STAFF =================
     const handleAddStaff = async () => {
         if (!staffName || !staffPhone || !staffRole) {
-            alert("All fields required");
+            props.showAlert("All fields required", "danger");
             return;
         }
 
@@ -152,11 +152,11 @@ export default function DoctorProfile() {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            alert("All fields required");
+            props.showAlert("All fields required", "danger");
             return;
         }
         if (newPassword !== confirmPassword) {
-            alert("Passwords do not match");
+            props.showAlert("Passwords do not match", "danger");
             return;
         }
 
@@ -171,14 +171,14 @@ export default function DoctorProfile() {
 
         const data = await res.json();
         if (data.success) {
-            alert("Password updated");
+            props.showAlert("Password updated", "success");
             setPasswordData({
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: "",
             });
         } else {
-            alert(data.error);
+            props.showAlert(data.error||"Server Error try again later", "danger");
         }
     };
     const deletestaff = async (staffId) => {
