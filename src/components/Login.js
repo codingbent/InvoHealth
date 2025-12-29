@@ -249,9 +249,21 @@ export default function Login(props) {
                         )}
 
                         <input
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                            type={
+                                loginAs === "staff" || isOtpLogin
+                                    ? "tel"
+                                    : "text"
+                            }
+                            inputMode={
+                                loginAs === "staff" || isOtpLogin
+                                    ? "numeric"
+                                    : "text"
+                            }
+                            pattern={
+                                loginAs === "staff" || isOtpLogin
+                                    ? "[0-9]{10}"
+                                    : undefined
+                            }
                             className="form-control"
                             placeholder={
                                 loginAs === "staff" || isOtpLogin
