@@ -16,6 +16,7 @@ export default function AddAppointment({ showAlert }) {
     const [allServices, setAllServices] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10)
@@ -108,6 +109,8 @@ export default function AddAppointment({ showAlert }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        if (isSubmitting) return;
+
         if (!selectedPatient) {
             showAlert("Please select a patient", "warning");
             return;
@@ -118,14 +121,13 @@ export default function AddAppointment({ showAlert }) {
             return;
         }
 
+        setIsSubmitting(true); // 🔒 lock submit
+
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
                     body: JSON.stringify({
                         service: services.map((s) => ({
                             id: s._id,
@@ -143,15 +145,21 @@ export default function AddAppointment({ showAlert }) {
 
             const data = await res.json();
 
-            if (data.success) {
-                showAlert("Appointment added successfully", "success");
-                resetForm();
-            } else {
+            if (!res.ok) {
                 showAlert(data.error || "Failed to add appointment", "danger");
+                return;
             }
+
+            showAlert("Appointment added successfully", "success");
+            resetForm();
+
+            // ⏳ allow submit again after short delay
+            setTimeout(() => {
+                setIsSubmitting(false);
+            }, 1500);
         } catch (err) {
-            console.error(err);
             showAlert("Server error", "danger");
+            setIsSubmitting(false);
         }
     };
 
@@ -330,9 +338,9 @@ export default function AddAppointment({ showAlert }) {
                         <button
                             className="btn btn-primary w-100"
                             type="submit"
-                            disabled={services.length === 0}
+                            disabled={isSubmitting || services.length === 0}
                         >
-                            Save Appointment
+                            {isSubmitting ? "Saving..." : "Save Appointment"}
                         </button>
                     </form>
                 )}
