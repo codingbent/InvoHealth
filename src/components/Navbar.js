@@ -61,7 +61,7 @@ export default function Navbar(props) {
                                 data-bs-display="static"
                             >
                                 <span className="avatar">👤</span>
-                                <span className="d-none d-sm-inline">
+                                <span className="d-sm-inline">
                                     {name}
                                 </span>
                             </button>
