@@ -32,30 +32,25 @@ export default function Login(props) {
             setInputType("invalid");
         }
     };
-    const sendOtp = async () => {
-        if (inputType !== "phone") {
-            alert("Enter a valid phone number");
-            return;
-        }
 
-        const res = await fetch("http://localhost:5001/api/auth/send-otp", {
+    const sendOtp = async () => {
+        const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ phone: identifier }),
         });
 
         const data = await res.json();
-
         if (data.success) {
             setSessionId(data.sessionId);
             alert("OTP sent");
         } else {
-            alert("Failed to send OTP");
+            alert(data.error);
         }
     };
 
     const verifyOtp = async () => {
-        const res = await fetch("http://localhost:5001/api/auth/verify-otp", {
+        const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -137,6 +132,11 @@ export default function Login(props) {
     // ================= FORM SUBMIT =================
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (inputType !== "email" && inputType !== "phone") {
+            props.showAlert("Enter a valid email or phone number", "danger");
+            return;
+        }
 
         if (loginAs === "staff") {
             if (inputType !== "phone") {
@@ -306,7 +306,10 @@ export default function Login(props) {
 
                 {/* SUBMIT BUTTON (PASSWORD ONLY) */}
                 {!isOtpLogin && (
-                    <button type="submit" className="btn btn-primary w-100 mt-2">
+                    <button
+                        type="submit"
+                        className="btn btn-primary w-100 mt-2"
+                    >
                         Login
                     </button>
                 )}

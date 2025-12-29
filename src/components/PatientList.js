@@ -377,7 +377,7 @@ export default function PatientList() {
                 {[1, 2, 3, 4, 5].map((i) => (
                     <div
                         key={i}
-                        className="d-flex justify-content-between align-items-center p-3 mb-2 rounded bg-light"
+                        className="d-flex justify-content-between align-items-center p-3 my-2 rounded bg-light"
                     >
                         <div className="placeholder col-4" />
                         <div className="placeholder col-2" />
