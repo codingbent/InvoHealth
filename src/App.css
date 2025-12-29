@@ -205,53 +205,85 @@ body.freeze-scroll {
     flex: 1;
 }
 .info-box {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 12px 14px;
 }
 
 .info-box .label {
-  display: block;
-  font-size: 12px;
-  color: #6c757d;
+    display: block;
+    font-size: 12px;
+    color: #6c757d;
 }
 
 .info-box .value {
-  font-weight: 600;
-  font-size: 15px;
+    font-weight: 600;
+    font-size: 15px;
 }
 
 .avatar-circle {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #e9ecef;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 18px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 18px;
 }
 
 .info-box {
-  background: #f8f9fa;
-  border-radius: 14px;
-  padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 14px;
+    padding: 12px 14px;
 }
 
 .info-box .label {
-  font-size: 12px;
-  color: #6c757d;
+    font-size: 12px;
+    color: #6c757d;
 }
 
 .info-box .value {
-  font-size: 15px;
-  font-weight: 600;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .otp-input {
-  letter-spacing: 6px;
-  font-weight: 600;
+    letter-spacing: 6px;
+    font-weight: 600;
+}
+/* ===== DASHBOARD UI ===== */
+
+.dashboard-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    transition: all 0.25s ease;
 }
 
+.dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+}
 
+/* Chart cards same height */
+.chart-card {
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fix chart sizing */
+.chart-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+    .chart-card {
+        height: 360px;
+    }
+}

@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Doc = require("../models/Doc");
 const Patient = require("../models/Patient");
@@ -174,48 +175,64 @@ router.post(
     fetchuser,
     [
         body("name", "Enter Name").notEmpty(),
-        body("service"),
-        body("number"),
-        body("amount"),
+        body("number").isLength({ min: 10, max: 10 }),
         body("age")
             .optional({ checkFalsy: true })
             .isNumeric()
             .withMessage("Age must be a number"),
-
-        // 👉 Gender validation (optional but allowed)
         body("gender")
             .optional()
             .isIn(["Male", "Female"])
-            .withMessage("Gender must be Male, Female"),
+            .withMessage("Gender must be Male or Female"),
     ],
     async (req, res) => {
-        let success = false;
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ success, errors: errors.array() });
-        }
-
         try {
-            const doctorId = req.user.doctorId; // fetched from JWT
-            const patient = await Patient.create({
-                name: req.body.name,
-                service: req.body.service,
-                number: req.body.number,
-                amount: req.body.amount,
-                age: req.body.age,
-                gender: req.body.gender, // ✅ Save gender
+            const doctorId = req.user.doctorId;
+            const { name, number, age, gender } = req.body;
+
+            // 🔍 CHECK EXISTING PATIENT (NAME + NUMBER)
+            const existingPatient = await Patient.findOne({
                 doctor: doctorId,
-                discount: req.body.discount, // NEW
-                isPercent: req.body.isPercent,
+                name: { $regex: `^${name.trim()}$`, $options: "i" },
+                number: number.trim(),
             });
 
-            success = true;
-            res.json({ success, patient });
+            if (existingPatient) {
+                return res.json({
+                    success: true,
+                    patient: existingPatient,
+                    alreadyExists: true,
+                });
+            }
+
+            // ✅ CREATE NEW PATIENT
+            const patient = await Patient.create({
+                name: name.trim(),
+                number: number.trim(),
+                age,
+                gender,
+                doctor: doctorId,
+            });
+
+            res.json({
+                success: true,
+                patient,
+                alreadyExists: false,
+            });
         } catch (err) {
+            // 🔥 DUPLICATE PATIENT
+            if (err.code === 11000) {
+                return res.status(409).json({
+                    success: false,
+                    error: "Patient with same name and number already exists",
+                    alreadyExists: true,
+                });
+            }
+
             console.error("AddPatient error:", err);
-            res.status(500).json({
-                success,
-                error: err.message,
+            return res.status(500).json({
+                success: false,
+                error: "Server error",
             });
         }
     }
@@ -893,9 +910,20 @@ router.delete(
 
 router.get("/fetchallappointments", fetchuser, async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 10;
+        const {
+            limit = 10,
+            skip = 0,
+            search = "",
+            gender,
+            payments,
+            services,
+            startDate,
+            endDate,
+        } = req.query;
 
-        // 🔑 Determine doctorId safely
+        const parsedLimit = parseInt(limit) || 10;
+        const parsedSkip = parseInt(skip) || 0;
+
         const doctorId =
             req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
@@ -903,7 +931,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             doctor: doctorId,
         }).populate("patient");
 
-        const allVisits = [];
+        let allVisits = [];
 
         appointments.forEach((appt) => {
             if (!appt.patient) return;
@@ -911,7 +939,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             appt.visits.forEach((visit) => {
                 allVisits.push({
                     patientId: appt.patient._id,
-                    name: appt.patient.name,
+                    name: appt.patient.name || "",
                     number: appt.patient.number || "",
                     gender: appt.patient.gender || "",
                     date: visit.date,
@@ -923,20 +951,62 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             });
         });
 
-        // 🔽 Newest first
+        // FILTERS
+        allVisits = allVisits.filter((v) => {
+            const searchMatch =
+                !search ||
+                v.name.toLowerCase().includes(search.toLowerCase()) ||
+                v.number.includes(search);
+
+            const genderMatch = !gender || v.gender === gender;
+
+            const paymentMatch =
+                !payments || payments.split(",").includes(v.payment_type);
+
+            const serviceMatch =
+                !services ||
+                (v.services || []).some((s) =>
+                    services
+                        .split(",")
+                        .includes(typeof s === "object" ? s.name : s)
+                );
+
+            const dateObj = new Date(v.date);
+            const startMatch = !startDate || dateObj >= new Date(startDate);
+            const endMatch = !endDate || dateObj <= new Date(endDate);
+
+            return (
+                searchMatch &&
+                genderMatch &&
+                paymentMatch &&
+                serviceMatch &&
+                startMatch &&
+                endMatch
+            );
+        });
+
+        // SORT
         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // 🔢 Apply limit
-        const limitedVisits = allVisits.slice(0, limit);
+        const total = allVisits.length;
+
+        // ✅ CORRECT PAGINATION
+        const paginatedVisits = allVisits.slice(
+            parsedSkip,
+            parsedSkip + parsedLimit
+        );
 
         res.json({
             success: true,
-            total: allVisits.length,
-            data: limitedVisits,
+            total,
+            data: paginatedVisits,
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, error: "Server error" });
+        console.error("fetchallappointments error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+        });
     }
 });
 
@@ -1513,6 +1583,156 @@ router.put("/edit-staff/:id", fetchuser, async (req, res) => {
 router.post("/addservice", fetchuser, async (req, res) => {
     if (req.user.role !== "doctor") {
         return res.status(403).json({ error: "Doctor only" });
+    }
+});
+
+router.get("/dashboard/analytics", fetchuser, async (req, res) => {
+    try {
+        const doctorId = req.user.id;
+        const { payments, services, gender, startDate, endDate } = req.query;
+
+        const pipeline = [
+            // 🔒 Doctor scope
+            {
+                $match: {
+                    doctor: new mongoose.Types.ObjectId(doctorId),
+                },
+            },
+
+            // 🔗 Join Patient (for gender)
+            {
+                $lookup: {
+                    from: "patients",
+                    localField: "patient",
+                    foreignField: "_id",
+                    as: "patientInfo",
+                },
+            },
+            { $unwind: "$patientInfo" },
+
+            // 🔹 Gender filter
+            ...(gender ? [{ $match: { "patientInfo.gender": gender } }] : []),
+
+            // 🔹 Unwind visits
+            { $unwind: "$visits" },
+
+            // 🔹 Date filter
+            ...(startDate || endDate
+                ? [
+                      {
+                          $match: {
+                              "visits.date": {
+                                  ...(startDate && {
+                                      $gte: new Date(startDate),
+                                  }),
+                                  ...(endDate && {
+                                      $lte: new Date(endDate),
+                                  }),
+                              },
+                          },
+                      },
+                  ]
+                : []),
+
+            // 🔹 Payment filter
+            ...(payments
+                ? [
+                      {
+                          $match: {
+                              "visits.payment_type": {
+                                  $in: payments.split(","),
+                              },
+                          },
+                      },
+                  ]
+                : []),
+
+            // 🔹 SERVICE FILTER (🔥 MOVED HERE 🔥)
+            ...(services
+                ? [
+                      { $unwind: "$visits.service" },
+                      {
+                          $match: {
+                              "visits.service.name": {
+                                  $in: services.split(","),
+                              },
+                          },
+                      },
+                  ]
+                : []),
+
+            // ================= FACET =================
+            {
+                $facet: {
+                    // PAYMENT SUMMARY
+                    paymentSummary: [
+                        {
+                            $group: {
+                                _id: "$visits.payment_type",
+                                total: { $sum: "$visits.amount" },
+                            },
+                        },
+                        {
+                            $project: {
+                                _id: 0,
+                                type: "$_id",
+                                total: 1,
+                            },
+                        },
+                    ],
+
+                    // SERVICE SUMMARY
+                    serviceSummary: [
+                        ...(services ? [] : [{ $unwind: "$visits.service" }]),
+                        {
+                            $group: {
+                                _id: "$visits.service.name",
+                                total: {
+                                    $sum: "$visits.service.amount",
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                _id: 0,
+                                service: "$_id",
+                                total: 1,
+                            },
+                        },
+                    ],
+
+                    // TOTAL COLLECTION (✅ NOW FILTERED)
+                    totalCollection: [
+                        {
+                            $group: {
+                                _id: null,
+                                total: { $sum: "$visits.amount" },
+                            },
+                        },
+                    ],
+
+                    // TOTAL VISITS (✅ NOW FILTERED)
+                    totalVisits: [{ $count: "count" }],
+                },
+            },
+        ];
+
+        const analytics = await Appointment.aggregate(pipeline);
+        const result = analytics[0];
+
+        res.json({
+            success: true,
+            paymentSummary: result.paymentSummary,
+            serviceSummary: result.serviceSummary,
+            totalCollection: result.totalCollection[0]?.total || 0,
+            totalVisits: result.totalVisits[0]?.count || 0,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: "Dashboard analytics failed",
+        });
     }
 });
 
