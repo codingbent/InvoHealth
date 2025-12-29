@@ -54,13 +54,13 @@ export default function Navbar(props) {
                     </ul>
 
                     {token ? (
-                        <div className="dropdown user-dropdown">
+                        <div className="dropdown user-dropdown pb-2">
                             <button
-                                className="btn dropdown-toggle d-flex align-items-center gap-2"
+                                className="btn dropdown-toggle d-flex align-items-center gap-2 p-0"
                                 data-bs-toggle="dropdown"
                                 data-bs-display="static"
                             >
-                                <span className="avatar">👤</span>
+                                <span className="avatar" style={{width: "32px", height: "32px"}}>👤</span>
                                 <span className="d-sm-inline">
                                     {name}
                                 </span>
