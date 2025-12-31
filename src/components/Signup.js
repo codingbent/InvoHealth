@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
+import { set } from "mongoose";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
@@ -34,8 +35,8 @@ const Signup = (props) => {
         setSessionId("");
         setOtp("");
         setPhoneVerified(false);
-        setOtpCooldown(0); // ✅ ADD THIS
-    }, [credentials.phone]);
+        setOtpCooldown(0);
+    }, [normalizePhone(credentials.phone)]);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -121,16 +122,32 @@ const Signup = (props) => {
         const phone = normalizePhone(credentials.phone);
 
         if (!isValidIndianMobile(phone)) {
-            props.showAlert(
-                "Enter a valid Indian mobile number (10 digits starting with 6–9)",
-                "danger"
-            );
+            props.showAlert("Enter a valid Indian mobile number", "danger");
             return;
         }
 
         try {
             setSendingOtp(true);
 
+            // ✅ STEP 1: Check if phone exists
+            const checkRes = await authFetch(
+                `${API_BASE_URL}/api/auth/check-phone`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone }),
+                }
+            );
+
+            const checkData = await checkRes.json();
+
+            if (!checkData.success) {
+                setSendingOtp(false);
+                alert(checkData.error);
+                return;
+            }
+
+            // ✅ STEP 2: Send OTP
             const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

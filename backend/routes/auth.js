@@ -1072,9 +1072,9 @@ router.get("/search-patients", fetchuser, async (req, res) => {
 });
 
 router.post("/send-otp", async (req, res) => {
-    const phone = String(req.body.phone || "").replace(/\D/g, "");
+    const phone = req.body.phone;
 
-    if (!isValidIndianMobile(phone)) {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
         return res.status(400).json({
             success: false,
             error: "Invalid mobile number",
@@ -1086,21 +1086,53 @@ router.post("/send-otp", async (req, res) => {
             `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN`
         );
 
+        console.log("2Factor Response:", response.data);
+
         if (response.data.Status === "Success") {
-            res.json({
+            return res.json({
                 success: true,
                 sessionId: response.data.Details,
             });
-        } else {
-            res.status(400).json({
-                success: false,
-                error: "OTP could not be sent",
-            });
         }
+
+        return res.status(400).json({
+            success: false,
+            error: response.data.Details || "OTP could not be sent",
+        });
     } catch (err) {
+        console.error(err.message);
         res.status(500).json({
             success: false,
             error: "OTP service unavailable",
+        });
+    }
+});
+
+router.post("/check-phone", async (req, res) => {
+    const phone = String(req.body.phone || "").replace(/\D/g, "");
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+        return res.status(400).json({
+            success: false,
+            error: "Invalid mobile number",
+        });
+    }
+
+    try {
+        const existingUser = await Doc.findOne({ phone });
+
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                error: "Phone number already registered",
+            });
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            error: "Server error",
         });
     }
 });
