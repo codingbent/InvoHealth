@@ -23,7 +23,7 @@ export default function Alert({ alert }) {
                     <span className="alert-icon">
                         {icons[alert.type] || "ℹ️"}
                     </span>
-                    <span className="alert-text z-100">{alert.msg}</span>
+                    <span className="alert-text">{alert.msg}</span>
                 </motion.div>
             </AnimatePresence>
         </div>
