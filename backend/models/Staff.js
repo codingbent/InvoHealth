@@ -23,8 +23,13 @@ const StaffSchema = new Schema(
         },
 
         isActive: { type: Boolean, default: true },
+        mode:{
+            type:String,
+            default:"dark",
+            enum:["light","dark"],
+        },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 module.exports = mongoose.model("Staff", StaffSchema);
