@@ -272,7 +272,7 @@ export default function DoctorProfile(props) {
                     <div className="d-flex justify-content-between align-items-center mb-3">
                         <div>
                             <h4 className="mb-1">{doctor.name}</h4>
-                            <small className="text-muted">
+                            <small className="text-theme-muted">
                                 {doctor.clinicName}
                             </small>
                         </div>
@@ -350,7 +350,7 @@ export default function DoctorProfile(props) {
                             {/* ================= ADD STAFF ================= */}
                             <div className="row g-3 mb-3">
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Staff Name
                                     </label>
                                     <input
@@ -364,7 +364,7 @@ export default function DoctorProfile(props) {
                                 </div>
 
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Phone Number
                                     </label>
                                     <input
@@ -378,7 +378,7 @@ export default function DoctorProfile(props) {
                                 </div>
 
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Role
                                     </label>
                                     <select
@@ -411,7 +411,7 @@ export default function DoctorProfile(props) {
 
                             {/* ================= STAFF LIST ================= */}
                             {staffList.length === 0 ? (
-                                <p className="text-muted text-center mb-0">
+                                <p className="text-theme-muted text-center mb-0">
                                     No staff added yet
                                 </p>
                             ) : (
@@ -427,7 +427,7 @@ export default function DoctorProfile(props) {
                                                         {s.name}
                                                     </h6>
 
-                                                    <div className="small text-muted mb-2">
+                                                    <div className="small text-theme-muted mb-2">
                                                         📞 {s.phone}
                                                     </div>
 
@@ -585,7 +585,7 @@ export default function DoctorProfile(props) {
                             <div className="row g-3">
                                 {/* Current Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Current Password
                                     </label>
                                     <input
@@ -604,7 +604,7 @@ export default function DoctorProfile(props) {
 
                                 {/* New Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         New Password
                                     </label>
                                     <input
@@ -623,7 +623,7 @@ export default function DoctorProfile(props) {
 
                                 {/* Confirm Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Confirm Password
                                     </label>
                                     <input
@@ -674,7 +674,7 @@ export default function DoctorProfile(props) {
 
                         <div className="modal-body">
                             {/* BASIC INFO */}
-                            <h6 className="text-uppercase text-muted mb-3">
+                            <h6 className="text-uppercase text-theme-muted mb-3">
                                 Basic Information
                             </h6>
 
@@ -725,7 +725,7 @@ export default function DoctorProfile(props) {
                             </div>
 
                             {/* DEGREE */}
-                            <h6 className="text-uppercase text-muted mb-3">
+                            <h6 className="text-uppercase text-theme-muted mb-3">
                                 Qualifications
                             </h6>
 
@@ -763,7 +763,7 @@ export default function DoctorProfile(props) {
                             </button>
 
                             {/* ADDRESS */}
-                            <h6 className="text-uppercase text-muted mb-3">
+                            <h6 className="text-uppercase text-theme-muted mb-3">
                                 Clinic Address
                             </h6>
 

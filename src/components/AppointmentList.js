@@ -20,11 +20,11 @@ export default function AppointmentList({
                     {[1, 2, 3, 4, 5].map((i) => (
                         <div
                             key={i}
-                            className="d-flex justify-content-between align-items-center p-3 my-2 rounded bg-light"
+                            className="skeleton-row d-flex justify-content-between align-items-center p-3 my-2 rounded"
                         >
-                            <div className="placeholder col-4" />
-                            <div className="placeholder col-2" />
-                            <div className="placeholder col-2" />
+                            <div className="skeleton skeleton-name" />
+                            <div className="skeleton skeleton-payment" />
+                            <div className="skeleton skeleton-amount" />
                         </div>
                     ))}
                 </div>
@@ -71,7 +71,7 @@ export default function AppointmentList({
 
             {/* EMPTY STATE */}
             {!loading && appointments.length === 0 && (
-                <p className="text-center text-muted mt-3">
+                <p className="text-center text-theme-muted mt-3">
                     No records match the selected filters
                 </p>
             )}

@@ -1,6 +1,25 @@
 .App {
     text-align: center;
 }
+/* Base background */
+body.dark-theme {
+    background-color: #020617; /* slate-950 */
+    color: #e5e7eb;
+    min-height: 100vh;
+}
+#root {
+    min-height: 100vh;
+    background: inherit;
+}
+body.dark-theme::before {
+    content: "DARK MODE ACTIVE";
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    opacity: 0.4;
+}
+
 /* =========================
    Action Sheet
    ========================= */
@@ -197,6 +216,43 @@ body.freeze-scroll {
     color: #084298;
     border-left: 4px solid #0d6efd;
 }
+/* ================= MODERN ALERT — DARK THEME ================= */
+
+body.dark-theme .modern-alert {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+
+/* SUCCESS */
+body.dark-theme .modern-alert.success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* DANGER */
+body.dark-theme .modern-alert.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* WARNING */
+body.dark-theme .modern-alert.warning {
+    background: rgba(234, 179, 8, 0.15);
+    color: #fde68a;
+    border: 1px solid rgba(234, 179, 8, 0.35);
+}
+
+/* INFO */
+body.dark-theme .modern-alert.info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+body.dark-theme .modern-alert.success {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3),
+        0 8px 24px rgba(16, 185, 129, 0.15);
+}
 
 .alert-icon {
     font-size: 18px;
@@ -288,4 +344,838 @@ body.freeze-scroll {
     .chart-card {
         height: 360px;
     }
+}
+/* 
+    Toogle Theme Button
+*/
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.dark-theme .theme-toggle-btn {
+    color: #e5e7eb;
+}
+
+.light-theme .theme-toggle-btn {
+    color: #0f172a;
+}
+
+.light-theme .app-navbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.light-theme .navbar-brand {
+    color: #2563eb;
+}
+
+.light-theme .nav-link {
+    color: #0f172a;
+}
+
+.light-theme .nav-link:hover {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.dark-theme .app-navbar {
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+}
+
+.dark-theme .navbar-brand {
+    color: #3b82f6;
+}
+
+.dark-theme .nav-link {
+    color: #e5e7eb;
+}
+
+.dark-theme .nav-link:hover {
+    background: #1e293b;
+    color: #3b82f6;
+}
+
+.dark-theme .theme-dropdown {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+}
+
+.dark-theme .theme-dropdown .dropdown-item {
+    color: #e5e7eb;
+}
+
+.dark-theme .theme-dropdown .dropdown-item:hover {
+    background: #1e293b;
+}
+
+/* Card */
+.light-theme .about-card {
+    background: #ffffff;
+}
+
+.dark-theme .about-card {
+    background: #111827;
+    color: #e5e7eb;
+}
+
+/* Header */
+.about-header {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #ffffff;
+}
+
+/* Text */
+.light-theme .text-theme-primary {
+    color: #0f172a;
+}
+.dark-theme .text-theme-primary {
+    color: #e5e7eb;
+}
+
+.light-theme .text-theme-secondary {
+    color: #475569;
+}
+.dark-theme .text-theme-secondary {
+    color: #cbd5e1;
+}
+
+.light-theme .text-theme-muted {
+    color: #64748b;
+}
+.dark-theme .text-theme-muted {
+    color: #94a3b8;
+}
+
+/* Lists */
+.theme-list .list-group-item {
+    background: transparent;
+    border-color: #e5e7eb;
+}
+
+.dark-theme .theme-list .list-group-item {
+    color: #e5e7eb;
+    border-color: #1e293b;
+}
+
+/* Alerts */
+.theme-alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.dark-theme .theme-alert-warning {
+    background: #422006;
+    color: #fde68a;
+}
+
+.theme-alert-info {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.dark-theme .theme-alert-info {
+    background: #082f49;
+    color: #bae6fd;
+}
+
+/* Borders */
+.theme-border {
+    border-color: #e5e7eb;
+}
+
+.dark-theme .theme-border {
+    border-color: #1e293b;
+}
+
+.light-theme .dashboard-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+}
+
+.dark-theme .dashboard-card {
+    background: #111827;
+    border: 1px solid #1e293b;
+    color: #e5e7eb;
+}
+
+.dark-theme .text-muted {
+    color: #94a3b8 !important;
+}
+
+/* TEXT */
+.light-theme .text-theme-muted {
+    color: #64748b;
+}
+
+.dark-theme .text-theme-muted {
+    color: #94a3b8;
+}
+
+/* OFFCANVAS */
+.light-theme .theme-offcanvas {
+    background: #ffffff;
+}
+
+.dark-theme .theme-offcanvas {
+    background: #0f172a; /* soft dark */
+    color: #e5e7eb;
+}
+
+/* BORDERS */
+.light-theme .theme-border {
+    border-color: #e5e7eb !important;
+}
+
+.dark-theme .theme-border {
+    border-color: #1e293b !important;
+}
+
+/* SURFACES (scroll boxes) */
+.light-theme .theme-surface {
+    background: #ffffff;
+}
+
+.dark-theme .theme-surface {
+    background: #111827;
+}
+
+/* INPUTS */
+.dark-theme .theme-input {
+    background: #020617;
+    border-color: #1e293b;
+    color: #e5e7eb;
+}
+
+.dark-theme .theme-input::placeholder {
+    color: #94a3b8;
+}
+
+/* BUTTONS */
+.btn-outline-theme {
+    border: 1px solid #94a3b8;
+    color: #475569;
+}
+
+.dark-theme .btn-outline-theme {
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+.dark-theme .btn-outline-theme:hover {
+    background: #1e293b;
+}
+
+/* CLOSE BUTTON FIX */
+.dark-theme .btn-close {
+    filter: invert(1);
+}
+
+/* ACTION SHEET BASE */
+.theme-action-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    padding: 12px;
+    z-index: 1055;
+    transition: transform 0.35s ease;
+}
+
+/* LIGHT THEME */
+.light-theme .theme-action-sheet {
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* DARK THEME (SOFT DARK) */
+.dark-theme .theme-action-sheet {
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    color: #e5e7eb;
+}
+
+/* ACTION BUTTONS */
+.theme-action-btn {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 12px;
+    text-align: left;
+    font-size: 15px;
+    border-radius: 10px;
+}
+
+/* LIGHT */
+.light-theme .theme-action-btn {
+    color: #0f172a;
+}
+
+.light-theme .theme-action-btn:hover {
+    background: #f1f5f9;
+}
+
+/* DARK */
+.dark-theme .theme-action-btn {
+    color: #e5e7eb;
+}
+
+.dark-theme .theme-action-btn:hover {
+    background: #1e293b;
+}
+
+.dark-theme .card {
+    background: #111827;
+    color: #e5e7eb;
+    border-color: #1e293b;
+}
+
+.dark-theme .card .text-muted {
+    color: #94a3b8 !important;
+}
+.dark-theme .text-muted {
+    color: #94a3b8 !important;
+}
+
+/* PAYMENT TAG BASE */
+.payment-tag {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+/* LIGHT THEME */
+.light-theme .payment-cash {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.light-theme .payment-upi {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.light-theme .payment-card {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.light-theme .payment-bank {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.light-theme .payment-other {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e5e7eb;
+}
+
+/* DARK THEME (SOFT) */
+.dark-theme .payment-cash {
+    background: #422006;
+    color: #fde68a;
+}
+
+.dark-theme .payment-upi {
+    background: #052e16;
+    color: #86efac;
+}
+
+.dark-theme .payment-card {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+.dark-theme .payment-bank {
+    background: #082f49;
+    color: #7dd3fc;
+}
+
+.dark-theme .payment-other {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+}
+.dark-theme .card,
+.dark-theme .list-group-item {
+    background: #111827;
+    border-color: #1e293b;
+    color: #e5e7eb;
+}
+.dark-theme .btn-success {
+    background-color: #22c55e;
+    border-color: #22c55e;
+}
+
+.dark-theme .btn-success:hover {
+    background-color: #16a34a;
+}
+/* Light mode – default Bootstrap is fine */
+.light-theme .navbar-toggler {
+    border-color: #e5e7eb;
+}
+
+/* Dark mode */
+.dark-theme .navbar-toggler {
+    border-color: #1e293b;
+}
+
+/* Make the hamburger icon visible in dark mode */
+.dark-theme .navbar-toggler-icon {
+    filter: invert(1);
+}
+/* Gender badges */
+.light-theme .gender-badge.male {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.light-theme .gender-badge.female {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.light-theme .gender-badge.other {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Dark */
+.dark-theme .gender-badge.male {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+.dark-theme .gender-badge.female {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+.dark-theme .gender-badge.other {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+.dark-theme .card {
+    background: #111827;
+    color: #e5e7eb;
+    border-color: #1e293b;
+}
+
+.dark-theme .info-box {
+    background: #020617;
+    border-radius: 10px;
+    padding: 10px;
+}
+.dark-theme table {
+    color: #e5e7eb;
+}
+
+.dark-theme .table-light {
+    background: #020617;
+}
+
+.dark-theme .table thead {
+    background: #020617;
+}
+
+.dark-theme .table td,
+.dark-theme .table th {
+    border-color: #1e293b;
+}
+
+.dark-theme .table-hover tbody tr:hover {
+    background: #1e293b;
+}
+.dark-theme .modal-content {
+    background: #020617;
+    color: #e5e7eb;
+}
+
+.dark-theme .modal-header,
+.dark-theme .modal-footer {
+    border-color: #1e293b;
+}
+
+.dark-theme .btn-close {
+    filter: invert(1);
+}
+.dark-theme .form-control,
+.dark-theme .form-select {
+    background: #020617;
+    border-color: #1e293b;
+    color: #e5e7eb;
+}
+
+.dark-theme .form-control::placeholder {
+    color: #94a3b8;
+}
+.dark-theme .list-group-item {
+    background: #020617;
+    color: #e5e7eb;
+    border-color: #1e293b;
+}
+.dark-theme .spinner-border {
+    color: #3b82f6;
+}
+
+/* Role badge */
+.light-theme .role-badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.dark-theme .role-badge {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+/* Day header */
+.day-header {
+    background-color: #f8f9fa;
+}
+
+body.dark-theme .day-header {
+    background-color: #111827; /* slate-900 */
+    color: #e5e7eb;
+}
+
+/* Table header */
+.table-theme thead {
+    background-color: #f8f9fa;
+}
+
+body.dark-theme .table-theme thead {
+    background-color: #1f2933;
+    color: #e5e7eb;
+}
+
+/* Card override */
+body.dark-theme .card {
+    background-color: #0b1220;
+    color: #e5e7eb;
+}
+
+/* Table rows */
+body.dark-theme .table {
+    color: #e5e7eb;
+}
+
+body.dark-theme .table-hover tbody tr:hover {
+    background-color: #1f2937;
+}
+
+/* Badge fallback */
+.badge-theme {
+    background-color: #e5e7eb;
+    color: #111827;
+}
+
+body.dark-theme .badge-theme {
+    background-color: #374151;
+    color: #e5e7eb;
+}
+/* ================= DESKTOP CARD ================= */
+body.dark-theme .card {
+    background-color: #0b1220; /* dark slate */
+    color: #e5e7eb;
+}
+
+/* ================= TABLE ================= */
+body.dark-theme .table-theme {
+    color: #e5e7eb;
+}
+
+body.dark-theme .table-theme th {
+    color: #cbd5f5;
+    border-color: #1f2937;
+}
+
+body.dark-theme .table-theme td {
+    border-color: #1f2937;
+}
+
+/* Hover row */
+body.dark-theme .table-hover tbody tr:hover {
+    background-color: #1f2937;
+}
+
+/* Remove Bootstrap light header bleed */
+body.dark-theme .table-theme thead {
+    background-color: #111827;
+}
+
+/* ================= BUTTONS ================= */
+body.dark-theme .btn-outline-primary {
+    color: #93c5fd;
+    border-color: #3b82f6;
+}
+
+body.dark-theme .btn-outline-primary:hover {
+    background-color: #2563eb;
+    color: #fff;
+}
+/* ================= TABLE DARK MODE ================= */
+body.dark-theme .table-theme {
+    background-color: transparent;
+    color: #e5e7eb;
+}
+
+body.dark-theme .table-theme thead {
+    background-color: #0f172a;
+}
+
+body.dark-theme .table-theme th {
+    color: #c7d2fe;
+    border-bottom: 1px solid #1f2937;
+}
+
+body.dark-theme .table-theme tbody tr {
+    background-color: #020617;
+}
+
+body.dark-theme .table-theme td {
+    border-top: 1px solid #1f2937;
+}
+
+/* Hover */
+body.dark-theme .table-hover tbody tr:hover {
+    background-color: #111827;
+}
+
+/* Remove bootstrap white bleed */
+body.dark-theme .table > :not(caption) > * > * {
+    background-color: transparent;
+}
+body.dark-theme .card {
+    background-color: #020617;
+    color: #e5e7eb;
+}
+body.dark-theme .table-theme td {
+    color: #e5e7eb; /* light gray */
+}
+/* ================= THEME CARD ================= */
+body.dark-theme .theme-card {
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+/* ================= INPUTS ================= */
+body.dark-theme .theme-input {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+body.dark-theme .theme-input::placeholder {
+    color: #94a3b8;
+}
+
+body.dark-theme .theme-input:focus {
+    background-color: #020617;
+    color: #e5e7eb;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+/* ================= ACCORDION (DARK THEME) ================= */
+
+body.dark-theme .accordion-item {
+    background-color: #020617;
+    border: 1px solid #1f2937;
+}
+
+body.dark-theme .accordion-button {
+    background-color: #020617;
+    color: #e5e7eb;
+}
+
+body.dark-theme .accordion-button:not(.collapsed) {
+    background-color: #020617;
+    color: #e5e7eb;
+    box-shadow: none;
+}
+
+body.dark-theme .accordion-button::after {
+    filter: invert(1); /* makes arrow visible */
+}
+
+body.dark-theme .accordion-body {
+    background-color: #020617;
+    color: #e5e7eb;
+}
+
+/* ================= FORM ELEMENTS INSIDE ACCORDION ================= */
+
+body.dark-theme .accordion .form-control,
+body.dark-theme .accordion .form-select {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+body.dark-theme .accordion .form-control::placeholder {
+    color: #94a3b8;
+}
+
+body.dark-theme .accordion .form-control:focus,
+body.dark-theme .accordion .form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* ================= STAFF CARD ================= */
+
+body.dark-theme .accordion .card {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+/* role badge fix */
+body.dark-theme .accordion .badge.bg-light {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #334155;
+}
+/* ================= SKELETON BASE ================= */
+
+.skeleton-row {
+    border-radius: 12px;
+}
+
+/* Skeleton block */
+.skeleton {
+    height: 14px;
+    border-radius: 6px;
+    animation: shimmer 1.4s infinite linear;
+}
+
+/* Widths */
+.skeleton-name {
+    width: 40%;
+}
+.skeleton-payment {
+    width: 20%;
+}
+.skeleton-amount {
+    width: 15%;
+}
+
+/* ================= LIGHT THEME ================= */
+
+body:not(.dark-theme) .skeleton-row {
+    background: #f8f9fa;
+}
+
+body:not(.dark-theme) .skeleton {
+    background: linear-gradient(90deg, #e9ecef 25%, #f1f3f5 37%, #e9ecef 63%);
+    background-size: 400% 100%;
+}
+
+/* ================= DARK THEME ================= */
+
+body.dark-theme .skeleton-row {
+    background: #0b1220;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .skeleton {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%);
+    background-size: 400% 100%;
+}
+
+/* ================= ANIMATION ================= */
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: -100% 0;
+    }
+}
+/* ================= MODAL DARK MODE ================= */
+
+body.dark-theme .modal-content {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+body.dark-theme .modal-header {
+    border-bottom: 1px solid #1f2937;
+}
+
+body.dark-theme .modal-footer {
+    border-top: 1px solid #1f2937;
+}
+
+/* Title */
+body.dark-theme .modal-title {
+    color: #f8fafc;
+}
+
+/* Close button */
+body.dark-theme .btn-close {
+    filter: invert(1);
+}
+
+/* ================= FORM CONTROLS ================= */
+
+body.dark-theme .form-control,
+body.dark-theme .form-select {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+body.dark-theme .form-control::placeholder {
+    color: #94a3b8;
+}
+
+body.dark-theme .form-control:focus,
+body.dark-theme .form-select:focus {
+    background-color: #020617;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.15rem rgba(59, 130, 246, 0.25);
+}
+
+/* ================= LIST GROUP ================= */
+
+body.dark-theme .list-group-item {
+    background-color: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1f2937;
+}
+
+/* ================= TABLE INSIDE MODAL ================= */
+
+body.dark-theme .modal-content table {
+    color: #e5e7eb;
+}
+
+body.dark-theme .modal-content th {
+    background-color: #0f172a;
+    color: #c7d2fe;
+}
+
+body.dark-theme .modal-content td {
+    background-color: #020617;
+    color: #e5e7eb;
+}
+
+body.dark-theme .modal-content .table-primary {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #93c5fd;
 }

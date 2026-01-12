@@ -13,7 +13,6 @@ export default function Login(props) {
     const [isOtpLogin, setIsOtpLogin] = useState(false);
     const [inputType, setInputType] = useState("typing");
     const [loginAs, setLoginAs] = useState("doctor");
-
     const [showInvalid, setShowInvalid] = useState(false);
 
     const API_BASE_URL =
@@ -33,6 +32,14 @@ export default function Login(props) {
 
         return () => clearTimeout(timer);
     }, [inputType]);
+    const applyTheme = (theme) => {
+        const finalTheme = theme || "light";
+
+        document.body.classList.remove("light-theme", "dark-theme");
+        document.body.classList.add(`${finalTheme}-theme`);
+
+        localStorage.setItem("theme", finalTheme);
+    };
 
     // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
@@ -95,6 +102,7 @@ export default function Login(props) {
             localStorage.setItem("token", data.authtoken);
             localStorage.setItem("name", data.name);
             localStorage.setItem("role", data.role);
+            applyTheme(data.theme);
             navigate("/");
         } else {
             alert(data.error);
@@ -134,6 +142,7 @@ export default function Login(props) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", json.name);
             localStorage.setItem("role", json.role);
+            applyTheme(json.theme);
             navigate("/");
         } else {
             props.showAlert(json.error || "Login failed", "danger");
@@ -163,6 +172,7 @@ export default function Login(props) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("name", data.name);
             localStorage.setItem("role", data.role);
+            applyTheme(data.theme);
             navigate("/");
         } else {
             alert(data.error);

@@ -99,7 +99,7 @@ const EditService = ({ showAlert }) => {
             <div className="modal-body pt-2">
                 {/* Service Selector */}
                 <div className="mb-3">
-                    <label className="form-label small text-muted">
+                    <label className="form-label small text-theme-muted">
                         Select Service
                     </label>
                     <select
@@ -147,7 +147,7 @@ const EditService = ({ showAlert }) => {
                 </div>
 
                 {!selectedService && (
-                    <small className="text-muted d-block mt-2">
+                    <small className="text-theme-muted d-block mt-2">
                         Please select a service to edit its details
                     </small>
                 )}

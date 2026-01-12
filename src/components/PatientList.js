@@ -340,24 +340,24 @@ export default function PatientList() {
         return totals;
     }, [appointmentsByMonth]);
     const paymentColor = {
-        Cash: "bg-warning-subtle text-dark",
-        UPI: "bg-success-subtle text-success",
-        Card: "bg-primary-subtle text-primary",
-        ICICI: "bg-info-subtle text-info",
-        HDFC: "bg-secondary-subtle text-secondary",
-        Other: "bg-light text-dark border",
+        Cash: "payment-tag payment-cash",
+        UPI: "payment-tag payment-upi",
+        Card: "payment-tag payment-card",
+        ICICI: "payment-tag payment-bank",
+        HDFC: "payment-tag payment-bank",
+        Other: "payment-tag payment-other",
     };
     useEffect(() => {
-  setPage(0);
-}, [
-  debouncedSearch,
-  selectedGender,
-  selectedPayments,
-  selectedServices,
-  startDate,
-  endDate,
-  selectedFY,
-]);
+        setPage(0);
+    }, [
+        debouncedSearch,
+        selectedGender,
+        selectedPayments,
+        selectedServices,
+        startDate,
+        endDate,
+        selectedFY,
+    ]);
 
     return (
         <div className="container mt-3">

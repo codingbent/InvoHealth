@@ -97,7 +97,7 @@ const AddServices = (props) => {
                         <label htmlFor="serviceAmount">Amount (optional)</label>
                     </div>
 
-                    <small className="text-muted d-block mt-2">
+                    <small className="text-theme-muted d-block mt-2">
                         Leave amount empty if service price varies
                     </small>
                 </div>

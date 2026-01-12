@@ -39,6 +39,33 @@ export default function Dashboard() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
+    const theme = useMemo(
+        () =>
+            document.body.classList.contains("dark-theme") ? "dark" : "light",
+        []
+    );
+
+    const chartColors = useMemo(() => {
+        if (theme === "dark") {
+            return {
+                text: "#E5E7EB",
+                grid: "#1E293B",
+                tooltipBg: "#111827",
+                cardBg: "#111827",
+                primary: "#3B82F6",
+                success: "#22C55E",
+            };
+        }
+
+        return {
+            text: "#0F172A",
+            grid: "#E5E7EB",
+            tooltipBg: "#ffffff",
+            cardBg: "#ffffff",
+            primary: "#0D6EFD",
+            success: "#198754",
+        };
+    }, [theme]);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -117,18 +144,28 @@ export default function Dashboard() {
             datasets: [
                 {
                     data: analytics.paymentSummary.map((p) => p.total),
-                    backgroundColor: [
-                        "#0d6efd",
-                        "#198754",
-                        "#ffc107",
-                        "#0dcaf0",
-                        "#6f42c1",
-                        "#adb5bd",
-                    ],
+                    backgroundColor:
+                        theme === "dark"
+                            ? [
+                                  "#3B82F6",
+                                  "#22C55E",
+                                  "#F59E0B",
+                                  "#06B6D4",
+                                  "#8B5CF6",
+                                  "#64748B",
+                              ]
+                            : [
+                                  "#0D6EFD",
+                                  "#198754",
+                                  "#FFC107",
+                                  "#0DCAF0",
+                                  "#6F42C1",
+                                  "#ADB5BD",
+                              ],
                 },
             ],
         }),
-        [analytics.paymentSummary]
+        [analytics.paymentSummary, theme]
     );
 
     const serviceChartData = useMemo(
@@ -138,34 +175,56 @@ export default function Dashboard() {
                 {
                     label: "Revenue (₹)",
                     data: analytics.serviceSummary.map((s) => s.total),
-                    backgroundColor: "#0d6efd",
+                    backgroundColor: chartColors.primary,
                     borderRadius: 8,
                 },
             ],
         }),
-        [analytics.serviceSummary]
+        [analytics.serviceSummary, chartColors]
     );
 
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: "bottom",
-                labels: {
-                    boxWidth: 12,
-                    padding: 16,
+    const chartOptions = useMemo(
+        () => ({
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        color: chartColors.text,
+                        boxWidth: 12,
+                        padding: 16,
+                    },
+                },
+                tooltip: {
+                    backgroundColor: chartColors.tooltipBg,
+                    titleColor: chartColors.text,
+                    bodyColor: chartColors.text,
+                    padding: 10,
+                    cornerRadius: 8,
                 },
             },
-            tooltip: {
-                backgroundColor: "#111",
-                titleColor: "#fff",
-                bodyColor: "#fff",
-                padding: 10,
-                cornerRadius: 8,
+            scales: {
+                x: {
+                    ticks: {
+                        color: chartColors.text,
+                    },
+                    grid: {
+                        color: chartColors.grid,
+                    },
+                },
+                y: {
+                    ticks: {
+                        color: chartColors.text,
+                    },
+                    grid: {
+                        color: chartColors.grid,
+                    },
+                },
             },
-        },
-    };
+        }),
+        [chartColors]
+    );
 
     return (
         <div className="container mt-4 mb-5">
@@ -196,7 +255,7 @@ export default function Dashboard() {
 
             {/* LOADING INDICATOR */}
             {loading && (
-                <p className="text-center text-muted mt-4">
+                <p className="text-center text-theme-muted mt-4">
                     Updating dashboard…
                 </p>
             )}
@@ -205,7 +264,7 @@ export default function Dashboard() {
             <div className="row g-3 mb-4">
                 <div className="col-md-6">
                     <div className="dashboard-card">
-                        <p className="text-muted small">Total Collection</p>
+                        <p className="text-theme-muted small">Total Collection</p>
                         <h3 className="fw-bold text-success">
                             ₹ {analytics.totalCollection.toFixed(2)}
                         </h3>
@@ -214,7 +273,7 @@ export default function Dashboard() {
 
                 <div className="col-md-6">
                     <div className="dashboard-card">
-                        <p className="text-muted small">Total Visits</p>
+                        <p className="text-theme-muted small">Total Visits</p>
                         <h3 className="fw-bold text-primary">
                             {analytics.totalVisits}
                         </h3>

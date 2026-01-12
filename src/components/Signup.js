@@ -227,7 +227,7 @@ const Signup = (props) => {
                         <h3 className="fw-semibold mb-1">
                             Create Your Account
                         </h3>
-                        <p className="text-muted">
+                        <p className="text-theme-muted">
                             Set up your clinic profile to get started
                         </p>
                     </div>

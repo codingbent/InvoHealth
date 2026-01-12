@@ -218,7 +218,7 @@ const AddPatient = ({ showAlert }) => {
                         <h5 className="modal-title fw-semibold mb-0">
                             🧑‍⚕️ Add Patient
                         </h5>
-                        <small className="text-muted">
+                        <small className="text-theme-muted">
                             Create patient & initial appointment
                         </small>
                     </div>
@@ -232,7 +232,7 @@ const AddPatient = ({ showAlert }) => {
                 {/* BODY */}
                 <div className="modal-body pt-3">
                     {/* BASIC INFO */}
-                    <h6 className="text-uppercase text-muted small mb-3">
+                    <h6 className="text-uppercase text-theme-muted small mb-3">
                         Patient Details
                     </h6>
 
@@ -305,7 +305,7 @@ const AddPatient = ({ showAlert }) => {
                     </div>
 
                     {/* SERVICES */}
-                    <h6 className="text-uppercase text-muted small mb-2">
+                    <h6 className="text-uppercase text-theme-muted small mb-2">
                         Services & Billing
                     </h6>
 
@@ -436,7 +436,7 @@ const AddPatient = ({ showAlert }) => {
                     )}
 
                     {/* APPOINTMENT */}
-                    <h6 className="text-uppercase text-muted small mb-2">
+                    <h6 className="text-uppercase text-theme-muted small mb-2">
                         Appointment & Payment
                     </h6>
 

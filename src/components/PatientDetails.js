@@ -62,7 +62,8 @@ export default function PatientDetails() {
     const fetchServices = async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`,);
+                `${API_BASE_URL}/api/auth/fetchallservice`
+            );
             const data = await res.json();
             setAvailableServices(
                 Array.isArray(data) ? data : data.services || []
@@ -134,7 +135,6 @@ export default function PatientDetails() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-
             const [patientRes, appointmentsRes] = await Promise.all([
                 authFetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`),
                 authFetch(`${API_BASE_URL}/api/auth/appointments/${id}`),
@@ -487,13 +487,12 @@ export default function PatientDetails() {
             return;
         }
         try {
-
             const response = await authFetch(
                 `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
                 {
                     method: "PUT",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         date: apptData.date,
@@ -550,7 +549,7 @@ export default function PatientDetails() {
                     className="spinner-border text-primary mb-3"
                     role="status"
                 />
-                <span className="text-muted">Loading patient details…</span>
+                <span className="text-theme-muted">Loading patient details…</span>
             </div>
         );
 
@@ -579,19 +578,15 @@ export default function PatientDetails() {
                                     <h5 className="fw-semibold mb-0">
                                         {details?.name}
                                     </h5>
-                                    <small className="text-muted">
+                                    <small className="text-theme-muted">
                                         {details?.number}
                                     </small>
                                 </div>
                             </div>
 
                             <span
-                                className={`badge rounded-pill px-3 py-2 ${
-                                    details?.gender === "Male"
-                                        ? "bg-primary-subtle text-primary"
-                                        : details?.gender === "Female"
-                                        ? "bg-danger-subtle text-danger"
-                                        : "bg-secondary-subtle text-secondary"
+                                className={`badge rounded-pill px-3 py-2 gender-badge ${
+                                    details?.gender?.toLowerCase() || "other"
                                 }`}
                             >
                                 {details?.gender || "N/A"}
@@ -653,38 +648,38 @@ export default function PatientDetails() {
 
                     <div className="d-none d-md-block">
                         {appointments.length === 0 ? (
-                            <div className="text-muted">
+                            <div className="text-theme-muted">
                                 No appointments found
                             </div>
                         ) : (
                             <table className="table align-middle table-hover">
                                 <thead className="table-light">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Services</th>
-                                        <th>Amount</th>
-                                        <th>Payment</th>
-                                        <th className="text-end">Actions</th>
+                                        <th className="text-theme-muted">Date</th>
+                                        <th className="text-theme-muted">Services</th>
+                                        <th className="text-theme-muted">Amount</th>
+                                        <th className="text-theme-muted">Payment</th>
+                                        <th className="text-end text-theme-muted">Actions</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
-                                            <td>{visit.formattedDate}</td>
+                                            <td className="text-theme-muted">{visit.formattedDate}</td>
 
-                                            <td className="text-muted">
+                                            <td className="text-theme-muted">
                                                 {(visit.service || [])
                                                     .map((s) => s.name)
                                                     .join(", ")}
                                             </td>
 
-                                            <td className="fw-semibold">
+                                            <td className="fw-semibold text-theme-muted">
                                                 ₹{visit.amount}
                                             </td>
 
                                             <td>
-                                                <span className="badge bg-secondary-subtle text-secondary">
+                                                <span className="payment-tag payment-bank">
                                                     {visit.payment_type ||
                                                         "N/A"}
                                                 </span>
@@ -750,7 +745,7 @@ export default function PatientDetails() {
                                 </span>
                             </div>
 
-                            <p className="text-muted mb-1">
+                            <p className="text-theme-muted mb-1">
                                 {(visit.service || [])
                                     .map((s) => s.name)
                                     .join(", ")}

@@ -160,6 +160,7 @@ router.post("/login", async (req, res) => {
             role: userRole,
             name: user.name,
             doctorId: userRole === "doctor" ? user._id : user.doctorId,
+            theme:user.theme||"light",
         });
     } catch (err) {
         console.error(err);
@@ -1765,6 +1766,30 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
             success: false,
             message: "Dashboard analytics failed",
         });
+    }
+});
+
+router.put("/doctor/theme", fetchuser, async (req, res) => {
+    try {
+        const { theme } = req.body;
+
+        if (!theme || !["light", "dark"].includes(theme)) {
+            return res.status(400).json({ error: "Invalid theme value" });
+        }
+
+        const doctor = await Doc.findByIdAndUpdate(
+            req.user.id, // set by fetchuser middleware
+            { theme },
+            { new: true }
+        ).select("theme");
+
+        res.json({
+            success: true,
+            theme: doctor.theme,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server error" });
     }
 });
 

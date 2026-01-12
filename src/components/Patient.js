@@ -212,7 +212,7 @@ const Patient = (props) => {
                     {/* Hero */}
                     <h1 className="fw-bold mb-3">Manage Your Clinic Smarter</h1>
 
-                    <p className="text-muted mb-4">
+                    <p className="text-theme-muted mb-4">
                         Patient records, appointments, billing, and Excel
                         reports — all in one simple system.
                     </p>
@@ -235,7 +235,7 @@ const Patient = (props) => {
                             <div className="card border-0 shadow-sm h-100">
                                 <div className="card-body">
                                     <h5>🧾 Patient Records</h5>
-                                    <p className="text-muted small">
+                                    <p className="text-theme-muted small">
                                         Securely manage patient details and
                                         visit history.
                                     </p>
@@ -247,7 +247,7 @@ const Patient = (props) => {
                             <div className="card border-0 shadow-sm h-100">
                                 <div className="card-body">
                                     <h5>📅 Appointments</h5>
-                                    <p className="text-muted small">
+                                    <p className="text-theme-muted small">
                                         Track visits, services, and doctor
                                         assignments.
                                     </p>
@@ -259,7 +259,7 @@ const Patient = (props) => {
                             <div className="card border-0 shadow-sm h-100">
                                 <div className="card-body">
                                     <h5>📊 Excel Reports</h5>
-                                    <p className="text-muted small">
+                                    <p className="text-theme-muted small">
                                         Export filtered reports for accounting
                                         and analysis.
                                     </p>

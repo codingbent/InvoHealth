@@ -78,13 +78,12 @@ export default function FilterPanel({
 
             {/* OFFCANVAS */}
             <div
-                className={`offcanvas offcanvas-end shadow-lg ${
+                className={`offcanvas offcanvas-end shadow-lg theme-offcanvas ${
                     open ? "show" : ""
                 }`}
-                style={{ visibility: open ? "visible" : "hidden" }}
             >
                 {/* HEADER */}
-                <div className="offcanvas-header border-bottom">
+                <div className="offcanvas-header border-bottom theme-border">
                     <h5 className="fw-semibold mb-0">🔍 Filters</h5>
                     <button
                         className="btn-close"
@@ -98,11 +97,11 @@ export default function FilterPanel({
                         {/* SEARCH */}
                         {!isdashboard && (
                             <div className="mb-4">
-                                <label className="form-label small fw-semibold text-muted">
+                                <label className="form-label small fw-semibold text-theme-muted">
                                     Search Patient
                                 </label>
                                 <input
-                                    className="form-control rounded-3"
+                                    className="form-control rounded-3 theme-input"
                                     placeholder="Name or phone number"
                                     value={searchTerm}
                                     onChange={(e) =>
@@ -114,7 +113,7 @@ export default function FilterPanel({
 
                         {/* PAYMENT TYPES */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Payment Method
                             </label>
 
@@ -156,11 +155,11 @@ export default function FilterPanel({
 
                         {/* GENDER */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Gender
                             </label>
                             <select
-                                className="form-select rounded-3"
+                                className="form-select rounded-3 theme-input"
                                 value={selectedGender}
                                 onChange={(e) =>
                                     setSelectedGender(e.target.value)
@@ -176,14 +175,11 @@ export default function FilterPanel({
 
                         {/* SERVICES */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Services
                             </label>
 
-                            <div
-                                className="d-flex flex-wrap gap-2 border rounded-3 p-2"
-                                style={{ maxHeight: 180, overflowY: "auto" }}
-                            >
+                            <div className="d-flex flex-wrap gap-2 border rounded-3 p-2 theme-border theme-surface">
                                 {allServices.map((s) => {
                                     const active = selectedServices.includes(s);
 
@@ -219,7 +215,7 @@ export default function FilterPanel({
                         <hr />
                         {/* QUICK FILTERS */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Quick Filters
                             </label>
 
@@ -266,7 +262,7 @@ export default function FilterPanel({
 
                         {/* DATE RANGE */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Date Range
                             </label>
 
@@ -299,11 +295,11 @@ export default function FilterPanel({
 
                         {/* FINANCIAL YEAR */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-muted">
+                            <label className="form-label small fw-semibold text-theme-muted">
                                 Financial Year
                             </label>
                             <select
-                                className="form-select rounded-3"
+                                className="form-select rounded-3 theme-input"
                                 value={selectedFY}
                                 onChange={(e) => {
                                     const fy = e.target.value;
@@ -322,7 +318,7 @@ export default function FilterPanel({
                         {/* RESET */}
                         <div className="d-grid gap-2 mt-4">
                             <button
-                                className="btn btn-outline-secondary rounded-3"
+                                className="btn btn-outline-theme rounded-3"
                                 onClick={() => {
                                     setSearchTerm("");
                                     setSelectedPayments([]);

@@ -40,6 +40,11 @@ const DocSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "Staff",
     }],
+    theme:{
+        type:String,
+        enum:["light","dark"],
+        default:"light",
+    },
 });
 
 const Doc = mongoose.model("Doc", DocSchema);

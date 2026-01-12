@@ -69,7 +69,7 @@ export default function StaffProfile(props) {
                     className="spinner-border text-primary mb-3"
                     role="status"
                 />
-                <span className="text-muted">Loading patient details…</span>
+                <span className="text-theme-muted">Loading patient details…</span>
             </div>
         );
 
@@ -86,7 +86,7 @@ export default function StaffProfile(props) {
                             </span>
                         </div>
 
-                        <div className="text-muted small">📞 {staff.phone}</div>
+                        <div className="text-theme-muted small">📞 {staff.phone}</div>
                     </div>
                 </div>
             </div>
@@ -116,7 +116,7 @@ export default function StaffProfile(props) {
                             <div className="row g-3">
                                 {/* Current Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Current Password
                                     </label>
                                     <input
@@ -135,7 +135,7 @@ export default function StaffProfile(props) {
 
                                 {/* New Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         New Password
                                     </label>
                                     <input
@@ -154,7 +154,7 @@ export default function StaffProfile(props) {
 
                                 {/* Confirm Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-muted">
+                                    <label className="form-label small text-theme-muted">
                                         Confirm Password
                                     </label>
                                     <input
