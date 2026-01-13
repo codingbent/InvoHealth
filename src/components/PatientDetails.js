@@ -274,7 +274,6 @@ export default function PatientDetails() {
             const docPdf = new jsPDF();
 
             const pageWidth = docPdf.internal.pageSize.getWidth();
-            const pageHeight = docPdf.internal.pageSize.getHeight();
 
             let leftY = 20;
             let rightY = 20;
@@ -309,7 +308,7 @@ export default function PatientDetails() {
                 margin,
                 leftY
             );
-            leftY += 10;
+            leftY += 6;
 
             // ================= RIGHT INFO =================
             docPdf.setFontSize(10.5);
@@ -392,7 +391,7 @@ export default function PatientDetails() {
             tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
 
             // ================= TABLE =================
-            const tableStartY = Math.max(leftY, rightY) + 10;
+            const tableStartY = leftY + 4;
 
             autoTable(docPdf, {
                 startY: tableStartY,
@@ -400,9 +399,8 @@ export default function PatientDetails() {
                 body: tableRows,
                 theme: "grid",
                 styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [0, 0, 0] },
+                headStyles: { fillColor: [60, 60, 60],textColor: [255, 255, 255],fontStyle: "bold"},
                 didParseCell: function (data) {
-                    // Make TOTAL row bold
                     if (data.row.index === tableRows.length - 1) {
                         data.cell.styles.fontStyle = "bold";
                     }
@@ -425,14 +423,14 @@ export default function PatientDetails() {
 
             y+=10;
             // ================= DOCTOR NAME =================
-            docPdf.setFontSize(12);
+            docPdf.setFontSize(15);
             docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
 
             // Move down for signature
-            y += 10;
+            y += 5;
 
             // ================= SIGNATURE =================
-            docPdf.setFontSize(10);
+            docPdf.setFontSize(12);
             docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
 
             // ================= SAVE =================
