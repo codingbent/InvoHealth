@@ -423,20 +423,17 @@ export default function PatientDetails() {
                 y
             );
 
-            // ================= SIGNATURE =================
+            y+=10;
+            // ================= DOCTOR NAME =================
             docPdf.setFontSize(12);
-            docPdf.text(doctor.name, pageWidth - margin, pageHeight - 25, {
-                align: "right",
-            });
+            docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
 
-            if (doctor.degree?.length) {
-                docPdf.text(
-                    doctor.degree.join(", "),
-                    pageWidth - margin,
-                    pageHeight - 18,
-                    { align: "right" }
-                );
-            }
+            // Move down for signature
+            y += 10;
+
+            // ================= SIGNATURE =================
+            docPdf.setFontSize(10);
+            docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
 
             // ================= SAVE =================
             docPdf.save(`Invoice_${details.name}.pdf`);
@@ -549,7 +546,9 @@ export default function PatientDetails() {
                     className="spinner-border text-primary mb-3"
                     role="status"
                 />
-                <span className="text-theme-muted">Loading patient details…</span>
+                <span className="text-theme-muted">
+                    Loading patient details…
+                </span>
             </div>
         );
 
@@ -655,18 +654,30 @@ export default function PatientDetails() {
                             <table className="table align-middle table-hover">
                                 <thead className="table-light">
                                     <tr>
-                                        <th className="text-theme-muted">Date</th>
-                                        <th className="text-theme-muted">Services</th>
-                                        <th className="text-theme-muted">Amount</th>
-                                        <th className="text-theme-muted">Payment</th>
-                                        <th className="text-end text-theme-muted">Actions</th>
+                                        <th className="text-theme-muted">
+                                            Date
+                                        </th>
+                                        <th className="text-theme-muted">
+                                            Services
+                                        </th>
+                                        <th className="text-theme-muted">
+                                            Amount
+                                        </th>
+                                        <th className="text-theme-muted">
+                                            Payment
+                                        </th>
+                                        <th className="text-end text-theme-muted">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
-                                            <td className="text-theme-muted">{visit.formattedDate}</td>
+                                            <td className="text-theme-muted">
+                                                {visit.formattedDate}
+                                            </td>
 
                                             <td className="text-theme-muted">
                                                 {(visit.service || [])
