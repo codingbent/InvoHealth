@@ -175,6 +175,7 @@ export default function DoctorProfile(props) {
             props.showAlert(data.error||"Server Error try again later", "danger");
         }
     };
+    
     const deletestaff = async (staffId) => {
         const confirmDelete = window.confirm(
             "Do you want to delete this staff member?"

@@ -14,7 +14,7 @@ export const authFetch = async (url, options = {}) => {
         const data = await res.json();
         if (data.error === "TOKEN_EXPIRED") {
             localStorage.clear();
-            alert("Session expired. Please login again.");
+            // alert("Session expired. Please login again.");
             window.location.href = "/";
             return;
         }

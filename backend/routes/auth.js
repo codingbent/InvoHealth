@@ -160,7 +160,7 @@ router.post("/login", async (req, res) => {
             role: userRole,
             name: user.name,
             doctorId: userRole === "doctor" ? user._id : user.doctorId,
-            theme:user.theme||"light",
+            theme: user.theme || "light",
         });
     } catch (err) {
         console.error(err);
@@ -1320,11 +1320,24 @@ router.post("/add-staff", fetchuser, async (req, res) => {
             });
         }
 
-        const existing = await Staff.findOne({ phone });
-        if (existing) {
+        const existingStaff = await Staff.findOne({ phone, doctorId });
+
+        if (existingStaff) {
+            if (!existingStaff.isActive) {
+                existingStaff.isActive = true;
+                existingStaff.name = name;
+                existingStaff.role = role;
+                await existingStaff.save();
+
+                return res.json({
+                    success: true,
+                    message: "Staff reactivated",
+                });
+            }
+
             return res.status(400).json({
                 success: false,
-                error: "Staff with this number already exists",
+                error: "Staff already exists",
             });
         }
 

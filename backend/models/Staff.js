@@ -18,18 +18,21 @@ const StaffSchema = new Schema(
         },
 
         password: {
-            type: String,     // bcrypt hash
-            default: null,    // 👈 important
+            type: String, // bcrypt hash
+            default: null, // 👈 important
         },
 
-        isActive: { type: Boolean, default: true },
-        mode:{
-            type:String,
-            default:"dark",
-            enum:["light","dark"],
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+        mode: {
+            type: String,
+            default: "dark",
+            enum: ["light", "dark"],
         },
     },
-    { timestamps: true },
+    { timestamps: true }
 );
 
 module.exports = mongoose.model("Staff", StaffSchema);
