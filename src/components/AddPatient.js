@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
@@ -27,10 +27,13 @@ const AddPatient = ({ showAlert }) => {
 
     const { name, service, number, amount, age, gender } = patient;
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
 
     // =========================
     // FETCH SERVICES
@@ -50,7 +53,7 @@ const AddPatient = ({ showAlert }) => {
             }
         };
         fetchServices();
-    }, []);
+    }, [API_BASE_URL]);
 
     // =========================
     // CALCULATE TOTAL
@@ -133,7 +136,9 @@ const AddPatient = ({ showAlert }) => {
             }
 
             if (patientJson.alreadyExists) {
-                alert("Patient with same name and mobile number already exists");
+                alert(
+                    "Patient with same name and mobile number already exists"
+                );
                 return; // 🚫 stop further execution
             }
 

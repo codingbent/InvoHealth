@@ -39,11 +39,26 @@ export default function Dashboard() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
-    const theme = useMemo(
-        () =>
-            document.body.classList.contains("dark-theme") ? "dark" : "light",
-        []
+    const [theme, setTheme] = useState(
+        document.body.classList.contains("dark-theme") ? "dark" : "light"
     );
+
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setTheme(
+                document.body.classList.contains("dark-theme")
+                    ? "dark"
+                    : "light"
+            );
+        });
+
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["class"],
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     const chartColors = useMemo(() => {
         if (theme === "dark") {
@@ -67,10 +82,13 @@ export default function Dashboard() {
         };
     }, [theme]);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
 
     /* ================= FETCH ANALYTICS ================= */
     useEffect(() => {
@@ -108,6 +126,7 @@ export default function Dashboard() {
 
         fetchAnalytics();
     }, [
+        API_BASE_URL,
         selectedPayments,
         selectedServices,
         selectedGender,
@@ -135,7 +154,7 @@ export default function Dashboard() {
         };
 
         fetchServices();
-    }, []);
+    }, [API_BASE_URL]);
 
     /* ================= CHART DATA ================= */
     const paymentChartData = useMemo(
@@ -264,7 +283,9 @@ export default function Dashboard() {
             <div className="row g-3 mb-4">
                 <div className="col-md-6">
                     <div className="dashboard-card">
-                        <p className="text-theme-muted small">Total Collection</p>
+                        <p className="text-theme-muted small">
+                            Total Collection
+                        </p>
                         <h3 className="fw-bold text-success">
                             ₹ {analytics.totalCollection.toFixed(2)}
                         </h3>

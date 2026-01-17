@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
-import { set } from "mongoose";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
+
 const Signup = (props) => {
     const [credentials, setcredentials] = useState({
         name: "",
@@ -30,18 +30,25 @@ const Signup = (props) => {
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [sendingOtp, setSendingOtp] = useState(false);
     const [otpCooldown, setOtpCooldown] = useState(0);
+    const normalizedPhone = useMemo(
+        () => normalizePhone(credentials.phone),
+        [credentials.phone]
+    );
 
     useEffect(() => {
         setSessionId("");
         setOtp("");
         setPhoneVerified(false);
         setOtpCooldown(0);
-    }, [normalizePhone(credentials.phone)]);
+    }, [normalizedPhone]);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
 
     const navigate = useNavigate();
 
