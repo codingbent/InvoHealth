@@ -113,7 +113,7 @@ export default function DoctorProfile(props) {
     useEffect(() => {
         fetchDoctor();
         fetchStaff();
-    }, []);
+    }, [fetchDoctor, fetchStaff]);
 
     // ================= ADD STAFF =================
     const handleAddStaff = async () => {
