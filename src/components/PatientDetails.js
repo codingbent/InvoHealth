@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
+import { toWords } from "number-to-words";
 
 export default function PatientDetails() {
     const navigate = useNavigate();
@@ -311,7 +312,7 @@ export default function PatientDetails() {
             leftY += 6;
 
             // ================= RIGHT INFO =================
-            docPdf.setFontSize(10.5);
+            docPdf.setFontSize(12);
 
             if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
@@ -355,27 +356,34 @@ export default function PatientDetails() {
             // ================= BILL CALCULATION =================
             const services = visit.service || [];
 
+            // 1️⃣ Base amount (sum of services)
+            const baseAmount = services.reduce(
+                (sum, s) => sum + Number(s.amount || 0),
+                0
+            );
+
+            // 2️⃣ Apply discount ONCE
             let discountValue = 0;
-            let finalAmount = visit.amount || 0;
+            let finalAmount = baseAmount;
 
             if (includeDiscount && visit.discount > 0) {
                 discountValue = visit.isPercent
-                    ? (finalAmount * visit.discount) / 100
+                    ? (baseAmount * visit.discount) / 100
                     : visit.discount;
 
-                if (discountValue > finalAmount) discountValue = finalAmount;
-                finalAmount = finalAmount - discountValue;
+                if (discountValue > baseAmount) discountValue = baseAmount;
+                if (discountValue < 0) discountValue = 0;
+
+                finalAmount = baseAmount - discountValue;
             }
 
             // ================= TABLE ROWS =================
             const tableRows = services.map((s) => [
-                typeof s === "object" ? s.name : s,
-                `Rs ${(typeof s === "object" ? s.amount : Number(s)).toFixed(
-                    2
-                )}`,
+                s.name,
+                `Rs ${Number(s.amount).toFixed(2)}`,
             ]);
 
-            // Discount row
+            // Discount row (AFTER tableRows is defined)
             if (includeDiscount && visit.discount > 0) {
                 tableRows.push([
                     `Discount ${
@@ -387,8 +395,24 @@ export default function PatientDetails() {
                 ]);
             }
 
-            // Final total row
+            // Total row
             tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
+
+            // // ================= TABLE ROWS =================
+
+            // // Discount row
+            // if (includeDiscount && visit.discount > 0) {
+            //     tableRows.push([
+            //         `Discount ${
+            //             visit.isPercent
+            //                 ? `(${visit.discount}%)`
+            //                 : `(Rs ${visit.discount})`
+            //         }`,
+            //         `- Rs ${discountValue.toFixed(2)}`,
+            //     ]);
+            // }
+
+            // tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
 
             // ================= TABLE =================
             const tableStartY = leftY + 4;
@@ -399,7 +423,11 @@ export default function PatientDetails() {
                 body: tableRows,
                 theme: "grid",
                 styles: { fontSize: 11, cellPadding: 3 },
-                headStyles: { fillColor: [60, 60, 60],textColor: [255, 255, 255],fontStyle: "bold"},
+                headStyles: {
+                    fillColor: [60, 60, 60],
+                    textColor: [255, 255, 255],
+                    fontStyle: "bold",
+                },
                 didParseCell: function (data) {
                     if (data.row.index === tableRows.length - 1) {
                         data.cell.styles.fontStyle = "bold";
@@ -407,29 +435,45 @@ export default function PatientDetails() {
                 },
             });
 
-            let y = docPdf.lastAutoTable.finalY + 10;
+            const roundedAmount = Math.round(finalAmount);
+            let y = docPdf.lastAutoTable.finalY + 7;
+
+            const amountInWords = `Rupees ${toWords(
+                roundedAmount
+            )} Only`.replace(/\b\w/g, (c) => c.toUpperCase());
+
+            docPdf.setFontSize(11);
+
+            // Label (bold)
+            docPdf.setFont(undefined, "bold");
+            docPdf.text("Amount in Words:", margin, y);
+
+            docPdf.setFont(undefined, "normal");
+            docPdf.text(amountInWords, margin + 40, y);
+
+            y += 7;
 
             // ================= FOOTER TEXT =================
             docPdf.setFontSize(11);
+            docPdf.setFont(undefined, "normal");
             docPdf.text(
                 `Received with thanks from ${
                     details.name
-                } the sum of Rupees ${finalAmount.toFixed(
+                } the sum of Rupees ${roundedAmount.toFixed(
                     2
-                )} on account of services.`,
+                )}  on account of services`,
                 margin,
-                y
+                y,
+                { maxWidth: pageWidth - margin * 2 }
             );
 
-            y+=10;
-            // ================= DOCTOR NAME =================
+            y += 10;
+
             docPdf.setFontSize(15);
             docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
 
-            // Move down for signature
-            y += 5;
+            y += 6;
 
-            // ================= SIGNATURE =================
             docPdf.setFontSize(12);
             docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
 
