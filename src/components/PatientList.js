@@ -11,7 +11,6 @@ export default function PatientList() {
     // DATA
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true); // initial load
-    const [loadingMore, setLoadingMore] = useState(false); // pagination
 
     // FILTER STATES
     const [searchTerm, setSearchTerm] = useState("");
@@ -28,10 +27,14 @@ export default function PatientList() {
 
     const [total, setTotal] = useState(0);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
+
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
     useEffect(() => {
@@ -50,27 +53,26 @@ export default function PatientList() {
     // FETCH ALL APPOINTMENTS
     // =========================
 
+    const fetchServices = useCallback(async () => {
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/auth/fetchallservice`
+            );
+            const data = await res.json();
+
+            setAllServices(
+                Array.isArray(data.services)
+                    ? data.services.map((s) => s.name).sort()
+                    : []
+            );
+        } catch (err) {
+            console.error("Error fetching services", err);
+        }
+    }, [API_BASE_URL]);
+
     useEffect(() => {
-        const fetchServices = async () => {
-            try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`
-                );
-                const data = await res.json();
-
-                // normalize service names
-                setAllServices(
-                    Array.isArray(data.services)
-                        ? data.services.map((s) => s.name).sort()
-                        : []
-                );
-            } catch (err) {
-                console.error("Error fetching services", err);
-            }
-        };
-
         fetchServices();
-    }, []);
+    }, [fetchServices]);
 
     // =========================
     // FINANCIAL YEAR LOGIC
@@ -98,43 +100,41 @@ export default function PatientList() {
     // =========================
     // APPLY FILTERS
     // =========================
-    useEffect(() => {
-        const fetchAppointments = async () => {
-            try {
-                setLoading(true);
+    const fetchAppointments = useCallback(async () => {
+        try {
+            setLoading(true);
 
-                const query = new URLSearchParams({
-                    limit,
-                    skip: page * limit,
-                    search: debouncedSearch,
-                    gender: selectedGender,
-                    payments: selectedPayments.join(","),
-                    services: selectedServices.join(","),
-                    startDate,
-                    endDate,
-                }).toString();
+            const query = new URLSearchParams({
+                limit,
+                skip: page * limit,
+                search: debouncedSearch,
+                gender: selectedGender,
+                payments: selectedPayments.join(","),
+                services: selectedServices.join(","),
+                startDate,
+                endDate,
+            }).toString();
 
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallappointments?${query}`
-                );
+            const res = await authFetch(
+                `${API_BASE_URL}/api/auth/fetchallappointments?${query}`
+            );
 
-                const data = await res.json();
+            const data = await res.json();
 
-                setAppointments((prev) =>
-                    page === 0 ? data.data : [...prev, ...data.data]
-                );
+            setAppointments((prev) =>
+                page === 0 ? data.data : [...prev, ...data.data]
+            );
 
-                setTotal(data.total || 0);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAppointments();
+            setTotal(data.total || 0);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, [
+        API_BASE_URL,
         page,
+        limit,
         debouncedSearch,
         selectedGender,
         selectedPayments,
@@ -143,10 +143,14 @@ export default function PatientList() {
         endDate,
     ]);
 
+    useEffect(() => {
+        fetchAppointments();
+    }, [fetchAppointments]);
+
     // ------------------------------------------------------------
     // FETCH DOCTOR DETAILS
     // ------------------------------------------------------------
-    const fetchDoctor = async () => {
+    const fetchDoctor = useCallback(async () => {
         try {
             const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
             const data = await res.json();
@@ -154,11 +158,12 @@ export default function PatientList() {
         } catch (err) {
             console.error("Error fetching doctor:", err);
         }
-    };
+    }, [API_BASE_URL]);
 
     useEffect(() => {
         fetchDoctor();
-    }, []);
+    }, [fetchDoctor]);
+
 
     const dataToShow = appointments;
 

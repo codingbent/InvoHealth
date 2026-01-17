@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
 
 export default function DoctorProfile(props) {
@@ -21,14 +21,17 @@ export default function DoctorProfile(props) {
     const [editData, setEditData] = useState({});
 
     // ================= FETCH DOCTOR =================
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-    const fetchDoctor = async () => {
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
+
+    const fetchDoctor = useCallback(async () => {
         try {
             const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
-
             const data = await res.json();
             if (data.success) {
                 const doc = data.doctor;
@@ -49,11 +52,7 @@ export default function DoctorProfile(props) {
         } catch (err) {
             console.error(err);
         }
-    };
-
-    useEffect(() => {
-        fetchDoctor();
-    }, []);
+    }, [API_BASE_URL]);
 
     const handleEditChange = (e) =>
         setEditData({ ...editData, [e.target.name]: e.target.value });
@@ -101,11 +100,15 @@ export default function DoctorProfile(props) {
         }
     };
     // ================= FETCH STAFF =================
-    const fetchStaff = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/auth/fetch-staff`);
-        const data = await res.json();
-        if (data.success) setStaffList(data.staff);
-    };
+    const fetchStaff = useCallback(async () => {
+        try {
+            const res = await authFetch(`${API_BASE_URL}/api/auth/fetch-staff`);
+            const data = await res.json();
+            if (data.success) setStaffList(data.staff);
+        } catch (err) {
+            console.error(err);
+        }
+    }, [API_BASE_URL]);
 
     useEffect(() => {
         fetchDoctor();
@@ -155,13 +158,16 @@ export default function DoctorProfile(props) {
             return;
         }
 
-        const res = await authFetch(`${API_BASE_URL}/api/auth/change-password`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ currentPassword, newPassword }),
-        });
+        const res = await authFetch(
+            `${API_BASE_URL}/api/auth/change-password`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            }
+        );
 
         const data = await res.json();
         if (data.success) {
@@ -172,10 +178,13 @@ export default function DoctorProfile(props) {
                 confirmPassword: "",
             });
         } else {
-            props.showAlert(data.error||"Server Error try again later", "danger");
+            props.showAlert(
+                data.error || "Server Error try again later",
+                "danger"
+            );
         }
     };
-    
+
     const deletestaff = async (staffId) => {
         const confirmDelete = window.confirm(
             "Do you want to delete this staff member?"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
 
 const EditService = ({ showAlert }) => {
@@ -7,36 +7,39 @@ const EditService = ({ showAlert }) => {
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        []
+    );
 
     // Fetch all services on load
-    useEffect(() => {
-        const fetchServices = async () => {
-            try {
-                const response = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,);
+    const fetchServices = useCallback(async () => {
+        try {
+            const response = await authFetch(
+                `${API_BASE_URL}/api/auth/fetchallservice`
+            );
 
-                const data = await response.json();
+            const data = await response.json();
 
-                // ✅ HANDLE BOTH RESPONSE TYPES
-                if (Array.isArray(data)) {
-                    setServices(data);
-                } else if (Array.isArray(data.services)) {
-                    setServices(data.services);
-                } else {
-                    setServices([]);
-                }
-            } catch (err) {
-                console.error("Error fetching services:", err);
+            if (Array.isArray(data)) {
+                setServices(data);
+            } else if (Array.isArray(data.services)) {
+                setServices(data.services);
+            } else {
                 setServices([]);
             }
-        };
+        } catch (err) {
+            console.error("Error fetching services:", err);
+            setServices([]);
+        }
+    }, [API_BASE_URL]);
 
+    useEffect(() => {
         fetchServices();
-    }, []);
+    }, [fetchServices]);
 
     // Set form fields when selecting a service
     const handleSelect = (id) => {
