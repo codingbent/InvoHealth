@@ -60,7 +60,7 @@ export default function PatientDetails() {
     // ------------------------------------------------------------
     // FETCH SERVICES
     // ------------------------------------------------------------
-    const fetchServices = async () => {
+    const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/auth/fetchallservice`
@@ -72,7 +72,8 @@ export default function PatientDetails() {
         } catch (err) {
             console.error("Error fetching services:", err);
         }
-    };
+    }, [API_BASE_URL]);
+
     useEffect(() => {
         if (!availableServices.length) return;
 
@@ -163,7 +164,7 @@ export default function PatientDetails() {
         } finally {
             setLoading(false);
         }
-    }, [id, API_BASE_URL]);
+    }, [id, API_BASE_URL, fetchServices]);
 
     useEffect(() => {
         fetchData();
