@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { authFetch } from "./authfetch";
 import FilterPanel from "./FilterPanel";
 import AppointmentList from "./AppointmentList";
@@ -32,7 +34,7 @@ export default function PatientList() {
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001",
-        []
+        [],
     );
 
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
@@ -56,14 +58,14 @@ export default function PatientList() {
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`
+                `${API_BASE_URL}/api/auth/fetchallservice`,
             );
             const data = await res.json();
 
             setAllServices(
                 Array.isArray(data.services)
                     ? data.services.map((s) => s.name).sort()
-                    : []
+                    : [],
             );
         } catch (err) {
             console.error("Error fetching services", err);
@@ -116,13 +118,13 @@ export default function PatientList() {
             }).toString();
 
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallappointments?${query}`
+                `${API_BASE_URL}/api/auth/fetchallappointments?${query}`,
             );
 
             const data = await res.json();
 
             setAppointments((prev) =>
-                page === 0 ? data.data : [...prev, ...data.data]
+                page === 0 ? data.data : [...prev, ...data.data],
             );
 
             setTotal(data.total || 0);
@@ -163,7 +165,6 @@ export default function PatientList() {
     useEffect(() => {
         fetchDoctor();
     }, [fetchDoctor]);
-
 
     const dataToShow = appointments;
 
@@ -223,8 +224,8 @@ export default function PatientList() {
                 selectedServices.length === 0 ||
                 (a.services || []).some((s) =>
                     selectedServices.includes(
-                        typeof s === "object" ? s.name : s
-                    )
+                        typeof s === "object" ? s.name : s,
+                    ),
                 );
 
             return (
@@ -240,7 +241,7 @@ export default function PatientList() {
     const downloadExcel = async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/exportappointments`
+                `${API_BASE_URL}/api/auth/exportappointments`,
             );
 
             const allData = await res.json();
@@ -258,75 +259,108 @@ export default function PatientList() {
         }
     };
 
-    const exportToExcel = (data) => {
-        if (data.length === 0) return;
+    const exportToExcel = async (data) => {
+        if (!data.length) return;
 
-        // ✅ sort ALL records by date DESC
         const sorted = [...data].sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
+            (a, b) => new Date(b.date) - new Date(a.date),
         );
 
-        const rows = [];
+        const fromDate = new Date(
+            sorted[sorted.length - 1].date,
+        ).toLocaleDateString();
+
+        const toDate = new Date(sorted[0].date).toLocaleDateString();
+
+        const grandTotal = sorted.reduce(
+            (sum, a) => sum + Number(a.amount || 0),
+            0,
+        );
+        const paymentSummary = {};
+
+        sorted.forEach((a) => {
+            const key = a.payment_type || "Other";
+            paymentSummary[key] =
+                (paymentSummary[key] || 0) + Number(a.amount || 0);
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet("Visit Records");
 
         // ===== HEADER =====
-        rows.push({ Patient: `Doctor: ${doctor?.name || ""}` });
-        rows.push({});
+        sheet.addRow([`Doctor: ${doctor?.name || ""}`]).font = { bold: true };
+        sheet.addRow(["From", fromDate]).font = { bold: true };
+        sheet.addRow(["To", toDate]).font = { bold: true };
+        sheet.addRow(["GRAND TOTAL", grandTotal]).font = { bold: true };
+        sheet.addRow([]);
+
+        sheet.addRow(["COLLECTION SUMMARY"]).font = { bold: true };
+
+        Object.entries(paymentSummary).forEach(([type, amount]) => {
+            sheet.addRow([type, amount]);
+        });
+
+        sheet.addRow([]);
 
         let currentDay = null;
         let dayTotal = 0;
 
         sorted.forEach((a, index) => {
-            const day = new Date(String(a.date)).toISOString().split("T")[0];
+            const day = new Date(a.date).toISOString().split("T")[0];
 
             if (day !== currentDay) {
                 if (currentDay !== null) {
-                    rows.push({ Payment: "TOTAL", Amount: dayTotal });
-                    rows.push({});
+                    sheet.addRow(["", "", "", "TOTAL", dayTotal, ""]).font = {
+                        bold: true,
+                    };
+                    sheet.addRow([]);
                 }
 
                 currentDay = day;
                 dayTotal = 0;
 
-                rows.push({
-                    Patient: new Date(day).toLocaleDateString(),
-                });
+                sheet.addRow([new Date(day).toLocaleDateString()]).font = {
+                    bold: true,
+                };
 
-                rows.push({
-                    Patient: "Patient",
-                    Number: "Number",
-                    Date: "Date",
-                    Payment: "Payment",
-                    Invoice: "Invoice",
-                    Amount: "Amount",
-                    Services: "Services",
-                });
+                sheet.addRow([
+                    "Patient",
+                    "Number",
+                    "Date",
+                    "Payment",
+                    "Amount",
+                    "Invoice Number",
+                    "Services",
+                ]).font = { bold: true };
             }
 
             dayTotal += Number(a.amount || 0);
 
-            rows.push({
-                Patient: a.name,
-                Number: a.number || "",
-                Date: new Date(String(a.date)).toLocaleDateString(),
-                Payment: a.payment_type,
-                Invoice: a.invoiceNumber || "",
-                Amount: a.amount,
-                Services: (a.services || [])
+            sheet.addRow([
+                a.name,
+                a.number || "",
+                new Date(a.date).toLocaleDateString(),
+                a.payment_type,
+                a.amount,
+                a.invoiceNumber || "",
+                (a.services || [])
                     .map((s) => (typeof s === "object" ? s.name : s))
                     .join(", "),
-            });
+            ]);
 
             if (index === sorted.length - 1) {
-                rows.push({ Payment: "TOTAL", Amount: dayTotal });
+                sheet.addRow(["", "", "", "TOTAL", dayTotal, "", ""]).font = {
+                    bold: true,
+                };
             }
         });
 
-        const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Visit Records");
+        sheet.columns.forEach((col) => (col.width = 20));
 
-        XLSX.writeFile(wb, "visit-records.xlsx");
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), "visit-records.xlsx");
     };
+
     const monthTotal = useMemo(() => {
         const totals = {};
 
@@ -336,14 +370,15 @@ export default function PatientList() {
                     sum +
                     dayApps.reduce(
                         (daySum, a) => daySum + Number(a.amount || 0),
-                        0
+                        0,
                     ),
-                0
+                0,
             );
         });
 
         return totals;
     }, [appointmentsByMonth]);
+
     const paymentColor = {
         Cash: "payment-tag payment-cash",
         UPI: "payment-tag payment-upi",
