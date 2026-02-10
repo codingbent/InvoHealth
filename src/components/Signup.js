@@ -32,7 +32,7 @@ const Signup = (props) => {
     const [otpCooldown, setOtpCooldown] = useState(0);
     const normalizedPhone = useMemo(
         () => normalizePhone(credentials.phone),
-        [credentials.phone]
+        [credentials.phone],
     );
 
     useEffect(() => {
@@ -47,7 +47,7 @@ const Signup = (props) => {
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001",
-        []
+        [],
     );
 
     const navigate = useNavigate();
@@ -143,7 +143,7 @@ const Signup = (props) => {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ phone }),
-                }
+                },
             );
 
             const checkData = await checkRes.json();
@@ -245,7 +245,10 @@ const Signup = (props) => {
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
-                                <label className="form-label">Full Name</label>
+                                <label className="form-label">
+                                    Full Name
+                                    <span className="text-danger">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     className="form-control"
@@ -258,6 +261,7 @@ const Signup = (props) => {
                             <div className="col-md-6 mb-3">
                                 <label className="form-label">
                                     Email Address
+                                    <span className="text-danger">*</span>
                                 </label>
                                 <input
                                     type="email"
@@ -271,7 +275,10 @@ const Signup = (props) => {
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
-                                <label className="form-label">Password</label>
+                                <label className="form-label">
+                                    Password
+                                    <span className="text-danger">*</span>
+                                </label>
                                 <input
                                     type="password"
                                     className="form-control"
@@ -284,6 +291,7 @@ const Signup = (props) => {
                             <div className="col-md-6 mb-3">
                                 <label className="form-label">
                                     Confirm Password
+                                    <span className="text-danger">*</span>
                                 </label>
                                 <input
                                     type="password"
@@ -301,6 +309,7 @@ const Signup = (props) => {
                         <div className="mb-3">
                             <label className="form-label">
                                 Clinic / Hospital Name
+                                <span className="text-danger">*</span>
                             </label>
                             <input
                                 type="text"
@@ -315,7 +324,10 @@ const Signup = (props) => {
                         <h5 className="mt-4 mb-3">Contact Verification</h5>
 
                         <div className="mb-3">
-                            <label className="form-label">Doctor Contact</label>
+                            <label className="form-label">
+                                Doctor Contact
+                                <span className="text-danger">*</span>
+                            </label>
                             <input
                                 type="text"
                                 className="form-control"
@@ -340,8 +352,8 @@ const Signup = (props) => {
                                             {sendingOtp
                                                 ? "Sending OTP..."
                                                 : otpCooldown > 0
-                                                ? `Resend OTP in ${otpCooldown}s`
-                                                : "Send OTP"}
+                                                  ? `Resend OTP in ${otpCooldown}s`
+                                                  : "Send OTP"}
                                         </button>
                                     ) : (
                                         <>
@@ -354,8 +366,8 @@ const Signup = (props) => {
                                                     setOtp(
                                                         e.target.value.replace(
                                                             /\D/g,
-                                                            ""
-                                                        )
+                                                            "",
+                                                        ),
                                                     )
                                                 }
                                                 maxLength={6}
@@ -385,6 +397,7 @@ const Signup = (props) => {
                         <div className="mb-3">
                             <label className="form-label">
                                 Appointment Contact
+                                <span className="text-danger">*</span>
                             </label>
                             <input
                                 type="text"
@@ -395,7 +408,9 @@ const Signup = (props) => {
                         </div>
 
                         {/* ================= ADDRESS ================= */}
-                        <h5 className="mt-4 mb-3">Clinic Address</h5>
+                        <h5 className="mt-4 mb-3">
+                            Clinic Address<span className="text-danger">*</span>
+                        </h5>
 
                         <input
                             className="form-control mb-2"
@@ -448,7 +463,9 @@ const Signup = (props) => {
                         <h5 className="mt-4 mb-3">Professional Details</h5>
 
                         <div className="mb-3">
-                            <label className="form-label">Experience</label>
+                            <label className="form-label">
+                                Experience<span className="text-danger">*</span>
+                            </label>
                             <input
                                 className="form-control"
                                 name="experience"
@@ -457,7 +474,9 @@ const Signup = (props) => {
                         </div>
 
                         <div className="mb-3">
-                            <label className="form-label">Degree(s)</label>
+                            <label className="form-label">
+                                Degree(s)<span className="text-danger">*</span>
+                            </label>
 
                             {credentials.degrees.map((degree, index) => (
                                 <div key={index} className="d-flex mb-2">
@@ -467,7 +486,7 @@ const Signup = (props) => {
                                         onChange={(e) =>
                                             handleDegreeChange(
                                                 index,
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                         required
@@ -493,7 +512,11 @@ const Signup = (props) => {
                                 + Add Degree
                             </button>
                         </div>
-
+                        {!phoneVerified && (
+                            <div className="alert alert-warning text-center mt-3">
+                                🔒 Verify phone number to create account
+                            </div>
+                        )}
                         {/* ================= SUBMIT ================= */}
                         <button
                             type="submit"
