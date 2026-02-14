@@ -32,7 +32,7 @@ export default function Dashboard() {
     });
 
     const [loading, setLoading] = useState(false);
-    // const [allServices, setAllServices] = useState([]);
+    const [allServices, setAllServices] = useState([]);
 
     // FILTER STATES
     const [selectedPayments, setSelectedPayments] = useState([]);
@@ -95,6 +95,26 @@ export default function Dashboard() {
         endDate,
     ]);
 
+    /* ================= FETCH SERVICES ================= */
+    useEffect(() => {
+        const fetchServices = async () => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/auth/fetchallservice`,
+                );
+
+                const data = await res.json();
+
+                if (data.success && Array.isArray(data.services)) {
+                    setAllServices(data.services.map((s) => s.name).sort());
+                }
+            } catch (err) {
+                console.error("Service fetch error:", err);
+            }
+        };
+
+        fetchServices();
+    }, [API_BASE_URL]);
     /* ================= CHART DATA ================= */
     const paymentChartData = useMemo(
         () => ({
