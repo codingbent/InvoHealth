@@ -32,7 +32,7 @@ export default function Dashboard() {
     });
 
     const [loading, setLoading] = useState(false);
-    const [allServices, setAllServices] = useState([]);
+    // const [allServices, setAllServices] = useState([]);
 
     // FILTER STATES
     const [selectedPayments, setSelectedPayments] = useState([]);
@@ -87,6 +87,7 @@ export default function Dashboard() {
 
         fetchAnalytics();
     }, [
+        API_BASE_URL,
         selectedPayments,
         selectedServices,
         selectedGender,
