@@ -50,6 +50,7 @@ export default function Navbar(props) {
     const handleLogout = () => {
         localStorage.clear();
         props.showAlert("Logged out successfully", "success");
+        window.location.reload();
         navigate("/login");
     };
 
