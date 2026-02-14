@@ -23,6 +23,7 @@ export default function PatientDetails() {
     const [isPercent, setIsPercent] = useState(false);
     const [finalAmount, setFinalAmount] = useState(0);
     const [deleting, setDeleting] = useState(false);
+    const [collected, setCollected] = useState(0);
 
     const [apptData, setApptData] = useState({
         date: "",
@@ -63,11 +64,11 @@ export default function PatientDetails() {
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`
+                `${API_BASE_URL}/api/auth/fetchallservice`,
             );
             const data = await res.json();
             setAvailableServices(
-                Array.isArray(data) ? data : data.services || []
+                Array.isArray(data) ? data : data.services || [],
             );
         } catch (err) {
             console.error("Error fetching services:", err);
@@ -82,7 +83,7 @@ export default function PatientDetails() {
 
             const normalized = prev.service.map((s) => {
                 const match = availableServices.find(
-                    (as) => as._id === s._id || as._id === s.id
+                    (as) => as._id === s._id || as._id === s.id,
                 );
 
                 return {
@@ -98,7 +99,7 @@ export default function PatientDetails() {
 
     const handleDeletePatient = async () => {
         const confirmDelete = window.confirm(
-            `Are you sure you want to delete patient "${details?.name}"?\nThis will remove all related appointments.`
+            `Are you sure you want to delete patient "${details?.name}"?\nThis will remove all related appointments.`,
         );
 
         if (!confirmDelete) return;
@@ -109,7 +110,7 @@ export default function PatientDetails() {
                 `${API_BASE_URL}/api/auth/deletepatient/${id}`,
                 {
                     method: "DELETE",
-                }
+                },
             );
 
             const data = await res.json();
@@ -154,6 +155,7 @@ export default function PatientDetails() {
                 age: patientData.age || "",
                 gender: patientData.gender || "",
                 amount: patientData.amount || 0,
+                collectedAmount: patientData.collected,
             });
 
             setAppointmentId(appointmentsData.appointmentId);
@@ -174,7 +176,7 @@ export default function PatientDetails() {
     useEffect(() => {
         const total = apptData.service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
-            0
+            0,
         );
 
         let discountValue = 0;
@@ -211,7 +213,7 @@ export default function PatientDetails() {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(patient),
-                }
+                },
             );
 
             const result = await response.json();
@@ -229,14 +231,14 @@ export default function PatientDetails() {
 
     const sortedAppointments = useMemo(() => {
         return [...appointments].sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
+            (a, b) => new Date(b.date) - new Date(a.date),
         );
     }, [appointments]);
 
     const serviceTotal = useMemo(() => {
         return apptData.service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
-            0
+            0,
         );
     }, [apptData.service, serviceAmounts]);
 
@@ -257,7 +259,7 @@ export default function PatientDetails() {
         // Ask only if discount exists
         if (visit.discount && visit.discount > 0) {
             includeDiscount = window.confirm(
-                `This invoice has a discount applied.\n\nDo you want to include the discount in the invoice?`
+                `This invoice has a discount applied.\n\nDo you want to include the discount in the invoice?`,
             );
         }
 
@@ -274,7 +276,6 @@ export default function PatientDetails() {
             const margin = 20;
             const invoiceNumber = visit.invoiceNumber || "N/A";
             const docPdf = new jsPDF();
-
             const pageWidth = docPdf.internal.pageSize.getWidth();
 
             let leftY = 20;
@@ -282,16 +283,17 @@ export default function PatientDetails() {
 
             // ================= HEADER =================
             docPdf.setFontSize(16);
-            docPdf.text(doctor.clinicName, margin, leftY);
+            docPdf.text(doctor.clinicName || "", margin, leftY);
             leftY += 10;
 
             docPdf.setFontSize(14);
-            docPdf.text(doctor.name, margin, leftY);
+            docPdf.text(doctor.name || "", margin, leftY);
             leftY += 8;
 
             docPdf.setFontSize(11);
+
             if (doctor.degree?.length) {
-                docPdf.text(`${doctor.degree.join(",")}`, margin, leftY);
+                docPdf.text(doctor.degree.join(","), margin, leftY);
                 leftY += 6;
             }
 
@@ -304,16 +306,16 @@ export default function PatientDetails() {
             leftY += 8;
 
             docPdf.text(
-                `Patient: ${details.name} | Age: ${
-                    details.age || "N/A"
-                } | Gender: ${details.gender || "N/A"}`,
+                `Patient: ${details.name} | Age: ${details.age || "N/A"} | Gender: ${
+                    details.gender || "N/A"
+                }`,
                 margin,
-                leftY
+                leftY,
             );
             leftY += 6;
 
-            // ================= RIGHT INFO =================
-            docPdf.setFontSize(12);
+            // ================= RIGHT SIDE INFO =================
+            docPdf.setFontSize(11);
 
             if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
@@ -329,20 +331,24 @@ export default function PatientDetails() {
                 rightY += 5;
             }
 
-            docPdf.text(
-                `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
-                pageWidth - margin,
-                rightY,
-                { align: "right" }
-            );
-            rightY += 5;
+            if (doctor.address?.city) {
+                docPdf.text(
+                    `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
+                    pageWidth - margin,
+                    rightY,
+                    { align: "right" },
+                );
+                rightY += 5;
+            }
 
             if (doctor.phone) {
                 docPdf.text(
                     `Phone: ${doctor.phone}`,
                     pageWidth - margin,
                     rightY,
-                    { align: "right" }
+                    {
+                        align: "right",
+                    },
                 );
                 rightY += 5;
             }
@@ -351,19 +357,19 @@ export default function PatientDetails() {
                 `Date: ${visit.formattedDate}`,
                 pageWidth - margin,
                 rightY,
-                { align: "right" }
+                {
+                    align: "right",
+                },
             );
 
             // ================= BILL CALCULATION =================
             const services = visit.service || [];
 
-            // 1️⃣ Base amount (sum of services)
             const baseAmount = services.reduce(
                 (sum, s) => sum + Number(s.amount || 0),
-                0
+                0,
             );
 
-            // 2️⃣ Apply discount ONCE
             let discountValue = 0;
             let finalAmount = baseAmount;
 
@@ -378,13 +384,24 @@ export default function PatientDetails() {
                 finalAmount = baseAmount - discountValue;
             }
 
+            // ================= PAYMENT STATUS =================
+            const collectedAmount = Number(visit.collected ?? finalAmount);
+
+            const remainingAmount = finalAmount - collectedAmount;
+
+            const paymentStatus =
+                remainingAmount <= 0
+                    ? "Paid"
+                    : collectedAmount > 0
+                      ? "Partial"
+                      : "Unpaid";
+
             // ================= TABLE ROWS =================
             const tableRows = services.map((s) => [
                 s.name,
-                `Rs ${Number(s.amount).toFixed(2)}`,
+                `Rs ${Number(s.amount).toFixed(0)}`,
             ]);
 
-            // Discount row (AFTER tableRows is defined)
             if (includeDiscount && visit.discount > 0) {
                 tableRows.push([
                     `Discount ${
@@ -392,28 +409,19 @@ export default function PatientDetails() {
                             ? `(${visit.discount}%)`
                             : `(Rs ${visit.discount})`
                     }`,
-                    `- Rs ${discountValue.toFixed(2)}`,
+                    `- Rs ${discountValue.toFixed(0)}`,
                 ]);
             }
 
-            // Total row
-            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
+            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(0)}`]);
 
-            // // ================= TABLE ROWS =================
-
-            // // Discount row
-            // if (includeDiscount && visit.discount > 0) {
-            //     tableRows.push([
-            //         `Discount ${
-            //             visit.isPercent
-            //                 ? `(${visit.discount}%)`
-            //                 : `(Rs ${visit.discount})`
-            //         }`,
-            //         `- Rs ${discountValue.toFixed(2)}`,
-            //     ]);
-            // }
-
-            // tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(2)}`]);
+            // Payment breakdown
+            tableRows.push(["Collected", `Rs ${collectedAmount.toFixed(0)}`]);
+            tableRows.push([
+                "Payable Amount",
+                `Rs ${remainingAmount.toFixed(0)}`,
+            ]);
+            tableRows.push(["Status", paymentStatus]);
 
             // ================= TABLE =================
             const tableStartY = leftY + 4;
@@ -430,53 +438,67 @@ export default function PatientDetails() {
                     fontStyle: "bold",
                 },
                 didParseCell: function (data) {
-                    if (data.row.index === tableRows.length - 1) {
+                    if (data.row.index >= tableRows.length - 4) {
                         data.cell.styles.fontStyle = "bold";
                     }
                 },
             });
 
+            // ================= AMOUNT IN WORDS =================
             const roundedAmount = Math.round(finalAmount);
-            let y = docPdf.lastAutoTable.finalY + 7;
+            let y = docPdf.lastAutoTable.finalY + 8;
 
             const amountInWords = `Rupees ${toWords(
-                roundedAmount
+                roundedAmount,
             )} Only`.replace(/\b\w/g, (c) => c.toUpperCase());
 
             docPdf.setFontSize(11);
-
-            // Label (bold)
             docPdf.setFont(undefined, "bold");
             docPdf.text("Amount in Words:", margin, y);
 
             docPdf.setFont(undefined, "normal");
             docPdf.text(amountInWords, margin + 40, y);
 
-            y += 7;
+            y += 8;
 
-            // ================= FOOTER TEXT =================
+            // ================= FOOTER MESSAGE =================
+            let receiptText = "";
+
+            if (paymentStatus === "Paid") {
+                receiptText = `Received with thanks from ${details.name} the sum of Rupees ${collectedAmount.toFixed(
+                    2,
+                )} only towards full settlement.`;
+            } else if (paymentStatus === "Partial") {
+                receiptText = `Part payment of Rupees ${collectedAmount.toFixed(
+                    2,
+                )} received from ${details.name}. Remaining amount of Rupees ${remainingAmount.toFixed(
+                    2,
+                )} is pending.`;
+            } else {
+                receiptText = `Total amount of Rupees ${finalAmount.toFixed(
+                    2,
+                )} is pending from ${details.name}.`;
+            }
+
             docPdf.setFontSize(11);
-            docPdf.setFont(undefined, "normal");
-            docPdf.text(
-                `Received with thanks from ${
-                    details.name
-                } the sum of Rupees ${roundedAmount.toFixed(
-                    2
-                )}  on account of services`,
-                margin,
-                y,
-                { maxWidth: pageWidth - margin * 2 }
-            );
+            docPdf.text(receiptText, margin, y, {
+                maxWidth: pageWidth - margin * 2,
+            });
 
-            y += 10;
+            y += 12;
 
+            // ================= SIGNATURE =================
             docPdf.setFontSize(15);
-            docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
+            docPdf.text(doctor.name, pageWidth - margin, y, {
+                align: "right",
+            });
 
             y += 6;
 
             docPdf.setFontSize(12);
-            docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
+            docPdf.text("Signature", pageWidth - margin, y, {
+                align: "right",
+            });
 
             // ================= SAVE =================
             docPdf.save(`Invoice_${details.name}.pdf`);
@@ -492,7 +514,7 @@ export default function PatientDetails() {
         });
         const normalizedServices = (visit.service || []).map((s) => {
             const realService = availableServices.find(
-                (as) => as._id === (s._id || s.id)
+                (as) => as._id === (s._id || s.id),
             );
 
             return {
@@ -517,6 +539,7 @@ export default function PatientDetails() {
         setServiceAmounts(amountMap);
         setDiscount(visit.discount || 0);
         setIsPercent(!!visit.isPercent);
+        setCollected(visit.collected || 0);
 
         document.getElementById("editAppointmentModalBtn").click();
     };
@@ -537,15 +560,16 @@ export default function PatientDetails() {
                     body: JSON.stringify({
                         date: apptData.date,
                         service: apptData.service.map((s) => ({
-                            ...s,
+                            id: s._id,
+                            name: s.name,
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
-                        amount: finalAmount,
                         payment_type: apptData.payment_type,
                         discount,
                         isPercent,
+                        collected,
                     }),
-                }
+                },
             );
 
             const data = await response.json();
@@ -569,7 +593,7 @@ export default function PatientDetails() {
             `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
             {
                 method: "DELETE",
-            }
+            },
         );
 
         const data = await response.json();
@@ -707,6 +731,9 @@ export default function PatientDetails() {
                                             Amount
                                         </th>
                                         <th className="text-theme-muted">
+                                            Status
+                                        </th>
+                                        <th className="text-theme-muted">
                                             Payment
                                         </th>
                                         <th className="text-end text-theme-muted">
@@ -729,9 +756,48 @@ export default function PatientDetails() {
                                             </td>
 
                                             <td className="fw-semibold text-theme-muted">
-                                                ₹{visit.amount}
+                                                ₹
+                                                {Number(
+                                                    visit.collected ??
+                                                        visit.amount ??
+                                                        0,
+                                                ).toFixed(0)}
                                             </td>
+                                            <td>
+                                                {(() => {
+                                                    const collected = Number(
+                                                        visit.collected ?? 0,
+                                                    );
+                                                    const total = Number(
+                                                        visit.amount ?? 0,
+                                                    );
+                                                    const remaining =
+                                                        total - collected;
 
+                                                    const status =
+                                                        remaining <= 0
+                                                            ? "Paid"
+                                                            : collected > 0
+                                                              ? "Partial"
+                                                              : "Unpaid";
+
+                                                    const badgeClass =
+                                                        status === "Paid"
+                                                            ? "bg-success"
+                                                            : status ===
+                                                                "Partial"
+                                                              ? "bg-warning text-dark"
+                                                              : "bg-danger";
+
+                                                    return (
+                                                        <span
+                                                            className={`badge ${badgeClass}`}
+                                                        >
+                                                            {status}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </td>
                                             <td>
                                                 <span className="payment-tag payment-bank">
                                                     {visit.payment_type ||
@@ -746,7 +812,7 @@ export default function PatientDetails() {
                                                         handleInvoiceClick(
                                                             id,
                                                             visit,
-                                                            details
+                                                            details,
                                                         )
                                                     }
                                                 >
@@ -758,7 +824,7 @@ export default function PatientDetails() {
                                                     onClick={() =>
                                                         editInvoice(
                                                             appointmentId,
-                                                            visit
+                                                            visit,
                                                         )
                                                     }
                                                 >
@@ -770,7 +836,7 @@ export default function PatientDetails() {
                                                     onClick={() =>
                                                         deleteInvoice(
                                                             appointmentId,
-                                                            visit
+                                                            visit,
                                                         )
                                                     }
                                                 >
@@ -792,18 +858,54 @@ export default function PatientDetails() {
                         className="card mb-3 shadow-sm rounded-4"
                     >
                         <div className="card-body">
-                            <div className="d-flex justify-content-between mb-2">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
                                 <strong>{visit.formattedDate}</strong>
-                                <span className="fw-semibold">
-                                    ₹{visit.amount}
-                                </span>
+
+                                <div className="text-end">
+                                    {visit.amount === visit.collected ? (
+                                        <div className="fw-semibold text-success">
+                                            ₹{visit.amount?.toFixed(0)}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="fw-semibold text-primary">
+                                                ₹{visit.amount?.toFixed(0)}
+                                            </div>
+                                            <small className="text-muted d-block">
+                                                Collected: ₹
+                                                {visit.collected || 0}
+                                            </small>
+                                            <small className="text-danger d-block">
+                                                Remaining: ₹
+                                                {(
+                                                    Number(visit.amount ?? 0) -
+                                                    Number(visit.collected ?? 0)
+                                                ).toFixed(0)}
+                                            </small>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
-                            <p className="text-theme-muted mb-1">
-                                {(visit.service || [])
-                                    .map((s) => s.name)
-                                    .join(", ")}
-                            </p>
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                                <p className="text-theme-muted mb-1 me-2">
+                                    {(visit.service || [])
+                                        .map((s) => s.name)
+                                        .join(", ")}
+                                </p>
+
+                                <span
+                                    className={`badge px-3 py-2 ${
+                                        visit.status === "Paid"
+                                            ? "bg-success"
+                                            : visit.status === "Partial"
+                                              ? "bg-warning text-dark"
+                                              : "bg-danger"
+                                    }`}
+                                >
+                                    {visit.status}
+                                </span>
+                            </div>
 
                             <span className="badge bg-secondary-subtle text-secondary mb-3">
                                 {visit.payment_type || "N/A"}
@@ -887,7 +989,8 @@ export default function PatientDetails() {
                                         setApptData((prev) => {
                                             if (
                                                 prev.service.some(
-                                                    (s) => s._id === service._id
+                                                    (s) =>
+                                                        s._id === service._id,
                                                 )
                                             ) {
                                                 return prev;
@@ -905,7 +1008,7 @@ export default function PatientDetails() {
                                         setApptData((prev) => ({
                                             ...prev,
                                             service: prev.service.filter(
-                                                (s) => s._id !== id
+                                                (s) => s._id !== id,
                                             ),
                                         }));
                                     }}
@@ -915,112 +1018,240 @@ export default function PatientDetails() {
                             {/* SERVICE AMOUNT BREAKDOWN */}
                             {apptData.service.length > 0 && (
                                 <>
-                                    <label className="form-label fw-bold">
-                                        Bill Details
-                                    </label>
-
-                                    <ul className="list-group mb-3">
-                                        {apptData.service.map((s) => (
-                                            <li
-                                                key={s._id}
-                                                className="list-group-item d-flex justify-content-between"
-                                            >
-                                                <span>{s.name}</span>
-                                                <input
-                                                    type="number"
-                                                    value={
-                                                        serviceAmounts[s._id] ??
-                                                        s.amount
-                                                    }
-                                                    onChange={(e) =>
-                                                        setServiceAmounts(
-                                                            (prev) => ({
-                                                                ...prev,
-                                                                [s._id]: Number(
-                                                                    e.target
-                                                                        .value
-                                                                ),
-                                                            })
-                                                        )
-                                                    }
-                                                />
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    {/* DISCOUNT */}
+                                    {/* ================= BILL HEADER ================= */}
                                     <div className="mb-3">
-                                        <label className="form-label fw-bold">
-                                            Discount
-                                        </label>
+                                        <h6 className="fw-bold text-primary">
+                                            Billing Summary
+                                        </h6>
+                                        <hr />
+                                    </div>
 
-                                        <div className="d-flex gap-2">
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                style={{ maxWidth: "200px" }}
-                                                value={discount}
-                                                onChange={(e) =>
-                                                    setDiscount(
-                                                        Number(e.target.value)
-                                                    )
-                                                }
-                                            />
+                                    {/* ================= SERVICES BREAKDOWN ================= */}
+                                    <div className="card border-0 shadow-sm mb-4">
+                                        <div className="card-body">
+                                            <h6 className="fw-semibold mb-3">
+                                                Services
+                                            </h6>
 
-                                            <div className="form-check d-flex align-items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    className="form-check-input"
-                                                    checked={isPercent}
-                                                    onChange={(e) =>
-                                                        setIsPercent(
-                                                            e.target.checked
-                                                        )
-                                                    }
-                                                />
-                                                <label className="form-check-label ms-1">
-                                                    %
-                                                </label>
+                                            {apptData.service.map((s) => (
+                                                <div
+                                                    key={s._id}
+                                                    className="d-flex justify-content-between align-items-center mb-2"
+                                                >
+                                                    <span>{s.name}</span>
+
+                                                    <input
+                                                        type="number"
+                                                        className="form-control text-end"
+                                                        style={{
+                                                            maxWidth: "140px",
+                                                        }}
+                                                        value={
+                                                            serviceAmounts[
+                                                                s._id
+                                                            ] ?? s.amount
+                                                        }
+                                                        onChange={(e) =>
+                                                            setServiceAmounts(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    [s._id]:
+                                                                        Number(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                }),
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                            ))}
+
+                                            <hr />
+
+                                            <div className="d-flex justify-content-between fw-semibold">
+                                                <span>Total</span>
+                                                <span>
+                                                    ₹ {serviceTotal.toFixed(0)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* SUMMARY */}
-                                    <table className="table table-bordered">
-                                        <tbody>
-                                            <tr>
-                                                <th>Total Before Discount</th>
-                                                <td className="text-end">
-                                                    ₹{serviceTotal}
-                                                </td>
-                                            </tr>
+                                    {/* ================= DISCOUNT SECTION ================= */}
+                                    <div className="card border-0 shadow-sm mb-4">
+                                        <div className="card-body">
+                                            <h6 className="fw-semibold mb-3">
+                                                Discount
+                                            </h6>
 
-                                            <tr>
-                                                <th>
-                                                    Discount{" "}
-                                                    {isPercent
-                                                        ? `(${discount}%)`
-                                                        : discount > 0
-                                                        ? `(${discount})`
-                                                        : ""}
-                                                </th>
-                                                <td className="text-end">
-                                                    ₹
+                                            <div className="row align-items-center">
+                                                <div className="col-md-6">
+                                                    <input
+                                                        type="number"
+                                                        className="form-control"
+                                                        value={discount.toFixed(
+                                                            0,
+                                                        )}
+                                                        min={0}
+                                                        max={
+                                                            isPercent
+                                                                ? 100
+                                                                : serviceTotal
+                                                        }
+                                                        onChange={(e) =>
+                                                            setDiscount(
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div className="col-md-6">
+                                                    <div className="form-check form-switch">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="form-check-input"
+                                                            checked={isPercent}
+                                                            onChange={(e) =>
+                                                                setIsPercent(
+                                                                    e.target
+                                                                        .checked,
+                                                                )
+                                                            }
+                                                        />
+                                                        <label className="form-check-label">
+                                                            {isPercent
+                                                                ? "Percentage (%)"
+                                                                : "Flat Amount (₹)"}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="d-flex justify-content-between mt-3 text-danger">
+                                                <span>Discount Applied</span>
+                                                <span>
+                                                    ₹{" "}
                                                     {(
                                                         serviceTotal -
                                                         finalAmount
-                                                    ).toFixed(2)}
-                                                </td>
-                                            </tr>
+                                                    ).toFixed(0)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            <tr className="table-primary fw-bold">
-                                                <th>Final Amount</th>
-                                                <td className="text-end">
-                                                    ₹{finalAmount}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                    {/* ================= PAYMENT SECTION ================= */}
+                                    <div className="card border-0 shadow-sm mb-4">
+                                        <div className="card-body">
+                                            <h6 className="fw-semibold mb-3">
+                                                Payment Details
+                                            </h6>
+
+                                            <div className="card border-0 shadow-sm mb-4">
+                                                <div className="card-body">
+                                                    <div className="row align-items-center">
+                                                        <div className="col-md-6">
+                                                            <label className="form-label fw-semibold">
+                                                                Amount Collected
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control"
+                                                                value={collected.toFixed(
+                                                                    0,
+                                                                )}
+                                                                min={0}
+                                                                max={
+                                                                    finalAmount
+                                                                }
+                                                                onChange={(
+                                                                    e,
+                                                                ) => {
+                                                                    let value =
+                                                                        Number(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        );
+                                                                    if (
+                                                                        value <
+                                                                        0
+                                                                    )
+                                                                        value = 0;
+                                                                    if (
+                                                                        value >
+                                                                        finalAmount
+                                                                    )
+                                                                        value =
+                                                                            finalAmount;
+                                                                    setCollected(
+                                                                        value,
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </div>
+
+                                                        <div className="col-md-6 text-end">
+                                                            <div className="mt-4">
+                                                                <small className="text-muted d-block">
+                                                                    Remaining
+                                                                </small>
+                                                                <h5 className="fw-bold text-warning mb-0">
+                                                                    ₹{" "}
+                                                                    {(
+                                                                        finalAmount -
+                                                                        collected
+                                                                    ).toFixed(
+                                                                        0,
+                                                                    )}
+                                                                </h5>
+
+                                                                <span
+                                                                    className={`badge mt-2 ${
+                                                                        finalAmount -
+                                                                            collected ===
+                                                                        0
+                                                                            ? "bg-success"
+                                                                            : collected >
+                                                                                0
+                                                                              ? "bg-warning text-dark"
+                                                                              : "bg-danger"
+                                                                    }`}
+                                                                >
+                                                                    {finalAmount -
+                                                                        collected ===
+                                                                    0
+                                                                        ? "Paid"
+                                                                        : collected >
+                                                                            0
+                                                                          ? "Partial"
+                                                                          : "Unpaid"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* ================= FINAL SUMMARY ================= */}
+                                    <div className="card border-primary shadow-sm">
+                                        <div className="card-body d-flex justify-content-between align-items-center">
+                                            <h6 className="mb-0 fw-bold">
+                                                Final Amount
+                                            </h6>
+                                            <h5 className="mb-0 fw-bold text-primary">
+                                                ₹ {finalAmount.toFixed(0)}
+                                            </h5>
+                                        </div>
+                                    </div>
                                 </>
                             )}
 

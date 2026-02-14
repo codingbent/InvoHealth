@@ -2,7 +2,6 @@ export default function About() {
     return (
         <div className="container py-4 py-lg-5">
             <div className="card about-card shadow-lg rounded-4 overflow-hidden">
-                
                 {/* HEADER */}
                 <div className="about-header text-center px-4 py-5">
                     <h2 className="fw-bold mb-2">InvoHealth</h2>
@@ -12,7 +11,6 @@ export default function About() {
                 </div>
 
                 <div className="card-body p-4 p-lg-5">
-                    
                     {/* INTRO */}
                     <p className="lead text-center text-theme-secondary mb-4">
                         A simple, fast, and practical record-keeping solution
@@ -40,21 +38,48 @@ export default function About() {
                         <div className="row g-3">
                             <div className="col-md-6">
                                 <ul className="list-group list-group-flush theme-list">
-                                    <li className="list-group-item">✔ Patient profile management</li>
-                                    <li className="list-group-item">✔ Appointment & visit history</li>
-                                    <li className="list-group-item">✔ Service-based billing system</li>
-                                    <li className="list-group-item">✔ Discounts (flat & percentage)</li>
-                                    <li className="list-group-item">✔ Multiple payment modes</li>
+                                    <li className="list-group-item">
+                                        ✔ Patient profile management
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Appointment & visit history
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Service-based billing system
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Discounts (flat & percentage)
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Partial & full payment support
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Auto payment status (Paid / Partial /
+                                        Unpaid)
+                                    </li>
                                 </ul>
                             </div>
 
                             <div className="col-md-6">
                                 <ul className="list-group list-group-flush theme-list">
-                                    <li className="list-group-item">✔ Day-wise & month-wise income view</li>
-                                    <li className="list-group-item">✔ Advanced filters</li>
-                                    <li className="list-group-item">✔ PDF invoice generation</li>
-                                    <li className="list-group-item">✔ Excel export</li>
-                                    <li className="list-group-item">✔ Fully responsive</li>
+                                    <li className="list-group-item">
+                                        ✔ Multiple payment modes
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Advanced filters
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Day-wise & month-wise income view
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ PDF invoice generation
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Excel export
+                                    </li>
+                                    <li className="list-group-item">
+                                        ✔ Fully responsive
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -77,9 +102,12 @@ export default function About() {
 
                     {/* ACCOUNTING */}
                     <section className="mb-5">
-                        <h5 className="fw-semibold mb-2">🧾 Accounting & ITR Support</h5>
+                        <h5 className="fw-semibold mb-2">
+                            🧾 Accounting & ITR Support
+                        </h5>
                         <p className="text-theme-muted">
-                            Clean financial records for CA review and tax filing.
+                            Clean financial records for CA review and tax
+                            filing.
                         </p>
 
                         <ul className="text-theme-muted">
@@ -89,7 +117,8 @@ export default function About() {
                         </ul>
 
                         <div className="alert theme-alert-info rounded-3 mt-3">
-                            <strong>Note:</strong> Consult a CA for final filings.
+                            <strong>Note:</strong> Consult a CA for final
+                            filings.
                         </div>
                     </section>
 
@@ -116,15 +145,16 @@ export default function About() {
                     <section className="mb-4">
                         <h5 className="fw-semibold mb-2">👨‍💻 Developer Note</h5>
                         <p className="text-theme-muted">
-                            Developed by <strong>Abhed Agarwal</strong> as a real-world clinic solution.
+                            Developed by <strong>Abhed Agarwal</strong> as a
+                            real-world clinic solution.
                         </p>
                     </section>
 
                     {/* FOOTER */}
                     <div className="text-center pt-3 border-top theme-border">
                         <small className="text-theme-muted">
-                            App Version: v1.0.0 <br />
-                            © {new Date().getFullYear()} InvoHealth
+                            App Version: v1.0.0 <br />©{" "}
+                            {new Date().getFullYear()} InvoHealth
                         </small>
                     </div>
                 </div>

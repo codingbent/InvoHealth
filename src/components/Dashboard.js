@@ -18,77 +18,35 @@ ChartJS.register(
     Legend,
     CategoryScale,
     LinearScale,
-    BarElement
+    BarElement,
 );
 
 export default function Dashboard() {
     const [analytics, setAnalytics] = useState({
         paymentSummary: [],
         serviceSummary: [],
+        totalRevenue: 0,
         totalCollection: 0,
+        totalPending: 0,
         totalVisits: 0,
     });
+
     const [loading, setLoading] = useState(false);
     const [allServices, setAllServices] = useState([]);
 
     // FILTER STATES
-    const [searchTerm, setSearchTerm] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedGender, setSelectedGender] = useState("");
+    const [selectedStatus, setSelectedStatus] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
-    const [theme, setTheme] = useState(
-        document.body.classList.contains("dark-theme") ? "dark" : "light"
-    );
 
-    useEffect(() => {
-        const observer = new MutationObserver(() => {
-            setTheme(
-                document.body.classList.contains("dark-theme")
-                    ? "dark"
-                    : "light"
-            );
-        });
-
-        observer.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["class"],
-        });
-
-        return () => observer.disconnect();
-    }, []);
-
-    const chartColors = useMemo(() => {
-        if (theme === "dark") {
-            return {
-                text: "#E5E7EB",
-                grid: "#1E293B",
-                tooltipBg: "#111827",
-                cardBg: "#111827",
-                primary: "#3B82F6",
-                success: "#22C55E",
-            };
-        }
-
-        return {
-            text: "#0F172A",
-            grid: "#E5E7EB",
-            tooltipBg: "#ffffff",
-            cardBg: "#ffffff",
-            primary: "#0D6EFD",
-            success: "#198754",
-        };
-    }, [theme]);
-
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        []
-    );
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
 
     /* ================= FETCH ANALYTICS ================= */
     useEffect(() => {
@@ -105,15 +63,18 @@ export default function Dashboard() {
                 }).toString();
 
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/dashboard/analytics?${params}`
+                    `${API_BASE_URL}/api/auth/dashboard/analytics?${params}`,
                 );
 
                 const data = await res.json();
+
                 if (data.success) {
                     setAnalytics({
                         paymentSummary: data.paymentSummary || [],
                         serviceSummary: data.serviceSummary || [],
+                        totalRevenue: data.totalRevenue || 0,
                         totalCollection: data.totalCollection || 0,
+                        totalPending: data.totalPending || 0,
                         totalVisits: data.totalVisits || 0,
                     });
                 }
@@ -126,35 +87,12 @@ export default function Dashboard() {
 
         fetchAnalytics();
     }, [
-        API_BASE_URL,
         selectedPayments,
         selectedServices,
         selectedGender,
         startDate,
         endDate,
     ]);
-
-    /* ================= FETCH SERVICES ================= */
-    useEffect(() => {
-        const fetchServices = async () => {
-            try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`
-                );
-                const data = await res.json();
-
-                setAllServices(
-                    Array.isArray(data.services)
-                        ? data.services.map((s) => s.name).sort()
-                        : []
-                );
-            } catch (err) {
-                console.error("Service fetch error:", err);
-            }
-        };
-
-        fetchServices();
-    }, [API_BASE_URL]);
 
     /* ================= CHART DATA ================= */
     const paymentChartData = useMemo(
@@ -163,28 +101,18 @@ export default function Dashboard() {
             datasets: [
                 {
                     data: analytics.paymentSummary.map((p) => p.total),
-                    backgroundColor:
-                        theme === "dark"
-                            ? [
-                                  "#3B82F6",
-                                  "#22C55E",
-                                  "#F59E0B",
-                                  "#06B6D4",
-                                  "#8B5CF6",
-                                  "#64748B",
-                              ]
-                            : [
-                                  "#0D6EFD",
-                                  "#198754",
-                                  "#FFC107",
-                                  "#0DCAF0",
-                                  "#6F42C1",
-                                  "#ADB5BD",
-                              ],
+                    backgroundColor: [
+                        "#0D6EFD",
+                        "#198754",
+                        "#FFC107",
+                        "#0DCAF0",
+                        "#6F42C1",
+                        "#ADB5BD",
+                    ],
                 },
             ],
         }),
-        [analytics.paymentSummary, theme]
+        [analytics.paymentSummary],
     );
 
     const serviceChartData = useMemo(
@@ -194,70 +122,31 @@ export default function Dashboard() {
                 {
                     label: "Revenue (₹)",
                     data: analytics.serviceSummary.map((s) => s.total),
-                    backgroundColor: chartColors.primary,
+                    backgroundColor: "#0D6EFD",
                     borderRadius: 8,
                 },
             ],
         }),
-        [analytics.serviceSummary, chartColors]
+        [analytics.serviceSummary],
     );
 
-    const chartOptions = useMemo(
-        () => ({
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: "bottom",
-                    labels: {
-                        color: chartColors.text,
-                        boxWidth: 12,
-                        padding: 16,
-                    },
-                },
-                tooltip: {
-                    backgroundColor: chartColors.tooltipBg,
-                    titleColor: chartColors.text,
-                    bodyColor: chartColors.text,
-                    padding: 10,
-                    cornerRadius: 8,
-                },
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        color: chartColors.text,
-                    },
-                    grid: {
-                        color: chartColors.grid,
-                    },
-                },
-                y: {
-                    ticks: {
-                        color: chartColors.text,
-                    },
-                    grid: {
-                        color: chartColors.grid,
-                    },
-                },
-            },
-        }),
-        [chartColors]
-    );
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: "bottom" },
+        },
+    };
 
     return (
         <div className="container mt-4 mb-5">
-            {/* HEADER */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h3 className="fw-bold">📊 Dashboard</h3>
-            </div>
+            <h3 className="fw-bold mb-4">Clinic Dashboard</h3>
 
-            {/* FILTER PANEL (NEVER UNMOUNTS) */}
             <FilterPanel
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
                 selectedPayments={selectedPayments}
                 setSelectedPayments={setSelectedPayments}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
                 selectedGender={selectedGender}
                 setSelectedGender={setSelectedGender}
                 allServices={allServices}
@@ -272,58 +161,93 @@ export default function Dashboard() {
                 isdashboard={true}
             />
 
-            {/* LOADING INDICATOR */}
             {loading && (
-                <p className="text-center text-theme-muted mt-4">
+                <p className="text-center text-muted mt-3">
                     Updating dashboard…
                 </p>
             )}
 
-            {/* KPI CARDS */}
+            {/* ================= KPI CARDS ================= */}
             <div className="row g-3 mb-4">
-                <div className="col-md-6">
-                    <div className="dashboard-card">
-                        <p className="text-theme-muted small">
-                            Total Collection
-                        </p>
-                        <h3 className="fw-bold text-success">
-                            ₹ {analytics.totalCollection.toFixed(2)}
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="col-md-6">
-                    <div className="dashboard-card">
-                        <p className="text-theme-muted small">Total Visits</p>
-                        <h3 className="fw-bold text-primary">
-                            {analytics.totalVisits}
-                        </h3>
-                    </div>
-                </div>
+                <KPI
+                    title="Total Revenue"
+                    value={analytics.totalRevenue}
+                    color="primary"
+                />
+                <KPI
+                    title="Collected"
+                    value={analytics.totalCollection}
+                    color="success"
+                />
+                <KPI
+                    title="Pending"
+                    value={analytics.totalPending}
+                    color="danger"
+                />
+                <KPI
+                    title="Total Visits"
+                    value={analytics.totalVisits}
+                    color="secondary"
+                    isCurrency={false}
+                />
             </div>
 
-            {/* CHARTS */}
+            {/* ================= CHART SECTION ================= */}
             <div className="row g-4">
+                {/* Payment Section */}
                 <div className="col-lg-6">
-                    <div className="dashboard-card chart-card">
-                        <h6 className="text-center fw-semibold mb-3">
+                    <div className="dashboard-card p-4 shadow-sm rounded-4">
+                        <h6 className="fw-semibold mb-3 text-center">
                             Payment Distribution
                         </h6>
-                        <div className="chart-wrapper">
-                            <Doughnut
-                                data={paymentChartData}
-                                options={chartOptions}
-                            />
+
+                        <div className="row">
+                            <div className="col-md-6">
+                                <div style={{ height: 250 }}>
+                                    <Doughnut
+                                        data={paymentChartData}
+                                        options={chartOptions}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="col-md-6">
+                                {analytics.paymentSummary.map((p) => {
+                                    const percent =
+                                        analytics.totalCollection > 0
+                                            ? (
+                                                  (p.total /
+                                                      analytics.totalCollection) *
+                                                  100
+                                              ).toFixed(1)
+                                            : 0;
+
+                                    return (
+                                        <div
+                                            key={p.type}
+                                            className="d-flex justify-content-between mb-2"
+                                        >
+                                            <span>{p.type}</span>
+                                            <span className="fw-bold">
+                                                ₹ {p.total.toFixed(2)} (
+                                                {percent}%)
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Service Revenue */}
                 <div className="col-lg-6">
-                    <div className="dashboard-card chart-card">
-                        <h6 className="text-center fw-semibold mb-3">
-                            Service-wise Revenue
+                    <div className="dashboard-card p-4 shadow-sm rounded-4">
+                        <h6 className="fw-semibold mb-3 text-center">
+                            Top Revenue Services
                         </h6>
-                        <div className="chart-wrapper">
+
+                        <div style={{ height: 250 }}>
                             <Bar
                                 data={serviceChartData}
                                 options={chartOptions}
@@ -331,6 +255,20 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/* ================= KPI COMPONENT ================= */
+function KPI({ title, value, color, isCurrency = true }) {
+    return (
+        <div className="col-md-3">
+            <div className={`p-4 rounded-4 text-white bg-${color} shadow-sm`}>
+                <p className="small mb-1">{title}</p>
+                <h4 className="fw-bold">
+                    {isCurrency ? `₹ ${value.toFixed(2)}` : value}
+                </h4>
             </div>
         </div>
     );

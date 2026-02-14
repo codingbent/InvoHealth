@@ -6,7 +6,10 @@ const AppointmentDay = memo(function AppointmentDay({
     paymentColor,
     navigate,
 }) {
-    const dayTotal = dayApps.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+    const dayTotal = dayApps.reduce(
+        (sum, a) => sum + Number(a.collected ?? a.amount ?? 0),
+        0,
+    );
 
     return (
         <div className="mb-4">
@@ -22,7 +25,7 @@ const AppointmentDay = memo(function AppointmentDay({
 
                 {localStorage.getItem("role") === "doctor" && (
                     <span className="fw-bold text-success">
-                        ₹ {dayTotal.toFixed(2)}
+                        ₹ {dayTotal.toFixed(0)}
                     </span>
                 )}
             </div>
@@ -32,8 +35,9 @@ const AppointmentDay = memo(function AppointmentDay({
                 <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <table className="table table-hover align-middle mb-0 table-theme">
                         <colgroup>
-                            <col style={{ width: "40%" }} />
-                            <col style={{ width: "30%" }} />
+                            <col style={{ width: "25%" }} />
+                            <col style={{ width: "25%" }} />
+                            <col style={{ width: "20%" }} />
                             <col style={{ width: "20%" }} />
                             <col style={{ width: "10%" }} />
                         </colgroup>
@@ -43,6 +47,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                 <th>Patient</th>
                                 <th>Payment</th>
                                 <th className="text-end">Amount</th>
+                                <th className="text-end">Status</th>
                                 <th />
                             </tr>
                         </thead>
@@ -63,16 +68,50 @@ const AppointmentDay = memo(function AppointmentDay({
                                         </span>
                                     </td>
 
-                                    <td className="text-end fw-bold text-success">
-                                        ₹ {a.amount}
-                                    </td>
+                                    <td className="text-end">
+                                        {(() => {
+                                            const collected = Number(
+                                                a.collected ?? 0,
+                                            );
+                                            const total = Number(a.amount ?? 0);
+                                            const isPaid =
+                                                collected >= total && total > 0;
 
+                                            return isPaid ? (
+                                                <span className="fw-bold text-success">
+                                                    ₹ {total}
+                                                </span>
+                                            ) : (
+                                                <div>
+                                                    <div className="fw-bold text-primary">
+                                                        ₹ {collected}
+                                                    </div>
+                                                    <small className="text-muted d-block">
+                                                        of ₹ {total}
+                                                    </small>
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
+                                    <td className="text-end">
+                                        <span
+                                            className={`badge ${
+                                                a.status === "Paid"
+                                                    ? "bg-success"
+                                                    : a.status === "Partial"
+                                                      ? "bg-warning text-dark"
+                                                      : "bg-danger"
+                                            }`}
+                                        >
+                                            {a.status}
+                                        </span>
+                                    </td>
                                     <td className="text-end">
                                         <button
                                             className="btn btn-sm btn-outline-primary"
                                             onClick={() =>
                                                 navigate(
-                                                    `/patient/${a.patientId}`
+                                                    `/patient/${a.patientId}`,
                                                 )
                                             }
                                         >
@@ -96,7 +135,7 @@ const AppointmentDay = memo(function AppointmentDay({
                         style={{ cursor: "pointer" }}
                     >
                         <div className="card-body">
-                            <div className="d-flex justify-content-between">
+                            <div className="d-flex justify-content-between align-items-start">
                                 <div>
                                     <h6 className="fw-semibold mb-1">
                                         {a.name}
@@ -112,8 +151,44 @@ const AppointmentDay = memo(function AppointmentDay({
                                     </span>
                                 </div>
 
-                                <div className="fw-bold text-success">
-                                    ₹ {a.amount}
+                                {/* Amount Section */}
+                                <div className="text-end">
+                                    {(() => {
+                                        const collected = Number(
+                                            a.collected ?? 0,
+                                        );
+                                        const total = Number(a.amount ?? 0);
+                                        const isPaid =
+                                            collected >= total && total > 0;
+
+                                        return isPaid ? (
+                                            <span className="fw-bold text-success">
+                                                ₹ {total}
+                                            </span>
+                                        ) : (
+                                            <div>
+                                                <div className="fw-bold text-primary">
+                                                    ₹ {collected}
+                                                </div>
+                                                <small className="text-muted d-block">
+                                                    of ₹ {total}
+                                                </small>
+                                            </div>
+                                        );
+                                    })()}
+                                    <div className="mt-1">
+                                        <span
+                                            className={`badge ${
+                                                a.status === "Paid"
+                                                    ? "bg-success"
+                                                    : a.status === "Partial"
+                                                      ? "bg-warning text-dark"
+                                                      : "bg-danger"
+                                            }`}
+                                        >
+                                            {a.status}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

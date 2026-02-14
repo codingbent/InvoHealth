@@ -98,7 +98,7 @@ router.post(
                 error: "Internal server error",
             });
         }
-    }
+    },
 );
 
 router.post("/login", async (req, res) => {
@@ -236,7 +236,7 @@ router.post(
                 error: "Server error",
             });
         }
-    }
+    },
 );
 //Creating a Service using : POST "/API/AUTH" Doesn't require auth
 router.post(
@@ -276,7 +276,7 @@ router.post(
                 error: "Internal server error",
             });
         }
-    }
+    },
 );
 
 // Fetch all services for the logged-in doctor
@@ -368,7 +368,7 @@ router.put(
             const patient = await Patient.findByIdAndUpdate(
                 req.params.id,
                 { $set: updateFields },
-                { new: true }
+                { new: true },
             );
 
             if (!patient) {
@@ -384,7 +384,7 @@ router.put(
             console.error(err.message);
             res.status(500).json({ message: "Server error" });
         }
-    }
+    },
 );
 
 // delete patient by id
@@ -433,19 +433,17 @@ router.post("/addappointment/:id", async (req, res) => {
     try {
         const {
             service,
-            amount,
             payment_type,
             doctorId,
             date,
             discount,
             isPercent,
+            collected,
         } = req.body;
 
         const patientId = req.params.id;
 
-        // --------------------------------------------------
-        // 1. VALIDATION
-        // --------------------------------------------------
+        // 1️⃣ VALIDATION
         if (!Array.isArray(service) || service.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -453,9 +451,7 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // --------------------------------------------------
-        // 2. FIND PATIENT
-        // --------------------------------------------------
+        // 2️⃣ FIND PATIENT
         const patient = await Patient.findById(patientId);
         if (!patient) {
             return res.status(404).json({
@@ -464,9 +460,7 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // --------------------------------------------------
-        // 3. DETERMINE DOCTOR
-        // --------------------------------------------------
+        // 3️⃣ DETERMINE DOCTOR
         const finalDoctorId = doctorId || patient.doctor;
         if (!finalDoctorId) {
             return res.status(400).json({
@@ -475,48 +469,59 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // --------------------------------------------------
-        // 4. SERVICE TOTAL (SERVER AUTHORITATIVE)
-        // --------------------------------------------------
+        // 4️⃣ SERVICE TOTAL
         const serviceTotal = service.reduce(
             (sum, s) => sum + (Number(s.amount) || 0),
-            0
+            0,
         );
 
-        // --------------------------------------------------
-        // 5. DISCOUNT
-        // --------------------------------------------------
-        const disc = Number(discount) || 0;
+        // 5️⃣ DISCOUNT
+        const rawDiscount = Number(discount) || 0;
         const percentFlag = Boolean(isPercent);
 
-        let discountValue = 0;
-        if (disc > 0) {
-            discountValue = percentFlag ? serviceTotal * (disc / 100) : disc;
+        let discountValue = percentFlag
+            ? serviceTotal * (rawDiscount / 100)
+            : rawDiscount;
+
+        discountValue = Math.min(Math.max(discountValue, 0), serviceTotal);
+        discountValue = Number(discountValue.toFixed(2));
+
+        // 6️⃣ FINAL AMOUNT
+        const finalAmount = Number((serviceTotal - discountValue).toFixed(2));
+
+        // 7️⃣ PARTIAL PAYMENT
+        let collectedAmount = Math.max(Number(collected) || 0, 0);
+
+        if (collectedAmount > finalAmount) {
+            return res.status(400).json({
+                success: false,
+                message: "Collected amount cannot exceed final amount",
+            });
         }
 
-        if (discountValue > serviceTotal) discountValue = serviceTotal;
-        if (discountValue < 0) discountValue = 0;
+        const remainingAmount = Number(
+            (finalAmount - collectedAmount).toFixed(2),
+        );
 
-        // --------------------------------------------------
-        // 6. FINAL AMOUNT
-        // --------------------------------------------------
-        const finalAmount = serviceTotal - discountValue;
+        const status =
+            remainingAmount === 0
+                ? "Paid"
+                : collectedAmount > 0
+                  ? "Partial"
+                  : "Unpaid";
 
-        // --------------------------------------------------
-        // 7. INVOICE NUMBER (PER DOCTOR)
-        // --------------------------------------------------
+        // 8️⃣ INVOICE COUNTER
         const counterId = `invoice_${finalDoctorId}`;
+
         const counter = await Counter.findByIdAndUpdate(
             counterId,
             { $inc: { seq: 1 } },
-            { new: true, upsert: true }
+            { new: true, upsert: true },
         );
 
         const invoiceNumber = counter.seq;
 
-        // --------------------------------------------------
-        // 8. VISIT OBJECT
-        // --------------------------------------------------
+        // 9️⃣ CREATE VISIT OBJECT
         const visitDate = date ? new Date(date) : new Date();
 
         const visitData = {
@@ -526,28 +531,27 @@ router.post("/addappointment/:id", async (req, res) => {
                 amount: Number(s.amount) || 0,
             })),
             amount: finalAmount,
+            collected: collectedAmount,
+            remaining: remainingAmount,
+            status,
             payment_type,
             invoiceNumber,
             date: visitDate,
-            discount: disc,
+            discount: rawDiscount, // store original input
             isPercent: percentFlag,
         };
 
-        // --------------------------------------------------
-        // 9. SAVE VISIT
-        // --------------------------------------------------
+        // 🔟 SAVE
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
             {
                 $push: { visits: visitData },
                 $set: { doctor: finalDoctorId },
             },
-            { new: true, upsert: true }
+            { new: true, upsert: true },
         );
 
-        // --------------------------------------------------
-        // 🔥 10. FIX: UPDATE lastAppointment SAFELY
-        // --------------------------------------------------
+        // 1️⃣1️⃣ UPDATE PATIENT
         const currentLast = patient.lastAppointment
             ? new Date(patient.lastAppointment)
             : null;
@@ -557,7 +561,6 @@ router.post("/addappointment/:id", async (req, res) => {
             patient.lastpayment_type = payment_type;
             await patient.save();
         }
-        // --------------------------------------------------
 
         return res.status(201).json({
             success: true,
@@ -597,90 +600,103 @@ router.put(
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, payment_type, discount, isPercent } =
-                req.body;
+            const {
+                date,
+                service,
+                payment_type,
+                discount,
+                isPercent,
+                collected,
+            } = req.body;
 
-            // 1. Basic validation
-            if (
-                !date ||
-                !service ||
-                !Array.isArray(service) ||
-                service.length === 0
-            ) {
+            if (!date || !Array.isArray(service) || service.length === 0) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid data. Missing date or services.",
                 });
             }
 
-            // 2. Fetch appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
-                return res
-                    .status(404)
-                    .json({ success: false, message: "Appointment not found" });
+                return res.status(404).json({
+                    success: false,
+                    message: "Appointment not found",
+                });
             }
 
-            // 3. Find correct visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
-                return res
-                    .status(404)
-                    .json({ success: false, message: "Visit not found" });
+                return res.status(404).json({
+                    success: false,
+                    message: "Visit not found",
+                });
             }
 
-            // 4. Update visit date
+            // ✅ Update date
             visit.date = new Date(date);
 
-            // 5. Update service list (normalize)
+            // ✅ Normalize services
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
                 amount: Number(s.amount) || 0,
             }));
 
-            // 6. Compute service total
+            // ✅ Service total
             const serviceTotal = visit.service.reduce(
-                (sum, s) => sum + (Number(s.amount) || 0),
-                0
+                (sum, s) => sum + s.amount,
+                0,
             );
 
-            // 7. Compute discount
+            // ✅ Discount
             const disc = Number(discount) || 0;
             const percentFlag = Boolean(isPercent);
 
-            let discountValue = 0;
-
-            if (disc > 0) {
-                if (percentFlag) {
-                    discountValue = serviceTotal * (disc / 100);
-                } else {
-                    discountValue = disc;
-                }
-            }
+            let discountValue = percentFlag
+                ? serviceTotal * (disc / 100)
+                : disc;
 
             if (discountValue < 0) discountValue = 0;
             if (discountValue > serviceTotal) discountValue = serviceTotal;
 
-            // 8. Final payable amount
             const finalAmount = serviceTotal - discountValue;
 
-            // 9. Update payment type (validated)
+            // ✅ Partial payment logic
+            let collectedAmount = Number(collected) || 0;
+
+            if (collectedAmount < 0) collectedAmount = 0;
+            if (collectedAmount > finalAmount) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Collected amount cannot exceed final amount",
+                });
+            }
+
+            const remainingAmount = finalAmount - collectedAmount;
+
+            const status =
+                remainingAmount === 0
+                    ? "Paid"
+                    : collectedAmount > 0
+                      ? "Partial"
+                      : "Unpaid";
+
+            visit.amount = finalAmount;
+            visit.discount = disc;
+            visit.isPercent = percentFlag;
+            visit.collected = collectedAmount;
+            visit.remaining = remainingAmount;
+            visit.status = status;
+
             if (
                 payment_type &&
                 ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
-                    payment_type
+                    payment_type,
                 )
             ) {
                 visit.payment_type = payment_type;
             }
 
-            // 10. Save computed values
-            visit.amount = finalAmount;
-            visit.discount = disc;
-            visit.isPercent = percentFlag;
-
-            // 11. Save appointment
             await appointment.save();
 
             return res.json({
@@ -695,7 +711,7 @@ router.put(
                 message: err.message || "Server error",
             });
         }
-    }
+    },
 );
 
 router.get("/appointments/:patientId", fetchuser, async (req, res) => {
@@ -711,9 +727,26 @@ router.get("/appointments/:patientId", fetchuser, async (req, res) => {
             });
         }
 
-        // sort visits latest first
-        appointment.visits.sort((a, b) => new Date(b.date) - new Date(a.date));
+        appointment.visits = appointment.visits
+            .map((visit) => {
+                const collected = Number(visit.collected);
 
+                // If collected missing OR zero but status Paid → fix it
+                if (
+                    visit.collected === undefined ||
+                    (collected === 0 && visit.status === "Paid")
+                ) {
+                    return {
+                        ...visit,
+                        collected: visit.amount,
+                        remaining: 0,
+                        status: "Paid",
+                    };
+                }
+
+                return visit;
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
         res.json({
             appointmentId: appointment._id,
             visits: appointment.visits,
@@ -753,7 +786,7 @@ router.put("/updatedoc", fetchuser, async (req, res) => {
         const updated = await Doc.findByIdAndUpdate(
             req.user.doctorId,
             { $set: req.body },
-            { new: true }
+            { new: true },
         );
 
         return res.json({ success: true, doctor: updated });
@@ -768,8 +801,14 @@ router.put(
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
-            const { date, service, payment_type, discount, isPercent } =
-                req.body;
+            const {
+                date,
+                service,
+                payment_type,
+                discount,
+                isPercent,
+                collected,
+            } = req.body;
 
             // 1️⃣ Validation
             if (!date || !Array.isArray(service) || service.length === 0) {
@@ -788,7 +827,7 @@ router.put(
                 });
             }
 
-            // 3️⃣ Find visit inside appointment
+            // 3️⃣ Find visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
                 return res.status(404).json({
@@ -798,8 +837,7 @@ router.put(
             }
 
             // 4️⃣ Update date
-            const visitDate = new Date(date);
-            visit.date = visitDate;
+            visit.date = new Date(date);
 
             // 5️⃣ Normalize services
             visit.service = service.map((s) => ({
@@ -811,7 +849,7 @@ router.put(
             // 6️⃣ Compute service total
             const serviceTotal = visit.service.reduce(
                 (sum, s) => sum + s.amount,
-                0
+                0,
             );
 
             // 7️⃣ Discount calculation
@@ -831,22 +869,50 @@ router.put(
             // 8️⃣ Final amount
             const finalAmount = serviceTotal - discountValue;
 
-            // 9️⃣ Payment type validation
+            // 9️⃣ Recalculate payment logic (USE FRONTEND VALUE)
+            let collectedAmount;
+
+            if (collected !== undefined) {
+                collectedAmount = Number(collected);
+            } else {
+                collectedAmount = visit.collected || 0;
+            }
+
+            if (collectedAmount < 0) collectedAmount = 0;
+            if (collectedAmount > finalAmount) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Collected amount exceeds final amount.",
+                });
+            }
+
+            const remainingAmount = finalAmount - collectedAmount;
+
+            const status =
+                remainingAmount === 0
+                    ? "Paid"
+                    : collectedAmount > 0
+                      ? "Partial"
+                      : "Unpaid";
+
+            // 🔟 Update visit fields
+            visit.amount = finalAmount;
+            visit.discount = disc;
+            visit.isPercent = percentFlag;
+            visit.collected = collectedAmount;
+            visit.remaining = remainingAmount;
+            visit.status = status;
+
             if (
                 payment_type &&
                 ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
-                    payment_type
+                    payment_type,
                 )
             ) {
                 visit.payment_type = payment_type;
             }
 
-            // 🔟 Save computed values
-            visit.amount = finalAmount;
-            visit.discount = disc;
-            visit.isPercent = percentFlag;
-
-            // 1️⃣1️⃣ Save appointment
+            // 1️⃣1️⃣ Save
             await appointment.save();
 
             return res.json({
@@ -861,8 +927,9 @@ router.put(
                 message: "Server error",
             });
         }
-    }
+    },
 );
+
 router.delete(
     "/delete-invoice/:appointmentId/:visitId",
     fetchuser,
@@ -878,7 +945,7 @@ router.delete(
 
             // Remove visit
             appointment.visits = appointment.visits.filter(
-                (v) => v._id.toString() !== visitId
+                (v) => v._id.toString() !== visitId,
             );
 
             // 🛑 NEW FIX: Also remove broken/empty visits
@@ -906,7 +973,7 @@ router.delete(
             console.error(err);
             res.status(500).json({ message: "Server error" });
         }
-    }
+    },
 );
 
 router.get("/fetchallappointments", fetchuser, async (req, res) => {
@@ -917,6 +984,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             search = "",
             gender,
             payments,
+            status,
             services,
             startDate,
             endDate,
@@ -938,6 +1006,25 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             if (!appt.patient) return;
 
             appt.visits.forEach((visit) => {
+                const amount = Number(visit.amount) || 0;
+                const collected =
+                    visit.collected !== undefined
+                        ? Number(visit.collected)
+                        : amount;
+
+                const remaining =
+                    visit.remaining !== undefined
+                        ? Number(visit.remaining)
+                        : Math.max(amount - collected, 0);
+
+                const visitStatus =
+                    visit.status ||
+                    (remaining === 0
+                        ? "Paid"
+                        : collected > 0
+                          ? "Partial"
+                          : "Unpaid");
+
                 allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name || "",
@@ -945,14 +1032,18 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
                     gender: appt.patient.gender || "",
                     date: visit.date,
                     payment_type: visit.payment_type,
-                    amount: visit.amount,
+                    amount,
+                    collected,
+                    remaining,
+                    status: visitStatus,
                     services: visit.service || [],
                     invoiceNumber: visit.invoiceNumber || "",
                 });
             });
         });
 
-        // FILTERS
+        // ================= FILTERS =================
+
         allVisits = allVisits.filter((v) => {
             const searchMatch =
                 !search ||
@@ -964,37 +1055,45 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
             const paymentMatch =
                 !payments || payments.split(",").includes(v.payment_type);
 
+            const statusMatch = !status || status.split(",").includes(v.status);
+
             const serviceMatch =
                 !services ||
                 (v.services || []).some((s) =>
                     services
                         .split(",")
-                        .includes(typeof s === "object" ? s.name : s)
+                        .includes(typeof s === "object" ? s.name : s),
                 );
 
             const dateObj = new Date(v.date);
+
             const startMatch = !startDate || dateObj >= new Date(startDate);
-            const endMatch = !endDate || dateObj <= new Date(endDate);
+
+            const end = endDate ? new Date(endDate) : null;
+            if (end) end.setHours(23, 59, 59, 999);
+
+            const endMatch = !end || dateObj <= end;
 
             return (
                 searchMatch &&
                 genderMatch &&
                 paymentMatch &&
+                statusMatch &&
                 serviceMatch &&
                 startMatch &&
                 endMatch
             );
         });
 
-        // SORT
+        // ================= SORT =================
+
         allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const total = allVisits.length;
 
-        // ✅ CORRECT PAGINATION
         const paginatedVisits = allVisits.slice(
             parsedSkip,
-            parsedSkip + parsedLimit
+            parsedSkip + parsedLimit,
         );
 
         res.json({
@@ -1014,7 +1113,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
 router.get("/exportappointments", fetchuser, async (req, res) => {
     try {
         const appointments = await Appointment.find({
-            doctor: req.user.doctorId,
+            doctor: req.user.id, // ✅ FIXED (you were using doctorId)
         }).populate("patient");
 
         const allVisits = [];
@@ -1023,21 +1122,41 @@ router.get("/exportappointments", fetchuser, async (req, res) => {
             if (!appt.patient) return;
 
             appt.visits.forEach((visit) => {
+                const billed = Number(visit.amount ?? 0);
+                const collected = Number(visit.collected ?? billed);
+                const remaining = billed - collected;
+
+                const status =
+                    remaining <= 0
+                        ? "Paid"
+                        : collected > 0
+                          ? "Partial"
+                          : "Unpaid";
+
                 allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name,
                     number: appt.patient.number || "",
                     gender: appt.patient.gender || "",
+
                     date: visit.date,
-                    payment_type: visit.payment_type,
-                    amount: visit.amount,
+                    payment_type: visit.payment_type || "Other",
+
+                    amount: billed,
+                    collected: collected, 
+                    remaining: remaining, 
+                    status: status, 
+
+                    discount: visit.discount || 0, // optional
+                    isPercent: visit.isPercent || false,
+
                     services: visit.service || [],
                     invoiceNumber: visit.invoiceNumber || "",
                 });
             });
         });
 
-        allVisits.sort((a, b) => new Date(a.date) - new Date(b.date)); // ASC for excel
+        allVisits.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         res.json(allVisits);
     } catch (err) {
@@ -1084,7 +1203,7 @@ router.post("/send-otp", async (req, res) => {
 
     try {
         const response = await axios.get(
-            `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN`
+            `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN`,
         );
 
         console.log("2Factor Response:", response.data);
@@ -1146,7 +1265,7 @@ router.post("/verify-otp", async (req, res) => {
 
     try {
         const response = await axios.get(
-            `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`
+            `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`,
         );
 
         if (response.data.Status !== "Success") {
@@ -1387,7 +1506,7 @@ router.delete("/delete-staff/:id", fetchuser, async (req, res) => {
         const staff = await Staff.findOneAndUpdate(
             { _id: req.params.id, doctorId },
             { isActive: false },
-            { new: true }
+            { new: true },
         );
 
         if (!staff) {
@@ -1419,7 +1538,7 @@ router.post("/staff/send-otp", async (req, res) => {
     }
 
     const response = await axios.get(
-        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN/STAFF_LOGIN`
+        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN/STAFF_LOGIN`,
     );
 
     res.json({
@@ -1431,7 +1550,7 @@ router.post("/staff/verify-otp", async (req, res) => {
     const { sessionId, otp, phone } = req.body;
 
     const response = await axios.get(
-        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`
+        `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`,
     );
 
     if (response.data.Status !== "Success") {
@@ -1505,7 +1624,7 @@ router.post("/staff/login", async (req, res) => {
                 },
             },
             JWT_SECRET,
-            { expiresIn: "1d" }
+            { expiresIn: "1d" },
         );
 
         res.json({
@@ -1551,7 +1670,7 @@ router.post("/staff/set-password", async (req, res) => {
             },
         },
         JWT_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "1d" },
     );
 
     res.json({ success: true, token, role: "staff", name: staff.name });
@@ -1710,12 +1829,19 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
             // ================= FACET =================
             {
                 $facet: {
-                    // PAYMENT SUMMARY
+                    // PAYMENT SUMMARY (Collected only)
                     paymentSummary: [
                         {
                             $group: {
                                 _id: "$visits.payment_type",
-                                total: { $sum: "$visits.amount" },
+                                total: {
+                                    $sum: {
+                                        $ifNull: [
+                                            "$visits.collected",
+                                            "$visits.amount",
+                                        ],
+                                    },
+                                },
                             },
                         },
                         {
@@ -1733,9 +1859,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                         {
                             $group: {
                                 _id: "$visits.service.name",
-                                total: {
-                                    $sum: "$visits.service.amount",
-                                },
+                                total: { $sum: "$visits.service.amount" },
                             },
                         },
                         {
@@ -1747,8 +1871,8 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                         },
                     ],
 
-                    // TOTAL COLLECTION (✅ NOW FILTERED)
-                    totalCollection: [
+                    // TOTAL REVENUE (Full billed amount)
+                    totalRevenue: [
                         {
                             $group: {
                                 _id: null,
@@ -1757,7 +1881,50 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                         },
                     ],
 
-                    // TOTAL VISITS (✅ NOW FILTERED)
+                    // TOTAL COLLECTION (Actual collected)
+                    totalCollection: [
+                        {
+                            $group: {
+                                _id: null,
+                                total: {
+                                    $sum: {
+                                        $ifNull: [
+                                            "$visits.collected",
+                                            "$visits.amount",
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    ],
+
+                    // TOTAL PENDING
+                    totalPending: [
+                        {
+                            $group: {
+                                _id: null,
+                                total: {
+                                    $sum: {
+                                        $max: [
+                                            {
+                                                $subtract: [
+                                                    "$visits.amount",
+                                                    {
+                                                        $ifNull: [
+                                                            "$visits.collected",
+                                                            "$visits.amount",
+                                                        ],
+                                                    },
+                                                ],
+                                            },
+                                            0,
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                    ],
+
                     totalVisits: [{ $count: "count" }],
                 },
             },
@@ -1770,7 +1937,9 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
             success: true,
             paymentSummary: result.paymentSummary,
             serviceSummary: result.serviceSummary,
+            totalRevenue: result.totalRevenue[0]?.total || 0,
             totalCollection: result.totalCollection[0]?.total || 0,
+            totalPending: result.totalPending[0]?.total || 0,
             totalVisits: result.totalVisits[0]?.count || 0,
         });
     } catch (err) {
@@ -1793,7 +1962,7 @@ router.put("/doctor/theme", fetchuser, async (req, res) => {
         const doctor = await Doc.findByIdAndUpdate(
             req.user.id, // set by fetchuser middleware
             { theme },
-            { new: true }
+            { new: true },
         ).select("theme");
 
         res.json({

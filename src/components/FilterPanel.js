@@ -5,6 +5,8 @@ export default function FilterPanel({
     setSearchTerm,
     selectedPayments,
     setSelectedPayments,
+    selectedStatus,
+    setSelectedStatus,
     selectedGender,
     setSelectedGender,
     allServices,
@@ -138,12 +140,51 @@ export default function FilterPanel({
                                             setSelectedPayments(
                                                 selectedPayments.includes(type)
                                                     ? selectedPayments.filter(
-                                                          (p) => p !== type
+                                                          (p) => p !== type,
                                                       )
                                                     : [
                                                           ...selectedPayments,
                                                           type,
-                                                      ]
+                                                      ],
+                                            )
+                                        }
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/*Payment Status*/}
+                        <div className="mb-4">
+                            <label className="form-label small fw-semibold text-theme-muted">
+                                Payment Status
+                            </label>
+
+                            <div className="d-flex flex-wrap gap-2">
+                                {[
+                                    "Unpaid",
+                                    "Paid",
+                                    "Partial",
+                                ].map((type) => (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        className={`btn btn-sm rounded-pill ${
+                                            selectedStatus.includes(type)
+                                                ? "btn-primary"
+                                                : "btn-outline-secondary"
+                                        }`}
+                                        onClick={() =>
+                                            setSelectedStatus(
+                                                selectedStatus.includes(type)
+                                                    ? selectedStatus.filter(
+                                                          (p) => p !== type,
+                                                      )
+                                                    : [
+                                                          ...selectedStatus,
+                                                          type,
+                                                      ],
                                             )
                                         }
                                     >
@@ -196,12 +237,12 @@ export default function FilterPanel({
                                                 setSelectedServices(
                                                     active
                                                         ? selectedServices.filter(
-                                                              (x) => x !== s
+                                                              (x) => x !== s,
                                                           )
                                                         : [
                                                               ...selectedServices,
                                                               s,
-                                                          ]
+                                                          ],
                                                 )
                                             }
                                         >

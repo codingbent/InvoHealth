@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
@@ -12,27 +13,29 @@ const AddPatient = ({ showAlert }) => {
         age: "",
         gender: "Male",
     });
+    
+    const navigate=useNavigate();
 
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
-
     // Discount
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
 
     const [appointmentDate, setAppointmentDate] = useState(
-        new Date().toISOString().slice(0, 10)
+        new Date().toISOString().slice(0, 10),
     );
     const [payment_type, setPaymentType] = useState("Cash");
-
-    const { name, service, number, amount, age, gender } = patient;
-
+    const { name, service, number, age, gender } = patient;
+    const token = localStorage.getItem("token");
+    const decoded = jwtDecode(token);
+    const doctorId = decoded.user?.doctorId;
     const API_BASE_URL = useMemo(
         () =>
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001",
-        []
+        [],
     );
 
     // =========================
@@ -42,11 +45,11 @@ const AddPatient = ({ showAlert }) => {
         const fetchServices = async () => {
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`
+                    `${API_BASE_URL}/api/auth/fetchallservice`,
                 );
                 const data = await res.json();
                 setAvailableServices(
-                    Array.isArray(data) ? data : data.services || []
+                    Array.isArray(data) ? data : data.services || [],
                 );
             } catch (err) {
                 console.error("Error fetching services:", err);
@@ -58,22 +61,26 @@ const AddPatient = ({ showAlert }) => {
     // =========================
     // CALCULATE TOTAL
     // =========================
-    useEffect(() => {
-        const serviceTotal = service.reduce(
+    const serviceTotal = useMemo(() => {
+        return service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
-            0
+            0,
         );
+    }, [service, serviceAmounts]);
 
-        let final = serviceTotal;
+    // 🔥 FINAL AMOUNT = SERVICE TOTAL ONLY
+    const finalAmount = serviceTotal;
 
-        if (discount > 0) {
-            final -= isPercent ? serviceTotal * (discount / 100) : discount;
-        }
+    // =========================
+    // AUTO SET COLLECTED = FINAL WHEN SERVICES CHANGE
+    // =========================
+    useEffect(() => {
+        setPatient((prev) => ({
+            ...prev,
+            amount: finalAmount,
+        }));
+    }, [finalAmount]);
 
-        if (final < 0) final = 0;
-
-        setPatient((prev) => ({ ...prev, amount: final }));
-    }, [service, serviceAmounts, discount, isPercent]);
 
     // =========================
     // INPUT HANDLER
@@ -81,7 +88,24 @@ const AddPatient = ({ showAlert }) => {
     const onChange = (e) => {
         setPatient({ ...patient, [e.target.name]: e.target.value });
     };
+    const calculatedDiscount = useMemo(() => {
+        if (!discount || discount <= 0) return 0;
 
+        if (isPercent) {
+            return (finalAmount * discount) / 100;
+        }
+
+        return discount;
+    }, [discount, isPercent, finalAmount]);
+    
+    useEffect(() => {
+    const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
+
+    setPatient((prev) => ({
+        ...prev,
+        amount: autoCollected,
+    }));
+}, [calculatedDiscount, finalAmount]);
     // =========================
     // SUBMIT
     // =========================
@@ -99,11 +123,38 @@ const AddPatient = ({ showAlert }) => {
         }
 
         let finalNumber = number.trim();
+        if (!isPercent && discount > serviceTotal) {
+            alert("Discount cannot exceed total amount");
+            return;
+        }
+        if ((patient.amount > finalAmount)||patient.amount > finalAmount-calculatedDiscount) {
+            alert("Collected amount cannot exceed final amount");
+            return;
+        }
+        if (isPercent && discount > 100) {
+            alert("Percentage cannot exceed 100%");
+            return;
+        }
+        // extract doctorId once
+        if (isPercent) {
+            setDiscount((finalAmount * discount) / 100);
+        }
+        // 🔥 REAL CALCULATION
+        const collectedAmount = Number(patient.amount) || 0;
+        const totalAmount = finalAmount;
 
+        let computedStatus = "Unpaid";
+        let computedRemaining = totalAmount;
+
+        if (collectedAmount >= totalAmount) {
+            computedStatus = "Paid";
+            computedRemaining = 0;
+        } else if (collectedAmount > 0) {
+            computedStatus = "Partial";
+            computedRemaining = totalAmount - collectedAmount;
+        }
         try {
-            // =========================
-            // CREATE PATIENT
-            // =========================
+            // 1️⃣ CREATE PATIENT
             const patientRes = await authFetch(
                 `${API_BASE_URL}/api/auth/addpatient`,
                 {
@@ -111,18 +162,10 @@ const AddPatient = ({ showAlert }) => {
                     body: JSON.stringify({
                         name,
                         gender,
-                        service: service.map((s) => ({
-                            id: s._id,
-                            name: s.name,
-                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
-                        })),
                         number: finalNumber,
-                        amount,
                         age,
-                        discount,
-                        isPercent,
                     }),
-                }
+                },
             );
 
             const patientJson = await patientRes.json();
@@ -130,35 +173,14 @@ const AddPatient = ({ showAlert }) => {
             if (!patientJson.success) {
                 showAlert(
                     patientJson.error || "Failed to add patient",
-                    "danger"
-                );
-                return;
-            }
-
-            if (patientJson.alreadyExists) {
-                alert(
-                    "Patient with same name and mobile number already exists"
-                );
-                return; // 🚫 stop further execution
-            }
-
-            if (!patientJson.success) {
-                showAlert(
-                    patientJson.error || "Failed to add patient",
-                    "danger"
+                    "danger",
                 );
                 return;
             }
 
             const newPatientId = patientJson.patient._id;
 
-            // =========================
-            // CREATE APPOINTMENT
-            // =========================
-            const token = localStorage.getItem("token");
-            const decoded = jwtDecode(token);
-            const doctorId = decoded.user?.doctorId;
-
+            // 2️⃣ CREATE APPOINTMENT (billing happens here)
             const appointmentRes = await authFetch(
                 `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
                 {
@@ -169,45 +191,26 @@ const AddPatient = ({ showAlert }) => {
                             name: s.name,
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
-                        amount,
+                        collected: patient.amount,
+                        status: computedStatus,
+                        remaining: computedRemaining,
                         date: appointmentDate,
                         payment_type,
                         doctorId,
                         discount,
                         isPercent,
                     }),
-                }
+                },
             );
 
             const appointmentJson = await appointmentRes.json();
 
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
-                document.querySelector("#patientModal .btn-close")?.click();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 3000);
+                navigate("/");
             } else {
                 showAlert("Patient added but appointment failed", "warning");
             }
-
-            // =========================
-            // RESET FORM
-            // =========================
-            setPatient({
-                name: "",
-                service: [],
-                number: "",
-                amount: 0,
-                age: "",
-                gender: "Male",
-            });
-
-            setServiceAmounts({});
-            setDiscount(0);
-            setIsPercent(false);
-            setAppointmentDate(new Date().toISOString().slice(0, 10));
-            setPaymentType("Cash");
         } catch (err) {
             console.error(err);
             showAlert("Server error", "danger");
@@ -240,7 +243,6 @@ const AddPatient = ({ showAlert }) => {
                     <h6 className="text-uppercase text-theme-muted small mb-3">
                         Patient Details
                     </h6>
-
                     <div className="row g-3 mb-4">
                         <div className="col-md-6">
                             <label className="form-label small">
@@ -282,7 +284,6 @@ const AddPatient = ({ showAlert }) => {
                             />
                         </div>
                     </div>
-
                     {/* CONTACT */}
                     <div className="mb-4">
                         <label className="form-label small">
@@ -297,7 +298,7 @@ const AddPatient = ({ showAlert }) => {
                             onChange={(e) => {
                                 const onlyDigits = e.target.value.replace(
                                     /\D/g,
-                                    ""
+                                    "",
                                 );
                                 if (onlyDigits.length <= 10) {
                                     setPatient({
@@ -308,12 +309,10 @@ const AddPatient = ({ showAlert }) => {
                             }}
                         />
                     </div>
-
                     {/* SERVICES */}
                     <h6 className="text-uppercase text-theme-muted small mb-2">
                         Services & Billing
                     </h6>
-
                     <div className="mb-3">
                         <ServiceList
                             services={availableServices}
@@ -321,7 +320,7 @@ const AddPatient = ({ showAlert }) => {
                             onAdd={(serviceObj) => {
                                 setPatient((prev) =>
                                     prev.service.some(
-                                        (s) => s._id === serviceObj._id
+                                        (s) => s._id === serviceObj._id,
                                     )
                                         ? prev
                                         : {
@@ -330,7 +329,7 @@ const AddPatient = ({ showAlert }) => {
                                                   ...prev.service,
                                                   serviceObj,
                                               ],
-                                          }
+                                          },
                                 );
 
                                 setServiceAmounts((prev) => ({
@@ -342,7 +341,7 @@ const AddPatient = ({ showAlert }) => {
                                 setPatient((prev) => ({
                                     ...prev,
                                     service: prev.service.filter(
-                                        (s) => s._id !== id
+                                        (s) => s._id !== id,
                                     ),
                                 }));
 
@@ -354,42 +353,9 @@ const AddPatient = ({ showAlert }) => {
                             }}
                         />
                     </div>
-
                     {/* BILLING */}
                     {service.length > 0 && (
                         <div className="border rounded-4 p-3 mb-4">
-                            {/* DISCOUNT */}
-                            <div className="d-flex align-items-end gap-3 mb-3">
-                                <div>
-                                    <label className="form-label small">
-                                        Discount
-                                    </label>
-                                    <input
-                                        type="number"
-                                        className="form-control rounded-3"
-                                        style={{ maxWidth: 160 }}
-                                        value={discount}
-                                        onChange={(e) =>
-                                            setDiscount(Number(e.target.value))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="form-check mt-4">
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        checked={isPercent}
-                                        onChange={(e) =>
-                                            setIsPercent(e.target.checked)
-                                        }
-                                    />
-                                    <label className="form-check-label small">
-                                        Percentage (%)
-                                    </label>
-                                </div>
-                            </div>
-
                             {/* SERVICES TABLE */}
                             <table className="table table-sm align-middle mb-3">
                                 <thead className="table-light">
@@ -420,9 +386,9 @@ const AddPatient = ({ showAlert }) => {
                                                                 ...prev,
                                                                 [s._id]: Number(
                                                                     e.target
-                                                                        .value
+                                                                        .value,
                                                                 ),
-                                                            })
+                                                            }),
                                                         )
                                                     }
                                                 />
@@ -433,18 +399,90 @@ const AddPatient = ({ showAlert }) => {
                             </table>
 
                             {/* TOTAL */}
-                            <div className="d-flex justify-content-between fw-semibold">
+                            <div className="d-flex justify-content-between fw-semibold mt-3">
                                 <span>Final Amount</span>
-                                <span className="text-primary">₹ {amount}</span>
+                                <span className="text-primary">
+                                    ₹ {finalAmount}
+                                </span>
                             </div>
                         </div>
                     )}
+                    {/* DISCOUNT SECTION */}
+                    <div className="mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <label className="form-label fw-semibold mb-0">
+                                Discount
+                            </label>
+                            <div className="form-check form-switch">
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    checked={isPercent}
+                                    onChange={(e) =>
+                                        setIsPercent(e.target.checked)
+                                    }
+                                />
+                                <label className="form-check-label small">
+                                    {isPercent
+                                        ? "Percentage (%)"
+                                        : "Flat Amount (₹)"}
+                                </label>
+                            </div>
+                        </div>
+                        <input
+                            type="number"
+                            className="form-control rounded-3"
+                            placeholder={isPercent ? "Enter %" : "Enter amount"}
+                            value={discount}
+                            min={0}
+                            max={isPercent ? 100 : finalAmount}
+                            onChange={(e) => {
+                                let value = Number(e.target.value);
+                                if (value < 0) value = 0;
+                                if (isPercent && value > 100) value = 100;
+                                if (!isPercent && value > finalAmount)
+                                    value = finalAmount;
+                                setDiscount(value);
+                                
+                            }}
+                        />
+                    </div>
+                    {/* AMOUNT COLLECTED */}
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="fw-semibold">Amount Collected</span>
 
+                        <input
+                            type="number"
+                            className="form-control text-end rounded-3"
+                            style={{ maxWidth: "140px" }}
+                            value={patient.amount.toFixed(0)}
+                            onChange={(e) =>
+                                setPatient((prev) => ({
+                                    ...prev,
+                                    amount: Number(e.target.value),
+                                }))
+                            }
+                        />
+                    </div>
+                    {/* DISCOUNT GIVEN */}
+                    <div className="d-flex justify-content-between">
+                        <span className="text-muted">Discount Given</span>
+                        <span className="text-danger">
+                            ₹ {calculatedDiscount.toFixed(0)}
+                        </span>
+                    </div>
+                    {/* PAYABLE AMOUNT */}
+                    <div className="d-flex justify-content-between fw-semibold mt-2">
+                        <span>Payable Amount</span>
+                        <span className="text-success">
+                            ₹
+                            {Math.max(finalAmount - patient.amount-calculatedDiscount, 0).toFixed(0)}
+                        </span>
+                    </div>
                     {/* APPOINTMENT */}
                     <h6 className="text-uppercase text-theme-muted small mb-2">
                         Appointment & Payment
                     </h6>
-
                     <div className="row g-3">
                         <div className="col-md-6">
                             <label className="form-label small">
@@ -495,7 +533,7 @@ const AddPatient = ({ showAlert }) => {
                         className="btn btn-primary rounded-3 px-4"
                         disabled={service.length === 0}
                     >
-                        ✅ Save & Create
+                        Save & Create
                     </button>
                 </div>
             </div>

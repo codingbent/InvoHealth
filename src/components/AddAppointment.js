@@ -12,14 +12,13 @@ export default function AddAppointment({ showAlert }) {
     const [searchText, setSearchText] = useState("");
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
-
+    const [collected, setCollected] = useState(0);
     const [allServices, setAllServices] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const [appointmentDate, setAppointmentDate] = useState(
-        new Date().toISOString().slice(0, 10)
+        new Date().toISOString().slice(0, 10),
     );
     const [paymentType, setPaymentType] = useState("Cash");
 
@@ -29,12 +28,21 @@ export default function AddAppointment({ showAlert }) {
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
 
+    const discountValue = Math.min(
+        isPercent ? (total * discount) / 100 : discount,
+        total,
+    );
+
+    const remaining = Math.max(finalAmount - collected, 0);
+
+    const status =
+        remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
     /* ===================== FETCH SERVICES ===================== */
     useEffect(() => {
         const fetchServices = async () => {
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`
+                    `${API_BASE_URL}/api/auth/fetchallservice`,
                 );
                 const data = await res.json();
                 setAllServices(data.services || data || []);
@@ -55,7 +63,7 @@ export default function AddAppointment({ showAlert }) {
 
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`
+                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`,
                 );
                 const data = await res.json();
                 setPatients(data);
@@ -71,7 +79,7 @@ export default function AddAppointment({ showAlert }) {
     useEffect(() => {
         const t = services.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
-            0
+            0,
         );
         setTotal(t);
 
@@ -135,12 +143,15 @@ export default function AddAppointment({ showAlert }) {
                             amount: serviceAmounts[s._id] ?? s.amount,
                         })),
                         amount: finalAmount,
+                        collected,
+                        remaining,
+                        status,
                         payment_type: paymentType,
                         discount,
                         isPercent,
                         date: appointmentDate,
                     }),
-                }
+                },
             );
 
             const data = await res.json();
@@ -230,12 +241,12 @@ export default function AddAppointment({ showAlert }) {
                                 setServices((prev) =>
                                     prev.some((x) => x._id === s._id)
                                         ? prev
-                                        : [...prev, s]
+                                        : [...prev, s],
                                 )
                             }
                             onRemove={(id) => {
                                 setServices((prev) =>
-                                    prev.filter((s) => s._id !== id)
+                                    prev.filter((s) => s._id !== id),
                                 );
                                 setServiceAmounts((prev) => {
                                     const c = { ...prev };
@@ -265,7 +276,7 @@ export default function AddAppointment({ showAlert }) {
                                                 onChange={(e) =>
                                                     changeServiceAmount(
                                                         s._id,
-                                                        e.target.value
+                                                        e.target.value,
                                                     )
                                                 }
                                             />
@@ -303,16 +314,47 @@ export default function AddAppointment({ showAlert }) {
                                 <div className="alert alert-light border">
                                     <div>Total: ₹ {total}</div>
                                     <div>
-                                        Discount: ₹{" "}
-                                        {isPercent
-                                            ? (
-                                                  (total * discount) /
-                                                  100
-                                              ).toFixed(2)
-                                            : discount}
+                                        Discount: ₹ {discountValue.toFixed(2)}
                                     </div>
                                     <div className="fw-bold">
                                         Final: ₹ {finalAmount}
+                                    </div>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">
+                                        Amount Collected
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={collected}
+                                        min={0}
+                                        max={finalAmount}
+                                        onChange={(e) => {
+                                            let value = Number(e.target.value);
+                                            if (value < 0) value = 0;
+                                            if (value > finalAmount)
+                                                value = finalAmount;
+                                            setCollected(value);
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="alert alert-light border">
+                                    <div>Remaining: ₹ {remaining}</div>
+                                    <div className="fw-semibold">
+                                        Status:{" "}
+                                        <span
+                                            className={
+                                                status === "Paid"
+                                                    ? "text-success"
+                                                    : status === "Partial"
+                                                      ? "text-warning"
+                                                      : "text-danger"
+                                            }
+                                        >
+                                            {status}
+                                        </span>
                                     </div>
                                 </div>
                             </>

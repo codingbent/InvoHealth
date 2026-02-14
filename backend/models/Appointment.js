@@ -23,13 +23,22 @@ const AppointmentSchema = new Schema({
 
             amount: { type: Number, default: 0 },
 
-            // 🆕 DISCOUNT FIELDS
+            // DISCOUNT FIELDS
             discount: { type: Number, default: 0 }, // discount value
             isPercent: { type: Boolean, default: false }, // true = percentage, false = fixed
+            // PARTIAL PAYMENT SUPPORT
+            collected: { type: Number, default: 0 },
+            remaining: { type: Number, default: 0 },
 
+            // PAYMENT STATUS
+            status: {
+                type: String,
+                enum: ["Paid", "Partial", "Unpaid"],
+                default: "Unpaid",
+            },
             payment_type: {
                 type: String,
-                enum: ["Cash", "Card", "UPI","ICICI","HDFC", "Other"],
+                enum: ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"],
                 default: "Cash",
             },
             invoiceNumber: { type: Number, default: 1 },
@@ -41,8 +50,8 @@ const AppointmentSchema = new Schema({
 async function getNextInvoiceNumber(doctorId) {
     const counter = await Counter.findOneAndUpdate(
         { _id: `invoice_${doctorId}` },
-        { $inc: { seq: 0 } },
-        { new: true }
+        { $inc: { seq: 1 } },
+        { new: true },
     );
 
     if (!counter) {
@@ -65,18 +74,41 @@ AppointmentSchema.statics.addVisit = async function (
     amount,
     payment_type,
     invoiceNumber,
-    date
+    date,
+    collectedInput,
 ) {
-    // Parse date safely
+    // 1️⃣ Safe date parsing
     let visitDate = new Date();
     if (date && !isNaN(Date.parse(date))) {
         visitDate = new Date(date);
     }
 
+    const finalAmount = Number(amount) || 0;
+
+    // 2️⃣ Safe collected calculation
+    let collected = Number(collectedInput);
+
+    if (isNaN(collected)) {
+        collected = finalAmount;
+    }
+
+    if (collected < 0) collected = 0;
+    if (collected > finalAmount) collected = finalAmount;
+
+    // 3️⃣ Remaining
+    const remaining = Math.max(finalAmount - collected, 0);
+
+    // 4️⃣ Status logic
+    const status =
+        remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
+
     const newVisit = {
         date: visitDate,
         service,
-        amount,
+        amount: finalAmount,
+        collected,
+        remaining,
+        status,
         payment_type,
         invoiceNumber,
     };
@@ -87,7 +119,7 @@ AppointmentSchema.statics.addVisit = async function (
             $push: { visits: newVisit },
             $set: { doctor: doctorId },
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true },
     );
 
     return appointment;

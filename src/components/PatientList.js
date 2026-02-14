@@ -18,6 +18,7 @@ export default function PatientList() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
+    const [selectedStatus, setSelectedStatus] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
     const [allServices, setAllServices] = useState([]);
     const [startDate, setStartDate] = useState("");
@@ -112,6 +113,7 @@ export default function PatientList() {
                 search: debouncedSearch,
                 gender: selectedGender,
                 payments: selectedPayments.join(","),
+                status: selectedStatus.join(","),
                 services: selectedServices.join(","),
                 startDate,
                 endDate,
@@ -140,6 +142,7 @@ export default function PatientList() {
         debouncedSearch,
         selectedGender,
         selectedPayments,
+        selectedStatus,
         selectedServices,
         startDate,
         endDate,
@@ -214,6 +217,10 @@ export default function PatientList() {
                 selectedPayments.length === 0 ||
                 selectedPayments.includes(a.payment_type);
 
+            const statusMatch =
+                selectedStatus.length === 0 ||
+                selectedStatus.includes(a.status);
+
             const genderMatch = !selectedGender || a.gender === selectedGender;
 
             const dateMatch =
@@ -231,6 +238,7 @@ export default function PatientList() {
             return (
                 searchMatch &&
                 paymentMatch &&
+                statusMatch &&
                 genderMatch &&
                 dateMatch &&
                 serviceMatch
@@ -272,26 +280,50 @@ export default function PatientList() {
 
         const toDate = new Date(sorted[0].date).toLocaleDateString();
 
-        const grandTotal = sorted.reduce(
-            (sum, a) => sum + Number(a.amount || 0),
-            0,
-        );
+        // ================= FINANCIAL SUMMARY =================
+        let totalRevenue = 0;
+        let totalCollected = 0;
+        let totalPending = 0;
+        let paidCount = 0;
+        let partialCount = 0;
+        let unpaidCount = 0;
+
         const paymentSummary = {};
 
         sorted.forEach((a) => {
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? 0);
+            const remaining = Number(a.remaining ?? billed - collected);
+
+            totalRevenue += billed;
+            totalCollected += collected;
+            totalPending += remaining > 0 ? remaining : 0;
+
+            if (remaining <= 0) paidCount++;
+            else if (collected > 0) partialCount++;
+            else unpaidCount++;
+
             const key = a.payment_type || "Other";
-            paymentSummary[key] =
-                (paymentSummary[key] || 0) + Number(a.amount || 0);
+            paymentSummary[key] = (paymentSummary[key] || 0) + collected;
         });
 
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Visit Records");
 
-        // ===== HEADER =====
+        // ================= HEADER =================
         sheet.addRow([`Doctor: ${doctor?.name || ""}`]).font = { bold: true };
-        sheet.addRow(["From", fromDate]).font = { bold: true };
-        sheet.addRow(["To", toDate]).font = { bold: true };
-        sheet.addRow(["GRAND TOTAL", grandTotal]).font = { bold: true };
+        sheet.addRow(["From", fromDate]);
+        sheet.addRow(["To", toDate]);
+        sheet.addRow([]);
+
+        sheet.addRow(["TOTAL REVENUE", totalRevenue]).font = { bold: true };
+        sheet.addRow(["TOTAL COLLECTED", totalCollected]).font = { bold: true };
+        sheet.addRow(["TOTAL PENDING", totalPending]).font = { bold: true };
+        sheet.addRow([]);
+
+        sheet.addRow(["Paid Visits", paidCount]);
+        sheet.addRow(["Partial Visits", partialCount]);
+        sheet.addRow(["Unpaid Visits", unpaidCount]);
         sheet.addRow([]);
 
         sheet.addRow(["COLLECTION SUMMARY"]).font = { bold: true };
@@ -302,22 +334,37 @@ export default function PatientList() {
 
         sheet.addRow([]);
 
+        // ================= DAILY TABLE =================
         let currentDay = null;
-        let dayTotal = 0;
+        let dayCollectedTotal = 0;
 
         sorted.forEach((a, index) => {
             const day = new Date(a.date).toISOString().split("T")[0];
 
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? billed);
+            const remaining = billed - collected;
+
+            const status =
+                remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
+
             if (day !== currentDay) {
                 if (currentDay !== null) {
-                    sheet.addRow(["", "", "", "TOTAL", dayTotal, ""]).font = {
+                    sheet.addRow([
+                        "",
+                        "",
+                        "",
+                        "",
+                        "DAY TOTAL (Collected)",
+                        dayCollectedTotal,
+                    ]).font = {
                         bold: true,
                     };
                     sheet.addRow([]);
                 }
 
                 currentDay = day;
-                dayTotal = 0;
+                dayCollectedTotal = 0;
 
                 sheet.addRow([new Date(day).toLocaleDateString()]).font = {
                     bold: true,
@@ -328,20 +375,26 @@ export default function PatientList() {
                     "Number",
                     "Date",
                     "Payment",
-                    "Amount",
-                    "Invoice Number",
+                    "Billed",
+                    "Collected",
+                    "Remaining",
+                    "Status",
+                    "Invoice",
                     "Services",
                 ]).font = { bold: true };
             }
 
-            dayTotal += Number(a.amount || 0);
+            dayCollectedTotal += collected;
 
             sheet.addRow([
                 a.name,
                 a.number || "",
                 new Date(a.date).toLocaleDateString(),
                 a.payment_type,
-                a.amount,
+                billed,
+                collected,
+                remaining,
+                status,
                 a.invoiceNumber || "",
                 (a.services || [])
                     .map((s) => (typeof s === "object" ? s.name : s))
@@ -349,16 +402,23 @@ export default function PatientList() {
             ]);
 
             if (index === sorted.length - 1) {
-                sheet.addRow(["", "", "", "TOTAL", dayTotal, "", ""]).font = {
+                sheet.addRow([
+                    "",
+                    "",
+                    "",
+                    "",
+                    "DAY TOTAL (Collected)",
+                    dayCollectedTotal,
+                ]).font = {
                     bold: true,
                 };
             }
         });
 
-        sheet.columns.forEach((col) => (col.width = 20));
+        sheet.columns.forEach((col) => (col.width = 18));
 
         const buffer = await workbook.xlsx.writeBuffer();
-        saveAs(new Blob([buffer]), "visit-records.xlsx");
+        saveAs(new Blob([buffer]), "clinic-records.xlsx");
     };
 
     const monthTotal = useMemo(() => {
@@ -369,7 +429,8 @@ export default function PatientList() {
                 (sum, dayApps) =>
                     sum +
                     dayApps.reduce(
-                        (daySum, a) => daySum + Number(a.amount || 0),
+                        (daySum, a) =>
+                            daySum + Number(a.collected ?? a.amount ?? 0),
                         0,
                     ),
                 0,
@@ -407,6 +468,8 @@ export default function PatientList() {
                 setSearchTerm={setSearchTerm}
                 selectedPayments={selectedPayments}
                 setSelectedPayments={setSelectedPayments}
+                selectedStatus={selectedStatus}
+                setSelectedStatus={setSelectedStatus}
                 selectedGender={selectedGender}
                 setSelectedGender={setSelectedGender}
                 allServices={allServices}
