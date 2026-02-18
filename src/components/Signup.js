@@ -71,7 +71,6 @@ const Signup = (props) => {
             password: credentials.password,
             clinicName: credentials.clinicName,
 
-            // ✅ normalized phone numbers
             phone: normalizePhone(credentials.phone),
             appointmentPhone: credentials.secondaryPhone
                 ? normalizePhone(credentials.secondaryPhone)
@@ -136,7 +135,7 @@ const Signup = (props) => {
         try {
             setSendingOtp(true);
 
-            // ✅ STEP 1: Check if phone exists
+            // STEP 1: Check if phone exists
             const checkRes = await authFetch(
                 `${API_BASE_URL}/api/auth/check-phone`,
                 {
@@ -154,7 +153,7 @@ const Signup = (props) => {
                 return;
             }
 
-            // ✅ STEP 2: Send OTP
+            // STEP 2: Send OTP
             const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -197,7 +196,7 @@ const Signup = (props) => {
 
         if (data.success) {
             setPhoneVerified(true);
-            props.showAlert("Phone number verified ✅", "success");
+            props.showAlert("Phone number verified", "success");
         } else {
             props.showAlert(data.error || "Invalid OTP", "danger");
         }
@@ -389,7 +388,7 @@ const Signup = (props) => {
 
                             {phoneVerified && (
                                 <div className="text-success fw-semibold mt-2">
-                                    ✅ Phone number verified
+                                 Phone number verified
                                 </div>
                             )}
                         </div>

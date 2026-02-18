@@ -243,8 +243,8 @@ export default function Login(props) {
                         {loginAs === "staff"
                             ? "Phone Number"
                             : isOtpLogin
-                            ? "Phone Number"
-                            : "Email or Phone"}
+                              ? "Phone Number"
+                              : "Email or Phone"}
                     </label>
 
                     <div

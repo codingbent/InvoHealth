@@ -11,7 +11,7 @@ export default function ServiceList({
             {/* Available services to ADD */}
             <div className="mb-2 d-flex flex-wrap gap-2">
                 {services
-                    .filter(s => !selectedIds.has(s._id)) // 🔥 KEY FIX
+                    .filter(s => !selectedIds.has(s._id))
                     .map(service => (
                         <button
                             key={service._id}

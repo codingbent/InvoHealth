@@ -18,8 +18,8 @@ const StaffSchema = new Schema(
         },
 
         password: {
-            type: String, // bcrypt hash
-            default: null, // 👈 important
+            type: String,
+            default: null,
         },
 
         isActive: {

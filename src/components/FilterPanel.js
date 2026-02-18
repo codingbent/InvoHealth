@@ -345,7 +345,7 @@ export default function FilterPanel({
                                 onChange={(e) => {
                                     const fy = e.target.value;
                                     setSelectedFY(fy);
-                                    applyFinancialYear(fy); // ✅ APPLY FY LOGIC
+                                    applyFinancialYear(fy);
                                 }}
                             >
                                 <option value="">All Years</option>

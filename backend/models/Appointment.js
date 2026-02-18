@@ -9,7 +9,7 @@ const AppointmentSchema = new Schema({
         required: true,
         unique: true,
     },
-    doctor: { type: Schema.Types.ObjectId, ref: "Doc", required: true }, // track doctor
+    doctor: { type: Schema.Types.ObjectId, ref: "Doc", required: true },
     visits: [
         {
             date: { type: Date, default: Date.now },
@@ -22,15 +22,11 @@ const AppointmentSchema = new Schema({
             ],
 
             amount: { type: Number, default: 0 },
-
-            // DISCOUNT FIELDS
-            discount: { type: Number, default: 0 }, // discount value
-            isPercent: { type: Boolean, default: false }, // true = percentage, false = fixed
-            // PARTIAL PAYMENT SUPPORT
+            discount: { type: Number, default: 0 },
+            isPercent: { type: Boolean, default: false },
             collected: { type: Number, default: 0 },
             remaining: { type: Number, default: 0 },
 
-            // PAYMENT STATUS
             status: {
                 type: String,
                 enum: ["Paid", "Partial", "Unpaid"],
@@ -46,7 +42,6 @@ const AppointmentSchema = new Schema({
     ],
 });
 
-// Helper to get next invoice number for a doctor
 async function getNextInvoiceNumber(doctorId) {
     const counter = await Counter.findOneAndUpdate(
         { _id: `invoice_${doctorId}` },
@@ -55,7 +50,6 @@ async function getNextInvoiceNumber(doctorId) {
     );
 
     if (!counter) {
-        // Create the counter first with seq = 1
         const newCounter = await Counter.create({
             _id: `invoice_${doctorId}`,
             seq: 1,
@@ -66,7 +60,6 @@ async function getNextInvoiceNumber(doctorId) {
     return counter.seq;
 }
 
-// Static method to add visit
 AppointmentSchema.statics.addVisit = async function (
     patientId,
     doctorId,

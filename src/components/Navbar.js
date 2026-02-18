@@ -9,7 +9,7 @@ export default function Navbar(props) {
     const role = localStorage.getItem("role");
 
     const [theme, setTheme] = React.useState(
-        localStorage.getItem("theme") || "light"
+        localStorage.getItem("theme") || "light",
     );
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -132,9 +132,10 @@ export default function Navbar(props) {
                                 >
                                     👤
                                 </span>
-                                <span className="d-sm-inline text-theme-muted">{name}</span>
+                                <span className="d-sm-inline text-theme-muted">
+                                    {name}
+                                </span>
                             </button>
-
                             <ul className="dropdown-menu dropdown-menu-end shadow-sm theme-dropdown">
                                 <li>
                                     <button

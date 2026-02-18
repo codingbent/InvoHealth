@@ -129,7 +129,7 @@ export default function AddAppointment({ showAlert }) {
             return;
         }
 
-        setIsSubmitting(true); // 🔒 lock submit
+        setIsSubmitting(true);
 
         try {
             const res = await authFetch(
@@ -164,7 +164,6 @@ export default function AddAppointment({ showAlert }) {
             showAlert("Appointment added successfully", "success");
             resetForm();
 
-            // ⏳ allow submit again after short delay
             setTimeout(() => {
                 setIsSubmitting(false);
             }, 1500);

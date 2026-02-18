@@ -12,9 +12,7 @@ export default function PatientList() {
 
     // DATA
     const [appointments, setAppointments] = useState([]);
-    const [loading, setLoading] = useState(true); // initial load
-
-    // FILTER STATES
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
@@ -170,17 +168,6 @@ export default function PatientList() {
     }, [fetchDoctor]);
 
     const dataToShow = appointments;
-
-    // =========================
-    // HELPERS
-    // =========================
-    // const getMonthKey = (date) =>
-    //     new Date(date).toLocaleString("default", {
-    //         month: "long",
-    //         year: "numeric",
-    //     });
-
-    // const getDateKey = (date) => new Date(date).toISOString().split("T")[0];
 
     // =========================
     // GROUP BY MONTH → DAY

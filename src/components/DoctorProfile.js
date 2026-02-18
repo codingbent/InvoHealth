@@ -26,7 +26,7 @@ export default function DoctorProfile(props) {
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001",
-        []
+        [],
     );
 
     const fetchDoctor = useCallback(async () => {
@@ -166,7 +166,7 @@ export default function DoctorProfile(props) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ currentPassword, newPassword }),
-            }
+            },
         );
 
         const data = await res.json();
@@ -180,21 +180,21 @@ export default function DoctorProfile(props) {
         } else {
             props.showAlert(
                 data.error || "Server Error try again later",
-                "danger"
+                "danger",
             );
         }
     };
 
     const deletestaff = async (staffId) => {
         const confirmDelete = window.confirm(
-            "Do you want to delete this staff member?"
+            "Do you want to delete this staff member?",
         );
         if (!confirmDelete) return;
         const res = await authFetch(
             `${API_BASE_URL}/api/auth/delete-staff/${staffId}`,
             {
                 method: "DELETE",
-            }
+            },
         );
 
         const data = await res.json();
@@ -226,7 +226,7 @@ export default function DoctorProfile(props) {
                     phone: editStaffData.phone,
                     role: editStaffData.role,
                 }),
-            }
+            },
         );
 
         const data = await res.json();
@@ -319,7 +319,7 @@ export default function DoctorProfile(props) {
                             </p>
                         </div>
 
-                        {/* <div className="col-12">
+                        <div className="col-12">
                             <p className="mb-0">
                                 <strong>Address:</strong>
                                 <br />
@@ -330,7 +330,7 @@ export default function DoctorProfile(props) {
                                 {doctor.address?.city}, {doctor.address?.state}{" "}
                                 - {doctor.address?.pincode}
                             </p>
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -452,7 +452,7 @@ export default function DoctorProfile(props) {
                                                             data-bs-target="#editStaffModal"
                                                             onClick={() =>
                                                                 openEditStaffModal(
-                                                                    s
+                                                                    s,
                                                                 )
                                                             }
                                                         >
@@ -463,7 +463,7 @@ export default function DoctorProfile(props) {
                                                             className="btn btn-sm btn-outline-danger flex-fill rounded-3"
                                                             onClick={() =>
                                                                 deletestaff(
-                                                                    s._id
+                                                                    s._id,
                                                                 )
                                                             }
                                                         >
@@ -749,7 +749,7 @@ export default function DoctorProfile(props) {
                                         onChange={(e) =>
                                             handleDegreeChange(
                                                 index,
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                     />

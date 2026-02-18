@@ -14,7 +14,6 @@ export default function StaffProfile(props) {
         confirmPassword: "",
     });
 
-    // ✅ Fetch staff ONLY
     const fetchStaff = async () => {
         const res = await authFetch(`${API_BASE_URL}/api/auth/staff`);
 

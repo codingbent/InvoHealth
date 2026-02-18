@@ -21,7 +21,7 @@ const Patient = (props) => {
 
         try {
             const decoded = jwtDecode(token);
-            setRole(decoded.user.role); // ✅ CORRECT
+            setRole(decoded.user.role);
         } catch (err) {
             console.error("Invalid token");
             setRole(null);

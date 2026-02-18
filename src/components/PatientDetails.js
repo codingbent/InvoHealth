@@ -117,10 +117,7 @@ export default function PatientDetails() {
 
             if (data.success) {
                 alert("Patient deleted successfully");
-
-                // ✅ Redirect after delete
                 navigate("/");
-                // or use navigate() if you prefer
             } else {
                 alert(data.message || "Failed to delete patient");
             }
@@ -401,6 +398,7 @@ export default function PatientDetails() {
                 s.name,
                 `Rs ${Number(s.amount).toFixed(0)}`,
             ]);
+            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(0)}`]);
 
             if (includeDiscount && visit.discount > 0) {
                 tableRows.push([
@@ -413,14 +411,14 @@ export default function PatientDetails() {
                 ]);
             }
 
-            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(0)}`]);
-
             // Payment breakdown
             tableRows.push(["Collected", `Rs ${collectedAmount.toFixed(0)}`]);
-            tableRows.push([
-                "Payable Amount",
-                `Rs ${remainingAmount.toFixed(0)}`,
-            ]);
+            if (remainingAmount != 0) {
+                tableRows.push([
+                    "Payable Amount",
+                    `Rs ${remainingAmount.toFixed(0)}`,
+                ]);
+            }
             tableRows.push(["Status", paymentStatus]);
 
             // ================= TABLE =================
@@ -466,17 +464,17 @@ export default function PatientDetails() {
 
             if (paymentStatus === "Paid") {
                 receiptText = `Received with thanks from ${details.name} the sum of Rupees ${collectedAmount.toFixed(
-                    2,
+                    0,
                 )} only towards full settlement.`;
             } else if (paymentStatus === "Partial") {
                 receiptText = `Part payment of Rupees ${collectedAmount.toFixed(
-                    2,
+                    0,
                 )} received from ${details.name}. Remaining amount of Rupees ${remainingAmount.toFixed(
-                    2,
+                    0,
                 )} is pending.`;
             } else {
                 receiptText = `Total amount of Rupees ${finalAmount.toFixed(
-                    2,
+                    0,
                 )} is pending from ${details.name}.`;
             }
 

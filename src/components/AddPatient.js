@@ -68,7 +68,6 @@ const AddPatient = ({ showAlert }) => {
         );
     }, [service, serviceAmounts]);
 
-    // 🔥 FINAL AMOUNT = SERVICE TOTAL ONLY
     const finalAmount = serviceTotal;
 
     // =========================
@@ -139,7 +138,6 @@ const AddPatient = ({ showAlert }) => {
         if (isPercent) {
             setDiscount((finalAmount * discount) / 100);
         }
-        // 🔥 REAL CALCULATION
         const collectedAmount = Number(patient.amount) || 0;
         const totalAmount = finalAmount;
 
