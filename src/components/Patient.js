@@ -7,7 +7,6 @@ import AddAppointment from "./AddAppointment";
 import PatientDetails from "./PatientDetails";
 import EditService from "./EditService";
 import { jwtDecode } from "jwt-decode";
-import { authFetch } from "./authfetch";
 
 const Patient = (props) => {
     const { showAlert } = props;
@@ -15,26 +14,6 @@ const Patient = (props) => {
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
-
-    const [services, setServices] = useState([]);
-
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
-    const fetchServices = async () => {
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/services/fetchall_services`,
-        );
-        const data = await res.json();
-        if (data.success) {
-            setServices(data.services);
-        }
-    };
-    useEffect(() => {
-        fetchServices();
-    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -183,7 +162,6 @@ const Patient = (props) => {
                         <div className="modal-dialog">
                             <AddServices
                                 showAlert={showAlert}
-                                fetchServices={fetchServices}
                             />
                         </div>
                     </div>

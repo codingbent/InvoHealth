@@ -32,7 +32,6 @@ const AddServices = (props) => {
             const json = await response.json();
 
             if (json.success) {
-                props.fetchServices();
                 setService({ name: "", amount: "" });
                 props.showAlert("Service added successfully", "success");
                 document.querySelector("#serviceModal .btn-close")?.click();
