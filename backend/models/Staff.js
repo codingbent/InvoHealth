@@ -26,7 +26,7 @@ const StaffSchema = new Schema(
             type: Boolean,
             default: true,
         },
-        mode: {
+        theme: {
             type: String,
             default: "dark",
             enum: ["light", "dark"],

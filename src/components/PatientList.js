@@ -57,7 +57,7 @@ export default function PatientList() {
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`,
+                `${API_BASE_URL}/api/doctor/services/fetchall_services`,
             );
             const data = await res.json();
 
@@ -118,7 +118,7 @@ export default function PatientList() {
             }).toString();
 
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallappointments?${query}`,
+                `${API_BASE_URL}/api/doctor/appointment/fetchall_appointments?${query}`,
             );
 
             const data = await res.json();
@@ -155,7 +155,7 @@ export default function PatientList() {
     // ------------------------------------------------------------
     const fetchDoctor = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
             if (data.success) setDoctor(data.doctor);
         } catch (err) {
@@ -236,7 +236,7 @@ export default function PatientList() {
     const downloadExcel = async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/exportappointments`,
+                `${API_BASE_URL}/api/doctor/appointment/export_appointments`,
             );
 
             const allData = await res.json();
@@ -429,7 +429,7 @@ export default function PatientList() {
 
     const paymentColor = {
         Cash: "payment-tag payment-cash",
-        UPI: "payment-tag payment-upi",
+        SBI: "payment-tag payment-SBI",
         Card: "payment-tag payment-card",
         ICICI: "payment-tag payment-bank",
         HDFC: "payment-tag payment-bank",

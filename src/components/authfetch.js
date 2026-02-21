@@ -10,6 +10,12 @@ export const authFetch = async (url, options = {}) => {
         },
     });
 
+    if (res.status !== 200 && res.status !== 201) {
+        const errorData = await res.json().catch(() => null);
+        console.log(errorData);
+        return null;
+    }
+
     if (res.status === 401) {
         const data = await res.json();
         if (data.error === "TOKEN_EXPIRED") {

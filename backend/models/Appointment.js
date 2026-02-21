@@ -34,7 +34,7 @@ const AppointmentSchema = new Schema({
             },
             payment_type: {
                 type: String,
-                enum: ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"],
+                enum: ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"],
                 default: "Cash",
             },
             invoiceNumber: { type: Number, default: 1 },

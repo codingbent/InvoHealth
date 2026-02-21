@@ -63,7 +63,7 @@ export default function Dashboard() {
                 }).toString();
 
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/dashboard/analytics?${params}`,
+                    `${API_BASE_URL}/api/doctor/dashboard/analytics?${params}`,
                 );
 
                 const data = await res.json();
@@ -100,7 +100,7 @@ export default function Dashboard() {
         const fetchServices = async () => {
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
+                    `${API_BASE_URL}/api/doctor/services/fetchall_services`,
                 );
 
                 const data = await res.json();

@@ -31,7 +31,7 @@ export default function DoctorProfile(props) {
 
     const fetchDoctor = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
             if (data.success) {
                 const doc = data.doctor;
@@ -83,7 +83,7 @@ export default function DoctorProfile(props) {
             degree: editData.degree.filter((d) => d.trim() !== ""),
         };
 
-        const res = await authFetch(`${API_BASE_URL}/api/auth/updatedoc`, {
+        const res = await authFetch(`${API_BASE_URL}/api/doctor/update_profile`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -102,7 +102,7 @@ export default function DoctorProfile(props) {
     // ================= FETCH STAFF =================
     const fetchStaff = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/fetch-staff`);
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/staff/fetch_staff`);
             const data = await res.json();
             if (data.success) setStaffList(data.staff);
         } catch (err) {
@@ -122,7 +122,7 @@ export default function DoctorProfile(props) {
             return;
         }
 
-        const res = await authFetch(`${API_BASE_URL}/api/auth/add-staff`, {
+        const res = await authFetch(`${API_BASE_URL}/api/doctor/staff/add_staff`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -159,7 +159,7 @@ export default function DoctorProfile(props) {
         }
 
         const res = await authFetch(
-            `${API_BASE_URL}/api/auth/change-password`,
+            `${API_BASE_URL}/api/doctor/change_password`,
             {
                 method: "PUT",
                 headers: {
@@ -191,7 +191,7 @@ export default function DoctorProfile(props) {
         );
         if (!confirmDelete) return;
         const res = await authFetch(
-            `${API_BASE_URL}/api/auth/delete-staff/${staffId}`,
+            `${API_BASE_URL}/api/doctor/staff/delete_staff/${staffId}`,
             {
                 method: "DELETE",
             },
@@ -215,7 +215,7 @@ export default function DoctorProfile(props) {
 
     const editstaff = async () => {
         const res = await authFetch(
-            `${API_BASE_URL}/api/auth/edit-staff/${editStaffData._id}`,
+            `${API_BASE_URL}/api/doctor/staff/edit_staff/${editStaffData._id}`,
             {
                 method: "PUT",
                 headers: {

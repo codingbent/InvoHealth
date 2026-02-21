@@ -24,6 +24,7 @@ export default function PatientDetails() {
     const [finalAmount, setFinalAmount] = useState(0);
     const [deleting, setDeleting] = useState(false);
     const [collected, setCollected] = useState(0);
+    const [isFullPaid, setIsFullPaid] = useState(false);
 
     const [apptData, setApptData] = useState({
         date: "",
@@ -50,7 +51,7 @@ export default function PatientDetails() {
     // ------------------------------------------------------------
     const fetchDoctor = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/getdoc`);
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
             if (data.success) setDoctor(data.doctor);
         } catch (err) {
@@ -64,7 +65,7 @@ export default function PatientDetails() {
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`,
+                `${API_BASE_URL}/api/doctor/services/fetchall_services`,
             );
             const data = await res.json();
             setAvailableServices(
@@ -107,7 +108,7 @@ export default function PatientDetails() {
         try {
             setDeleting(true);
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/deletepatient/${id}`,
+                `${API_BASE_URL}/api/doctor/patient/delete_patient/${id}`,
                 {
                     method: "DELETE",
                 },
@@ -136,8 +137,12 @@ export default function PatientDetails() {
         setLoading(true);
         try {
             const [patientRes, appointmentsRes] = await Promise.all([
-                authFetch(`${API_BASE_URL}/api/auth/patientdetails/${id}`),
-                authFetch(`${API_BASE_URL}/api/auth/appointments/${id}`),
+                authFetch(
+                    `${API_BASE_URL}/api/doctor/patient/patient_details/${id}`,
+                ),
+                authFetch(
+                    `${API_BASE_URL}/api/doctor/patient/patient_record/${id}`,
+                ),
             ]);
 
             const patientData = await patientRes.json();
@@ -203,7 +208,7 @@ export default function PatientDetails() {
 
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/auth/updatepatientdetails/${id}`,
+                `${API_BASE_URL}/api/doctor/patient/update_patient/${id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -413,7 +418,7 @@ export default function PatientDetails() {
 
             // Payment breakdown
             tableRows.push(["Collected", `Rs ${collectedAmount.toFixed(0)}`]);
-            if (remainingAmount != 0) {
+            if (remainingAmount !== 0) {
                 tableRows.push([
                     "Payable Amount",
                     `Rs ${remainingAmount.toFixed(0)}`,
@@ -549,7 +554,7 @@ export default function PatientDetails() {
         }
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/auth/edit-invoice/${editingAppt.appointmentId}/${editingAppt._id}`,
+                `${API_BASE_URL}/api/doctor/appointment/edit_appointment/${editingAppt.appointmentId}/${editingAppt._id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -574,6 +579,7 @@ export default function PatientDetails() {
 
             if (data.success) {
                 alert("Invoice updated successfully!");
+                setIsFullPaid(false);
                 fetchData();
             } else {
                 alert("Update failed: " + data.message);
@@ -588,7 +594,7 @@ export default function PatientDetails() {
         if (!window.confirm("Delete this invoice?")) return;
 
         const response = await authFetch(
-            `${API_BASE_URL}/api/auth/delete-invoice/${appointmentId}/${visit._id}`,
+            `${API_BASE_URL}/api/doctor/appointment/delete_appointment/${appointmentId}/${visit._id}`,
             {
                 method: "DELETE",
             },
@@ -603,6 +609,24 @@ export default function PatientDetails() {
             alert("Delete failed: " + data.message);
         }
     };
+
+    useEffect(() => {
+        if (!editingAppt) return;
+
+        setCollected((prev) => {
+            if (prev > finalAmount) {
+                return finalAmount;
+            }
+
+            return prev;
+        });
+    }, [editingAppt,finalAmount]);
+
+    useEffect(() => {
+        if (isFullPaid) {
+            setCollected(finalAmount);
+        }
+    }, [isFullPaid, finalAmount]);
 
     if (loading)
         return (
@@ -1153,11 +1177,13 @@ export default function PatientDetails() {
 
                                             <div className="card border-0 shadow-sm mb-4">
                                                 <div className="card-body">
-                                                    <div className="row align-items-center">
+                                                    <div className="row align-items-start">
+                                                        {/* LEFT SIDE */}
                                                         <div className="col-md-6">
                                                             <label className="form-label fw-semibold">
                                                                 Amount Collected
                                                             </label>
+
                                                             <input
                                                                 type="number"
                                                                 className="form-control"
@@ -1188,50 +1214,87 @@ export default function PatientDetails() {
                                                                     )
                                                                         value =
                                                                             finalAmount;
+
                                                                     setCollected(
                                                                         value,
                                                                     );
+
+                                                                    // Auto untick if manually edited
+                                                                    if (
+                                                                        value !==
+                                                                        finalAmount
+                                                                    ) {
+                                                                        setIsFullPaid(
+                                                                            false,
+                                                                        );
+                                                                    }
                                                                 }}
                                                             />
+
+                                                            {/* Checkbox */}
+                                                            <div className="form-check mt-3">
+                                                                <input
+                                                                    className="form-check-input"
+                                                                    type="checkbox"
+                                                                    checked={
+                                                                        isFullPaid
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setIsFullPaid(
+                                                                            e
+                                                                                .target
+                                                                                .checked,
+                                                                        )
+                                                                    }
+                                                                    id="fullPaidCheck"
+                                                                />
+                                                                <label
+                                                                    className="form-check-label fw-medium"
+                                                                    htmlFor="fullPaidCheck"
+                                                                >
+                                                                    Full Amount
+                                                                    Collected
+                                                                </label>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="col-md-6 text-end">
-                                                            <div className="mt-4">
-                                                                <small className="text-muted d-block">
-                                                                    Remaining
-                                                                </small>
-                                                                <h5 className="fw-bold text-warning mb-0">
-                                                                    ₹{" "}
-                                                                    {(
-                                                                        finalAmount -
-                                                                        collected
-                                                                    ).toFixed(
-                                                                        0,
-                                                                    )}
-                                                                </h5>
+                                                        {/* RIGHT SIDE */}
+                                                        <div className="col-md-6 text-md-end mt-4 mt-md-0">
+                                                            <small className="text-muted d-block">
+                                                                Remaining
+                                                            </small>
 
-                                                                <span
-                                                                    className={`badge mt-2 ${
-                                                                        finalAmount -
-                                                                            collected ===
-                                                                        0
-                                                                            ? "bg-success"
-                                                                            : collected >
-                                                                                0
-                                                                              ? "bg-warning text-dark"
-                                                                              : "bg-danger"
-                                                                    }`}
-                                                                >
-                                                                    {finalAmount -
+                                                            <h5 className="fw-bold text-warning mb-1">
+                                                                ₹{" "}
+                                                                {(
+                                                                    finalAmount -
+                                                                    collected
+                                                                ).toFixed(0)}
+                                                            </h5>
+
+                                                            <span
+                                                                className={`badge px-3 py-2 ${
+                                                                    finalAmount -
                                                                         collected ===
                                                                     0
-                                                                        ? "Paid"
+                                                                        ? "bg-success"
                                                                         : collected >
                                                                             0
-                                                                          ? "Partial"
-                                                                          : "Unpaid"}
-                                                                </span>
-                                                            </div>
+                                                                          ? "bg-warning text-dark"
+                                                                          : "bg-danger"
+                                                                }`}
+                                                            >
+                                                                {finalAmount -
+                                                                    collected ===
+                                                                0
+                                                                    ? "Paid"
+                                                                    : collected >
+                                                                        0
+                                                                      ? "Partial"
+                                                                      : "Unpaid"}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1271,7 +1334,7 @@ export default function PatientDetails() {
                                     <option value="">Select Payment</option>
                                     <option value="Cash">Cash</option>
                                     <option value="Card">Card</option>
-                                    <option value="UPI">UPI</option>
+                                    <option value="SBI">SBI</option>
                                     <option value="ICICI">ICICI</option>
                                     <option value="HDFC">HDFC</option>
                                     <option value="Other">Other</option>

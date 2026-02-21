@@ -123,7 +123,7 @@ export default function FilterPanel({
                                 {[
                                     "Cash",
                                     "Card",
-                                    "UPI",
+                                    "SBI",
                                     "ICICI",
                                     "HDFC",
                                     "Other",

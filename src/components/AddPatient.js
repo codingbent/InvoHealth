@@ -13,8 +13,8 @@ const AddPatient = ({ showAlert }) => {
         age: "",
         gender: "Male",
     });
-    
-    const navigate=useNavigate();
+
+    const navigate = useNavigate();
 
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
@@ -45,7 +45,7 @@ const AddPatient = ({ showAlert }) => {
         const fetchServices = async () => {
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
+                    `${API_BASE_URL}/api/doctor/services/fetchall_services`,
                 );
                 const data = await res.json();
                 setAvailableServices(
@@ -80,7 +80,6 @@ const AddPatient = ({ showAlert }) => {
         }));
     }, [finalAmount]);
 
-
     // =========================
     // INPUT HANDLER
     // =========================
@@ -96,15 +95,15 @@ const AddPatient = ({ showAlert }) => {
 
         return discount;
     }, [discount, isPercent, finalAmount]);
-    
-    useEffect(() => {
-    const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
 
-    setPatient((prev) => ({
-        ...prev,
-        amount: autoCollected,
-    }));
-}, [calculatedDiscount, finalAmount]);
+    useEffect(() => {
+        const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
+
+        setPatient((prev) => ({
+            ...prev,
+            amount: autoCollected,
+        }));
+    }, [calculatedDiscount, finalAmount]);
     // =========================
     // SUBMIT
     // =========================
@@ -126,7 +125,10 @@ const AddPatient = ({ showAlert }) => {
             alert("Discount cannot exceed total amount");
             return;
         }
-        if ((patient.amount > finalAmount)||patient.amount > finalAmount-calculatedDiscount) {
+        if (
+            patient.amount > finalAmount ||
+            patient.amount > finalAmount - calculatedDiscount
+        ) {
             alert("Collected amount cannot exceed final amount");
             return;
         }
@@ -154,7 +156,7 @@ const AddPatient = ({ showAlert }) => {
         try {
             // 1️⃣ CREATE PATIENT
             const patientRes = await authFetch(
-                `${API_BASE_URL}/api/auth/addpatient`,
+                `${API_BASE_URL}/api/doctor/patient/add_patient`,
                 {
                     method: "POST",
                     body: JSON.stringify({
@@ -180,7 +182,7 @@ const AddPatient = ({ showAlert }) => {
 
             // 2️⃣ CREATE APPOINTMENT (billing happens here)
             const appointmentRes = await authFetch(
-                `${API_BASE_URL}/api/auth/addappointment/${newPatientId}`,
+                `${API_BASE_URL}/api/doctor/appointment/add_appointment/${newPatientId}`,
                 {
                     method: "POST",
                     body: JSON.stringify({
@@ -210,7 +212,7 @@ const AddPatient = ({ showAlert }) => {
                 showAlert("Patient added but appointment failed", "warning");
             }
         } catch (err) {
-            console.error(err);
+            console.log(err);
             showAlert("Server error", "danger");
         }
     };
@@ -441,7 +443,6 @@ const AddPatient = ({ showAlert }) => {
                                 if (!isPercent && value > finalAmount)
                                     value = finalAmount;
                                 setDiscount(value);
-                                
                             }}
                         />
                     </div>
@@ -474,7 +475,12 @@ const AddPatient = ({ showAlert }) => {
                         <span>Payable Amount</span>
                         <span className="text-success">
                             ₹
-                            {Math.max(finalAmount - patient.amount-calculatedDiscount, 0).toFixed(0)}
+                            {Math.max(
+                                finalAmount -
+                                    patient.amount -
+                                    calculatedDiscount,
+                                0,
+                            ).toFixed(0)}
                         </span>
                     </div>
                     {/* APPOINTMENT */}
@@ -507,7 +513,7 @@ const AddPatient = ({ showAlert }) => {
                             >
                                 <option>Cash</option>
                                 <option>Card</option>
-                                <option>UPI</option>
+                                <option>SBI</option>
                                 <option>ICICI</option>
                                 <option>HDFC</option>
                                 <option>Other</option>

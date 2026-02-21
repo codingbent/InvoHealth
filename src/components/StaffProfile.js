@@ -15,7 +15,7 @@ export default function StaffProfile(props) {
     });
 
     const fetchStaff = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/auth/staff`);
+        const res = await authFetch(`${API_BASE_URL}/api/staff/staff_profile`);
 
         const data = await res.json();
         if (data.success) setStaff(data.staff);
@@ -38,7 +38,7 @@ export default function StaffProfile(props) {
         }
 
         const res = await authFetch(
-            `${API_BASE_URL}/api/auth/staff/change-password`,
+            `${API_BASE_URL}/api/staff/change_password`,
             {
                 method: "PUT",
                 headers: {
@@ -68,7 +68,7 @@ export default function StaffProfile(props) {
                     className="spinner-border text-primary mb-3"
                     role="status"
                 />
-                <span className="text-theme-muted">Loading patient details…</span>
+                <span className="text-theme-muted">Loading details…</span>
             </div>
         );
 

@@ -91,7 +91,7 @@ const Signup = (props) => {
             role: "doctor",
         };
 
-        const response = await authFetch(`${API_BASE_URL}/api/auth/createdoc`, {
+        const response = await authFetch(`${API_BASE_URL}/api/doctor/create_doctor`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bodyToSend),
@@ -137,7 +137,7 @@ const Signup = (props) => {
 
             // STEP 1: Check if phone exists
             const checkRes = await authFetch(
-                `${API_BASE_URL}/api/auth/check-phone`,
+                `${API_BASE_URL}/api/doctor/check-phone`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -154,7 +154,7 @@ const Signup = (props) => {
             }
 
             // STEP 2: Send OTP
-            const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ phone }),
@@ -182,7 +182,7 @@ const Signup = (props) => {
             return;
         }
 
-        const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

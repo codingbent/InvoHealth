@@ -27,7 +27,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ phone }),
@@ -54,7 +54,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+            const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -98,7 +98,7 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/auth/reset-password`, {
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/reset-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

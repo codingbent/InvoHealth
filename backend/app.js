@@ -31,7 +31,7 @@ app.use(
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization", "auth-token"],
         credentials: true,
-    })
+    }),
 );
 
 // Handle preflight
@@ -40,7 +40,11 @@ app.options("*", cors());
 app.use(express.json());
 
 // Routes
-app.use("/api/auth", require("./routes/auth"));
+// app.use("/api/auth", require("./routes/auth"));
+
+app.use("/api/doctor", require("./routes/Doctor/index_doctor"));
+app.use("/api/staff", require("./routes/Staff/index_staff"));
+app.use("/api/authentication", require("./routes/authentication"));
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

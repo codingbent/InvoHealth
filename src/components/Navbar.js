@@ -17,7 +17,7 @@ export default function Navbar(props) {
             : "http://localhost:5001";
 
     const saveTheme = async (newTheme) => {
-        const res = await fetch(`${API_BASE_URL}/api/auth/doctor/theme`, {
+        const res = await fetch(`${API_BASE_URL}/api/doctor/theme_doctor`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -49,8 +49,9 @@ export default function Navbar(props) {
 
     const handleLogout = () => {
         localStorage.clear();
+        document.body.classList.remove("dark-theme");
+        document.body.classList.add("light-theme");
         props.showAlert("Logged out successfully", "success");
-        window.location.reload();
         navigate("/login");
     };
 

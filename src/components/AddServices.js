@@ -15,7 +15,7 @@ const AddServices = (props) => {
 
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/auth/createservice`,
+                `${API_BASE_URL}/api/doctor/services/create_service`,
                 {
                     method: "POST",
                     headers: {
@@ -32,6 +32,7 @@ const AddServices = (props) => {
             const json = await response.json();
 
             if (json.success) {
+                props.fetchServices();
                 setService({ name: "", amount: "" });
                 props.showAlert("Service added successfully", "success");
                 document.querySelector("#serviceModal .btn-close")?.click();

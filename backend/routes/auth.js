@@ -16,7 +16,6 @@ const authMiddleware = require("../middleware/fetchuser"); // if using auth
 const axios = require("axios");
 
 const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
-const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
 router.post(
@@ -690,7 +689,7 @@ router.put(
 
             if (
                 payment_type &&
-                ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
+                ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"].includes(
                     payment_type,
                 )
             ) {
@@ -905,7 +904,7 @@ router.put(
 
             if (
                 payment_type &&
-                ["Cash", "Card", "UPI", "ICICI", "HDFC", "Other"].includes(
+                ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"].includes(
                     payment_type,
                 )
             ) {
@@ -1143,9 +1142,9 @@ router.get("/exportappointments", fetchuser, async (req, res) => {
                     payment_type: visit.payment_type || "Other",
 
                     amount: billed,
-                    collected: collected, 
-                    remaining: remaining, 
-                    status: status, 
+                    collected: collected,
+                    remaining: remaining,
+                    status: status,
 
                     discount: visit.discount || 0, // optional
                     isPercent: visit.isPercent || false,
@@ -1742,12 +1741,6 @@ router.put("/edit-staff/:id", fetchuser, async (req, res) => {
             success: false,
             error: "Server error",
         });
-    }
-});
-
-router.post("/addservice", fetchuser, async (req, res) => {
-    if (req.user.role !== "doctor") {
-        return res.status(403).json({ error: "Doctor only" });
     }
 });
 

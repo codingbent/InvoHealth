@@ -42,7 +42,7 @@ export default function AddAppointment({ showAlert }) {
         const fetchServices = async () => {
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/fetchallservice`,
+                    `${API_BASE_URL}/api/doctor/services/fetchall_services`,
                 );
                 const data = await res.json();
                 setAllServices(data.services || data || []);
@@ -63,7 +63,7 @@ export default function AddAppointment({ showAlert }) {
 
             try {
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/auth/search-patients?q=${searchText}`,
+                    `${API_BASE_URL}/api/doctor/patient/search_patient?q=${searchText}`,
                 );
                 const data = await res.json();
                 setPatients(data);
@@ -133,7 +133,7 @@ export default function AddAppointment({ showAlert }) {
 
         try {
             const res = await authFetch(
-                `${API_BASE_URL}/api/auth/addappointment/${selectedPatient._id}`,
+                `${API_BASE_URL}/api/doctor/appointment/add_appointment/${selectedPatient._id}`,
                 {
                     method: "POST",
                     body: JSON.stringify({
@@ -369,7 +369,7 @@ export default function AddAppointment({ showAlert }) {
                             >
                                 <option>Cash</option>
                                 <option>Card</option>
-                                <option>UPI</option>
+                                <option>SBI</option>
                                 <option>ICICI</option>
                                 <option>HDFC</option>
                                 <option>Other</option>

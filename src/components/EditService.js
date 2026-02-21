@@ -19,7 +19,7 @@ const EditService = ({ showAlert }) => {
     const fetchServices = useCallback(async () => {
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/auth/fetchallservice`
+                `${API_BASE_URL}/api/doctor/services/fetchall_services`
             );
 
             const data = await response.json();
@@ -60,7 +60,7 @@ const EditService = ({ showAlert }) => {
 
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/auth/updateservice/${selectedService}`,
+                `${API_BASE_URL}/api/doctor/services/update_service/${selectedService}`,
                 {
                     method: "PUT",
                     headers: {

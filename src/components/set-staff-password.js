@@ -34,7 +34,7 @@ export default function SetStaffPassword(props) {
         setLoading(true);
 
         const res = await authFetch(
-            `${API_BASE_URL}/api/auth/staff/set-password`,
+            `${API_BASE_URL}/api/staff/set_password`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

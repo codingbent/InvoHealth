@@ -70,7 +70,7 @@ export default function Login(props) {
     };
 
     const sendOtp = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/auth/send-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ phone: identifier }),
@@ -86,7 +86,7 @@ export default function Login(props) {
     };
 
     const verifyOtp = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -125,7 +125,7 @@ export default function Login(props) {
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        const res = await fetch(`${API_BASE_URL}/api/doctor/login_doctor`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -150,7 +150,7 @@ export default function Login(props) {
     };
 
     const staffLogin = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/auth/staff/login`, {
+        const res = await authFetch(`${API_BASE_URL}/api/staff/login_staff`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
