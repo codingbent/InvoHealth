@@ -18,7 +18,6 @@ const AddPatient = ({ showAlert }) => {
 
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
-    // Discount
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const [showModal, setShowModal] = useState(false);

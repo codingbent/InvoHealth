@@ -11,6 +11,7 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import FilterPanel from "./FilterPanel";
 import { authFetch } from "./authfetch";
+import { SlidersHorizontal } from "lucide-react";
 
 ChartJS.register(
     ArcElement,
@@ -42,7 +43,47 @@ export default function Dashboard() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [themeVersion, setThemeVersion] = useState(0);
+    const [chartColors, setChartColors] = useState({
+        textColor: "#1f2937",
+        gridColor: "rgba(0,0,0,0.08)",
+    });
 
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setThemeVersion((prev) => prev + 1);
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class"],
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const updateColors = () => {
+            const styles = getComputedStyle(document.body);
+
+            setChartColors({
+                textColor: styles.getPropertyValue("--chart-text").trim(),
+                gridColor: styles.getPropertyValue("--chart-grid").trim(),
+            });
+        };
+
+        updateColors();
+
+        const observer = new MutationObserver(updateColors);
+
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["class"],
+        });
+
+        return () => observer.disconnect();
+    }, []);
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -155,15 +196,47 @@ export default function Dashboard() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { position: "bottom" },
+            legend: {
+                position: "bottom",
+                labels: {
+                    color: chartColors.textColor,
+                },
+            },
+        },
+        scales: {
+            x: {
+                ticks: { color: chartColors.textColor },
+                grid: { color: chartColors.gridColor },
+            },
+            y: {
+                ticks: { color: chartColors.textColor },
+                grid: { color: chartColors.gridColor },
+            },
         },
     };
 
     return (
         <div className="container mt-4 mb-5">
-            <h3 className="fw-bold mb-4">Clinic Dashboard</h3>
+            <div className="dashboard-header">
+                <div>
+                    <h3 className="fw-bold mb-1">Clinic Dashboard</h3>
+                    <small className="text-theme-secondary">
+                        Overview of revenue, collections & services
+                    </small>
+                </div>
+
+                <button
+                    className="btn btn-outline-theme btn-sm d-flex align-items-center gap-2"
+                    onClick={() => setFilterOpen(true)}
+                >
+                    <SlidersHorizontal size={16} />
+                    Filters
+                </button>
+            </div>
 
             <FilterPanel
+                open={filterOpen}
+                setOpen={setFilterOpen}
                 selectedPayments={selectedPayments}
                 setSelectedPayments={setSelectedPayments}
                 selectedStatus={selectedStatus}
@@ -228,6 +301,7 @@ export default function Dashboard() {
                                     <Doughnut
                                         data={paymentChartData}
                                         options={chartOptions}
+                                        key={themeVersion}
                                     />
                                 </div>
                             </div>
@@ -263,15 +337,16 @@ export default function Dashboard() {
 
                 {/* Service Revenue */}
                 <div className="col-lg-6">
-                    <div className="dashboard-card p-4 shadow-sm rounded-4">
+                    <div className="dashboard-card">
+                        {" "}
                         <h6 className="fw-semibold mb-3 text-center">
                             Top Revenue Services
                         </h6>
-
                         <div style={{ height: 250 }}>
                             <Bar
                                 data={serviceChartData}
                                 options={chartOptions}
+                                key={themeVersion}
                             />
                         </div>
                     </div>
@@ -284,10 +359,10 @@ export default function Dashboard() {
 /* ================= KPI COMPONENT ================= */
 function KPI({ title, value, color, isCurrency = true }) {
     return (
-        <div className="col-md-3">
-            <div className={`p-4 rounded-4 text-white bg-${color} shadow-sm`}>
-                <p className="small mb-1">{title}</p>
-                <h4 className="fw-bold">
+        <div className="col-6 col-md-3">
+            <div className="kpi-card">
+                <p className="kpi-label">{title}</p>
+                <h4 className="kpi-value">
                     {isCurrency ? `₹ ${value.toFixed(0)}` : value}
                 </h4>
             </div>

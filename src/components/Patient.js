@@ -205,17 +205,7 @@ const Patient = ({ showAlert }) => {
                 </div>
             </div>
 
-            <div className="modal fade" id="serviceModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <AddServices showAlert={showAlert} />
-                </div>
-            </div>
-
-            <div className="modal fade" id="editServiceModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <EditService showAlert={showAlert} />
-                </div>
-            </div>
+            
 
             {/* MAIN CONTENT AREA */}
             <div className="page-container px-2 px-md-4">
@@ -244,6 +234,18 @@ const Patient = ({ showAlert }) => {
                         />
                     </div>
                 )}
+            </div>
+            
+            <div className="modal fade" id="serviceModal" tabIndex="-1">
+                <div className="modal-dialog modal-lg modal-dialog-centered">
+                    <AddServices showAlert={showAlert} />
+                </div>
+            </div>
+
+            <div className="modal fade" id="editServiceModal" tabIndex="-1">
+                <div className="modal-dialog modal-lg modal-dialog-centered">
+                    <EditService showAlert={showAlert} />
+                </div>
             </div>
         </>
     );

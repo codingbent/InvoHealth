@@ -433,7 +433,7 @@ export default function PatientList() {
 
                 <div className="records-actions">
                     <button
-                        className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                        className="btn btn-outline-theme btn-sm d-flex align-items-center gap-2"
                         onClick={() => setFilterOpen((prev) => !prev)}
                     >
                         <SlidersHorizontal size={16} />
