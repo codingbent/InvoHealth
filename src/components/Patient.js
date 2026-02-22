@@ -17,7 +17,6 @@ import {
     Calendar,
     BarChart3,
 } from "lucide-react";
-import Login from "./Login";
 
 const Patient = ({ showAlert }) => {
     const [role, setRole] = useState(null);
