@@ -60,10 +60,10 @@ router.post("/add_appointment/:id", async (req, res) => {
             : rawDiscount;
 
         discountValue = Math.min(Math.max(discountValue, 0), serviceTotal);
-        discountValue = Number(discountValue.toFixed(2));
+        discountValue = Number(discountValue.toFixed(0));
 
         // 6️⃣ FINAL AMOUNT
-        const finalAmount = Number((serviceTotal - discountValue).toFixed(2));
+        const finalAmount = Number((serviceTotal - discountValue).toFixed(0));
 
         // 7️⃣ PARTIAL PAYMENT
         let collectedAmount = Math.max(Number(collected) || 0, 0);
@@ -76,7 +76,7 @@ router.post("/add_appointment/:id", async (req, res) => {
         }
 
         const remainingAmount = Number(
-            (finalAmount - collectedAmount).toFixed(2),
+            (finalAmount - collectedAmount).toFixed(0),
         );
 
         const status =

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
+import { Pencil } from "lucide-react";
 
 const EditService = ({ showAlert }) => {
     const [services, setServices] = useState([]);
@@ -12,14 +13,14 @@ const EditService = ({ showAlert }) => {
             process.env.NODE_ENV === "production"
                 ? "https://gmsc-backend.onrender.com"
                 : "http://localhost:5001",
-        []
+        [],
     );
 
     // Fetch all services on load
     const fetchServices = useCallback(async () => {
         try {
             const response = await authFetch(
-                `${API_BASE_URL}/api/doctor/services/fetchall_services`
+                `${API_BASE_URL}/api/doctor/services/fetchall_services`,
             );
 
             const data = await response.json();
@@ -67,7 +68,7 @@ const EditService = ({ showAlert }) => {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({ name, amount }),
-                }
+                },
             );
 
             const data = await response.json();
@@ -88,7 +89,8 @@ const EditService = ({ showAlert }) => {
             {/* HEADER */}
             <div className="modal-header border-0 pb-0">
                 <h5 className="modal-title fw-semibold d-flex align-items-center gap-2">
-                    ✏️ Edit Service
+                    <Pencil size={20} strokeWidth={2} />
+                    Edit Service
                 </h5>
                 <button
                     type="button"
@@ -102,7 +104,7 @@ const EditService = ({ showAlert }) => {
             <div className="modal-body pt-2">
                 {/* Service Selector */}
                 <div className="mb-3">
-                    <label className="form-label small text-theme-muted">
+                    <label className="form-label small text-theme-secondary">
                         Select Service
                     </label>
                     <select
@@ -150,7 +152,7 @@ const EditService = ({ showAlert }) => {
                 </div>
 
                 {!selectedService && (
-                    <small className="text-theme-muted d-block mt-2">
+                    <small className="text-theme-secondary d-block mt-2">
                         Please select a service to edit its details
                     </small>
                 )}

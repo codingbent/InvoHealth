@@ -24,7 +24,7 @@ const AppointmentDay = memo(function AppointmentDay({
                 </h6>
 
                 {localStorage.getItem("role") === "doctor" && (
-                    <span className="fw-bold text-success">
+                    <span className="fw-bold text-success-theme">
                         ₹ {dayTotal.toFixed(0)}
                     </span>
                 )}
@@ -55,13 +55,15 @@ const AppointmentDay = memo(function AppointmentDay({
                         <tbody>
                             {dayApps.map((a, i) => (
                                 <tr key={i}>
-                                    <td className="fw-semibold">{a.name}</td>
+                                    <td className="fw-semibold text-theme-primary">
+                                        {a.name}
+                                    </td>
 
                                     <td>
                                         <span
-                                            className={`badge rounded-pill ${
+                                            className={`payment-tag ${
                                                 paymentColor[a.payment_type] ||
-                                                "badge-theme"
+                                                "payment-other"
                                             }`}
                                         >
                                             {a.payment_type}
@@ -75,18 +77,18 @@ const AppointmentDay = memo(function AppointmentDay({
                                             );
                                             const total = Number(a.amount ?? 0);
                                             const isPaid =
-                                                collected >= total && total > 0;
+                                                collected <= total && total > 0;
 
                                             return isPaid ? (
-                                                <span className="fw-bold text-success">
+                                                <span className="fw-bold text-theme-primary">
                                                     ₹ {total}
                                                 </span>
                                             ) : (
                                                 <div>
-                                                    <div className="fw-bold text-primary">
+                                                    <div className="fw-bold text-theme-primary">
                                                         ₹ {collected}
                                                     </div>
-                                                    <small className="text-muted d-block">
+                                                    <small className="text-theme-primary d-block">
                                                         of ₹ {total}
                                                     </small>
                                                 </div>
@@ -95,12 +97,12 @@ const AppointmentDay = memo(function AppointmentDay({
                                     </td>
                                     <td className="text-end">
                                         <span
-                                            className={`badge ${
+                                            className={`status-badge ${
                                                 a.status === "Paid"
-                                                    ? "bg-success"
+                                                    ? "status-paid"
                                                     : a.status === "Partial"
-                                                      ? "bg-warning text-dark"
-                                                      : "bg-danger"
+                                                      ? "status-partial"
+                                                      : "status-unpaid"
                                             }`}
                                         >
                                             {a.status}
@@ -108,7 +110,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                     </td>
                                     <td className="text-end">
                                         <button
-                                            className="btn btn-sm btn-outline-primary"
+                                            className="btn btn-sm btn-outline-theme"
                                             onClick={() =>
                                                 navigate(
                                                     `/patient/${a.patientId}`,
@@ -130,7 +132,7 @@ const AppointmentDay = memo(function AppointmentDay({
                 {dayApps.map((a, i) => (
                     <div
                         key={i}
-                        className="card border-0 shadow-sm rounded-4 mb-2"
+                        className="card theme-card rounded-4"
                         onClick={() => navigate(`/patient/${a.patientId}`)}
                         style={{ cursor: "pointer" }}
                     >
@@ -142,9 +144,9 @@ const AppointmentDay = memo(function AppointmentDay({
                                     </h6>
 
                                     <span
-                                        className={`badge rounded-pill ${
+                                        className={`payment-tag ${
                                             paymentColor[a.payment_type] ||
-                                            "badge-theme"
+                                            "payment-other"
                                         }`}
                                     >
                                         {a.payment_type}
@@ -162,15 +164,15 @@ const AppointmentDay = memo(function AppointmentDay({
                                             collected >= total && total > 0;
 
                                         return isPaid ? (
-                                            <span className="fw-bold text-success">
+                                            <span className="fw-bold text-success-theme">
                                                 ₹ {total}
                                             </span>
                                         ) : (
                                             <div>
-                                                <div className="fw-bold text-primary">
+                                                <div className="fw-bold text-theme-primary">
                                                     ₹ {collected}
                                                 </div>
-                                                <small className="text-muted d-block">
+                                                <small className="text-theme-muted d-block">
                                                     of ₹ {total}
                                                 </small>
                                             </div>
@@ -178,12 +180,12 @@ const AppointmentDay = memo(function AppointmentDay({
                                     })()}
                                     <div className="mt-1">
                                         <span
-                                            className={`badge ${
+                                            className={`status-badge ${
                                                 a.status === "Paid"
-                                                    ? "bg-success"
+                                                    ? "status-paid"
                                                     : a.status === "Partial"
-                                                      ? "bg-warning text-dark"
-                                                      : "bg-danger"
+                                                      ? "status-partial"
+                                                      : "status-unpaid"
                                             }`}
                                         >
                                             {a.status}

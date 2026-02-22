@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
+import { ShieldCheck, UserPlus } from "lucide-react";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
@@ -233,7 +234,7 @@ const Signup = (props) => {
                         <h3 className="fw-semibold mb-1">
                             Create Your Account
                         </h3>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             Set up your clinic profile to get started
                         </p>
                     </div>
@@ -513,7 +514,8 @@ const Signup = (props) => {
                         </div>
                         {!phoneVerified && (
                             <div className="alert alert-warning text-center mt-3">
-                                🔒 Verify phone number to create account
+                                <ShieldCheck size={18}/>
+                                Verify phone number to create account
                             </div>
                         )}
                         {/* ================= SUBMIT ================= */}
@@ -522,7 +524,8 @@ const Signup = (props) => {
                             className="btn btn-success w-100 mt-3"
                             disabled={!phoneVerified}
                         >
-                            Create Account
+                            <UserPlus size={18}/>
+                            <span className="ms-2">Create Account</span>
                         </button>
 
                         <p className="text-center mt-4 mb-0">

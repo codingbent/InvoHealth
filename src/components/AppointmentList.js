@@ -46,7 +46,7 @@ export default function AppointmentList({
 
                         {role === "doctor" && (
                             <h4 className="mb-0 fw-bold">
-                                ₹ {monthTotal[month]?.toFixed(2)}
+                                ₹ {monthTotal[month]?.toFixed(0)}
                             </h4>
                         )}
                     </div>
@@ -71,7 +71,7 @@ export default function AppointmentList({
 
             {/* EMPTY STATE */}
             {!loading && appointments.length === 0 && (
-                <p className="text-center text-theme-muted mt-3">
+                <p className="text-center text-theme-secondary mt-3">
                     No records match the selected filters
                 </p>
             )}

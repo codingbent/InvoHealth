@@ -51,7 +51,7 @@ const AddServices = (props) => {
     };
     return (
         <form onSubmit={handleSubmit}>
-            <div className="modal-content border-0 shadow-lg rounded-4">
+            <div className="modal-content border-0 shadow-lg rounded-4 pe-0">
                 {/* HEADER */}
                 <div className="modal-header border-0 pb-0">
                     <h5 className="modal-title fw-semibold d-flex align-items-center gap-2">
@@ -97,7 +97,7 @@ const AddServices = (props) => {
                         <label htmlFor="serviceAmount">Amount (optional)</label>
                     </div>
 
-                    <small className="text-theme-muted d-block mt-2">
+                    <small className="text-theme-secondary d-block mt-2">
                         Leave amount empty if service price varies
                     </small>
                 </div>

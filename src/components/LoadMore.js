@@ -1,11 +1,11 @@
 export default function LoadMore({ onLoadMore }) {
     return (
-        <div className="text-center mb-3">
+        <div className="load-more-wrapper">
             <button
-                className="btn btn-outline-primary text-decoration-none fw-medium"
+                className="load-more-btn"
                 onClick={onLoadMore}
             >
-                Load more
+                Load More
             </button>
         </div>
     );

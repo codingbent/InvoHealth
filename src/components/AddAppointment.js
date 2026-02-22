@@ -21,7 +21,7 @@ export default function AddAppointment({ showAlert }) {
         new Date().toISOString().slice(0, 10),
     );
     const [paymentType, setPaymentType] = useState("Cash");
-
+    const [manualOverride, setManualOverride] = useState(false);
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
 
@@ -112,7 +112,11 @@ export default function AddAppointment({ showAlert }) {
         setPaymentType("Cash");
         setAppointmentDate(new Date().toISOString().slice(0, 10));
     };
-
+    useEffect(() => {
+        if (!manualOverride) {
+            setCollected(finalAmount);
+        }
+    }, [manualOverride, finalAmount]);
     /* ===================== SUBMIT ===================== */
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -175,9 +179,11 @@ export default function AddAppointment({ showAlert }) {
 
     /* ===================== UI ===================== */
     return (
-        <div className="card shadow-sm border-0 rounded-4">
+        <div className="card modify-modal shadow-sm border-0 rounded-4">
             <div className="card-body">
-                <h5 className="fw-bold mb-3">➕ Add Appointment</h5>
+                <h5 className="fw-bold mb-3 text-theme-primary">
+                    ➕ Add Appointment
+                </h5>
 
                 {/* PATIENT SEARCH */}
                 <label className="form-label fw-semibold">Patient</label>
@@ -186,8 +192,12 @@ export default function AddAppointment({ showAlert }) {
                     placeholder="Search by name or phone"
                     value={searchText}
                     onChange={(e) => {
-                        setSearchText(e.target.value);
-                        setSelectedPatient(null);
+                        const value = e.target.value;
+                        setSearchText(value);
+
+                        // if (selectedPatient) {
+                        //     setSelectedPatient(null);
+                        // }
                     }}
                 />
 
@@ -284,7 +294,10 @@ export default function AddAppointment({ showAlert }) {
                                 </ul>
 
                                 {/* DISCOUNT */}
-                                <div className="mb-3 d-flex gap-2 align-items-center">
+                                <div className="mb-3 d-flex justify-content-around align-items-center">
+                                    <label className="form-label fw-semibold mb-0">
+                                        Discount
+                                    </label>{" "}
                                     <input
                                         type="number"
                                         className="form-control w-50"
@@ -310,13 +323,13 @@ export default function AddAppointment({ showAlert }) {
                                 </div>
 
                                 {/* SUMMARY */}
-                                <div className="alert alert-light border">
+                                <div className="summary-box">
                                     <div>Total: ₹ {total}</div>
                                     <div>
-                                        Discount: ₹ {discountValue.toFixed(2)}
+                                        Discount: ₹ {discountValue.toFixed(0)}
                                     </div>
                                     <div className="fw-bold">
-                                        Final: ₹ {finalAmount}
+                                        Final: ₹ {finalAmount.toFixed(0)}
                                     </div>
                                 </div>
                                 <div className="mb-3">
@@ -326,20 +339,19 @@ export default function AddAppointment({ showAlert }) {
                                     <input
                                         type="number"
                                         className="form-control"
-                                        value={collected}
+                                        value={finalAmount.toFixed(0)}
                                         min={0}
                                         max={finalAmount}
                                         onChange={(e) => {
-                                            let value = Number(e.target.value);
-                                            if (value < 0) value = 0;
-                                            if (value > finalAmount)
-                                                value = finalAmount;
-                                            setCollected(value);
+                                            setManualOverride(true);
+                                            setCollected(
+                                                Number(e.target.value),
+                                            );
                                         }}
                                     />
                                 </div>
 
-                                <div className="alert alert-light border">
+                                <div className="summary-box">
                                     <div>Remaining: ₹ {remaining}</div>
                                     <div className="fw-semibold">
                                         Status:{" "}

@@ -14,20 +14,21 @@ import Dashboard from "./components/Dashboard";
 import ForgotPassword from "./components/ForgotPassword";
 
 function App() {
-    const [alert, setalert] = useState(null);
-    const showAlert = (message, type) => {
-        setalert({
-            msg: message,
-            type: type,
-        });
-        setTimeout(() => setalert(null), 7000);
+    const [alert, setAlert] = useState(null);
+
+    const showAlert = (msg, type = "info") => {
+        setAlert({ msg, type });
+    };
+
+    const clearAlert = () => {
+        setAlert(null);
     };
 
     return (
         <>
             <BrowserRouter>
                 <Navbar showAlert={showAlert} />
-                <Alert alert={alert} />
+                <Alert alert={alert} clearAlert={clearAlert}/>
                 <Routes>
                     <Route path="/" element={<Home showAlert={showAlert} />} />
                     <Route path="/about" element={<About />} />

@@ -250,7 +250,7 @@ export default function Dashboard() {
                                         >
                                             <span>{p.type}</span>
                                             <span className="fw-bold">
-                                                ₹ {p.total.toFixed(2)} (
+                                                ₹ {p.total.toFixed(0)} (
                                                 {percent}%)
                                             </span>
                                         </div>
@@ -288,7 +288,7 @@ function KPI({ title, value, color, isCurrency = true }) {
             <div className={`p-4 rounded-4 text-white bg-${color} shadow-sm`}>
                 <p className="small mb-1">{title}</p>
                 <h4 className="fw-bold">
-                    {isCurrency ? `₹ ${value.toFixed(2)}` : value}
+                    {isCurrency ? `₹ ${value.toFixed(0)}` : value}
                 </h4>
             </div>
         </div>

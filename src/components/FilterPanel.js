@@ -1,6 +1,6 @@
-import { useState } from "react";
-
 export default function FilterPanel({
+    open,
+    setOpen,
     searchTerm,
     setSearchTerm,
     selectedPayments,
@@ -20,7 +20,6 @@ export default function FilterPanel({
     setSelectedFY,
     isdashboard = false,
 }) {
-    const [open, setOpen] = useState(false);
     const formatDate = (date) => {
         const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -68,16 +67,6 @@ export default function FilterPanel({
     };
     return (
         <>
-            {/* OPEN BUTTON */}
-            <div className="w-75 mx-auto mb-3">
-                <button
-                    className="btn btn-outline-primary w-100"
-                    onClick={() => setOpen(true)}
-                >
-                    🔍 Filters
-                </button>
-            </div>
-
             {/* OFFCANVAS */}
             <div
                 className={`offcanvas offcanvas-end shadow-lg theme-offcanvas ${
@@ -99,7 +88,7 @@ export default function FilterPanel({
                         {/* SEARCH */}
                         {!isdashboard && (
                             <div className="mb-4">
-                                <label className="form-label small fw-semibold text-theme-muted">
+                                <label className="form-label small fw-semibold text-theme-secondary">
                                     Search Patient
                                 </label>
                                 <input
@@ -115,7 +104,7 @@ export default function FilterPanel({
 
                         {/* PAYMENT TYPES */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Payment Method
                             </label>
 
@@ -157,16 +146,12 @@ export default function FilterPanel({
 
                         {/*Payment Status*/}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Payment Status
                             </label>
 
                             <div className="d-flex flex-wrap gap-2">
-                                {[
-                                    "Unpaid",
-                                    "Paid",
-                                    "Partial",
-                                ].map((type) => (
+                                {["Unpaid", "Paid", "Partial"].map((type) => (
                                     <button
                                         key={type}
                                         type="button"
@@ -181,10 +166,7 @@ export default function FilterPanel({
                                                     ? selectedStatus.filter(
                                                           (p) => p !== type,
                                                       )
-                                                    : [
-                                                          ...selectedStatus,
-                                                          type,
-                                                      ],
+                                                    : [...selectedStatus, type],
                                             )
                                         }
                                     >
@@ -196,7 +178,7 @@ export default function FilterPanel({
 
                         {/* GENDER */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Gender
                             </label>
                             <select
@@ -216,7 +198,7 @@ export default function FilterPanel({
 
                         {/* SERVICES */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Services
                             </label>
 
@@ -256,7 +238,7 @@ export default function FilterPanel({
                         <hr />
                         {/* QUICK FILTERS */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Quick Filters
                             </label>
 
@@ -303,7 +285,7 @@ export default function FilterPanel({
 
                         {/* DATE RANGE */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Date Range
                             </label>
 
@@ -336,7 +318,7 @@ export default function FilterPanel({
 
                         {/* FINANCIAL YEAR */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-muted">
+                            <label className="form-label small fw-semibold text-theme-secondary">
                                 Financial Year
                             </label>
                             <select

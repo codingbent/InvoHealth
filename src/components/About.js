@@ -22,7 +22,7 @@ export default function About() {
                         <h5 className="fw-semibold mb-2">
                             📌 What is InvoHealth?
                         </h5>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             InvoHealth is a personal clinic management and
                             billing application designed to simplify everyday
                             clinic operations. It helps doctors maintain
@@ -88,7 +88,7 @@ export default function About() {
                     {/* PURPOSE */}
                     <section className="mb-5">
                         <h5 className="fw-semibold mb-2">🎯 Purpose</h5>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             This software was built for a single private clinic
                             to reduce manual paperwork and simplify accounting.
                         </p>
@@ -105,12 +105,12 @@ export default function About() {
                         <h5 className="fw-semibold mb-2">
                             🧾 Accounting & ITR Support
                         </h5>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             Clean financial records for CA review and tax
                             filing.
                         </p>
 
-                        <ul className="text-theme-muted">
+                        <ul className="text-theme-secondary">
                             <li>• Monthly & yearly tracking</li>
                             <li>• Payment-mode summaries</li>
                             <li>• Excel export</li>
@@ -125,7 +125,7 @@ export default function About() {
                     {/* SECURITY */}
                     <section className="mb-5">
                         <h5 className="fw-semibold mb-2">🔐 Security</h5>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             Token-based authentication with controlled access.
                         </p>
                     </section>
@@ -133,7 +133,7 @@ export default function About() {
                     {/* CONTACT */}
                     <section className="mb-5">
                         <h5 className="fw-semibold mb-2">📧 Contact</h5>
-                        <p className="text-theme-muted mb-0">
+                        <p className="text-theme-secondary mb-0">
                             Feedback & support:
                         </p>
                         <strong className="text-theme-primary">
@@ -144,7 +144,7 @@ export default function About() {
                     {/* DEV NOTE */}
                     <section className="mb-4">
                         <h5 className="fw-semibold mb-2">👨‍💻 Developer Note</h5>
-                        <p className="text-theme-muted">
+                        <p className="text-theme-secondary">
                             Developed by <strong>Abhed Agarwal</strong> as a
                             real-world clinic solution.
                         </p>
@@ -152,7 +152,7 @@ export default function About() {
 
                     {/* FOOTER */}
                     <div className="text-center pt-3 border-top theme-border">
-                        <small className="text-theme-muted">
+                        <small className="text-theme-secondary">
                             App Version: v1.0.0 <br />©{" "}
                             {new Date().getFullYear()} InvoHealth
                         </small>

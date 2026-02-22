@@ -21,7 +21,7 @@ const AddPatient = ({ showAlert }) => {
     // Discount
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
     const [appointmentDate, setAppointmentDate] = useState(
         new Date().toISOString().slice(0, 10),
     );
@@ -207,6 +207,7 @@ const AddPatient = ({ showAlert }) => {
 
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
+                setShowModal(false)
                 navigate("/");
             } else {
                 showAlert("Patient added but appointment failed", "warning");
@@ -218,6 +219,7 @@ const AddPatient = ({ showAlert }) => {
     };
 
     return (
+        {showModal} &&
         <form onSubmit={handleSubmit}>
             <div className="modal-content border-0 shadow-lg rounded-4">
                 {/* HEADER */}
@@ -226,7 +228,7 @@ const AddPatient = ({ showAlert }) => {
                         <h5 className="modal-title fw-semibold mb-0">
                             🧑‍⚕️ Add Patient
                         </h5>
-                        <small className="text-theme-muted">
+                        <small className="text-theme-secondary">
                             Create patient & initial appointment
                         </small>
                     </div>
@@ -240,7 +242,7 @@ const AddPatient = ({ showAlert }) => {
                 {/* BODY */}
                 <div className="modal-body pt-3">
                     {/* BASIC INFO */}
-                    <h6 className="text-uppercase text-theme-muted small mb-3">
+                    <h6 className="text-uppercase text-theme-secondary small mb-3">
                         Patient Details
                     </h6>
                     <div className="row g-3 mb-4">
@@ -310,7 +312,7 @@ const AddPatient = ({ showAlert }) => {
                         />
                     </div>
                     {/* SERVICES */}
-                    <h6 className="text-uppercase text-theme-muted small mb-2">
+                    <h6 className="text-uppercase text-theme-secondary small mb-2">
                         Services & Billing
                     </h6>
                     <div className="mb-3">
@@ -358,7 +360,7 @@ const AddPatient = ({ showAlert }) => {
                         <div className="border rounded-4 p-3 mb-4">
                             {/* SERVICES TABLE */}
                             <table className="table table-sm align-middle mb-3">
-                                <thead className="table-light">
+                                <thead className="table-theme">
                                     <tr>
                                         <th>Service</th>
                                         <th className="text-end">Amount</th>
@@ -484,7 +486,7 @@ const AddPatient = ({ showAlert }) => {
                         </span>
                     </div>
                     {/* APPOINTMENT */}
-                    <h6 className="text-uppercase text-theme-muted small mb-2">
+                    <h6 className="text-uppercase text-theme-secondary small mb-2">
                         Appointment & Payment
                     </h6>
                     <div className="row g-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
+import { CheckCircle, Stethoscope, Users, Send, LogIn, UserPlus } from "lucide-react";
 
 export default function Login(props) {
     const navigate = useNavigate();
@@ -70,11 +71,14 @@ export default function Login(props) {
     };
 
     const sendOtp = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone: identifier }),
-        });
+        const res = await authFetch(
+            `${API_BASE_URL}/api/authentication/send-otp`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: identifier }),
+            },
+        );
 
         const data = await res.json();
         if (data.success) {
@@ -86,15 +90,18 @@ export default function Login(props) {
     };
 
     const verifyOtp = async () => {
-        const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                phone: identifier,
-                otp,
-                sessionId,
-            }),
-        });
+        const res = await authFetch(
+            `${API_BASE_URL}/api/authentication/verify-otp`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    phone: identifier,
+                    otp,
+                    sessionId,
+                }),
+            },
+        );
 
         const data = await res.json();
 
@@ -212,29 +219,25 @@ export default function Login(props) {
             <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
                 <h4 className="text-center mb-4 fw-semibold">Login</h4>
                 <div className="btn-group w-100 mb-3">
-                    <button
-                        type="button"
-                        className={`btn ${
-                            loginAs === "doctor"
-                                ? "btn-primary"
-                                : "btn-outline-primary"
-                        }`}
-                        onClick={() => setLoginAs("doctor")}
-                    >
-                        Doctor
-                    </button>
+                    <div className="role-toggle">
+                        <button
+                            type="button"
+                            className={`role-btn ${loginAs === "doctor" ? "active" : ""}`}
+                            onClick={() => setLoginAs("doctor")}
+                        >
+                            <Stethoscope size={16} />
+                            Doctor
+                        </button>
 
-                    <button
-                        type="button"
-                        className={`btn ${
-                            loginAs === "staff"
-                                ? "btn-primary"
-                                : "btn-outline-primary"
-                        }`}
-                        onClick={() => setLoginAs("staff")}
-                    >
-                        Staff
-                    </button>
+                        <button
+                            type="button"
+                            className={`role-btn ${loginAs === "staff" ? "active" : ""}`}
+                            onClick={() => setLoginAs("staff")}
+                        >
+                            <Users size={16} />
+                            Staff
+                        </button>
+                    </div>
                 </div>
 
                 {/* IDENTIFIER (shown always) */}
@@ -349,7 +352,8 @@ export default function Login(props) {
                             onClick={sendOtp}
                             disabled={inputType !== "phone"}
                         >
-                            📤 Send OTP
+                            <Send size={16}/>
+                            Send OTP
                         </button>
 
                         {/* OTP INPUT */}
@@ -374,7 +378,8 @@ export default function Login(props) {
                             onClick={verifyOtp}
                             disabled={otp.length !== 6}
                         >
-                            ✅ Verify OTP
+                            <CheckCircle size={16}/>
+                            Verify OTP
                         </button>
                     </div>
                 )}
@@ -385,13 +390,15 @@ export default function Login(props) {
                         type="submit"
                         className="btn btn-primary w-100 mt-2"
                     >
+                        <LogIn size={18}/>
                         Login
                     </button>
                 )}
 
                 {/* FOOTER */}
                 <div className="text-center mt-3">
-                    <span>New user? </span>
+                    <span className="text-theme-secondary">New user? </span>
+                    <UserPlus size={18}/>
                     <Link to="/signup">Create an account</Link>
                 </div>
             </form>

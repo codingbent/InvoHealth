@@ -1,16 +1,19 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { authFetch } from "./authfetch";
 import FilterPanel from "./FilterPanel";
 import AppointmentList from "./AppointmentList";
+import { SlidersHorizontal } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 
 export default function PatientList() {
     const navigate = useNavigate();
 
-    // DATA
+    // =============================
+    // STATE
+    // =============================
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -23,37 +26,45 @@ export default function PatientList() {
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
     const [doctor, setDoctor] = useState(null);
-    const limit = 10;
     const [page, setPage] = useState(0);
-
+    const [filterOpen, setFilterOpen] = useState(false);
     const [total, setTotal] = useState(0);
 
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        [],
-    );
+    const limit = 10;
 
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
+
+    // =============================
+    // FILTER COUNT (for badge)
+    // =============================
+    const activeFiltersCount =
+        selectedPayments.length +
+        selectedStatus.length +
+        selectedServices.length +
+        (selectedGender ? 1 : 0) +
+        (startDate || endDate ? 1 : 0) +
+        (selectedFY ? 1 : 0);
+
+    // =============================
+    // DEBOUNCED SEARCH
+    // =============================
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
-
+    useEffect(() => {
+        setDoctor(localStorage.getItem("name"));
+    }, []);
     useEffect(() => {
         const t = setTimeout(() => {
             setDebouncedSearch(searchTerm);
         }, 400);
-
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    const IncreaseLimit = () => {
-        setPage((prev) => prev + 1);
-    };
-
-    // =========================
-    // FETCH ALL APPOINTMENTS
-    // =========================
-
+    // =============================
+    // FETCH SERVICES
+    // =============================
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
@@ -75,32 +86,9 @@ export default function PatientList() {
         fetchServices();
     }, [fetchServices]);
 
-    // =========================
-    // FINANCIAL YEAR LOGIC
-    // =========================
-    useEffect(() => {
-        if (!selectedFY) return;
-
-        const fyStart = new Date(Number(selectedFY), 3, 1);
-        const fyEnd = new Date(Number(selectedFY) + 1, 2, 31);
-
-        setStartDate(fyStart.toISOString().split("T")[0]);
-        setEndDate(fyEnd.toISOString().split("T")[0]);
-    }, [selectedFY]);
-    useEffect(() => {
-        setPage(0);
-    }, [
-        debouncedSearch,
-        selectedGender,
-        selectedPayments,
-        selectedServices,
-        startDate,
-        endDate,
-    ]);
-
-    // =========================
-    // APPLY FILTERS
-    // =========================
+    // =============================
+    // FETCH APPOINTMENTS
+    // =============================
     const fetchAppointments = useCallback(async () => {
         try {
             setLoading(true);
@@ -108,7 +96,7 @@ export default function PatientList() {
             const query = new URLSearchParams({
                 limit,
                 skip: page * limit,
-                search: debouncedSearch,
+                search: debouncedSearch.toLowerCase(),
                 gender: selectedGender,
                 payments: selectedPayments.join(","),
                 status: selectedStatus.join(","),
@@ -134,9 +122,7 @@ export default function PatientList() {
             setLoading(false);
         }
     }, [
-        API_BASE_URL,
         page,
-        limit,
         debouncedSearch,
         selectedGender,
         selectedPayments,
@@ -144,42 +130,39 @@ export default function PatientList() {
         selectedServices,
         startDate,
         endDate,
+        API_BASE_URL,
     ]);
 
     useEffect(() => {
         fetchAppointments();
     }, [fetchAppointments]);
 
-    // ------------------------------------------------------------
-    // FETCH DOCTOR DETAILS
-    // ------------------------------------------------------------
-    const fetchDoctor = useCallback(async () => {
-        try {
-            const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
-            const data = await res.json();
-            if (data.success) setDoctor(data.doctor);
-        } catch (err) {
-            console.error("Error fetching doctor:", err);
-        }
-    }, [API_BASE_URL]);
-
+    // Reset page when filters change
     useEffect(() => {
-        fetchDoctor();
-    }, [fetchDoctor]);
+        setPage(0);
+    }, [
+        debouncedSearch,
+        selectedGender,
+        selectedPayments,
+        selectedStatus,
+        selectedServices,
+        startDate,
+        endDate,
+        selectedFY,
+    ]);
 
-    const dataToShow = appointments;
-
-    // =========================
-    // GROUP BY MONTH → DAY
-    // =========================
+    // =============================
+    // GROUP BY MONTH
+    // =============================
     const appointmentsByMonth = useMemo(() => {
         const grouped = {};
 
-        dataToShow.forEach((a) => {
+        appointments.forEach((a) => {
             const monthKey = new Date(a.date).toLocaleString("default", {
                 month: "long",
                 year: "numeric",
             });
+
             const dayKey = new Date(a.date).toISOString().split("T")[0];
 
             if (!grouped[monthKey]) grouped[monthKey] = {};
@@ -189,16 +172,13 @@ export default function PatientList() {
         });
 
         return grouped;
-    }, [dataToShow]);
+    }, [appointments]);
 
-    // =========================
-    // EXCEL EXPORT
-    // =========================
     const applyFilters = (data) => {
         return data.filter((a) => {
             const searchMatch =
-                a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                a.number?.includes(searchTerm);
+                a.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                a.number?.includes(debouncedSearch);
 
             const paymentMatch =
                 selectedPayments.length === 0 ||
@@ -263,9 +243,9 @@ export default function PatientList() {
 
         const fromDate = new Date(
             sorted[sorted.length - 1].date,
-        ).toLocaleDateString();
+        ).toLocaleDateString("en-GB");
 
-        const toDate = new Date(sorted[0].date).toLocaleDateString();
+        const toDate = new Date(sorted[0].date).toLocaleDateString("en-GB");
 
         // ================= FINANCIAL SUMMARY =================
         let totalRevenue = 0;
@@ -298,7 +278,7 @@ export default function PatientList() {
         const sheet = workbook.addWorksheet("Visit Records");
 
         // ================= HEADER =================
-        sheet.addRow([`Doctor: ${doctor?.name || ""}`]).font = { bold: true };
+        sheet.addRow([`Doctor:`, `${doctor || ""}`]).font = { bold: true };
         sheet.addRow(["From", fromDate]);
         sheet.addRow(["To", toDate]);
         sheet.addRow([]);
@@ -353,9 +333,10 @@ export default function PatientList() {
                 currentDay = day;
                 dayCollectedTotal = 0;
 
-                sheet.addRow([new Date(day).toLocaleDateString()]).font = {
-                    bold: true,
-                };
+                sheet.addRow([new Date(day).toLocaleDateString("en-GB")]).font =
+                    {
+                        bold: true,
+                    };
 
                 sheet.addRow([
                     "Patient",
@@ -376,7 +357,7 @@ export default function PatientList() {
             sheet.addRow([
                 a.name,
                 a.number || "",
-                new Date(a.date).toLocaleDateString(),
+                new Date(a.date).toLocaleDateString("en-GB"),
                 a.payment_type,
                 billed,
                 collected,
@@ -427,6 +408,12 @@ export default function PatientList() {
         return totals;
     }, [appointmentsByMonth]);
 
+    // =============================
+    // LOAD MORE
+    // =============================
+    const IncreaseLimit = () => {
+        setPage((prev) => prev + 1);
+    };
     const paymentColor = {
         Cash: "payment-tag payment-cash",
         SBI: "payment-tag payment-SBI",
@@ -435,22 +422,42 @@ export default function PatientList() {
         HDFC: "payment-tag payment-bank",
         Other: "payment-tag payment-other",
     };
-    useEffect(() => {
-        setPage(0);
-    }, [
-        debouncedSearch,
-        selectedGender,
-        selectedPayments,
-        selectedServices,
-        startDate,
-        endDate,
-        selectedFY,
-    ]);
-
+    // =============================
+    // RENDER
+    // =============================
     return (
-        <div className="container mt-3">
-            {/* FILTERS */}
+        <div className="records-container">
+            {/* HEADER */}
+            <div className="records-header">
+                <h5 className="mb-0">Appointments</h5>
+
+                <div className="records-actions">
+                    <button className="btn btn-outline-light btn-sm d-flex align-items-center gap-2">
+                        <SlidersHorizontal size={16} />
+                        Filters
+                        {activeFiltersCount > 0 && (
+                            <span className="filter-badge">
+                                {activeFiltersCount}
+                            </span>
+                        )}
+                    </button>
+
+                    {localStorage.getItem("role") === "doctor" && (
+                        <button
+                            className="btn btn-success btn-sm d-flex align-items-center gap-2 px-3"
+                            onClick={downloadExcel}
+                        >
+                            <FileSpreadsheet size={16} />
+                            <span>Export Excel</span>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* FILTER PANEL */}
             <FilterPanel
+                open={filterOpen}
+                setOpen={setFilterOpen}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 selectedPayments={selectedPayments}
@@ -470,25 +477,16 @@ export default function PatientList() {
                 setSelectedFY={setSelectedFY}
             />
 
-            {/* DOWNLOAD EXCEL */}
-            <div className="d-flex justify-content-center mb-3">
-                {localStorage.getItem("role") === "doctor" && (
-                    <button className="btn btn-success" onClick={downloadExcel}>
-                        📥 Download Excel
-                    </button>
-                )}
-            </div>
-
-            {/* APPOINTMENT LIST (MONTH + DAY + LOAD MORE) */}
+            {/* LIST */}
             <AppointmentList
                 appointmentsByMonth={appointmentsByMonth}
-                monthTotal={monthTotal}
-                paymentColor={paymentColor}
                 navigate={navigate}
+                monthTotal={monthTotal}
                 appointments={appointments}
                 total={total}
                 IncreaseLimit={IncreaseLimit}
                 loading={loading}
+                paymentColor={paymentColor}
             />
         </div>
     );

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Stethoscope,User,LogOut } from "lucide-react";
 
 export default function Navbar(props) {
     const navigate = useNavigate();
@@ -102,18 +103,16 @@ export default function Navbar(props) {
                         {/* Theme Toggle */}
                         {token && (
                             <li className="nav-item d-flex align-items-center ms-lg-3">
-                                {/* Toogle Theme */}
                                 <button
                                     onClick={toggleTheme}
-                                    className="theme-toggle-btn"
+                                    className={`theme-toggle ${theme}`}
                                     aria-label="Toggle theme"
                                 >
-                                    <span className="icon">
-                                        {theme === "dark" ? "🌙" : "☀️"}
-                                    </span>
-                                    <span className="text d-lg-inline d-none">
-                                        {theme === "dark" ? "Dark" : "Light"}
-                                    </span>
+                                    <div className="toggle-track">
+                                        <div className="toggle-thumb">
+                                            {theme === "dark" ? "🌙" : "☀️"}
+                                        </div>
+                                    </div>
                                 </button>
                             </li>
                         )}
@@ -131,19 +130,20 @@ export default function Navbar(props) {
                                     className="avatar"
                                     style={{ width: "32px", height: "32px" }}
                                 >
-                                    👤
+                                    <User size={18}/>
                                 </span>
-                                <span className="d-sm-inline text-theme-muted">
+                                <span className="d-sm-inline text-theme-secondary">
                                     {name}
                                 </span>
                             </button>
                             <ul className="dropdown-menu dropdown-menu-end shadow-sm theme-dropdown">
                                 <li>
                                     <button
-                                        className="dropdown-item text-theme-primary"
+                                        className="dropdown-item text-theme-muted d-flex align-items-center gap-2"
                                         onClick={() => navigate("/profile")}
                                     >
-                                        👨‍⚕️ My Profile
+                                        <Stethoscope size={16} />
+                                        My Profile
                                     </button>
                                 </li>
 
@@ -156,7 +156,8 @@ export default function Navbar(props) {
                                         className="dropdown-item text-danger"
                                         onClick={handleLogout}
                                     >
-                                        🚪 Logout
+                                        <LogOut size={18}/>
+                                        Logout
                                     </button>
                                 </li>
                             </ul>

@@ -21,7 +21,7 @@ export default function Profile(props) {
                     className="spinner-border text-primary mb-2"
                     role="status"
                 />
-                <span className="text-theme-muted">Loading profile…</span>
+                <span className="text-theme-secondary">Loading profile…</span>
             </div>
         );
 

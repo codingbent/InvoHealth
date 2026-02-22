@@ -6,6 +6,7 @@ import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { toWords } from "number-to-words";
+import { Pencil, Trash2, Loader2, UserRound,User } from "lucide-react";
 
 export default function PatientDetails() {
     const navigate = useNavigate();
@@ -620,7 +621,7 @@ export default function PatientDetails() {
 
             return prev;
         });
-    }, [editingAppt,finalAmount]);
+    }, [editingAppt, finalAmount]);
 
     useEffect(() => {
         if (isFullPaid) {
@@ -635,7 +636,7 @@ export default function PatientDetails() {
                     className="spinner-border text-primary mb-3"
                     role="status"
                 />
-                <span className="text-theme-muted">
+                <span className="text-theme-secondary">
                     Loading patient details…
                 </span>
             </div>
@@ -657,23 +658,25 @@ export default function PatientDetails() {
                         {/* Header */}
                         <div className="d-flex justify-content-between align-items-center mb-4">
                             <div className="d-flex align-items-center gap-3">
-                                {/* Avatar */}
-                                <div className="avatar-circle">
-                                    {details?.name?.charAt(0)?.toUpperCase()}
+                                <div className="avatar-circle d-flex align-items-center justify-content-center">
+                                    {details?.gender === "Female" ? (
+                                        <UserRound size={20} />
+                                    ) : (
+                                        <User size={20} />
+                                    )}
                                 </div>
-
                                 <div>
                                     <h5 className="fw-semibold mb-0">
                                         {details?.name}
                                     </h5>
-                                    <small className="text-theme-muted">
+                                    <small className="text-theme-secondary">
                                         {details?.number}
                                     </small>
                                 </div>
                             </div>
 
                             <span
-                                className={`badge rounded-pill px-3 py-2 gender-badge ${
+                                className={`status-badge rounded-pill px-3 py-2 gender-badge ${
                                     details?.gender?.toLowerCase() || "other"
                                 }`}
                             >
@@ -685,7 +688,7 @@ export default function PatientDetails() {
                         <div className="row g-3 mb-4">
                             <div className="col-6 col-md-4">
                                 <div className="info-box">
-                                    <span className="label">Age</span>
+                                    <span className="label">Age: </span>
                                     <span className="value">
                                         {details?.age}
                                     </span>
@@ -694,7 +697,7 @@ export default function PatientDetails() {
 
                             <div className="col-6 col-md-4">
                                 <div className="info-box">
-                                    <span className="label">Gender</span>
+                                    <span className="label">Gender: </span>
                                     <span className="value">
                                         {details?.gender || "N/A"}
                                     </span>
@@ -703,7 +706,7 @@ export default function PatientDetails() {
 
                             <div className="col-6 col-md-4">
                                 <div className="info-box">
-                                    <span className="label">Contact</span>
+                                    <span className="label">Contact: </span>
                                     <span className="value">
                                         {details?.number}
                                     </span>
@@ -718,47 +721,58 @@ export default function PatientDetails() {
                                 data-bs-toggle="modal"
                                 data-bs-target="#editPatientModal"
                             >
-                                ✏️ Edit Patient
+                                <Pencil size={20} strokeWidth={2} />
+                                Edit Patient
                             </button>
 
                             <button
-                                className="btn btn-outline-danger rounded-pill px-4"
+                                className="btn btn-outline-danger rounded-pill px-4 d-flex align-items-center gap-2"
                                 disabled={deleting}
                                 onClick={handleDeletePatient}
                             >
-                                {deleting ? "Deleting..." : "🗑 Delete"}
+                                {deleting ? (
+                                    <>
+                                        <Loader2 size={16} className="spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={16} />
+                                        Delete
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
                 </div>
-                <div className="mt-5">
+                <div className="mt-5 previous-section">
                     <h5 className="fw-semibold mb-3">Previous Appointments</h5>
 
                     <div className="d-none d-md-block">
                         {appointments.length === 0 ? (
-                            <div className="text-theme-muted">
+                            <div className="text-theme-secondary">
                                 No appointments found
                             </div>
                         ) : (
-                            <table className="table align-middle table-hover">
-                                <thead className="table-light">
+                            <table className="table table-theme align-middle table-hover">
+                                <thead>
                                     <tr>
-                                        <th className="text-theme-muted">
+                                        <th className="text-theme-secondary">
                                             Date
                                         </th>
-                                        <th className="text-theme-muted">
+                                        <th className="text-theme-secondary">
                                             Services
                                         </th>
-                                        <th className="text-theme-muted">
+                                        <th className="text-theme-secondary">
                                             Amount
                                         </th>
-                                        <th className="text-theme-muted">
+                                        <th className="text-theme-secondary">
                                             Status
                                         </th>
-                                        <th className="text-theme-muted">
+                                        <th className="text-theme-secondary">
                                             Payment
                                         </th>
-                                        <th className="text-end text-theme-muted">
+                                        <th className="text-end text-theme-secondary">
                                             Actions
                                         </th>
                                     </tr>
@@ -767,17 +781,17 @@ export default function PatientDetails() {
                                 <tbody>
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
-                                            <td className="text-theme-muted">
+                                            <td className="text-theme-primary">
                                                 {visit.formattedDate}
                                             </td>
 
-                                            <td className="text-theme-muted">
+                                            <td className="text-theme-primary">
                                                 {(visit.service || [])
                                                     .map((s) => s.name)
                                                     .join(", ")}
                                             </td>
 
-                                            <td className="fw-semibold text-theme-muted">
+                                            <td className="fw-semibold text-theme-primary">
                                                 ₹
                                                 {Number(
                                                     visit.collected ??
@@ -805,15 +819,15 @@ export default function PatientDetails() {
 
                                                     const badgeClass =
                                                         status === "Paid"
-                                                            ? "bg-success"
+                                                            ? "status-paid"
                                                             : status ===
                                                                 "Partial"
-                                                              ? "bg-warning text-dark"
-                                                              : "bg-danger";
+                                                              ? "status-partial"
+                                                              : "status-unpaid";
 
                                                     return (
                                                         <span
-                                                            className={`badge ${badgeClass}`}
+                                                            className={`status-badge ${badgeClass}`}
                                                         >
                                                             {status}
                                                         </span>
@@ -821,49 +835,57 @@ export default function PatientDetails() {
                                                 })()}
                                             </td>
                                             <td>
-                                                <span className="payment-tag payment-bank">
+                                                <span
+                                                    className={`payment-tag ${
+                                                        visit.payment_type
+                                                            ? `payment-${visit.payment_type}`
+                                                            : "payment-other"
+                                                    }`}
+                                                >
                                                     {visit.payment_type ||
                                                         "N/A"}
                                                 </span>
                                             </td>
 
                                             <td className="text-end">
-                                                <button
-                                                    className="btn btn-sm btn-success me-2"
-                                                    onClick={() =>
-                                                        handleInvoiceClick(
-                                                            id,
-                                                            visit,
-                                                            details,
-                                                        )
-                                                    }
-                                                >
-                                                    Invoice
-                                                </button>
+                                                <div className="d-flex justify-content-end gap-2">
+                                                    <button
+                                                        className="btn btn-sm btn-outline-theme"
+                                                        onClick={() =>
+                                                            handleInvoiceClick(
+                                                                id,
+                                                                visit,
+                                                                details,
+                                                            )
+                                                        }
+                                                    >
+                                                        Invoice
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-outline-warning me-2"
-                                                    onClick={() =>
-                                                        editInvoice(
-                                                            appointmentId,
-                                                            visit,
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
+                                                    <button
+                                                        className="btn btn-sm btn-outline-theme"
+                                                        onClick={() =>
+                                                            editInvoice(
+                                                                appointmentId,
+                                                                visit,
+                                                            )
+                                                        }
+                                                    >
+                                                        Edit
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    onClick={() =>
-                                                        deleteInvoice(
-                                                            appointmentId,
-                                                            visit,
-                                                        )
-                                                    }
-                                                >
-                                                    Delete
-                                                </button>
+                                                    <button
+                                                        className="btn btn-sm btn-outline-theme text-danger-theme"
+                                                        onClick={() =>
+                                                            deleteInvoice(
+                                                                appointmentId,
+                                                                visit,
+                                                            )
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -884,16 +906,18 @@ export default function PatientDetails() {
                                 <strong>{visit.formattedDate}</strong>
 
                                 <div className="text-end">
-                                    {visit.amount === visit.collected ? (
+                                    {Number(visit.collected ?? 0) >=
+                                    Number(visit.amount ?? 0) ? (
                                         <div className="fw-semibold text-success">
                                             ₹{visit.amount?.toFixed(0)}
                                         </div>
                                     ) : (
                                         <>
-                                            <div className="fw-semibold text-primary">
+                                            <div className="fw-semibold text-theme-primary">
                                                 ₹{visit.amount?.toFixed(0)}
                                             </div>
-                                            <small className="text-muted d-block">
+
+                                            <small className="text-theme-secondary d-block">
                                                 Collected: ₹
                                                 {visit.collected || 0}
                                             </small>
@@ -910,19 +934,19 @@ export default function PatientDetails() {
                             </div>
 
                             <div className="d-flex justify-content-between align-items-start mb-2">
-                                <p className="text-theme-muted mb-1 me-2">
+                                <p className="text-theme-secondary mb-1 me-2">
                                     {(visit.service || [])
                                         .map((s) => s.name)
                                         .join(", ")}
                                 </p>
 
                                 <span
-                                    className={`badge px-3 py-2 ${
+                                    className={`status-badge ${
                                         visit.status === "Paid"
-                                            ? "bg-success"
+                                            ? "status-paid"
                                             : visit.status === "Partial"
-                                              ? "bg-warning text-dark"
-                                              : "bg-danger"
+                                              ? "status-partial"
+                                              : "status-unpaid"
                                     }`}
                                 >
                                     {visit.status}
@@ -1275,7 +1299,7 @@ export default function PatientDetails() {
                                                             </h5>
 
                                                             <span
-                                                                className={`badge px-3 py-2 ${
+                                                                className={`status-badge px-3 py-2 ${
                                                                     finalAmount -
                                                                         collected ===
                                                                     0
