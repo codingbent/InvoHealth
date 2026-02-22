@@ -432,7 +432,10 @@ export default function PatientList() {
                 <h5 className="mb-0">Appointments</h5>
 
                 <div className="records-actions">
-                    <button className="btn btn-outline-light btn-sm d-flex align-items-center gap-2">
+                    <button
+                        className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
+                        onClick={() => setFilterOpen((prev) => !prev)}
+                    >
                         <SlidersHorizontal size={16} />
                         Filters
                         {activeFiltersCount > 0 && (

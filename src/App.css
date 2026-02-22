@@ -323,6 +323,31 @@ body {
     background: var(--bg-alt);
 }
 
+/* ===== ACCORDION DARK MODE FIX ===== */
+.accordion-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+}
+
+.accordion-button {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.accordion-button:not(.collapsed) {
+    background: var(--bg-alt);
+    color: var(--text-primary);
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+}
+
+.accordion-body {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
 /* =========================================================
    🧾 NAVBAR
 ========================================================= */

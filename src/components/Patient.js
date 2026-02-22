@@ -157,19 +157,6 @@ const Patient = ({ showAlert }) => {
                     </button>
                 )}
 
-                {role === "doctor" && (
-                    <button
-                        className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 2 }}
-                        data-bs-toggle="modal"
-                        data-bs-target="#serviceModal"
-                        onClick={() => setFabOpen(false)}
-                    >
-                        <FileText size={18} />
-                        <span className="fab-text">Add Service</span>
-                    </button>
-                )}
-
                 {role && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
@@ -181,6 +168,19 @@ const Patient = ({ showAlert }) => {
                     >
                         <CalendarPlus size={18} />
                         <span className="fab-text">Add Appointment</span>
+                    </button>
+                )}
+
+                {role === "doctor" && (
+                    <button
+                        className={`fab-item ${fabOpen ? "show" : ""}`}
+                        style={{ "--i": 2 }}
+                        data-bs-toggle="modal"
+                        data-bs-target="#serviceModal"
+                        onClick={() => setFabOpen(false)}
+                    >
+                        <FileText size={18} />
+                        <span className="fab-text">Add Service</span>
                     </button>
                 )}
 

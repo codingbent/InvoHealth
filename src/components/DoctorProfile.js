@@ -1,5 +1,14 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
+import {
+    Pencil,
+    Users,
+    UserPlus,
+    Phone,
+    Trash2,
+    Lock,
+    RefreshCcw,
+} from "lucide-react";
 
 export default function DoctorProfile(props) {
     const [doctor, setDoctor] = useState(null);
@@ -83,13 +92,16 @@ export default function DoctorProfile(props) {
             degree: editData.degree.filter((d) => d.trim() !== ""),
         };
 
-        const res = await authFetch(`${API_BASE_URL}/api/doctor/update_profile`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
+        const res = await authFetch(
+            `${API_BASE_URL}/api/doctor/update_profile`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
             },
-            body: JSON.stringify(payload),
-        });
+        );
 
         const data = await res.json();
         if (data.success) {
@@ -102,7 +114,9 @@ export default function DoctorProfile(props) {
     // ================= FETCH STAFF =================
     const fetchStaff = useCallback(async () => {
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/doctor/staff/fetch_staff`);
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/fetch_staff`,
+            );
             const data = await res.json();
             if (data.success) setStaffList(data.staff);
         } catch (err) {
@@ -122,17 +136,20 @@ export default function DoctorProfile(props) {
             return;
         }
 
-        const res = await authFetch(`${API_BASE_URL}/api/doctor/staff/add_staff`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
+        const res = await authFetch(
+            `${API_BASE_URL}/api/doctor/staff/add_staff`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: staffName,
+                    phone: staffPhone.replace(/\D/g, "").slice(-10),
+                    role: staffRole,
+                }),
             },
-            body: JSON.stringify({
-                name: staffName,
-                phone: staffPhone.replace(/\D/g, "").slice(-10),
-                role: staffRole,
-            }),
-        });
+        );
 
         const data = await res.json();
         if (data.success) {
@@ -280,19 +297,25 @@ export default function DoctorProfile(props) {
             <div className="card shadow-sm border-0 mb-3">
                 <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h4 className="mb-1">{doctor.name}</h4>
-                            <small className="text-theme-secondary">
-                                {doctor.clinicName}
-                            </small>
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="avatar-circle">
+                                {doctor.name?.charAt(0)}
+                            </div>
+                            <div>
+                                <h4 className="mb-1">{doctor.name}</h4>
+                                <small className="text-theme-secondary">
+                                    {doctor.clinicName}
+                                </small>
+                            </div>
                         </div>
 
                         <button
-                            className="btn btn-outline-primary btn-sm"
+                            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2"
                             data-bs-toggle="modal"
                             data-bs-target="#editProfileModal"
                         >
-                            ✏️ Edit Profile
+                            <Pencil size={16} />
+                            Edit Profile
                         </button>
                     </div>
 
@@ -347,7 +370,8 @@ export default function DoctorProfile(props) {
                             aria-expanded="false"
                             aria-controls="staffSection"
                         >
-                            👥 Staff Management
+                            <Users size={18} className="me-2" />
+                            Staff Management
                         </button>
                     </h2>
 
@@ -411,10 +435,11 @@ export default function DoctorProfile(props) {
                             </div>
 
                             <button
-                                className="btn btn-primary w-100 w-md-auto mb-4 rounded-3"
+                                className="btn btn-primary w-100 w-md-auto mb-4 rounded-3 d-flex align-items-center gap-2"
                                 onClick={handleAddStaff}
                             >
-                                ➕ Add Staff
+                                <UserPlus size={16} />
+                                Add Staff
                             </button>
 
                             <hr />
@@ -431,17 +456,21 @@ export default function DoctorProfile(props) {
                                             key={s._id}
                                             className="col-12 col-md-6"
                                         >
-                                            <div className="card h-100 border-0 shadow-sm rounded-4">
+                                            <div className="card h-100 border-0 shadow-sm rounded-4 bg-theme-surface">
                                                 <div className="card-body">
                                                     <h6 className="fw-bold mb-1">
                                                         {s.name}
                                                     </h6>
 
                                                     <div className="small text-theme-secondary mb-2">
-                                                        📞 {s.phone}
+                                                        <Phone
+                                                            size={14}
+                                                            className="me-1"
+                                                        />
+                                                        {s.phone}
                                                     </div>
 
-                                                    <span className="badge bg-light text-dark border mb-3">
+                                                    <span className="badge badge-theme mb-3">
                                                         {s.role}
                                                     </span>
 
@@ -467,7 +496,8 @@ export default function DoctorProfile(props) {
                                                                 )
                                                             }
                                                         >
-                                                            🗑 Delete
+                                                            <Trash2 size={14} />
+                                                            Delete
                                                         </button>
                                                     </div>
                                                 </div>
@@ -492,6 +522,7 @@ export default function DoctorProfile(props) {
                     <div className="modal-content border-0 shadow">
                         <div className="modal-header">
                             <h5 className="modal-title fw-semibold">
+                                <Pencil size={14} />
                                 Edit Staff
                             </h5>
                             <button
@@ -582,7 +613,8 @@ export default function DoctorProfile(props) {
                             aria-expanded="false"
                             aria-controls="passwordSection"
                         >
-                            🔒 Change Password
+                            <Lock size={18} className="me-2" />
+                            Change Password
                         </button>
                     </h2>
 
@@ -657,7 +689,8 @@ export default function DoctorProfile(props) {
                                     className="btn btn-danger px-4 rounded-3"
                                     onClick={handleChangePassword}
                                 >
-                                    🔄 Update Password
+                                    <RefreshCcw size={16} />
+                                    Update Password
                                 </button>
                             </div>
                         </div>
