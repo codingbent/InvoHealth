@@ -339,7 +339,7 @@ export default function AddAppointment({ showAlert }) {
                                     <input
                                         type="number"
                                         className="form-control"
-                                        value={finalAmount.toFixed(0)}
+                                        value={collected}
                                         min={0}
                                         max={finalAmount}
                                         onChange={(e) => {

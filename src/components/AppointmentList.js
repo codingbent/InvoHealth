@@ -37,11 +37,11 @@ export default function AppointmentList({
                     <div className="d-flex justify-content-between align-items-center bg-primary bg-gradient text-white rounded-4 px-3 py-3 mb-3 shadow">
                         <div>
                             <h5 className="mb-0 fw-semibold">{month}</h5>
-                            {role === "doctor" && (
+                            {/* {role === "doctor" && (
                                 <small className="opacity-75">
                                     Total Collection
                                 </small>
-                            )}
+                            )} */}
                         </div>
 
                         {role === "doctor" && (

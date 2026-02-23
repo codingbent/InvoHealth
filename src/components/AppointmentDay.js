@@ -72,26 +72,29 @@ const AppointmentDay = memo(function AppointmentDay({
 
                                     <td className="text-end">
                                         {(() => {
+                                            const status = a.status;
                                             const collected = Number(
                                                 a.collected ?? 0,
                                             );
                                             const total = Number(a.amount ?? 0);
-                                            const isPaid =
-                                                collected <= total && total > 0;
 
-                                            return isPaid ? (
-                                                <span className="fw-bold text-theme-primary">
-                                                    ₹ {total}
-                                                </span>
+                                            return status === "Paid" ? (
+                                                <>
+                                                    <span className="fw-bold text-theme-primary">
+                                                        ₹ {total}
+                                                    </span>
+                                                </>
                                             ) : (
-                                                <div>
-                                                    <div className="fw-bold text-theme-primary">
-                                                        ₹ {collected}
+                                                <>
+                                                    <div>
+                                                        <div className="fw-bold text-theme-primary">
+                                                            ₹ {collected}
+                                                        </div>
+                                                        <small className="text-theme-primary d-block">
+                                                            of ₹ {total}
+                                                        </small>
                                                     </div>
-                                                    <small className="text-theme-primary d-block">
-                                                        of ₹ {total}
-                                                    </small>
-                                                </div>
+                                                </>
                                             );
                                         })()}
                                     </td>
@@ -156,26 +159,29 @@ const AppointmentDay = memo(function AppointmentDay({
                                 {/* Amount Section */}
                                 <div className="text-end">
                                     {(() => {
+                                        const status = a.status;
                                         const collected = Number(
                                             a.collected ?? 0,
                                         );
                                         const total = Number(a.amount ?? 0);
-                                        const isPaid =
-                                            collected >= total && total > 0;
 
-                                        return isPaid ? (
-                                            <span className="fw-bold text-success-theme">
-                                                ₹ {total}
-                                            </span>
+                                        return status === "Paid" ? (
+                                            <>
+                                                <span className="fw-bold text-success-theme">
+                                                    ₹ {total}{" "}
+                                                </span>
+                                            </>
                                         ) : (
-                                            <div>
-                                                <div className="fw-bold text-theme-primary">
-                                                    ₹ {collected}
+                                            <>
+                                                <div>
+                                                    <div className="fw-bold text-theme-primary">
+                                                        ₹ {collected}
+                                                    </div>
+                                                    <small className="text-theme-muted d-block">
+                                                        of ₹ {total}
+                                                    </small>
                                                 </div>
-                                                <small className="text-theme-muted d-block">
-                                                    of ₹ {total}
-                                                </small>
-                                            </div>
+                                            </>
                                         );
                                     })()}
                                     <div className="mt-1">

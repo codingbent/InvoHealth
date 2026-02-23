@@ -58,6 +58,7 @@ router.post("/add_staff", fetchuser, async (req, res) => {
             name,
             phone,
             role,
+            theme:"dark",
         });
 
         res.json({

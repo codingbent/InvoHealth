@@ -218,7 +218,7 @@ export default function Login(props) {
         <div className="container mt-5" style={{ maxWidth: "420px" }}>
             <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
                 <h4 className="text-center mb-4 fw-semibold">Login</h4>
-                <div className="btn-group w-100 mb-3">
+                <div className="btn-group justify-content-around w-100 mb-3">
                     <div className="role-toggle">
                         <button
                             type="button"
