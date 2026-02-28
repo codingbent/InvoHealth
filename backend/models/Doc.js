@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { subscribe } = require("../routes/authentication");
 const { Schema } = mongoose;
 
 const DocSchema = new Schema({
@@ -9,7 +10,7 @@ const DocSchema = new Schema({
     clinicName: { type: String, required: true },
 
     phone: { type: String, required: true, unique: true },
-    appointmentPhone: { type: String }, 
+    appointmentPhone: { type: String },
 
     address: {
         line1: { type: String, required: true },
@@ -36,14 +37,31 @@ const DocSchema = new Schema({
         default: "doctor",
         enum: ["doctor"],
     },
-    staff: [{
-        type: Schema.Types.ObjectId,
-        ref: "Staff",
-    }],
-    theme:{
-        type:String,
-        enum:["light","dark"],
-        default:"light",
+    staff: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "Staff",
+        },
+    ],
+    theme: {
+        type: String,
+        enum: ["light", "dark"],
+        default: "light",
+    },
+    subscription: {
+        plan: {
+            type: String,
+            enum: ["free", "starter", "pro", "enterprise"],
+            default: "free",
+        },
+        status: {
+            type: String,
+            enum: ["active", "expired", "cancelled"],
+            default: "active",
+        },
+        startDate: Date,
+        expiryDate: Date,
+        razorpaySubscriptionId: String,
     },
 });
 

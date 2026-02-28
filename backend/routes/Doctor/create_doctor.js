@@ -65,6 +65,7 @@ router.post(
                 // })),
                 degree: degrees,
                 role: "doctor",
+                subscription:"starter",
             });
 
             const payload = {

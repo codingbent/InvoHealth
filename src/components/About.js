@@ -153,8 +153,10 @@ export default function About() {
                     {/* FOOTER */}
                     <div className="text-center pt-3 border-top theme-border">
                         <small className="text-theme-secondary">
-                            App Version: v1.0.0 <br />©{" "}
-                            {new Date().getFullYear()} InvoHealth
+                            <span>InvoHealth Admin Panel • Version </span>
+                            {process.env.REACT_APP_VERSION} <br />©{" "}
+                            {new Date().getFullYear()} InvoHealth. All rights
+                            reserved.
                         </small>
                     </div>
                 </div>

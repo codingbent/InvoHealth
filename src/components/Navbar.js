@@ -56,6 +56,9 @@ export default function Navbar(props) {
         navigate("/login");
     };
 
+    if(role==="superadmin"){
+        return (<></>)
+    }
     return (
         <nav className="navbar navbar-expand-lg shadow-sm app-navbar">
             <div className="container-fluid">

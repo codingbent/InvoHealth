@@ -12,6 +12,8 @@ import Profile from "./components/Profile";
 import SetStaffPassword from "./components/set-staff-password";
 import Dashboard from "./components/Dashboard";
 import ForgotPassword from "./components/ForgotPassword";
+import AdminLogin from "./components/admin/login_admin";
+import AdminDoctors from "./components/admin/fetchall_doctors";
 
 function App() {
     const [alert, setAlert] = useState(null);
@@ -28,7 +30,7 @@ function App() {
         <>
             <BrowserRouter>
                 <Navbar showAlert={showAlert} />
-                <Alert alert={alert} clearAlert={clearAlert}/>
+                <Alert alert={alert} clearAlert={clearAlert} />
                 <Routes>
                     <Route path="/" element={<Home showAlert={showAlert} />} />
                     <Route path="/about" element={<About />} />
@@ -59,6 +61,14 @@ function App() {
                     <Route
                         path="/forgot-password"
                         element={<ForgotPassword showAlert={showAlert} />}
+                    />
+                    <Route
+                        path="/admin/login_admin"
+                        element={<AdminLogin />}
+                    />
+                    <Route
+                        path="/admin/fetchall_doctors"
+                        element={<AdminDoctors />}
                     />
                 </Routes>
             </BrowserRouter>

@@ -6,7 +6,7 @@ import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { toWords } from "number-to-words";
-import { Pencil, Trash2, Loader2, UserRound,User } from "lucide-react";
+import { Pencil, Trash2, Loader2, UserRound, User } from "lucide-react";
 
 export default function PatientDetails() {
     const navigate = useNavigate();
@@ -669,19 +669,8 @@ export default function PatientDetails() {
                                     <h5 className="fw-semibold mb-0">
                                         {details?.name}
                                     </h5>
-                                    <small className="text-theme-secondary">
-                                        {details?.number}
-                                    </small>
                                 </div>
                             </div>
-
-                            <span
-                                className={`status-badge rounded-pill px-3 py-2 gender-badge ${
-                                    details?.gender?.toLowerCase() || "other"
-                                }`}
-                            >
-                                {details?.gender || "N/A"}
-                            </span>
                         </div>
 
                         {/* Info Grid */}

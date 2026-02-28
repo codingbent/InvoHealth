@@ -9,6 +9,7 @@ require("./models/Patient");
 require("./models/Service");
 require("./models/Appointment");
 require("./models/Staff");
+require("./models/Admin")
 console.log("Loaded models:", Object.keys(require("mongoose").models));
 
 const app = express();
@@ -45,6 +46,7 @@ app.use(express.json());
 app.use("/api/doctor", require("./routes/Doctor/index_doctor"));
 app.use("/api/staff", require("./routes/Staff/index_staff"));
 app.use("/api/authentication", require("./routes/authentication"));
+app.use("/api/admin",require("./routes/Admin/index_admin"));
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
