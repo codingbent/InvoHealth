@@ -45,7 +45,7 @@ const AdminDoctors = () => {
             setError("Server error");
             setLoading(false);
         }
-    }, [API_BASE_URL]);
+    }, [API_BASE_URL,navigate]);
     useEffect(() => {
         fetchDoctors();
     }, [fetchDoctors]);
