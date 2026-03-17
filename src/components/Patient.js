@@ -28,7 +28,7 @@ const Patient = ({ showAlert }) => {
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [fabOpen, setFabOpen] = useState(false);
-const API_BASE_URL =
+    const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
@@ -87,6 +87,7 @@ const API_BASE_URL =
         if (subscriptionStatus === "expired") {
             e.preventDefault();
             e.stopPropagation();
+            setSubscriptionStatus("Expired");
             showAlert("Plan expired. Please upgrade.", "danger");
             return;
         }
@@ -313,7 +314,9 @@ const API_BASE_URL =
             {/* MODALS */}
             <div className="modal fade" id="patientModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <AddPatient showAlert={showAlert} />
+                    {subscriptionStatus === "active" && (
+                        <AddPatient showAlert={showAlert} />
+                    )}
                 </div>
             </div>
 
@@ -328,7 +331,9 @@ const API_BASE_URL =
 
                 {showAppointment && (
                     <div className="appointment container mt-3">
-                        <AddAppointment showAlert={showAlert} />
+                        {subscriptionStatus === "active" && (
+                            <AddAppointment showAlert={showAlert} />
+                        )}
                         <button
                             className="btn btn-secondary mt-3"
                             onClick={closeAppointment}
@@ -351,7 +356,9 @@ const API_BASE_URL =
 
             <div className="modal fade" id="serviceModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <AddServices showAlert={showAlert} />
+                    {subscriptionStatus === "active" && (
+                        <AddServices showAlert={showAlert} />
+                    )}
                 </div>
             </div>
 
