@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
-import { CheckCircle, Stethoscope, Users, Send, LogIn, UserPlus } from "lucide-react";
+import { Stethoscope, Users, LogIn, UserPlus } from "lucide-react";
 
 export default function Login(props) {
     const navigate = useNavigate();
 
     // ================= STATES =================
     const [identifier, setIdentifier] = useState("");
-    const [otp, setOtp] = useState("");
-    const [sessionId, setSessionId] = useState("");
     const [password, setPassword] = useState("");
-    const [isOtpLogin, setIsOtpLogin] = useState(false);
-    const [inputType, setInputType] = useState("typing");
     const [loginAs, setLoginAs] = useState("doctor");
+    const [inputType, setInputType] = useState("typing");
     const [showInvalid, setShowInvalid] = useState(false);
+    // const [otp, setOtp] = useState("");
+    // const [sessionId, setSessionId] = useState("");
+    // const [isOtpLogin, setIsOtpLogin] = useState(false);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -33,21 +33,17 @@ export default function Login(props) {
 
         return () => clearTimeout(timer);
     }, [inputType]);
-    const applyTheme = (theme) => {
-        const finalTheme = theme || "light";
-
-        document.body.classList.remove("light-theme", "dark-theme");
-        document.body.classList.add(`${finalTheme}-theme`);
-
-        localStorage.setItem("theme", finalTheme);
-    };
 
     // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
         let value = e.target.value;
 
         // 🔒 Restrict to digits for staff / OTP
-        if (loginAs === "staff" || isOtpLogin) {
+        // if (loginAs === "staff" || isOtpLogin) {
+        //     value = value.replace(/\D/g, "");
+        // }
+
+        if (loginAs === "staff") {
             value = value.replace(/\D/g, "");
         }
 
@@ -67,52 +63,6 @@ export default function Login(props) {
             setInputType("phone");
         } else {
             setInputType("invalid");
-        }
-    };
-
-    const sendOtp = async () => {
-        const res = await authFetch(
-            `${API_BASE_URL}/api/authentication/send-otp`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: identifier }),
-            },
-        );
-
-        const data = await res.json();
-        if (data.success) {
-            setSessionId(data.sessionId);
-            props.showAlert("OTP sent", "success");
-        } else {
-            props.showAlert(data.error, "danger");
-        }
-    };
-
-    const verifyOtp = async () => {
-        const res = await authFetch(
-            `${API_BASE_URL}/api/authentication/verify-otp`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    phone: identifier,
-                    otp,
-                    sessionId,
-                }),
-            },
-        );
-
-        const data = await res.json();
-
-        if (data.success) {
-            localStorage.setItem("token", data.authtoken);
-            localStorage.setItem("name", data.name);
-            localStorage.setItem("role", data.role);
-            applyTheme(data.theme);
-            navigate("/");
-        } else {
-            alert(data.error);
         }
     };
     const getIdentifierTypeForApi = () => {
@@ -149,7 +99,7 @@ export default function Login(props) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", json.name);
             localStorage.setItem("role", json.role);
-            applyTheme(json.theme);
+            localStorage.setItem("plan", json.subscription?.plan || "free");
             navigate("/");
         } else {
             props.showAlert(json.error || "Login failed", "danger");
@@ -179,18 +129,18 @@ export default function Login(props) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("name", data.name);
             localStorage.setItem("role", data.role);
-            applyTheme(data.theme);
             navigate("/");
         } else {
             alert(data.error);
         }
     };
 
-    useEffect(() => {
-        if (loginAs === "staff") {
-            setIsOtpLogin(false);
-        }
-    }, [loginAs]);
+    // useEffect(() => {
+    //     if (loginAs === "staff") {
+    //         setIsOtpLogin(false);
+    //     }
+    // }, [loginAs]);
+
     // ================= FORM SUBMIT =================
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -240,17 +190,20 @@ export default function Login(props) {
                     </div>
                 </div>
 
-                {/* IDENTIFIER (shown always) */}
+                {/* IDENTIFIER */}
                 <div className="mb-3">
                     <label className="form-label">
-                        {loginAs === "staff"
+                        {/* {loginAs === "staff"
                             ? "Phone Number"
                             : isOtpLogin
                               ? "Phone Number"
-                              : "Email or Phone"}
+                              : "Email or Phone"} */}
+                        {loginAs === "staff"
+                            ? "Phone Number"
+                            : "Email or Phone"}
                     </label>
 
-                    <div
+                    {/* <div
                         className={
                             loginAs === "staff" || isOtpLogin
                                 ? "input-group"
@@ -258,38 +211,46 @@ export default function Login(props) {
                         }
                     >
                         {(loginAs === "staff" || isOtpLogin) && (
+                            <span className="input-group-text"> +91</span>
+                        )} */}
+
+                    <div className={loginAs === "staff" ? "input-group" : ""}>
+                        {loginAs === "staff" && (
                             <span className="input-group-text">🇮🇳 +91</span>
                         )}
 
                         <input
-                            type={
-                                loginAs === "staff" || isOtpLogin
-                                    ? "tel"
-                                    : "text"
-                            }
-                            inputMode={
-                                loginAs === "staff" || isOtpLogin
-                                    ? "numeric"
-                                    : "text"
-                            }
-                            pattern={
-                                loginAs === "staff" || isOtpLogin
-                                    ? "[0-9]{10}"
-                                    : undefined
-                            }
+                            // type={
+                            //         loginAs === "staff" || isOtpLogin
+                            //             ? "tel"
+                            //             : "text"
+                            //     }
+                            //     inputMode={
+                            //         loginAs === "staff" || isOtpLogin
+                            //             ? "numeric"
+                            //             : "text"
+                            //     }
+                            //     pattern={
+                            //         loginAs === "staff" || isOtpLogin
+                            //             ? "[0-9]{10}"
+                            //             : undefined
+                            //     }
+                            type={loginAs === "staff" ? "tel" : "text"}
                             className="form-control"
                             placeholder={
-                                loginAs === "staff" || isOtpLogin
+                                // loginAs === "staff" || isOtpLogin
+                                loginAs === "staff"
                                     ? "Enter 10-digit phone number"
                                     : "Enter email or phone"
                             }
                             value={identifier}
-                            maxLength={
-                                loginAs === "staff" || isOtpLogin
-                                    ? 10
-                                    : undefined
-                            }
-                            onWheel={(e) => e.target.blur()}
+                            // maxLength={
+                            //     loginAs === "staff" || isOtpLogin
+                            //         ? 10
+                            //         : undefined
+                            // }
+                            // onWheel={(e) => e.target.blur()}
+                            maxLength={loginAs === "staff" ? 10 : undefined}
                             onChange={handleIdentifierChange}
                             required
                         />
@@ -302,7 +263,7 @@ export default function Login(props) {
                     )}
                 </div>
 
-                {/* SWITCH */}
+                {/* SWITCH
                 {loginAs === "doctor" && (
                     <div className="form-check form-switch mb-3">
                         <input
@@ -315,10 +276,10 @@ export default function Login(props) {
                             Login with {isOtpLogin ? "OTP" : "Password"}
                         </label>
                     </div>
-                )}
+                )} */}
 
                 {/* PASSWORD LOGIN */}
-                {!isOtpLogin && (
+                {/* {!isOtpLogin && (
                     <div className="mb-3">
                         <label className="form-label">Password</label>
                         <input
@@ -329,23 +290,32 @@ export default function Login(props) {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
-                )}
+                )} 
+                {/* PASSWORD */}
+                <div className="mb-3">
+                    <label className="form-label">Password</label>
 
-                {!isOtpLogin && (
-                    <div className="text-end mt-2">
-                        <Link
-                            to="/forgot-password"
-                            className="text-decoration-none text-primary small fw-medium"
-                        >
-                            Forgot your password?
-                        </Link>
-                    </div>
-                )}
+                    <input
+                        type="password"
+                        className="form-control"
+                        placeholder="Enter password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
+                </div>
+
+                <div className="text-end mt-2">
+                    <Link
+                        to="/forgot-password"
+                        className="text-decoration-none text-primary small fw-medium"
+                    >
+                        Forgot your password?
+                    </Link>
+                </div>
 
                 {/* OTP LOGIN */}
-                {loginAs === "doctor" && isOtpLogin && (
+                {/* {loginAs === "doctor" && isOtpLogin && (
                     <div className="border rounded-3 p-3 bg-light mb-3">
-                        {/* Send OTP */}
                         <button
                             type="button"
                             className="btn btn-outline-primary w-100 mb-3"
@@ -356,7 +326,6 @@ export default function Login(props) {
                             Send OTP
                         </button>
 
-                        {/* OTP INPUT */}
                         <div className="mb-3">
                             <label className="form-label text-center w-100">
                                 Enter OTP
@@ -371,7 +340,6 @@ export default function Login(props) {
                             />
                         </div>
 
-                        {/* VERIFY */}
                         <button
                             type="button"
                             className="btn btn-success w-100"
@@ -383,22 +351,18 @@ export default function Login(props) {
                         </button>
                     </div>
                 )}
-
-                {/* SUBMIT BUTTON (PASSWORD ONLY) */}
-                {!isOtpLogin && (
-                    <button
-                        type="submit"
-                        className="btn btn-primary w-100 mt-2"
-                    >
-                        <LogIn size={18}/>
-                        Login
-                    </button>
-                )}
+*/}
+                {/* {!isOtpLogin && ( */}
+                <button type="submit" className="btn btn-primary w-100 mt-2">
+                    <LogIn size={18} />
+                    Login
+                </button>
+                {/* // )}  */}
 
                 {/* FOOTER */}
                 <div className="text-center mt-3">
                     <span className="text-theme-secondary">New user? </span>
-                    <UserPlus size={18}/>
+                    <UserPlus size={18} />
                     <Link to="/signup">Create an account</Link>
                 </div>
             </form>

@@ -14,6 +14,12 @@ import Dashboard from "./components/Dashboard";
 import ForgotPassword from "./components/ForgotPassword";
 import AdminLogin from "./components/admin/login_admin";
 import AdminDoctors from "./components/admin/fetchall_doctors";
+import Pricing from "./components/Pricing";
+import Privacy from "./components/Privacy";
+import Terms from "./components/Terms";
+import AdminPricing from "./components/admin/admin_pricing";
+import SubscriptionPage from "./components/SubscriptionPage";
+import Tutorials from "./components/Tutorials";
 
 function App() {
     const [alert, setAlert] = useState(null);
@@ -62,14 +68,20 @@ function App() {
                         path="/forgot-password"
                         element={<ForgotPassword showAlert={showAlert} />}
                     />
-                    <Route
-                        path="/admin/login_admin"
-                        element={<AdminLogin />}
-                    />
+                    <Route path="/admin/login_admin" element={<AdminLogin />} />
                     <Route
                         path="/admin/fetchall_doctors"
                         element={<AdminDoctors />}
                     />
+                    <Route path="/pricing" element={<Pricing />} />
+                    <Route
+                        path="/subscriptionpage"
+                        element={<SubscriptionPage showAlert={showAlert} />}
+                    />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/tutorials" element={<Tutorials />} />
+                    <Route path="/admin/pricing" element={<AdminPricing />} />
                 </Routes>
             </BrowserRouter>
         </>

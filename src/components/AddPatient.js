@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
+import { IndianRupee } from "lucide-react";
 
 const AddPatient = ({ showAlert }) => {
     const [patient, setPatient] = useState({
@@ -25,6 +26,7 @@ const AddPatient = ({ showAlert }) => {
         new Date().toISOString().slice(0, 10),
     );
     const [payment_type, setPaymentType] = useState("Cash");
+    const [collectFull, setCollectFull] = useState(true);
     const { name, service, number, age, gender } = patient;
     const token = localStorage.getItem("token");
     const decoded = jwtDecode(token);
@@ -37,9 +39,10 @@ const AddPatient = ({ showAlert }) => {
         [],
     );
 
-    // =========================
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
     // FETCH SERVICES
-    // =========================
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -57,9 +60,7 @@ const AddPatient = ({ showAlert }) => {
         fetchServices();
     }, [API_BASE_URL]);
 
-    // =========================
     // CALCULATE TOTAL
-    // =========================
     const serviceTotal = useMemo(() => {
         return service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
@@ -69,9 +70,8 @@ const AddPatient = ({ showAlert }) => {
 
     const finalAmount = serviceTotal;
 
-    // =========================
     // AUTO SET COLLECTED = FINAL WHEN SERVICES CHANGE
-    // =========================
+
     useEffect(() => {
         setPatient((prev) => ({
             ...prev,
@@ -79,9 +79,8 @@ const AddPatient = ({ showAlert }) => {
         }));
     }, [finalAmount]);
 
-    // =========================
     // INPUT HANDLER
-    // =========================
+
     const onChange = (e) => {
         setPatient({ ...patient, [e.target.name]: e.target.value });
     };
@@ -96,16 +95,18 @@ const AddPatient = ({ showAlert }) => {
     }, [discount, isPercent, finalAmount]);
 
     useEffect(() => {
-        const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
+        if (collectFull) {
+            const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
 
-        setPatient((prev) => ({
-            ...prev,
-            amount: autoCollected,
-        }));
-    }, [calculatedDiscount, finalAmount]);
-    // =========================
+            setPatient((prev) => ({
+                ...prev,
+                amount: autoCollected,
+            }));
+        }
+    }, [calculatedDiscount, finalAmount, collectFull]);
+
     // SUBMIT
-    // =========================
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -206,7 +207,7 @@ const AddPatient = ({ showAlert }) => {
 
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
-                setShowModal(false)
+                setShowModal(false);
                 navigate("/");
             } else {
                 showAlert("Patient added but appointment failed", "warning");
@@ -218,331 +219,385 @@ const AddPatient = ({ showAlert }) => {
     };
 
     return (
-        {showModal} &&
-        <form onSubmit={handleSubmit}>
-            <div className="modal-content border-0 shadow-lg rounded-4">
-                {/* HEADER */}
-                <div className="modal-header border-0 pb-2">
-                    <div>
-                        <h5 className="modal-title fw-semibold mb-0">
-                            🧑‍⚕️ Add Patient
-                        </h5>
-                        <small className="text-theme-secondary">
-                            Create patient & initial appointment
-                        </small>
+        { showModal } && (
+            <form onSubmit={handleSubmit}>
+                <div className="modal-content border-0 shadow-lg rounded-4">
+                    {/* HEADER */}
+                    <div className="modal-header border-0 pb-2">
+                        <div>
+                            <h5 className="modal-title fw-semibold mb-0">
+                                🧑‍⚕️ Add Patient
+                            </h5>
+                            <small className="text-theme-secondary">
+                                Create patient & initial appointment
+                            </small>
+                        </div>
+                        <button
+                            type="button"
+                            className="btn-close"
+                            data-bs-dismiss="modal"
+                        />
                     </div>
-                    <button
-                        type="button"
-                        className="btn-close"
-                        data-bs-dismiss="modal"
-                    />
-                </div>
 
-                {/* BODY */}
-                <div className="modal-body pt-3">
-                    {/* BASIC INFO */}
-                    <h6 className="text-uppercase text-theme-secondary small mb-3">
-                        Patient Details
-                    </h6>
-                    <div className="row g-3 mb-4">
-                        <div className="col-md-6">
+                    {/* BODY */}
+                    <div className="modal-body pt-3">
+                        {/* BASIC INFO */}
+                        <h6 className="text-uppercase text-theme-secondary small mb-3">
+                            Patient Details
+                        </h6>
+                        <div className="row g-3 mb-4">
+                            <div className="col-md-6">
+                                <label className="form-label small">
+                                    Full Name
+                                </label>
+                                <input
+                                    type="text"
+                                    className="form-control rounded-3"
+                                    name="name"
+                                    value={name}
+                                    onChange={onChange}
+                                    placeholder="Enter patient name"
+                                    required
+                                />
+                            </div>
+
+                            <div className="col-md-3">
+                                <label className="form-label small">
+                                    Gender
+                                </label>
+                                <select
+                                    className="form-select rounded-3"
+                                    name="gender"
+                                    value={gender}
+                                    onChange={onChange}
+                                >
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+
+                            <div className="col-md-3">
+                                <label className="form-label small">Age</label>
+                                <input
+                                    type="number"
+                                    className="form-control rounded-3"
+                                    name="age"
+                                    value={age}
+                                    onChange={onChange}
+                                    placeholder="Age"
+                                />
+                            </div>
+                        </div>
+                        {/* CONTACT */}
+                        <div className="mb-4">
                             <label className="form-label small">
-                                Full Name
+                                Mobile Number
                             </label>
                             <input
-                                type="text"
+                                type="tel"
                                 className="form-control rounded-3"
-                                name="name"
-                                value={name}
-                                onChange={onChange}
-                                placeholder="Enter patient name"
-                                required
+                                name="number"
+                                value={number}
+                                placeholder="10-digit mobile number"
+                                onChange={(e) => {
+                                    const onlyDigits = e.target.value.replace(
+                                        /\D/g,
+                                        "",
+                                    );
+                                    if (onlyDigits.length <= 10) {
+                                        setPatient({
+                                            ...patient,
+                                            number: onlyDigits,
+                                        });
+                                    }
+                                }}
                             />
                         </div>
+                        {/* SERVICES */}
+                        <h6 className="text-uppercase text-theme-secondary small mb-2">
+                            Services & Billing
+                        </h6>
+                        <div className="mb-3">
+                            <ServiceList
+                                services={availableServices}
+                                selectedServices={service}
+                                onAdd={(serviceObj) => {
+                                    setPatient((prev) =>
+                                        prev.service.some(
+                                            (s) => s._id === serviceObj._id,
+                                        )
+                                            ? prev
+                                            : {
+                                                  ...prev,
+                                                  service: [
+                                                      ...prev.service,
+                                                      serviceObj,
+                                                  ],
+                                              },
+                                    );
 
-                        <div className="col-md-3">
-                            <label className="form-label small">Gender</label>
-                            <select
-                                className="form-select rounded-3"
-                                name="gender"
-                                value={gender}
-                                onChange={onChange}
-                            >
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
+                                    setServiceAmounts((prev) => ({
+                                        ...prev,
+                                        [serviceObj._id]:
+                                            serviceObj.amount ?? 0,
+                                    }));
+                                }}
+                                onRemove={(id) => {
+                                    setPatient((prev) => ({
+                                        ...prev,
+                                        service: prev.service.filter(
+                                            (s) => s._id !== id,
+                                        ),
+                                    }));
+
+                                    setServiceAmounts((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[id];
+                                        return copy;
+                                    });
+                                }}
+                            />
                         </div>
+                        {/* BILLING */}
+                        {service.length > 0 && (
+                            <div className="border rounded-4 p-3 mb-4">
+                                {/* SERVICES TABLE */}
+                                <table className="table table-sm align-middle mb-3">
+                                    <thead className="table-theme">
+                                        <tr>
+                                            <th>Service</th>
+                                            <th className="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {service.map((s) => (
+                                            <tr
+                                                key={s._id}
+                                                className="service-row"
+                                            >
+                                                <td className="service-name">
+                                                    {s.name}
+                                                </td>
 
-                        <div className="col-md-3">
-                            <label className="form-label small">Age</label>
+                                                <td className="text-end">
+                                                    <div className="amount-input-wrapper">
+                                                        <IndianRupee
+                                                            size={14}
+                                                            className="me-1 text-theme-secondary"
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            className="amount-input"
+                                                            value={
+                                                                serviceAmounts[
+                                                                    s._id
+                                                                ] ?? s.amount
+                                                            }
+                                                            onChange={(e) =>
+                                                                setServiceAmounts(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [s._id]:
+                                                                            Number(
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            ),
+                                                                    }),
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* TOTAL */}
+                                <div className="d-flex justify-content-between fw-semibold mt-3">
+                                    <span>Final Amount</span>
+                                    <span className="text-primary">
+                                        <IndianRupee size={18} />{" "}
+                                        {formatCurrency(finalAmount)}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                        {/* DISCOUNT SECTION */}
+                        <div className="mb-4">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <label className="form-label fw-semibold mb-0">
+                                    Discount
+                                </label>
+                                <div className="form-check form-switch">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        checked={isPercent}
+                                        onChange={(e) =>
+                                            setIsPercent(e.target.checked)
+                                        }
+                                    />
+                                    <label className="form-check-label small">
+                                        {isPercent ? (
+                                            "Percentage (%)"
+                                        ) : (
+                                            <>
+                                                Flat Amount{" "}
+                                                <IndianRupee size={18} />
+                                            </>
+                                        )}
+                                    </label>
+                                </div>
+                            </div>
                             <input
                                 type="number"
                                 className="form-control rounded-3"
-                                name="age"
-                                value={age}
-                                onChange={onChange}
-                                placeholder="Age"
+                                placeholder={
+                                    isPercent ? "Enter %" : "Enter amount"
+                                }
+                                value={discount}
+                                min={0}
+                                max={isPercent ? 100 : finalAmount}
+                                onChange={(e) => {
+                                    let value = Number(e.target.value);
+                                    if (value < 0) value = 0;
+                                    if (isPercent && value > 100) value = 100;
+                                    if (!isPercent && value > finalAmount)
+                                        value = finalAmount;
+                                    setDiscount(value);
+                                }}
                             />
                         </div>
-                    </div>
-                    {/* CONTACT */}
-                    <div className="mb-4">
-                        <label className="form-label small">
-                            Mobile Number
-                        </label>
-                        <input
-                            type="tel"
-                            className="form-control rounded-3"
-                            name="number"
-                            value={number}
-                            placeholder="10-digit mobile number"
-                            onChange={(e) => {
-                                const onlyDigits = e.target.value.replace(
-                                    /\D/g,
-                                    "",
-                                );
-                                if (onlyDigits.length <= 10) {
-                                    setPatient({
-                                        ...patient,
-                                        number: onlyDigits,
-                                    });
-                                }
-                            }}
-                        />
-                    </div>
-                    {/* SERVICES */}
-                    <h6 className="text-uppercase text-theme-secondary small mb-2">
-                        Services & Billing
-                    </h6>
-                    <div className="mb-3">
-                        <ServiceList
-                            services={availableServices}
-                            selectedServices={service}
-                            onAdd={(serviceObj) => {
-                                setPatient((prev) =>
-                                    prev.service.some(
-                                        (s) => s._id === serviceObj._id,
-                                    )
-                                        ? prev
-                                        : {
-                                              ...prev,
-                                              service: [
-                                                  ...prev.service,
-                                                  serviceObj,
-                                              ],
-                                          },
-                                );
-
-                                setServiceAmounts((prev) => ({
-                                    ...prev,
-                                    [serviceObj._id]: serviceObj.amount ?? 0,
-                                }));
-                            }}
-                            onRemove={(id) => {
-                                setPatient((prev) => ({
-                                    ...prev,
-                                    service: prev.service.filter(
-                                        (s) => s._id !== id,
-                                    ),
-                                }));
-
-                                setServiceAmounts((prev) => {
-                                    const copy = { ...prev };
-                                    delete copy[id];
-                                    return copy;
-                                });
-                            }}
-                        />
-                    </div>
-                    {/* BILLING */}
-                    {service.length > 0 && (
-                        <div className="border rounded-4 p-3 mb-4">
-                            {/* SERVICES TABLE */}
-                            <table className="table table-sm align-middle mb-3">
-                                <thead className="table-theme">
-                                    <tr>
-                                        <th>Service</th>
-                                        <th className="text-end">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {service.map((s) => (
-                                        <tr key={s._id}>
-                                            <td>{s.name}</td>
-                                            <td className="text-end">
-                                                <input
-                                                    type="number"
-                                                    className="form-control form-control-sm text-end rounded-3"
-                                                    style={{
-                                                        maxWidth: 120,
-                                                        float: "right",
-                                                    }}
-                                                    value={
-                                                        serviceAmounts[s._id] ??
-                                                        s.amount
-                                                    }
-                                                    onChange={(e) =>
-                                                        setServiceAmounts(
-                                                            (prev) => ({
-                                                                ...prev,
-                                                                [s._id]: Number(
-                                                                    e.target
-                                                                        .value,
-                                                                ),
-                                                            }),
-                                                        )
-                                                    }
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {/* TOTAL */}
-                            <div className="d-flex justify-content-between fw-semibold mt-3">
-                                <span>Final Amount</span>
-                                <span className="text-primary">
-                                    ₹ {finalAmount}
+                        {/* AMOUNT COLLECTED */}
+                        <div className="amount-collect-wrapper mb-3">
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                                <span className="fw-semibold">
+                                    Amount Collected {collectFull && "(Auto)"}
                                 </span>
+
+                                <div className="amount-input-wrapper">
+                                    <IndianRupee
+                                        size={14}
+                                        className="me-1 text-theme-secondary"
+                                    />
+
+                                    <input
+                                        type="number"
+                                        className="amount-input"
+                                        value={patient.amount.toFixed(2)}
+                                        disabled={collectFull}
+                                        onChange={(e) =>
+                                            setPatient((prev) => ({
+                                                ...prev,
+                                                amount: Number(e.target.value),
+                                            }))
+                                        }
+                                    />
+                                </div>
                             </div>
                         </div>
-                    )}
-                    {/* DISCOUNT SECTION */}
-                    <div className="mb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                            <label className="form-label fw-semibold mb-0">
-                                Discount
+                        <div className="form-check mb-2">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={collectFull}
+                                onChange={(e) =>
+                                    setCollectFull(e.target.checked)
+                                }
+                            />
+                            <label className="form-check-label small">
+                                Collect full payable amount automatically
                             </label>
-                            <div className="form-check form-switch">
+                        </div>
+                        {/* DISCOUNT GIVEN */}
+                        <div className="d-flex justify-content-between">
+                            <span className="text-theme-secondary">
+                                Discount Given
+                            </span>
+                            <span className="text-danger">
+                                <IndianRupee size={18} />{" "}
+                                {formatCurrency(calculatedDiscount)}
+                            </span>
+                        </div>
+                        {/* PAYABLE AMOUNT */}
+                        <div className="d-flex justify-content-between fw-semibold mt-2">
+                            <span>Payable Amount</span>
+                            <span className="text-success">
+                                <IndianRupee size={18} />
+                                {formatCurrency(
+                                    Math.max(
+                                        finalAmount -
+                                            patient.amount -
+                                            calculatedDiscount,
+                                        0,
+                                    ),
+                                )}
+                            </span>
+                        </div>
+                        {/* APPOINTMENT */}
+                        <h6 className="text-uppercase text-theme-secondary mt-4 mb-2">
+                            Appointment & Payment
+                        </h6>
+                        <div className="row g-3">
+                            <div className="col-md-6">
+                                <label className="form-label small">
+                                    Appointment Date
+                                </label>
                                 <input
-                                    type="checkbox"
-                                    className="form-check-input"
-                                    checked={isPercent}
+                                    type="date"
+                                    className="form-control text-theme-secondary rounded-3"
+                                    value={appointmentDate}
                                     onChange={(e) =>
-                                        setIsPercent(e.target.checked)
+                                        setAppointmentDate(e.target.value)
                                     }
                                 />
-                                <label className="form-check-label small">
-                                    {isPercent
-                                        ? "Percentage (%)"
-                                        : "Flat Amount (₹)"}
+                            </div>
+
+                            <div className="col-md-6">
+                                <label className="form-label small">
+                                    Payment Type
                                 </label>
+                                <select
+                                    className="form-select rounded-3"
+                                    value={payment_type}
+                                    onChange={(e) =>
+                                        setPaymentType(e.target.value)
+                                    }
+                                >
+                                    <option>Cash</option>
+                                    <option>Card</option>
+                                    <option>SBI</option>
+                                    <option>ICICI</option>
+                                    <option>HDFC</option>
+                                    <option>Other</option>
+                                </select>
                             </div>
                         </div>
-                        <input
-                            type="number"
-                            className="form-control rounded-3"
-                            placeholder={isPercent ? "Enter %" : "Enter amount"}
-                            value={discount}
-                            min={0}
-                            max={isPercent ? 100 : finalAmount}
-                            onChange={(e) => {
-                                let value = Number(e.target.value);
-                                if (value < 0) value = 0;
-                                if (isPercent && value > 100) value = 100;
-                                if (!isPercent && value > finalAmount)
-                                    value = finalAmount;
-                                setDiscount(value);
-                            }}
-                        />
                     </div>
-                    {/* AMOUNT COLLECTED */}
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="fw-semibold">Amount Collected</span>
 
-                        <input
-                            type="number"
-                            className="form-control text-end rounded-3"
-                            style={{ maxWidth: "140px" }}
-                            value={patient.amount.toFixed(0)}
-                            onChange={(e) =>
-                                setPatient((prev) => ({
-                                    ...prev,
-                                    amount: Number(e.target.value),
-                                }))
-                            }
-                        />
-                    </div>
-                    {/* DISCOUNT GIVEN */}
-                    <div className="d-flex justify-content-between">
-                        <span className="text-muted">Discount Given</span>
-                        <span className="text-danger">
-                            ₹ {calculatedDiscount.toFixed(0)}
-                        </span>
-                    </div>
-                    {/* PAYABLE AMOUNT */}
-                    <div className="d-flex justify-content-between fw-semibold mt-2">
-                        <span>Payable Amount</span>
-                        <span className="text-success">
-                            ₹
-                            {Math.max(
-                                finalAmount -
-                                    patient.amount -
-                                    calculatedDiscount,
-                                0,
-                            ).toFixed(0)}
-                        </span>
-                    </div>
-                    {/* APPOINTMENT */}
-                    <h6 className="text-uppercase text-theme-secondary small mb-2">
-                        Appointment & Payment
-                    </h6>
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <label className="form-label small">
-                                Appointment Date
-                            </label>
-                            <input
-                                type="date"
-                                className="form-control rounded-3"
-                                value={appointmentDate}
-                                onChange={(e) =>
-                                    setAppointmentDate(e.target.value)
-                                }
-                            />
-                        </div>
+                    {/* FOOTER */}
+                    <div className="modal-footer border-0">
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary rounded-3"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancel
+                        </button>
 
-                        <div className="col-md-6">
-                            <label className="form-label small">
-                                Payment Type
-                            </label>
-                            <select
-                                className="form-select rounded-3"
-                                value={payment_type}
-                                onChange={(e) => setPaymentType(e.target.value)}
-                            >
-                                <option>Cash</option>
-                                <option>Card</option>
-                                <option>SBI</option>
-                                <option>ICICI</option>
-                                <option>HDFC</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
+                        <button
+                            type="submit"
+                            className="btn btn-primary rounded-3 px-4"
+                            disabled={service.length === 0}
+                        >
+                            Save & Create
+                        </button>
                     </div>
                 </div>
-
-                {/* FOOTER */}
-                <div className="modal-footer border-0">
-                    <button
-                        type="button"
-                        className="btn btn-outline-secondary rounded-3"
-                        data-bs-dismiss="modal"
-                    >
-                        Cancel
-                    </button>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary rounded-3 px-4"
-                        disabled={service.length === 0}
-                    >
-                        Save & Create
-                    </button>
-                </div>
-            </div>
-        </form>
+            </form>
+        )
     );
 };
 

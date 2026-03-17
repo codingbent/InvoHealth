@@ -5,10 +5,11 @@ router.use("/", require("./create_doctor"));
 router.use("/", require("./login_doctor"));
 router.use("/", require("./update_profile"));
 router.use("/", require("./dashboard_analytics"));
-router.use("/", require("./theme_doctor"));
 router.use("/", require("./get_doc"));
 router.use("/",require("./change_password"));
 router.use("/",require("./reset_password"));
+router.use("/",require("./subscription"));
+router.use("/",require("./payment_history"));
 
 router.use("/appointment", require("./Appointment/index_appointment"));
 router.use("/patient", require("./Patient/index_patient"));

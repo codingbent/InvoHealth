@@ -57,7 +57,6 @@ router.post("/login_staff", async (req, res) => {
             token,
             role: staff.role,
             name: staff.name,
-            theme:staff.theme,
         });
     } catch (err) {
         res.status(500).json({ success: false, error: "Server error" });

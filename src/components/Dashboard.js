@@ -11,7 +11,8 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import FilterPanel from "./FilterPanel";
 import { authFetch } from "./authfetch";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, IndianRupee } from "lucide-react";
+import { Link } from "react-router";
 
 ChartJS.register(
     ArcElement,
@@ -23,6 +24,10 @@ ChartJS.register(
 );
 
 export default function Dashboard() {
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     const [analytics, setAnalytics] = useState({
         paymentSummary: [],
         serviceSummary: [],
@@ -49,6 +54,63 @@ export default function Dashboard() {
         textColor: "#1f2937",
         gridColor: "rgba(0,0,0,0.08)",
     });
+    const [plan, setPlan] = useState(null);
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
+
+    const getGradient = (ctx, chartArea) => {
+        if (!chartArea) return "#0D6EFD";
+
+        const gradient = ctx.createLinearGradient(
+            0,
+            chartArea.bottom,
+            0,
+            chartArea.top,
+        );
+
+        gradient.addColorStop(0, "#0D6EFD");
+        gradient.addColorStop(1, "#60A5FA");
+
+        return gradient;
+    };
+
+    useEffect(() => {
+        const fetchSubscription = async () => {
+            try {
+                const token = localStorage.getItem("token");
+
+                if (!token) {
+                    setPlan("FREE");
+                    return;
+                }
+
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/subscription`,
+                );
+
+                const data = await res.json();
+
+                if (data.success && data.subscription) {
+                    const sub = data.subscription;
+
+                    // 🔥 HANDLE EXPIRED FIRST
+                    if (sub.status === "expired") {
+                        setPlan("EXPIRED");
+                    } else {
+                        setPlan(sub.plan?.toUpperCase() || "FREE");
+                    }
+                } else {
+                    setPlan("FREE");
+                }
+            } catch (err) {
+                console.error("Subscription fetch error:", err);
+                setPlan("FREE");
+            }
+        };
+
+        fetchSubscription();
+    }, [API_BASE_URL]);
 
     useEffect(() => {
         const observer = new MutationObserver(() => {
@@ -84,13 +146,11 @@ export default function Dashboard() {
 
         return () => observer.disconnect();
     }, []);
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
 
     /* ================= FETCH ANALYTICS ================= */
     useEffect(() => {
+        if (!["PRO", "ENTERPRISE"].includes(plan)) return;
+
         const fetchAnalytics = async () => {
             try {
                 setLoading(true);
@@ -129,6 +189,7 @@ export default function Dashboard() {
         fetchAnalytics();
     }, [
         API_BASE_URL,
+        plan,
         selectedPayments,
         selectedServices,
         selectedGender,
@@ -156,6 +217,7 @@ export default function Dashboard() {
 
         fetchServices();
     }, [API_BASE_URL]);
+
     /* ================= CHART DATA ================= */
     const paymentChartData = useMemo(
         () => ({
@@ -177,49 +239,158 @@ export default function Dashboard() {
         [analytics.paymentSummary],
     );
 
-    const serviceChartData = useMemo(
-        () => ({
+    const serviceChartData = useMemo(() => {
+        return {
             labels: analytics.serviceSummary.map((s) => s.service),
             datasets: [
                 {
                     label: "Revenue (₹)",
                     data: analytics.serviceSummary.map((s) => s.total),
-                    backgroundColor: "#0D6EFD",
-                    borderRadius: 8,
+                    backgroundColor: (context) => {
+                        const { chart } = context;
+                        const { ctx, chartArea } = chart;
+                        return getGradient(ctx, chartArea);
+                    },
+                    borderRadius: 10,
+                    borderSkipped: false,
                 },
             ],
-        }),
-        [analytics.serviceSummary],
-    );
+        };
+    }, [analytics.serviceSummary]);
 
     const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: 800,
+            easing: "easeOutQuart",
+        },
         plugins: {
             legend: {
-                position: "bottom",
-                labels: {
-                    color: chartColors.textColor,
+                display: false,
+            },
+            tooltip: {
+                backgroundColor: "#020617",
+                borderColor: "#1e293b",
+                borderWidth: 1,
+                padding: 10,
+                titleColor: "#e5e7eb",
+                bodyColor: "#e5e7eb",
+                callbacks: {
+                    label: function (context) {
+                        return `₹ ${formatCurrency(context.raw)}`;
+                    },
                 },
             },
         },
         scales: {
             x: {
-                ticks: { color: chartColors.textColor },
-                grid: { color: chartColors.gridColor },
+                ticks: {
+                    color: chartColors.textColor,
+                },
+                grid: {
+                    display: false,
+                },
             },
             y: {
-                ticks: { color: chartColors.textColor },
-                grid: { color: chartColors.gridColor },
+                ticks: {
+                    color: chartColors.textColor,
+                    callback: function (value) {
+                        return "₹ " + formatCurrency(value);
+                    },
+                },
+                grid: {
+                    color: chartColors.gridColor,
+                },
             },
         },
     };
+    function renderDashboardContent() {
+        return (
+            <div className="container mt-4 mb-5">
+                {/* KPI */}
+                <div className="row g-3 mb-4">
+                    <KPI title="Total Revenue" value={analytics.totalRevenue} />
+                    <KPI title="Collected" value={analytics.totalCollection} />
+                    <KPI title="Pending" value={analytics.totalPending} />
+                    <KPI
+                        title="Total Visits"
+                        value={analytics.totalVisits}
+                        isCurrency={false}
+                    />
+                </div>
 
+                {/* Charts */}
+                <div className="row g-4">...</div>
+            </div>
+        );
+    }
+    if (plan === null) {
+        return (
+            <div className="container text-center mt-5">
+                <p className="text-theme-secondary">Loading dashboard...</p>
+            </div>
+        );
+    }
+
+    if (!["PRO", "ENTERPRISE"].includes(plan)) {
+        return (
+            <div className="container mt-4 mb-5">
+                <div className="dashboard-wrapper">
+                    {/* BLURRED DASHBOARD */}
+                    <div
+                        className={
+                            plan !== "PRO" && plan !== "ENTERPRISE"
+                                ? "dashboard-blur"
+                                : ""
+                        }
+                    >
+                        {renderDashboardContent()}
+                    </div>
+
+                    {/* LOCK OVERLAY */}
+                    {plan !== "PRO" && plan !== "ENTERPRISE" && (
+                        <div className="dashboard-lock-overlay">
+                            <div className="lock-card">
+                                <div className="lock-icon">🔒</div>
+
+                                <p className="text-theme-secondary fw-bold">
+                                    {plan === "EXPIRED"
+                                        ? "Your subscription has expired"
+                                        : "Analytics Locked"}
+                                </p>
+
+                                <p className="text-theme-secondary">
+                                    {plan === "EXPIRED"
+                                        ? "Renew your plan to regain access to analytics."
+                                        : "Upgrade to Pro or Enterprise to unlock advanced analytics."}
+                                </p>
+
+                                <p className="text-theme-secondary">
+                                    Upgrade to <strong>Pro</strong> or{" "}
+                                    <strong>Enterprise</strong>
+                                    to unlock advanced analytics and revenue
+                                    insights.
+                                </p>
+
+                                <Link
+                                    to="/subscriptionpage"
+                                    className="btn btn-primary"
+                                >
+                                    Upgrade Plan
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="container mt-4 mb-5">
             <div className="dashboard-header">
                 <div>
-                    <h3 className="fw-bold mb-1">Clinic Dashboard</h3>
+                    <h3 className="fw-bold mb-1">Dashboard</h3>
                     <small className="text-theme-secondary">
                         Overview of revenue, collections & services
                     </small>
@@ -256,7 +427,7 @@ export default function Dashboard() {
             />
 
             {loading && (
-                <p className="text-center text-muted mt-3">
+                <p className="text-center text-theme-secondary mt-3">
                     Updating dashboard…
                 </p>
             )}
@@ -307,7 +478,7 @@ export default function Dashboard() {
                             </div>
 
                             <div className="col-md-6">
-                                {analytics.paymentSummary.map((p) => {
+                                {analytics.paymentSummary.map((p, index) => {
                                     const percent =
                                         analytics.totalCollection > 0
                                             ? (
@@ -320,11 +491,31 @@ export default function Dashboard() {
                                     return (
                                         <div
                                             key={p.type}
-                                            className="d-flex justify-content-between mb-2"
+                                            className="d-flex justify-content-between align-items-center mb-2"
                                         >
-                                            <span>{p.type}</span>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span
+                                                    style={{
+                                                        width: 10,
+                                                        height: 10,
+                                                        borderRadius: "50%",
+                                                        backgroundColor: [
+                                                            "#0D6EFD",
+                                                            "#198754",
+                                                            "#FFC107",
+                                                            "#0DCAF0",
+                                                            "#6F42C1",
+                                                            "#ADB5BD",
+                                                        ][index],
+                                                    }}
+                                                ></span>
+
+                                                <span>{p.type}</span>
+                                            </div>
+
                                             <span className="fw-bold">
-                                                ₹ {p.total.toFixed(0)} (
+                                                <IndianRupee size={16} />{" "}
+                                                {formatCurrency(p.total)} (
                                                 {percent}%)
                                             </span>
                                         </div>
@@ -358,12 +549,22 @@ export default function Dashboard() {
 
 /* ================= KPI COMPONENT ================= */
 function KPI({ title, value, color, isCurrency = true }) {
+    const formatCurrency = (val) =>
+        new Intl.NumberFormat("en-IN").format(Number(val || 0));
+
     return (
         <div className="col-6 col-md-3">
             <div className="kpi-card">
                 <p className="kpi-label">{title}</p>
+
                 <h4 className="kpi-value">
-                    {isCurrency ? `₹ ${value.toFixed(0)}` : value}
+                    {isCurrency ? (
+                        <>
+                            <IndianRupee size={18} /> {formatCurrency(value)}
+                        </>
+                    ) : (
+                        formatCurrency(value)
+                    )}
                 </h4>
             </div>
         </div>

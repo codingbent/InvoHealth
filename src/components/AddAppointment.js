@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ServiceList from "./ServiceList";
 import { authFetch } from "./authfetch";
+import { IndianRupee } from "lucide-react";
 
 const API_BASE_URL =
     process.env.NODE_ENV === "production"
@@ -28,6 +29,9 @@ export default function AddAppointment({ showAlert }) {
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
 
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
     const discountValue = Math.min(
         isPercent ? (total * discount) / 100 : discount,
         total,
@@ -324,12 +328,16 @@ export default function AddAppointment({ showAlert }) {
 
                                 {/* SUMMARY */}
                                 <div className="summary-box">
-                                    <div>Total: ₹ {total}</div>
-                                    <div>
-                                        Discount: ₹ {discountValue.toFixed(0)}
+                                    <div className="my-1">
+                                        Total: <IndianRupee size={15} /> {formatCurrency(total)}
                                     </div>
-                                    <div className="fw-bold">
-                                        Final: ₹ {finalAmount.toFixed(0)}
+                                    <div className="my-1">
+                                        Discount: <IndianRupee size={15} />{" "}
+                                        {formatCurrency(discountValue)}
+                                    </div>
+                                    <div className="fw-bold my-1">
+                                        Final: <IndianRupee size={15} />{" "}
+                                        {formatCurrency(finalAmount)}
                                     </div>
                                 </div>
                                 <div className="mb-3">
@@ -352,7 +360,10 @@ export default function AddAppointment({ showAlert }) {
                                 </div>
 
                                 <div className="summary-box">
-                                    <div>Remaining: ₹ {remaining}</div>
+                                    <div>
+                                        Remaining: <IndianRupee size={18} />{" "}
+                                        {remaining}
+                                    </div>
                                     <div className="fw-semibold">
                                         Status:{" "}
                                         <span

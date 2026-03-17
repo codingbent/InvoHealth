@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const subscriptionPlans = ["free", "starter", "pro", "enterprise"];
+const subscriptionPlans = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
 
 const AdminDoctors = () => {
     const navigate = useNavigate();
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [updating, setUpdating] = useState(null);
 
+    useEffect(() => {
+        document.body.classList.remove("light-theme", "dark-theme");
+        document.body.classList.add("dark-theme");
+    }, []);
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -17,10 +22,12 @@ const AdminDoctors = () => {
     const fetchDoctors = useCallback(async () => {
         try {
             const token = localStorage.getItem("admintoken");
+
             if (!token) {
                 navigate("/admin/login");
                 return;
             }
+
             const response = await fetch(
                 `${API_BASE_URL}/api/admin/fetchall_doctors`,
                 {
@@ -41,20 +48,23 @@ const AdminDoctors = () => {
 
             setDoctors(data.doctors);
             setLoading(false);
-        } catch (err) {
+        } catch {
             setError("Server error");
             setLoading(false);
         }
-    }, [API_BASE_URL,navigate]);
+    }, [API_BASE_URL, navigate]);
+
     useEffect(() => {
         fetchDoctors();
     }, [fetchDoctors]);
 
     const handleSubscriptionChange = async (doctorId, newPlan) => {
         try {
+            setUpdating(doctorId);
+
             const token = localStorage.getItem("admintoken");
 
-            await fetch(
+            const res = await fetch(
                 `${API_BASE_URL}/api/admin/update_subscription/${doctorId}`,
                 {
                     method: "PUT",
@@ -66,27 +76,45 @@ const AdminDoctors = () => {
                 },
             );
 
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Failed to update subscription");
+                return;
+            }
+
             setDoctors((prev) =>
                 prev.map((doc) =>
                     doc._id === doctorId
-                        ? { ...doc, subscription: { plan: newPlan } }
+                        ? {
+                              ...doc,
+                              subscription: {
+                                  ...doc.subscription,
+                                  plan: newPlan,
+                              },
+                          }
                         : doc,
                 ),
             );
-        } catch (err) {
+        } catch {
             alert("Failed to update subscription");
+        } finally {
+            setUpdating(null);
         }
     };
 
     if (loading) return <div className="center">Loading...</div>;
     if (error) return <div className="center error">{error}</div>;
+    if (localStorage.getItem("role") !== "superadmin") {
+        navigate("/");
+    }
 
     return (
-        <div className="admin-container">
+        <div className={"admin-container container-fluid dark-theme"}>
             <h2 className="admin-title">Registered Doctors</h2>
 
-            <div className="table-wrapper">
-                <table className="modern-table">
+            <div className="table-theme">
+                <table className="modern-table table-theme">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -96,6 +124,7 @@ const AdminDoctors = () => {
                             <th>Subscription</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {doctors.map((doc) => (
                             <tr key={doc._id}>
@@ -103,20 +132,22 @@ const AdminDoctors = () => {
                                 <td>{doc.email}</td>
                                 <td>{doc.clinicName}</td>
                                 <td>{doc.phone}</td>
+
                                 <td>
                                     <select
-                                        value={doc.subscription?.plan || "free"}
+                                        value={doc.subscription?.plan || "FREE"}
+                                        disabled={updating === doc._id}
                                         onChange={(e) =>
                                             handleSubscriptionChange(
                                                 doc._id,
                                                 e.target.value,
                                             )
                                         }
-                                        className="subscription-select"
+                                        className={`subscription-select plan-${doc.subscription?.plan?.toLowerCase()}`}
                                     >
                                         {subscriptionPlans.map((plan) => (
                                             <option key={plan} value={plan}>
-                                                {plan.toUpperCase()}
+                                                {plan}
                                             </option>
                                         ))}
                                     </select>
@@ -126,23 +157,27 @@ const AdminDoctors = () => {
                     </tbody>
                 </table>
 
-                {/* Mobile Card View */}
+                {/* Mobile View */}
                 <div className="mobile-cards">
                     {doctors.map((doc) => (
                         <div key={doc._id} className="doctor-card">
                             <h3>{doc.name}</h3>
+
                             <p>
                                 <strong>Email:</strong> {doc.email}
                             </p>
+
                             <p>
                                 <strong>Clinic:</strong> {doc.clinicName}
                             </p>
+
                             <p>
                                 <strong>Phone:</strong> {doc.phone}
                             </p>
 
                             <select
-                                value={doc.subscription?.plan || "free"}
+                                value={doc.subscription?.plan || "FREE"}
+                                disabled={updating === doc._id}
                                 onChange={(e) =>
                                     handleSubscriptionChange(
                                         doc._id,
@@ -153,7 +188,7 @@ const AdminDoctors = () => {
                             >
                                 {subscriptionPlans.map((plan) => (
                                     <option key={plan} value={plan}>
-                                        {plan.toUpperCase()}
+                                        {plan}
                                     </option>
                                 ))}
                             </select>

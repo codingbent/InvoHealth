@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { IndianRupee } from "lucide-react";
 
 const AppointmentDay = memo(function AppointmentDay({
     day,
@@ -10,7 +11,9 @@ const AppointmentDay = memo(function AppointmentDay({
         (sum, a) => sum + Number(a.collected ?? a.amount ?? 0),
         0,
     );
-
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
     return (
         <div className="mb-4">
             {/* DAY HEADER */}
@@ -25,7 +28,7 @@ const AppointmentDay = memo(function AppointmentDay({
 
                 {localStorage.getItem("role") === "doctor" && (
                     <span className="fw-bold text-success-theme">
-                        ₹ {dayTotal.toFixed(0)}
+                        <IndianRupee size={18} /> {formatCurrency(dayTotal)}
                     </span>
                 )}
             </div>
@@ -81,17 +84,27 @@ const AppointmentDay = memo(function AppointmentDay({
                                             return status === "Paid" ? (
                                                 <>
                                                     <span className="fw-bold text-theme-primary">
-                                                        ₹ {total}
+                                                        <IndianRupee
+                                                            size={18}
+                                                        />{" "}
+                                                        {formatCurrency(total)}
                                                     </span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <div>
                                                         <div className="fw-bold text-theme-primary">
-                                                            ₹ {collected}
+                                                            <IndianRupee
+                                                                size={12}
+                                                            />{" "}
+                                                            {formatCurrency(collected)}
                                                         </div>
                                                         <small className="text-theme-primary d-block">
-                                                            of ₹ {total}
+                                                            of{" "}
+                                                            <IndianRupee
+                                                                size={12}
+                                                            />{" "}
+                                                            {formatCurrency(total)}
                                                         </small>
                                                     </div>
                                                 </>
@@ -168,17 +181,25 @@ const AppointmentDay = memo(function AppointmentDay({
                                         return status === "Paid" ? (
                                             <>
                                                 <span className="fw-bold text-success-theme">
-                                                    ₹ {total}{" "}
+                                                    <IndianRupee size={14} />{" "}
+                                                    {total}{" "}
                                                 </span>
                                             </>
                                         ) : (
                                             <>
                                                 <div>
                                                     <div className="fw-bold text-theme-primary">
-                                                        ₹ {collected}
+                                                        <IndianRupee
+                                                            size={14}
+                                                        />{" "}
+                                                        {collected}
                                                     </div>
                                                     <small className="text-theme-muted d-block">
-                                                        of ₹ {total}
+                                                        of{" "}
+                                                        <IndianRupee
+                                                            size={14}
+                                                        />{" "}
+                                                        {total}
                                                     </small>
                                                 </div>
                                             </>

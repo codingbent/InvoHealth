@@ -8,7 +8,7 @@ import AppointmentList from "./AppointmentList";
 import { SlidersHorizontal } from "lucide-react";
 import { FileSpreadsheet } from "lucide-react";
 
-export default function PatientList() {
+export default function PatientList(props) {
     const navigate = useNavigate();
 
     // =============================
@@ -215,22 +215,42 @@ export default function PatientList() {
 
     const downloadExcel = async () => {
         try {
+            const checkRes = await authFetch(
+                `${API_BASE_URL}/api/doctor/appointment/check_export_limit`,
+            );
+
+            const check = await checkRes.json();
+
+            if (!check.success) {
+                props.showAlert(check.error, "danger");
+                return;
+            }
+
+            if (check.remaining === 1) {
+                const confirmExport = window.confirm(
+                    "⚠ This is your LAST Excel export for this plan.\n\nDo you want to continue?",
+                );
+
+                if (!confirmExport) return;
+            }
+
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/export_appointments`,
             );
 
-            const allData = await res.json();
+            const result = await res.json();
 
-            const filteredForExport = applyFilters(allData);
+            const filteredForExport = applyFilters(result.data);
 
-            if (filteredForExport.length === 0) {
-                alert("No data to export");
+            if (!filteredForExport.length) {
+                props.showAlert("No data to export", "warning");
                 return;
             }
 
             exportToExcel(filteredForExport);
         } catch (err) {
-            console.error("Export failed", err);
+            console.error(err);
+            props.showAlert("Failed to export Excel", "danger");
         }
     };
 
@@ -243,9 +263,9 @@ export default function PatientList() {
 
         const fromDate = new Date(
             sorted[sorted.length - 1].date,
-        ).toLocaleDateString("en-GB");
+        ).toLocaleDateString("en-IN");
 
-        const toDate = new Date(sorted[0].date).toLocaleDateString("en-GB");
+        const toDate = new Date(sorted[0].date).toLocaleDateString("en-IN");
 
         // ================= FINANCIAL SUMMARY =================
         let totalRevenue = 0;
@@ -333,7 +353,7 @@ export default function PatientList() {
                 currentDay = day;
                 dayCollectedTotal = 0;
 
-                sheet.addRow([new Date(day).toLocaleDateString("en-GB")]).font =
+                sheet.addRow([new Date(day).toLocaleDateString("en-IN")]).font =
                     {
                         bold: true,
                     };
@@ -357,7 +377,7 @@ export default function PatientList() {
             sheet.addRow([
                 a.name,
                 a.number || "",
-                new Date(a.date).toLocaleDateString("en-GB"),
+                new Date(a.date).toLocaleDateString("en-IN"),
                 a.payment_type,
                 billed,
                 collected,

@@ -3,7 +3,6 @@ const router = express.Router();
 const Patient = require("../../../models/Patient");
 const Appointment = require("../../../models/Appointment");
 const Counter = require("../../../models/Counter");
-const { body, validationResult } = require("express-validator");
 
 router.post("/add_appointment/:id", async (req, res) => {
     try {

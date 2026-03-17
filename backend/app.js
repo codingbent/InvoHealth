@@ -9,8 +9,11 @@ require("./models/Patient");
 require("./models/Service");
 require("./models/Appointment");
 require("./models/Staff");
-require("./models/Admin")
-console.log("Loaded models:", Object.keys(require("mongoose").models));
+require("./models/Admin");
+require("./models/Pricing");
+require("./models/Payment");
+
+// console.log("Loaded models:", Object.keys(require("mongoose").models));
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -18,6 +21,7 @@ const port = process.env.PORT || 5001;
 const allowedOrigins = [
     "https://invohealth.vercel.app",
     "http://localhost:3000",
+    "http://localhost:3001",
 ];
 
 app.use(
@@ -30,7 +34,12 @@ app.use(
             }
         },
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization", "auth-token"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "auth-token",
+            "admin-token",
+        ],
         credentials: true,
     }),
 );
@@ -42,11 +51,14 @@ app.use(express.json());
 
 // Routes
 // app.use("/api/auth", require("./routes/auth"));
-
+app.get("/health", (req, res) => {
+    res.status(200).send("OK");
+});
 app.use("/api/doctor", require("./routes/Doctor/index_doctor"));
 app.use("/api/staff", require("./routes/Staff/index_staff"));
 app.use("/api/authentication", require("./routes/authentication"));
-app.use("/api/admin",require("./routes/Admin/index_admin"));
+app.use("/api/admin", require("./routes/Admin/index_admin"));
+app.use("/api/payment", require("./routes/Payment/index_payment"));
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);

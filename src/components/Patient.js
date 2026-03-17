@@ -16,15 +16,22 @@ import {
     Pencil,
     Calendar,
     BarChart3,
+    Receipt,
 } from "lucide-react";
+import { motion } from "framer-motion";
+import Pricing from "./Pricing";
 
 const Patient = ({ showAlert }) => {
     const [role, setRole] = useState(null);
+    const [subscriptionStatus, setSubscriptionStatus] = useState("active");
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [fabOpen, setFabOpen] = useState(false);
-
+const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
@@ -38,6 +45,23 @@ const Patient = ({ showAlert }) => {
         }
     }, []);
 
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        fetch(`${API_BASE_URL}/api/doctor/subscription`, {
+            headers: {
+                "auth-token": token,
+            },
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    setSubscriptionStatus(data.subscription.status);
+                }
+            })
+            .catch(() => {});
+    }, [API_BASE_URL]);
     // Navigation Handlers
     const closeAppointment = () => {
         setShowAppointment(false);
@@ -54,69 +78,133 @@ const Patient = ({ showAlert }) => {
         setSelectedPatientId(null);
     };
 
-    // If Not Logged In → Landing Page
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 30);
+
+    const nextBillingDate = trialEnd.toLocaleDateString("en-IN");
+
+    const handleRestrictedAction = (e, modalId) => {
+        if (subscriptionStatus === "expired") {
+            e.preventDefault();
+            e.stopPropagation();
+            showAlert("Plan expired. Please upgrade.", "danger");
+            return;
+        }
+
+        // manually open modal
+        const modal = new window.bootstrap.Modal(
+            document.getElementById(modalId),
+        );
+        modal.show();
+    };
     if (!localStorage.getItem("token")) {
         return (
-            <div className="container text-center mt-5">
-                <h1 className="fw-bold mb-3">Manage Your Clinic Smarter</h1>
+            <motion.div
+                className="container py-5"
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+            >
+                {/* HERO */}
 
-                <p className="text-theme-secondary mb-4">
-                    Patient records, appointments, billing, and Excel reports —
-                    all in one simple system.
-                </p>
+                <div className="text-center mb-5">
+                    <h1 className="fw-bold mb-3">
+                        Smart Clinic Management for Modern Doctors
+                    </h1>
 
-                <div className="d-flex justify-content-center gap-3 mb-5">
-                    <Link to="/login" className="btn btn-primary px-4">
-                        <LogIn size={18} />
-                        <span> Login</span>
-                    </Link>
-                    <Link to="/signup" className="btn btn-outline-primary px-4">
-                        <UserPlus size={18} />
-                        <span> Create Account</span>
-                    </Link>
-                </div>
+                    <p className="text-theme-secondary mb-4">
+                        InvoHealth helps clinics manage{" "}
+                        <strong>
+                            patients, appointments, billing, and reports
+                        </strong>{" "}
+                        in one simple system.
+                    </p>
 
-                <div className="row justify-content-center g-4 mt-4">
-                    <div className="col-md-3">
-                        <div className="card border-0 shadow-sm h-100">
-                            <div className="card-body">
-                                <FileText size={18} />
-                                <h5> Patient Records</h5>
-                                <p className="text-theme-secondary small">
-                                    Securely manage patient details and visit
-                                    history.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="d-flex justify-content-center gap-3">
+                        <a href="#pricing" className="btn btn-primary px-4">
+                            <UserPlus size={18} />
+                            <span className="ms-2">Start Free Trial</span>
+                        </a>
 
-                    <div className="col-md-3">
-                        <div className="card border-0 shadow-sm h-100">
-                            <div className="card-body">
-                                <Calendar size={22} />
-                                <h5>Appointments</h5>
-                                <p className="text-theme-secondary small">
-                                    Track visits, services, and doctor
-                                    assignments.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="col-md-3">
-                        <div className="card border-0 shadow-sm h-100">
-                            <div className="card-body">
-                                <BarChart3 size={22} />
-                                <h5>Excel Reports</h5>
-                                <p className="text-theme-secondary small">
-                                    Export filtered reports for accounting and
-                                    analysis.
-                                </p>
-                            </div>
-                        </div>
+                        <Link
+                            to="/login"
+                            className="btn btn-outline-primary px-4"
+                        >
+                            <LogIn size={18} />
+                            <span className="ms-2">Login</span>
+                        </Link>
                     </div>
                 </div>
-            </div>
+
+                {/* FEATURES */}
+
+                <div className="row justify-content-center g-4 mb-5">
+                    {/* PATIENT RECORDS */}
+
+                    <div className="col-lg-3 col-md-6">
+                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
+                            <FileText size={28} className="text-primary" />
+                            <h5 className="mt-3">Patient Records</h5>
+                            <p className="text-theme-secondary small">
+                                Securely store patient details, visit history,
+                                and prescriptions in one place.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* APPOINTMENTS */}
+
+                    <div className="col-lg-3 col-md-6">
+                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
+                            <Calendar size={28} className="text-primary" />
+                            <h5 className="mt-3">Appointments</h5>
+                            <p className="text-theme-secondary small">
+                                Manage appointments and track doctor schedules
+                                and patient visits easily.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ANALYTICS */}
+
+                    <div className="col-lg-3 col-md-6">
+                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
+                            <BarChart3 size={28} className="text-primary" />
+                            <h5 className="mt-3">Analytics Dashboard</h5>
+                            <p className="text-theme-secondary small">
+                                Monitor revenue, payment distribution, visits,
+                                and top-performing services with visual charts.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* BILLING */}
+
+                    <div className="col-lg-3 col-md-6">
+                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
+                            <Receipt size={28} className="text-primary" />
+                            <h5 className="mt-3">Billing & Invoices</h5>
+                            <p className="text-theme-secondary small">
+                                Generate professional invoices and track clinic
+                                payments and collections easily.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* FREE TRIAL NOTICE */}
+
+                <div id="pricing">
+                    <div className="alert alert-success text-center shadow-sm my-2">
+                        <strong>30-Day Free Trial</strong> - No payment required
+                        today.
+                        <br />
+                        Billing starts only after your trial period ends i.e.{" "}
+                        <strong>{nextBillingDate}</strong>
+                    </div>
+                    <Pricing />
+                </div>
+            </motion.div>
         );
     }
 
@@ -148,9 +236,18 @@ const Patient = ({ showAlert }) => {
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
                         style={{ "--i": 1 }}
+                        onClick={(e) => {
+                            if (subscriptionStatus === "expired") {
+                                showAlert(
+                                    "Plan expired. Please upgrade.",
+                                    "danger",
+                                );
+                                return;
+                            }
+                            setFabOpen(false);
+                        }}
                         data-bs-toggle="modal"
                         data-bs-target="#patientModal"
-                        onClick={() => setFabOpen(false)}
                     >
                         <UserPlus size={18} />
                         <span className="fab-text">Add Patient</span>
@@ -161,8 +258,17 @@ const Patient = ({ showAlert }) => {
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
                         style={{ "--i": 3 }}
-                        onClick={() => {
+                        onClick={(e) => {
                             setFabOpen(false);
+
+                            if (subscriptionStatus === "expired") {
+                                showAlert(
+                                    "Plan expired. Please upgrade.",
+                                    "danger",
+                                );
+                                return;
+                            }
+
                             setShowAppointment(true);
                         }}
                     >
@@ -177,7 +283,10 @@ const Patient = ({ showAlert }) => {
                         style={{ "--i": 2 }}
                         data-bs-toggle="modal"
                         data-bs-target="#serviceModal"
-                        onClick={() => setFabOpen(false)}
+                        onClick={(e) => {
+                            setFabOpen(false);
+                            handleRestrictedAction(e, "serviceModal");
+                        }}
                     >
                         <FileText size={18} />
                         <span className="fab-text">Add Service</span>
@@ -190,7 +299,10 @@ const Patient = ({ showAlert }) => {
                         style={{ "--i": 4 }}
                         data-bs-toggle="modal"
                         data-bs-target="#editServiceModal"
-                        onClick={() => setFabOpen(false)}
+                        onClick={(e) => {
+                            setFabOpen(false);
+                            handleRestrictedAction(e, "editServiceModal");
+                        }}
                     >
                         <Pencil size={18} />
                         <span className="fab-text">Edit Service</span>
@@ -205,12 +317,13 @@ const Patient = ({ showAlert }) => {
                 </div>
             </div>
 
-            
-
             {/* MAIN CONTENT AREA */}
             <div className="page-container px-2 px-md-4">
                 {!showAppointment && !showPatientDetails && (
-                    <PatientList openPatientDetails={openPatientDetails} />
+                    <PatientList
+                        showAlert={showAlert}
+                        openPatientDetails={openPatientDetails}
+                    />
                 )}
 
                 {showAppointment && (
@@ -235,7 +348,7 @@ const Patient = ({ showAlert }) => {
                     </div>
                 )}
             </div>
-            
+
             <div className="modal fade" id="serviceModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <AddServices showAlert={showAlert} />

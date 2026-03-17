@@ -1,4 +1,4 @@
-import LoadMore from "./LoadMore";
+import { useEffect, useRef } from "react";
 import AppointmentDay from "./AppointmentDay";
 
 export default function AppointmentList({
@@ -11,25 +11,49 @@ export default function AppointmentList({
     IncreaseLimit,
     loading,
 }) {
+    const loadMoreRef = useRef(null);
+    const isFetchingRef = useRef(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const firstEntry = entries[0];
+
+                if (
+                    firstEntry.isIntersecting &&
+                    !loading &&
+                    !isFetchingRef.current
+                ) {
+                    isFetchingRef.current = true;
+
+                    IncreaseLimit();
+
+                    // prevent multiple triggers
+                    setTimeout(() => {
+                        isFetchingRef.current = false;
+                    }, 800);
+                }
+            },
+            { threshold: 0.5 },
+        );
+
+        const current = loadMoreRef.current;
+
+        if (current) observer.observe(current);
+
+        return () => {
+            if (current) observer.unobserve(current);
+        };
+    }, [loading,IncreaseLimit]);
+
     const role = localStorage.getItem("role");
+
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
+
     return (
         <>
-            {/* INITIAL LOADING ONLY */}
-            {loading && appointments.length === 0 && (
-                <div className="mt-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <div
-                            key={i}
-                            className="skeleton-row d-flex justify-content-between align-items-center p-3 my-2 rounded"
-                        >
-                            <div className="skeleton skeleton-name" />
-                            <div className="skeleton skeleton-payment" />
-                            <div className="skeleton skeleton-amount" />
-                        </div>
-                    ))}
-                </div>
-            )}
-
             {/* DATA */}
             {Object.keys(appointmentsByMonth).map((month) => (
                 <div key={month} className="container-fluid px-3 px-lg-5 py-3">
@@ -37,16 +61,11 @@ export default function AppointmentList({
                     <div className="d-flex justify-content-between align-items-center bg-primary bg-gradient text-white rounded-4 px-3 py-3 mb-3 shadow">
                         <div>
                             <h5 className="mb-0 fw-semibold">{month}</h5>
-                            {/* {role === "doctor" && (
-                                <small className="opacity-75">
-                                    Total Collection
-                                </small>
-                            )} */}
                         </div>
 
                         {role === "doctor" && (
                             <h4 className="mb-0 fw-bold">
-                                ₹ {monthTotal[month]?.toFixed(0)}
+                                ₹ {formatCurrency(monthTotal[month])}
                             </h4>
                         )}
                     </div>
@@ -64,14 +83,16 @@ export default function AppointmentList({
                 </div>
             ))}
 
-            {/* LOAD MORE */}
+            {/* AUTO LOAD */}
             {appointments.length < total && (
-                <LoadMore onLoadMore={IncreaseLimit} />
+                <div ref={loadMoreRef} style={{ height: "40px" }}>
+                    {loading && <p className="text-center">Loading...</p>}
+                </div>
             )}
 
-            {/* EMPTY STATE */}
+            {/* EMPTY */}
             {!loading && appointments.length === 0 && (
-                <p className="text-center text-theme-secondary mt-3">
+                <p className="text-center mt-3">
                     No records match the selected filters
                 </p>
             )}

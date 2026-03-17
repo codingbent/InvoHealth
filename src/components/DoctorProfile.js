@@ -16,6 +16,12 @@ export default function DoctorProfile(props) {
     const [staffName, setStaffName] = useState("");
     const [staffPhone, setStaffPhone] = useState("");
     const [staffRole, setStaffRole] = useState("");
+    // eslint-disable-next-line
+    const [subscription, setSubscription] = useState(null);
+    // eslint-disable-next-line
+    const [usage, setUsage] = useState(null);
+    // eslint-disable-next-line
+    const [staffCount, setStaffCount] = useState(0);
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
         newPassword: "",
@@ -42,24 +48,40 @@ export default function DoctorProfile(props) {
         try {
             const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
-            if (data.success) {
-                const doc = data.doctor;
-                setDoctor(doc);
-                setEditData({
-                    ...doc,
-                    degree: doc.degree?.length ? doc.degree : [""],
-                    address: {
-                        line1: doc.address?.line1 || "",
-                        line2: doc.address?.line2 || "",
-                        line3: doc.address?.line3 || "",
-                        city: doc.address?.city || "",
-                        state: doc.address?.state || "",
-                        pincode: doc.address?.pincode || "",
-                    },
-                });
-            }
+
+            if (!data.success) return;
+
+            const doc = data.doctor;
+
+            setDoctor(doc);
+
+            // NEW
+            setSubscription(doc.subscription || {});
+            setUsage(doc.usage || {});
+            setStaffCount(doc.staffCount || 0);
+
+            setEditData({
+                name: doc.name || "",
+                email: doc.email || "",
+                clinicName: doc.clinicName || "",
+                phone: doc.phone || "",
+                appointmentPhone: doc.appointmentPhone || "",
+                regNumber: doc.regNumber || "",
+                experience: doc.experience || "",
+
+                degree: doc.degree?.length ? doc.degree : [""],
+
+                address: {
+                    line1: doc.address?.line1 || "",
+                    line2: doc.address?.line2 || "",
+                    line3: doc.address?.line3 || "",
+                    city: doc.address?.city || "",
+                    state: doc.address?.state || "",
+                    pincode: doc.address?.pincode || "",
+                },
+            });
         } catch (err) {
-            console.error(err);
+            console.error("Fetch doctor error:", err);
         }
     }, [API_BASE_URL]);
 
@@ -118,6 +140,7 @@ export default function DoctorProfile(props) {
                 `${API_BASE_URL}/api/doctor/staff/fetch_staff`,
             );
             const data = await res.json();
+            setStaffCount(data.staff.length);
             if (data.success) setStaffList(data.staff);
         } catch (err) {
             console.error(err);

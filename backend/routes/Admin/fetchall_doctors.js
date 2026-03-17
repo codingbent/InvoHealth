@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
-const Admin = require("../../models/Admin");
 var fetchuser = require("../../middleware/fetchuser");
 
 router.get("/fetchall_doctors", fetchuser, async (req, res) => {

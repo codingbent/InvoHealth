@@ -14,7 +14,7 @@ var fetchuser = require("../middleware/fetchuser");
 const JWT_SECRET = process.env.JWT_SECRET;
 const authMiddleware = require("../middleware/fetchuser"); // if using auth
 const axios = require("axios");
-
+const Pricing =require("../../models/Pricing");
 const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
@@ -159,7 +159,6 @@ router.post("/login", async (req, res) => {
             role: userRole,
             name: user.name,
             doctorId: userRole === "doctor" ? user._id : user.doctorId,
-            theme: user.theme || "light",
         });
     } catch (err) {
         console.error(err);

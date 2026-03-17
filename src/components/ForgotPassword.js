@@ -20,18 +20,21 @@ export default function ForgotPassword(props) {
 
     const sendOtp = async () => {
         if (phone.length !== 10) {
-            props.showAlert("Enter a valid 10-digit phone number", "warning");
+            props.showAlert("Enter valid phone number", "warning");
             return;
         }
 
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone }),
-            });
+            const res = await authFetch(
+                `${API_BASE_URL}/api/authentication/send-reset-otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone }),
+                },
+            );
 
             const data = await res.json();
 
@@ -42,7 +45,9 @@ export default function ForgotPassword(props) {
                 props.showAlert(data.error || "Failed to send OTP", "danger");
             }
         } catch (err) {
-            props.showAlert("Server error. Try again.", "danger");
+            console.error(err);
+
+            props.showAlert("Server error. Try again later.", "danger");
         } finally {
             setLoading(false);
         }
@@ -54,284 +59,146 @@ export default function ForgotPassword(props) {
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    phone,
-                    otp,
-                    sessionId,
-                }),
-            });
+            const res = await authFetch(
+                `${API_BASE_URL}/api/authentication/verify-reset-otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone, otp, sessionId }),
+                },
+            );
 
             const data = await res.json();
 
             if (data.success) {
-                if (data.success) {
-                    setIsVerified(true);
-                } else {
-                    props.showAlert(data.error || "Invalid OTP", "danger");
-                }
-
-                localStorage.setItem("name", data.name);
-                localStorage.setItem("role", data.role);
+                setIsVerified(true);
             } else {
-                props.showAlert(data.error || "Invalid OTP", "danger");
+                props.showAlert("Invalid OTP", "danger");
             }
-        } catch (err) {
+        } catch {
             props.showAlert("Verification failed", "danger");
-        } finally {
-            setLoading(false);
         }
+
+        setLoading(false);
     };
+
     const resetPassword = async () => {
         if (newPassword.length < 6) {
-            props.showAlert("Password must be at least 6 characters", "danger");
+            props.showAlert("Password must be 6 characters", "danger");
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            props.showAlert("Passwords do not match");
+            props.showAlert("Passwords do not match", "danger");
             return;
         }
 
         setLoading(true);
 
         try {
-            const res = await authFetch(`${API_BASE_URL}/api/doctor/reset-password`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    phone,
-                    newPassword,
-                    sessionId,
-                }),
-            });
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/reset-password`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone, newPassword, sessionId }),
+                },
+            );
 
             const data = await res.json();
 
             if (data.success) {
                 props.showAlert("Password reset successfully", "success");
                 navigate("/login");
-            } else {
-                props.showAlert(data.error || "Failed to reset password", "danger");
             }
-        } catch (err) {
-            props.showAlert("Server error Try again later", "danger");
-        } finally {
-            setLoading(false);
+        } catch {
+            props.showAlert("Server error", "danger");
         }
+
+        setLoading(false);
     };
-    const styles = {
-        card: {
-            width: "100%",
-            maxWidth: "420px",
-            background: "#fff",
-            borderRadius: "20px",
-            padding: "32px",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
-        },
-        header: {
-            textAlign: "center",
-            marginBottom: "24px",
-        },
-        title: {
-            margin: 0,
-            fontSize: "22px",
-            fontWeight: 600,
-        },
-        subtitle: {
-            marginTop: "6px",
-            fontSize: "14px",
-            color: "#6b7280",
-        },
-        field: {
-            marginBottom: "16px",
-        },
-        label: {
-            fontSize: "13px",
-            color: "#374151",
-            marginBottom: "6px",
-            display: "block",
-        },
-        input: {
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            fontSize: "15px",
-            outline: "none",
-        },
-        otpInput: {
-            letterSpacing: "10px",
-            textAlign: "center",
-            fontSize: "18px",
-        },
-        primaryBtn: {
-            width: "100%",
-            padding: "12px",
-            background: "#6366f1",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "15px",
-            fontWeight: 500,
-            cursor: "pointer",
-            marginTop: "8px",
-        },
-        outlineBtn: {
-            width: "100%",
-            padding: "12px",
-            background: "transparent",
-            color: "#6366f1",
-            border: "1px solid #6366f1",
-            borderRadius: "12px",
-            fontSize: "15px",
-            cursor: "pointer",
-            marginBottom: "16px",
-        },
-        hint: {
-            display: "block",
-            marginTop: "12px",
-            textAlign: "center",
-            fontSize: "12px",
-            color: "#6b7280",
-        },
-    };
+
     return (
-        <div className="container-fluid">
-            <div
-                className="row justify-content-center align-items-center"
-                style={{ minHeight: "calc(100vh - 64px)" }}
-            >
-                <div className="col-11 col-sm-8 col-md-6 col-lg-4">
-                    <div style={styles.card}>
-                        {/* Header */}
-                        <div style={styles.header}>
-                            <h2 style={styles.title}>
-                                {isVerified
-                                    ? "Reset Password"
-                                    : "Forgot Password"}
-                            </h2>
-                            <p style={styles.subtitle}>
-                                {isVerified
-                                    ? "Create a new secure password"
-                                    : "Verify your registered phone number"}
-                            </p>
-                        </div>
+        <div className="auth-container">
+            <div className="auth-card">
+                <h2 className="auth-title">
+                    {isVerified ? "Reset Password" : "Forgot Password"}
+                </h2>
 
-                        {!isVerified ? (
-                            <>
-                                {/* Phone */}
-                                <div style={styles.field}>
-                                    <label style={styles.label}>
-                                        Phone Number
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        className="form-control"
-                                        placeholder="Registered phone number"
-                                        value={phone}
-                                        onChange={(e) =>
-                                            setPhone(e.target.value)
-                                        }
-                                        style={styles.input}
-                                    />
-                                </div>
+                <p className="auth-subtitle">
+                    {isVerified
+                        ? "Create a new secure password"
+                        : "Verify your registered phone number"}
+                </p>
 
-                                <button
-                                    className="btn btn-outline-primary w-100 mb-3"
-                                    onClick={sendOtp}
-                                    disabled={loading}
-                                >
-                                    {loading ? "Sending OTP..." : "Send OTP"}
-                                </button>
+                {!isVerified ? (
+                    <>
+                        <input
+                            type="tel"
+                            className="auth-input"
+                            placeholder="Registered phone number"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                        />
 
-                                {/* OTP */}
-                                <div className="text-center mb-3">
-                                    <label style={styles.label}>
-                                        Enter OTP
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control text-center"
-                                        maxLength={6}
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        disabled={!sessionId}
-                                        style={{
-                                            ...styles.input,
-                                            ...styles.otpInput,
-                                        }}
-                                    />
-                                </div>
+                        <button
+                            className="btn btn-outline-primary w-100 mb-3"
+                            onClick={sendOtp}
+                            disabled={loading}
+                        >
+                            {loading ? "Sending OTP..." : "Send OTP"}
+                        </button>
 
-                                <button
-                                    className="btn btn-primary w-100"
-                                    onClick={verifyOtp}
-                                    disabled={otp.length !== 6 || loading}
-                                >
-                                    Verify OTP
-                                </button>
+                        <input
+                            type="text"
+                            className="auth-input text-center"
+                            placeholder="Enter OTP"
+                            maxLength={6}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            disabled={!sessionId}
+                        />
 
-                                <small className="text-muted d-block text-center mt-3">
-                                    OTP is valid for 5 minutes
-                                </small>
-                            </>
-                        ) : (
-                            <>
-                                {/* New Password */}
-                                <div style={styles.field}>
-                                    <label style={styles.label}>
-                                        New Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        placeholder="New password"
-                                        value={newPassword}
-                                        onChange={(e) =>
-                                            setNewPassword(e.target.value)
-                                        }
-                                        style={styles.input}
-                                    />
-                                </div>
+                        <button
+                            className="btn btn-primary w-100 mt-3"
+                            onClick={verifyOtp}
+                            disabled={otp.length !== 6 || loading}
+                        >
+                            Verify OTP
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <input
+                            type="password"
+                            className="auth-input"
+                            placeholder="New password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
 
-                                {/* Confirm Password */}
-                                <div style={styles.field}>
-                                    <label style={styles.label}>
-                                        Confirm Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        placeholder="Confirm password"
-                                        value={confirmPassword}
-                                        onChange={(e) =>
-                                            setConfirmPassword(e.target.value)
-                                        }
-                                        style={styles.input}
-                                    />
-                                </div>
+                        <input
+                            type="password"
+                            className="auth-input"
+                            placeholder="Confirm password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
 
-                                <button
-                                    className="btn btn-primary w-100"
-                                    onClick={resetPassword}
-                                    disabled={loading}
-                                >
-                                    {loading ? "Updating..." : "Reset Password"}
-                                </button>
-                            </>
-                        )}
-                        <div className="text-center mt-3">
-                            <Link
-                                to="/login"
-                                className="text-decoration-none text-primary fw-medium"
-                            >
-                                ← Back to Login
-                            </Link>
-                        </div>
-                    </div>
+                        <button
+                            className="btn btn-primary w-100 mt-3"
+                            onClick={resetPassword}
+                            disabled={loading}
+                        >
+                            {loading ? "Updating..." : "Reset Password"}
+                        </button>
+                    </>
+                )}
+
+                <div className="text-center mt-3">
+                    <Link to="/login" className="auth-back">
+                        ← Back to Login
+                    </Link>
                 </div>
             </div>
         </div>

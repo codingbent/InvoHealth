@@ -6,7 +6,14 @@ import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { toWords } from "number-to-words";
-import { Pencil, Trash2, Loader2, UserRound, User } from "lucide-react";
+import {
+    Pencil,
+    Trash2,
+    Loader2,
+    UserRound,
+    User,
+    IndianRupee,
+} from "lucide-react";
 
 export default function PatientDetails() {
     const navigate = useNavigate();
@@ -46,6 +53,9 @@ export default function PatientDetails() {
     const [availableServices, setAvailableServices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [doctor, setDoctor] = useState(null);
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat("en-IN").format(value);
+    };
 
     // ------------------------------------------------------------
     // FETCH DOCTOR DETAILS
@@ -256,17 +266,50 @@ export default function PatientDetails() {
     // INVOICE GENERATOR
     // ------------------------------------------------------------
 
-    const handleInvoiceClick = (appointmentId, visit, details) => {
-        let includeDiscount = true;
-
-        // Ask only if discount exists
-        if (visit.discount && visit.discount > 0) {
-            includeDiscount = window.confirm(
-                `This invoice has a discount applied.\n\nDo you want to include the discount in the invoice?`,
+    const handleInvoiceClick = async (appointmentId, visit, details) => {
+        try {
+            const checkRes = await authFetch(
+                `${API_BASE_URL}/api/doctor/appointment/check_invoice_limit`,
             );
-        }
 
-        generateInvoicePDF(visit, details, includeDiscount);
+            if (!checkRes) {
+                alert("Invoice download limit reached");
+                return;
+            }
+
+            const check = await checkRes.json();
+
+            if (!check.success) {
+                alert(check.error);
+                return;
+            }
+
+            if (check.remaining === 1) {
+                const confirmDownload = window.confirm(
+                    "⚠ This is your LAST invoice download for this plan.\n\nDo you want to continue?",
+                );
+
+                if (!confirmDownload) return;
+            }
+
+            let includeDiscount = true;
+
+            if (visit.discount && visit.discount > 0) {
+                includeDiscount = window.confirm(
+                    `This invoice has a discount applied.\n\nDo you want to include the discount in the invoice?`,
+                );
+            }
+
+            generateInvoicePDF(visit, details, includeDiscount);
+
+            await authFetch(
+                `${API_BASE_URL}/api/doctor/appointment/increment_invoice_usage`,
+                { method: "POST" },
+            );
+        } catch (err) {
+            console.error(err);
+            alert("Failed to generate invoice");
+        }
     };
 
     const generateInvoicePDF = (visit, details, includeDiscount) => {
@@ -402,9 +445,12 @@ export default function PatientDetails() {
             // ================= TABLE ROWS =================
             const tableRows = services.map((s) => [
                 s.name,
-                `Rs ${Number(s.amount).toFixed(0)}`,
+                `Rs ${formatCurrency(s.amount)}`,
             ]);
-            tableRows.push(["TOTAL AMOUNT", `Rs ${finalAmount.toFixed(0)}`]);
+            tableRows.push([
+                "TOTAL AMOUNT",
+                `Rs ${formatCurrency(finalAmount)}`,
+            ]);
 
             if (includeDiscount && visit.discount > 0) {
                 tableRows.push([
@@ -413,16 +459,19 @@ export default function PatientDetails() {
                             ? `(${visit.discount}%)`
                             : `(Rs ${visit.discount})`
                     }`,
-                    `- Rs ${discountValue.toFixed(0)}`,
+                    `- Rs ${formatCurrency(discountValue)}`,
                 ]);
             }
 
             // Payment breakdown
-            tableRows.push(["Collected", `Rs ${collectedAmount.toFixed(0)}`]);
+            tableRows.push([
+                "Collected",
+                `Rs ${formatCurrency(collectedAmount)}`,
+            ]);
             if (remainingAmount !== 0) {
                 tableRows.push([
                     "Payable Amount",
-                    `Rs ${remainingAmount.toFixed(0)}`,
+                    `Rs ${formatCurrency(remainingAmount)}`,
                 ]);
             }
             tableRows.push(["Status", paymentStatus]);
@@ -469,19 +518,11 @@ export default function PatientDetails() {
             let receiptText = "";
 
             if (paymentStatus === "Paid") {
-                receiptText = `Received with thanks from ${details.name} the sum of Rupees ${collectedAmount.toFixed(
-                    0,
-                )} only towards full settlement.`;
+                receiptText = `Received with thanks from ${details.name} the sum of Rupees ${formatCurrency(collectedAmount)} only towards full settlement.`;
             } else if (paymentStatus === "Partial") {
-                receiptText = `Part payment of Rupees ${collectedAmount.toFixed(
-                    0,
-                )} received from ${details.name}. Remaining amount of Rupees ${remainingAmount.toFixed(
-                    0,
-                )} is pending.`;
+                receiptText = `Part payment of Rupees ${formatCurrency(collectedAmount)} received from ${details.name}. Remaining amount of Rupees ${formatCurrency(remainingAmount)} is pending.`;
             } else {
-                receiptText = `Total amount of Rupees ${finalAmount.toFixed(
-                    0,
-                )} is pending from ${details.name}.`;
+                receiptText = `Total amount of Rupees ${formatCurrency(finalAmount)} is pending from ${details.name}.`;
             }
 
             docPdf.setFontSize(11);
@@ -579,7 +620,7 @@ export default function PatientDetails() {
             const data = await response.json();
 
             if (data.success) {
-                alert("Invoice updated successfully!");
+                alert("Appointment updated successfully!");
                 setIsFullPaid(false);
                 fetchData();
             } else {
@@ -592,7 +633,7 @@ export default function PatientDetails() {
     };
 
     const deleteInvoice = async (appointmentId, visit) => {
-        if (!window.confirm("Delete this invoice?")) return;
+        if (!window.confirm("Delete this Appointment?")) return;
 
         const response = await authFetch(
             `${API_BASE_URL}/api/doctor/appointment/delete_appointment/${appointmentId}/${visit._id}`,
@@ -781,12 +822,12 @@ export default function PatientDetails() {
                                             </td>
 
                                             <td className="fw-semibold text-theme-primary">
-                                                ₹
-                                                {Number(
+                                                <IndianRupee size={18} />
+                                                {formatCurrency(
                                                     visit.collected ??
                                                         visit.amount ??
                                                         0,
-                                                ).toFixed(0)}
+                                                )}
                                             </td>
                                             <td>
                                                 {(() => {
@@ -898,24 +939,31 @@ export default function PatientDetails() {
                                     {Number(visit.collected ?? 0) >=
                                     Number(visit.amount ?? 0) ? (
                                         <div className="fw-semibold text-success">
-                                            ₹{visit.amount?.toFixed(0)}
+                                            <IndianRupee size={18} />
+                                            {formatCurrency(visit.amount)}
                                         </div>
                                     ) : (
                                         <>
                                             <div className="fw-semibold text-theme-primary">
-                                                ₹{visit.amount?.toFixed(0)}
+                                                <IndianRupee size={18} />
+                                                {formatCurrency(visit.amount)}
                                             </div>
 
                                             <small className="text-theme-secondary d-block">
-                                                Collected: ₹
+                                                Collected:{" "}
+                                                <IndianRupee size={18} />
                                                 {visit.collected || 0}
                                             </small>
                                             <small className="text-danger d-block">
-                                                Remaining: ₹
-                                                {(
+                                                Remaining:{" "}
+                                                <IndianRupee size={18} />
+                                                {formatCurrency(
                                                     Number(visit.amount ?? 0) -
-                                                    Number(visit.collected ?? 0)
-                                                ).toFixed(0)}
+                                                        Number(
+                                                            visit.collected ??
+                                                                0,
+                                                        ),
+                                                )}
                                             </small>
                                         </>
                                     )}
@@ -997,13 +1045,13 @@ export default function PatientDetails() {
                             ></button>
                         </div>
 
-                        <div className="modal-body">
+                        <div className="modal-body pt-3">
                             {/* DATE */}
-                            <div className="mb-3">
-                                <label className="form-label">Date</label>
+                            <div className="mb-4">
+                                <label className="form-label small">Date</label>
                                 <input
                                     type="date"
-                                    className="form-control"
+                                    className="form-control rounded-3"
                                     value={apptData.date}
                                     onChange={(e) =>
                                         setApptData((prev) => ({
@@ -1015,29 +1063,28 @@ export default function PatientDetails() {
                             </div>
 
                             {/* SERVICES */}
+                            <h6 className="text-uppercase text-theme-secondary small mb-2">
+                                Services & Billing
+                            </h6>
+
                             <div className="mb-3">
-                                <label className="form-label">Services</label>
                                 <ServiceList
                                     services={availableServices}
                                     selectedServices={apptData.service}
                                     onAdd={(service) => {
-                                        setApptData((prev) => {
-                                            if (
-                                                prev.service.some(
-                                                    (s) =>
-                                                        s._id === service._id,
-                                                )
-                                            ) {
-                                                return prev;
-                                            }
-                                            return {
-                                                ...prev,
-                                                service: [
-                                                    ...prev.service,
-                                                    service,
-                                                ],
-                                            };
-                                        });
+                                        setApptData((prev) =>
+                                            prev.service.some(
+                                                (s) => s._id === service._id,
+                                            )
+                                                ? prev
+                                                : {
+                                                      ...prev,
+                                                      service: [
+                                                          ...prev.service,
+                                                          service,
+                                                      ],
+                                                  },
+                                        );
                                     }}
                                     onRemove={(id) => {
                                         setApptData((prev) => ({
@@ -1050,292 +1097,207 @@ export default function PatientDetails() {
                                 />
                             </div>
 
-                            {/* SERVICE AMOUNT BREAKDOWN */}
+                            {/* SERVICES TABLE */}
                             {apptData.service.length > 0 && (
-                                <>
-                                    {/* ================= BILL HEADER ================= */}
-                                    <div className="mb-3">
-                                        <h6 className="fw-bold text-primary">
-                                            Billing Summary
-                                        </h6>
-                                        <hr />
-                                    </div>
+                                <div className="border rounded-4 p-3 mb-4">
+                                    <table className="table table-sm align-middle mb-3">
+                                        <thead className="table-theme">
+                                            <tr>
+                                                <th>Service</th>
+                                                <th className="text-end">
+                                                    Amount
+                                                </th>
+                                            </tr>
+                                        </thead>
 
-                                    {/* ================= SERVICES BREAKDOWN ================= */}
-                                    <div className="card border-0 shadow-sm mb-4">
-                                        <div className="card-body">
-                                            <h6 className="fw-semibold mb-3">
-                                                Services
-                                            </h6>
-
+                                        <tbody>
                                             {apptData.service.map((s) => (
-                                                <div
-                                                    key={s._id}
-                                                    className="d-flex justify-content-between align-items-center mb-2"
-                                                >
-                                                    <span>{s.name}</span>
+                                                <tr key={s._id}>
+                                                    <td className="service-name">
+                                                        {s.name}
+                                                    </td>
 
-                                                    <input
-                                                        type="number"
-                                                        className="form-control text-end"
-                                                        style={{
-                                                            maxWidth: "140px",
-                                                        }}
-                                                        value={
-                                                            serviceAmounts[
-                                                                s._id
-                                                            ] ?? s.amount
-                                                        }
-                                                        onChange={(e) =>
-                                                            setServiceAmounts(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    [s._id]:
-                                                                        Number(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        ),
-                                                                }),
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-                                            ))}
-
-                                            <hr />
-
-                                            <div className="d-flex justify-content-between fw-semibold">
-                                                <span>Total</span>
-                                                <span>
-                                                    ₹ {serviceTotal.toFixed(0)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* ================= DISCOUNT SECTION ================= */}
-                                    <div className="card border-0 shadow-sm mb-4">
-                                        <div className="card-body">
-                                            <h6 className="fw-semibold mb-3">
-                                                Discount
-                                            </h6>
-
-                                            <div className="row align-items-center">
-                                                <div className="col-md-6">
-                                                    <input
-                                                        type="number"
-                                                        className="form-control"
-                                                        value={discount.toFixed(
-                                                            0,
-                                                        )}
-                                                        min={0}
-                                                        max={
-                                                            isPercent
-                                                                ? 100
-                                                                : serviceTotal
-                                                        }
-                                                        onChange={(e) =>
-                                                            setDiscount(
-                                                                Number(
-                                                                    e.target
-                                                                        .value,
-                                                                ),
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="col-md-6">
-                                                    <div className="form-check form-switch">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="form-check-input"
-                                                            checked={isPercent}
-                                                            onChange={(e) =>
-                                                                setIsPercent(
-                                                                    e.target
-                                                                        .checked,
-                                                                )
-                                                            }
-                                                        />
-                                                        <label className="form-check-label">
-                                                            {isPercent
-                                                                ? "Percentage (%)"
-                                                                : "Flat Amount (₹)"}
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="d-flex justify-content-between mt-3 text-danger">
-                                                <span>Discount Applied</span>
-                                                <span>
-                                                    ₹{" "}
-                                                    {(
-                                                        serviceTotal -
-                                                        finalAmount
-                                                    ).toFixed(0)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* ================= PAYMENT SECTION ================= */}
-                                    <div className="card border-0 shadow-sm mb-4">
-                                        <div className="card-body">
-                                            <h6 className="fw-semibold mb-3">
-                                                Payment Details
-                                            </h6>
-
-                                            <div className="card border-0 shadow-sm mb-4">
-                                                <div className="card-body">
-                                                    <div className="row align-items-start">
-                                                        {/* LEFT SIDE */}
-                                                        <div className="col-md-6">
-                                                            <label className="form-label fw-semibold">
-                                                                Amount Collected
-                                                            </label>
-
+                                                    <td className="text-end">
+                                                        <div className="amount-input-wrapper">
+                                                            <IndianRupee
+                                                                size={14}
+                                                            />
                                                             <input
                                                                 type="number"
-                                                                className="form-control"
-                                                                value={collected.toFixed(
-                                                                    0,
-                                                                )}
-                                                                min={0}
-                                                                max={
-                                                                    finalAmount
+                                                                className="amount-input"
+                                                                value={
+                                                                    serviceAmounts[
+                                                                        s._id
+                                                                    ] ??
+                                                                    s.amount
                                                                 }
-                                                                onChange={(
-                                                                    e,
-                                                                ) => {
-                                                                    let value =
-                                                                        Number(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        );
-                                                                    if (
-                                                                        value <
-                                                                        0
+                                                                onChange={(e) =>
+                                                                    setServiceAmounts(
+                                                                        (
+                                                                            prev,
+                                                                        ) => ({
+                                                                            ...prev,
+                                                                            [s._id]:
+                                                                                Number(
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }),
                                                                     )
-                                                                        value = 0;
-                                                                    if (
-                                                                        value >
-                                                                        finalAmount
-                                                                    )
-                                                                        value =
-                                                                            finalAmount;
-
-                                                                    setCollected(
-                                                                        value,
-                                                                    );
-
-                                                                    // Auto untick if manually edited
-                                                                    if (
-                                                                        value !==
-                                                                        finalAmount
-                                                                    ) {
-                                                                        setIsFullPaid(
-                                                                            false,
-                                                                        );
-                                                                    }
-                                                                }}
+                                                                }
                                                             />
-
-                                                            {/* Checkbox */}
-                                                            <div className="form-check mt-3">
-                                                                <input
-                                                                    className="form-check-input"
-                                                                    type="checkbox"
-                                                                    checked={
-                                                                        isFullPaid
-                                                                    }
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) =>
-                                                                        setIsFullPaid(
-                                                                            e
-                                                                                .target
-                                                                                .checked,
-                                                                        )
-                                                                    }
-                                                                    id="fullPaidCheck"
-                                                                />
-                                                                <label
-                                                                    className="form-check-label fw-medium"
-                                                                    htmlFor="fullPaidCheck"
-                                                                >
-                                                                    Full Amount
-                                                                    Collected
-                                                                </label>
-                                                            </div>
                                                         </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
 
-                                                        {/* RIGHT SIDE */}
-                                                        <div className="col-md-6 text-md-end mt-4 mt-md-0">
-                                                            <small className="text-muted d-block">
-                                                                Remaining
-                                                            </small>
-
-                                                            <h5 className="fw-bold text-warning mb-1">
-                                                                ₹{" "}
-                                                                {(
-                                                                    finalAmount -
-                                                                    collected
-                                                                ).toFixed(0)}
-                                                            </h5>
-
-                                                            <span
-                                                                className={`status-badge px-3 py-2 ${
-                                                                    finalAmount -
-                                                                        collected ===
-                                                                    0
-                                                                        ? "bg-success"
-                                                                        : collected >
-                                                                            0
-                                                                          ? "bg-warning text-dark"
-                                                                          : "bg-danger"
-                                                                }`}
-                                                            >
-                                                                {finalAmount -
-                                                                    collected ===
-                                                                0
-                                                                    ? "Paid"
-                                                                    : collected >
-                                                                        0
-                                                                      ? "Partial"
-                                                                      : "Unpaid"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div className="final-amount-box">
+                                        <span>Total</span>
+                                        <span className="text-primary fw-bold">
+                                            ₹ {formatCurrency(serviceTotal)}
+                                        </span>
                                     </div>
-
-                                    {/* ================= FINAL SUMMARY ================= */}
-                                    <div className="card border-primary shadow-sm">
-                                        <div className="card-body d-flex justify-content-between align-items-center">
-                                            <h6 className="mb-0 fw-bold">
-                                                Final Amount
-                                            </h6>
-                                            <h5 className="mb-0 fw-bold text-primary">
-                                                ₹ {finalAmount.toFixed(0)}
-                                            </h5>
-                                        </div>
-                                    </div>
-                                </>
+                                </div>
                             )}
 
-                            {/* PAYMENT */}
+                            {/* DISCOUNT */}
+                            <div className="mb-4">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                    <label className="fw-semibold">
+                                        Discount
+                                    </label>
+
+                                    <div className="form-check form-switch">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input"
+                                            checked={isPercent}
+                                            onChange={(e) =>
+                                                setIsPercent(e.target.checked)
+                                            }
+                                        />
+                                        <label className="form-check-label small">
+                                            {isPercent
+                                                ? "Percentage (%)"
+                                                : "Flat Amount ₹"}
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <input
+                                    type="number"
+                                    className="form-control rounded-3"
+                                    value={discount}
+                                    onChange={(e) =>
+                                        setDiscount(Number(e.target.value))
+                                    }
+                                />
+
+                                <div className="d-flex justify-content-between mt-2 text-danger small">
+                                    <span>Discount Applied</span>
+                                    <span>
+                                        ₹{" "}
+                                        {formatCurrency(
+                                            serviceTotal - finalAmount,
+                                        )}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* PAYMENT SECTION */}
+                            <div className="amount-collect-wrapper mb-4">
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <span className="fw-semibold">
+                                        Amount Collected{" "}
+                                        {isFullPaid && "(Auto)"}
+                                    </span>
+
+                                    <div className="amount-input-wrapper">
+                                        <IndianRupee size={14} />
+                                        <input
+                                            type="number"
+                                            className="amount-input"
+                                            value={collected}
+                                            disabled={isFullPaid}
+                                            onChange={(e) => {
+                                                const val = Number(
+                                                    e.target.value,
+                                                );
+                                                setCollected(val);
+
+                                                if (val !== finalAmount) {
+                                                    setIsFullPaid(false);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-check mt-2">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        checked={isFullPaid}
+                                        onChange={(e) =>
+                                            setIsFullPaid(e.target.checked)
+                                        }
+                                    />
+                                    <label className="form-check-label small">
+                                        Collect full payable amount
+                                        automatically
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* STATUS */}
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <small className="text-theme-secondary">
+                                        Remaining
+                                    </small>
+                                    <div className="fw-bold text-warning">
+                                        ₹{" "}
+                                        {formatCurrency(
+                                            finalAmount - collected,
+                                        )}
+                                    </div>
+                                </div>
+
+                                <span
+                                    className={`status-badge px-3 py-2 ${
+                                        finalAmount - collected === 0
+                                            ? "bg-success"
+                                            : collected > 0
+                                              ? "bg-warning text-dark"
+                                              : "bg-danger"
+                                    }`}
+                                >
+                                    {finalAmount - collected === 0
+                                        ? "Paid"
+                                        : collected > 0
+                                          ? "Partial"
+                                          : "Unpaid"}
+                                </span>
+                            </div>
+
+                            {/* FINAL */}
+                            <div className="final-amount-box mb-4">
+                                <span>Final Amount</span>
+                                <span className="text-primary fw-bold">
+                                    ₹ {formatCurrency(finalAmount)}
+                                </span>
+                            </div>
+
+                            {/* PAYMENT TYPE */}
                             <div className="mb-3">
-                                <label className="form-label">
+                                <label className="form-label small">
                                     Payment Type
                                 </label>
                                 <select
-                                    className="form-select"
+                                    className="form-select rounded-3"
                                     value={apptData.payment_type}
                                     onChange={(e) =>
                                         setApptData((prev) => ({
@@ -1345,12 +1307,12 @@ export default function PatientDetails() {
                                     }
                                 >
                                     <option value="">Select Payment</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Card">Card</option>
-                                    <option value="SBI">SBI</option>
-                                    <option value="ICICI">ICICI</option>
-                                    <option value="HDFC">HDFC</option>
-                                    <option value="Other">Other</option>
+                                    <option>Cash</option>
+                                    <option>Card</option>
+                                    <option>SBI</option>
+                                    <option>ICICI</option>
+                                    <option>HDFC</option>
+                                    <option>Other</option>
                                 </select>
                             </div>
                         </div>

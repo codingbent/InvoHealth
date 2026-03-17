@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { ShieldCheck, UserPlus } from "lucide-react";
 
@@ -7,6 +7,12 @@ const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
 const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
 
 const Signup = (props) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const selectedPlan = params.get("plan");
+    const selectedBilling = params.get("billing");
+
     const [credentials, setcredentials] = useState({
         name: "",
         email: "",
@@ -31,6 +37,22 @@ const Signup = (props) => {
     const [phoneVerified, setPhoneVerified] = useState(false);
     const [sendingOtp, setSendingOtp] = useState(false);
     const [otpCooldown, setOtpCooldown] = useState(0);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const passwordRules = {
+        length: /.{8,}/,
+        upper: /[A-Z]/,
+        lower: /[a-z]/,
+        number: /[0-9]/,
+        special: /[^A-Za-z0-9]/,
+    };
+    const [passwordChecks, setPasswordChecks] = useState({
+        length: false,
+        upper: false,
+        lower: false,
+        number: false,
+        special: false,
+    });
+
     const normalizedPhone = useMemo(
         () => normalizePhone(credentials.phone),
         [credentials.phone],
@@ -51,13 +73,33 @@ const Signup = (props) => {
         [],
     );
 
-    const navigate = useNavigate();
+    const allowedPlans = ["starter", "pro", "enterprise"];
+
+    const planToSave = allowedPlans.includes(selectedPlan)
+        ? selectedPlan.toUpperCase()
+        : "FREE";
 
     const handlesubmit = async (e) => {
         e.preventDefault();
-
+        if (
+            !passwordChecks.length ||
+            !passwordChecks.upper ||
+            !passwordChecks.lower ||
+            !passwordChecks.number ||
+            !passwordChecks.special
+        ) {
+            props.showAlert(
+                "Password does not meet security requirements",
+                "danger",
+            );
+            return;
+        }
         if (!phoneVerified) {
             props.showAlert("Please verify phone number first", "danger");
+            return;
+        }
+        if (!acceptedTerms) {
+            props.showAlert("Please accept Terms & Conditions", "danger");
             return;
         }
 
@@ -90,13 +132,23 @@ const Signup = (props) => {
             experience: credentials.experience,
             degree: credentials.degrees.filter((d) => d.trim() !== ""),
             role: "doctor",
+
+            // PLAN FROM PRICING PAGE
+            subscription: {
+                plan: planToSave,
+                billing: selectedBilling === "yearly" ? "yearly" : "monthly",
+                status: "trial",
+            },
         };
 
-        const response = await authFetch(`${API_BASE_URL}/api/doctor/create_doctor`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bodyToSend),
-        });
+        const response = await authFetch(
+            `${API_BASE_URL}/api/doctor/create_doctor`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(bodyToSend),
+            },
+        );
 
         const json = await response.json();
 
@@ -112,7 +164,20 @@ const Signup = (props) => {
 
     const onChange = (e) => {
         setcredentials({ ...credentials, [e.target.name]: e.target.value });
+
+        if (e.target.name === "password") {
+            const value = e.target.value;
+
+            setPasswordChecks({
+                length: passwordRules.length.test(value),
+                upper: passwordRules.upper.test(value),
+                lower: passwordRules.lower.test(value),
+                number: passwordRules.number.test(value),
+                special: passwordRules.special.test(value),
+            });
+        }
     };
+
     useEffect(() => {
         if (otpCooldown <= 0) return;
 
@@ -136,7 +201,6 @@ const Signup = (props) => {
         try {
             setSendingOtp(true);
 
-            // STEP 1: Check if phone exists
             const checkRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/check-phone`,
                 {
@@ -155,11 +219,14 @@ const Signup = (props) => {
             }
 
             // STEP 2: Send OTP
-            const res = await authFetch(`${API_BASE_URL}/api/authentication/send-otp`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone }),
-            });
+            const res = await authFetch(
+                `${API_BASE_URL}/api/authentication/send-otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone }),
+                },
+            );
 
             const data = await res.json();
             setSendingOtp(false);
@@ -183,23 +250,36 @@ const Signup = (props) => {
             return;
         }
 
-        const res = await authFetch(`${API_BASE_URL}/api/authentication/verify-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                phone: normalizePhone(credentials.phone),
-                otp,
-                sessionId,
-            }),
-        });
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/authentication/verify-otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        phone: normalizePhone(credentials.phone),
+                        otp,
+                        sessionId,
+                    }),
+                },
+            );
 
-        const data = await res.json();
+            if (!res) {
+                props.showAlert("Network error. Try again.", "danger");
+                return;
+            }
 
-        if (data.success) {
-            setPhoneVerified(true);
-            props.showAlert("Phone number verified", "success");
-        } else {
-            props.showAlert(data.error || "Invalid OTP", "danger");
+            const data = await res.json();
+
+            if (data.success) {
+                setPhoneVerified(true);
+                props.showAlert("Phone number verified", "success");
+            } else {
+                props.showAlert(data.error || "Invalid OTP", "danger");
+            }
+        } catch (err) {
+            console.error(err);
+            props.showAlert("OTP verification failed", "danger");
         }
     };
 
@@ -237,6 +317,13 @@ const Signup = (props) => {
                         <p className="text-theme-secondary">
                             Set up your clinic profile to get started
                         </p>
+                        {selectedPlan && (
+                            <div className="alert alert-info text-center">
+                                Selected Plan:{" "}
+                                <strong>{selectedPlan.toUpperCase()}</strong> (
+                                {selectedBilling})
+                            </div>
+                        )}
                     </div>
 
                     <form onSubmit={handlesubmit}>
@@ -276,9 +363,10 @@ const Signup = (props) => {
                         <div className="row">
                             <div className="col-md-6 mb-3">
                                 <label className="form-label">
-                                    Password
+                                    Password{" "}
                                     <span className="text-danger">*</span>
                                 </label>
+
                                 <input
                                     type="password"
                                     className="form-control"
@@ -286,13 +374,73 @@ const Signup = (props) => {
                                     required
                                     onChange={onChange}
                                 />
+
+                                {/* PASSWORD RULES */}
+
+                                <div className="small mt-2">
+                                    <div
+                                        className={
+                                            passwordChecks.length
+                                                ? "text-success"
+                                                : "feature-cross"
+                                        }
+                                    >
+                                        {passwordChecks.length ? "✔" : "✖"}{" "}
+                                        Minimum 8 characters
+                                    </div>
+
+                                    <div
+                                        className={
+                                            passwordChecks.upper
+                                                ? "text-success"
+                                                : "feature-cross"
+                                        }
+                                    >
+                                        {passwordChecks.upper ? "✔" : "✖"} One
+                                        uppercase letter
+                                    </div>
+
+                                    <div
+                                        className={
+                                            passwordChecks.lower
+                                                ? "text-success"
+                                                : "feature-cross"
+                                        }
+                                    >
+                                        {passwordChecks.lower ? "✔" : "✖"} One
+                                        lowercase letter
+                                    </div>
+
+                                    <div
+                                        className={
+                                            passwordChecks.number
+                                                ? "text-success"
+                                                : "feature-cross"
+                                        }
+                                    >
+                                        {passwordChecks.number ? "✔" : "✖"} One
+                                        number
+                                    </div>
+
+                                    <div
+                                        className={
+                                            passwordChecks.special
+                                                ? "text-success"
+                                                : "feature-cross"
+                                        }
+                                    >
+                                        {passwordChecks.special ? "✔" : "✖"} One
+                                        special character
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="col-md-6 mb-3">
                                 <label className="form-label">
-                                    Confirm Password
+                                    Confirm Password{" "}
                                     <span className="text-danger">*</span>
                                 </label>
+
                                 <input
                                     type="password"
                                     className="form-control"
@@ -389,7 +537,7 @@ const Signup = (props) => {
 
                             {phoneVerified && (
                                 <div className="text-success fw-semibold mt-2">
-                                 Phone number verified
+                                    Phone number verified
                                 </div>
                             )}
                         </div>
@@ -514,17 +662,43 @@ const Signup = (props) => {
                         </div>
                         {!phoneVerified && (
                             <div className="alert alert-warning text-center mt-3">
-                                <ShieldCheck size={18}/>
+                                <ShieldCheck size={18} />
                                 Verify phone number to create account
                             </div>
                         )}
                         {/* ================= SUBMIT ================= */}
+                        <div className="form-check mt-3">
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                id="terms"
+                                checked={acceptedTerms}
+                                onChange={(e) =>
+                                    setAcceptedTerms(e.target.checked)
+                                }
+                            />
+
+                            <label
+                                className="form-check-label small"
+                                htmlFor="terms"
+                            >
+                                I agree to the{" "}
+                                <Link to="/terms" target="_blank">
+                                    Terms & Conditions
+                                </Link>{" "}
+                                and{" "}
+                                <Link to="/privacy" target="_blank">
+                                    Privacy Policy
+                                </Link>
+                                .
+                            </label>
+                        </div>
                         <button
                             type="submit"
                             className="btn btn-success w-100 mt-3"
-                            disabled={!phoneVerified}
+                            disabled={!phoneVerified || !acceptedTerms}
                         >
-                            <UserPlus size={18}/>
+                            <UserPlus size={18} />
                             <span className="ms-2">Create Account</span>
                         </button>
 

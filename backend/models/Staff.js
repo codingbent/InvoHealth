@@ -26,11 +26,6 @@ const StaffSchema = new Schema(
             type: Boolean,
             default: true,
         },
-        theme: {
-            type: String,
-            default: "dark",
-            enum: ["light", "dark"],
-        },
     },
     { timestamps: true }
 );
