@@ -13,6 +13,7 @@ import {
     UserRound,
     User,
     IndianRupee,
+    Phone,
 } from "lucide-react";
 
 export default function PatientDetails() {
@@ -33,6 +34,7 @@ export default function PatientDetails() {
     const [deleting, setDeleting] = useState(false);
     const [collected, setCollected] = useState(0);
     const [isFullPaid, setIsFullPaid] = useState(false);
+    const [initialCollected, setInitialCollected] = useState(0);
 
     const [apptData, setApptData] = useState({
         date: "",
@@ -262,6 +264,11 @@ export default function PatientDetails() {
         }));
     }, [sortedAppointments]);
 
+    useEffect(() => {
+        if (editingAppt && finalAmount > 0) {
+            setCollected(initialCollected);
+        }
+    }, [finalAmount, editingAppt, initialCollected]);
     // ------------------------------------------------------------
     // INVOICE GENERATOR
     // ------------------------------------------------------------
@@ -584,7 +591,7 @@ export default function PatientDetails() {
         setServiceAmounts(amountMap);
         setDiscount(visit.discount || 0);
         setIsPercent(!!visit.isPercent);
-        setCollected(visit.collected || 0);
+        setInitialCollected(visit.collected || 0);
 
         document.getElementById("editAppointmentModalBtn").click();
     };
@@ -735,11 +742,16 @@ export default function PatientDetails() {
                             </div>
 
                             <div className="col-6 col-md-4">
-                                <div className="info-box">
+                                <div className="info-box d-flex align-items-center gap-2">
                                     <span className="label">Contact: </span>
-                                    <span className="value">
+
+                                    <a
+                                        href={`tel:${details?.number}`}
+                                        className="value text-decoration-none d-flex align-items-center gap-1"
+                                    >
                                         {details?.number}
-                                    </span>
+                                        <Phone size={16} />
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -1266,21 +1278,35 @@ export default function PatientDetails() {
                                     </div>
                                 </div>
 
-                                <span
-                                    className={`status-badge px-3 py-2 ${
-                                        finalAmount - collected === 0
-                                            ? "bg-success"
-                                            : collected > 0
-                                              ? "bg-warning text-dark"
-                                              : "bg-danger"
-                                    }`}
-                                >
-                                    {finalAmount - collected === 0
-                                        ? "Paid"
-                                        : collected > 0
-                                          ? "Partial"
-                                          : "Unpaid"}
-                                </span>
+                                {finalAmount > 0 &&
+                                    (() => {
+                                        const remaining = Math.max(
+                                            finalAmount - collected,
+                                            0,
+                                        );
+
+                                        const status =
+                                            remaining === 0
+                                                ? "Paid"
+                                                : collected > 0
+                                                  ? "Partial"
+                                                  : "Unpaid";
+
+                                        const badgeClass =
+                                            status === "Paid"
+                                                ? "bg-success"
+                                                : status === "Partial"
+                                                  ? "bg-warning text-dark"
+                                                  : "bg-danger";
+
+                                        return (
+                                            <span
+                                                className={`status-badge px-3 py-2 ${badgeClass}`}
+                                            >
+                                                {status}
+                                            </span>
+                                        );
+                                    })()}
                             </div>
 
                             {/* FINAL */}
