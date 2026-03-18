@@ -8,6 +8,7 @@ import {
     Trash2,
     Lock,
     RefreshCcw,
+    TimerIcon,
 } from "lucide-react";
 
 export default function DoctorProfile(props) {
@@ -22,6 +23,13 @@ export default function DoctorProfile(props) {
     const [usage, setUsage] = useState(null);
     // eslint-disable-next-line
     const [staffCount, setStaffCount] = useState(0);
+    const [pricing, setPricing] = useState(null);
+    const [availability, setAvailability] = useState([]);
+    const [editAvailability, setEditAvailability] = useState([]);
+    const [selectedDays, setSelectedDays] = useState([]);
+    const [tempSlots, setTempSlots] = useState([
+        { startTime: "10:00", endTime: "15:00", slotDuration: 15 },
+    ]);
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
         newPassword: "",
@@ -82,6 +90,21 @@ export default function DoctorProfile(props) {
             });
         } catch (err) {
             console.error("Fetch doctor error:", err);
+        }
+    }, [API_BASE_URL]);
+
+    const fetchAvailability = useCallback(async () => {
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/timing/get_availability`,
+            );
+            const data = await res.json();
+
+            if (data.success) {
+                setAvailability(data.availability || data.timings || []);
+            }
+        } catch (err) {
+            console.error("Fetch availability error:", err);
         }
     }, [API_BASE_URL]);
 
@@ -150,7 +173,67 @@ export default function DoctorProfile(props) {
     useEffect(() => {
         fetchDoctor();
         fetchStaff();
-    }, [fetchDoctor, fetchStaff]);
+        fetchAvailability();
+    }, [fetchDoctor, fetchStaff, fetchAvailability]);
+
+    useEffect(() => {
+        const fetchPricing = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
+                const data = await res.json();
+
+                if (data.success) {
+                    setPricing(data.pricing);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchPricing();
+    }, [API_BASE_URL]);
+
+    const planKey = subscription?.plan?.toLowerCase();
+
+    const staffLimit =
+        planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
+
+    const isLimitReached = staffLimit !== -1 && staffCount >= staffLimit;
+
+    const formatTime = (time) => {
+        const [h, m] = time.split(":");
+        let hour = parseInt(h);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour}:${m} ${ampm}`;
+    };
+    // eslint-disable-next-line
+    const handleUpdateAvailability = async () => {
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/timing/update_availability`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        availability,
+                    }),
+                },
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                props.showAlert("Availability updated", "success");
+            } else {
+                props.showAlert("Failed to update availability", "danger");
+            }
+        } catch (err) {
+            props.showAlert("Server error", "danger");
+        }
+    };
 
     // ================= ADD STAFF =================
     const handleAddStaff = async () => {
@@ -217,6 +300,7 @@ export default function DoctorProfile(props) {
                 newPassword: "",
                 confirmPassword: "",
             });
+            fetchAvailability();
         } else {
             props.showAlert(
                 data.error || "Server Error try again later",
@@ -317,65 +401,78 @@ export default function DoctorProfile(props) {
     return (
         <div className="container py-3 py-md-4">
             {/* ================= DOCTOR PROFILE ================= */}
-            <div className="card shadow-sm border-0 mb-3">
-                <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="card profile-card mb-4">
+                <div className="card-body p-4">
+                    {/* HEADER */}
+                    <div className="d-flex justify-content-between align-items-center mb-4">
                         <div className="d-flex align-items-center gap-3">
-                            <div className="avatar-circle">
+                            <div className="avatar-circle-lg">
                                 {doctor.name?.charAt(0)}
                             </div>
+
                             <div>
                                 <h4 className="mb-1">{doctor.name}</h4>
-                                <small className="text-theme-secondary">
+                                <span className="text-secondary-theme small">
                                     {doctor.clinicName}
-                                </small>
+                                </span>
                             </div>
                         </div>
 
                         <button
-                            className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2"
+                            className="btn btn-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
                             data-bs-toggle="modal"
                             data-bs-target="#editProfileModal"
                         >
                             <Pencil size={16} />
-                            Edit Profile
+                            Edit
                         </button>
                     </div>
 
-                    <hr />
+                    {/* INFO GRID */}
+                    <div className="row g-3">
+                        <div className="col-md-4">
+                            <div className="info-card">
+                                <span className="label">Email</span>
+                                <span className="value">{doctor.email}</span>
+                            </div>
+                        </div>
 
-                    <div className="row g-4">
-                        <div className="col-md-6">
-                            <p>
-                                <strong>Email:</strong> {doctor.email}
-                            </p>
-                            <p>
-                                <strong>Phone:</strong> {doctor.phone}
-                            </p>
-                            <p>
-                                <strong>Reg No:</strong>{" "}
-                                {doctor.regNumber || "N/A"}
-                            </p>
+                        <div className="col-md-4">
+                            <div className="info-card">
+                                <span className="label">Phone</span>
+                                <span className="value">{doctor.phone}</span>
+                            </div>
+                        </div>
+
+                        <div className="col-md-4">
+                            <div className="info-card">
+                                <span className="label">Reg No</span>
+                                <span className="value">
+                                    {doctor.regNumber || "N/A"}
+                                </span>
+                            </div>
                         </div>
 
                         <div className="col-md-6">
-                            <p>
-                                <strong>Degree:</strong>{" "}
-                                {doctor.degree?.join(", ")}
-                            </p>
+                            <div className="info-card">
+                                <span className="label">Degree</span>
+                                <span className="value">
+                                    {doctor.degree?.join(", ") || "N/A"}
+                                </span>
+                            </div>
                         </div>
 
-                        <div className="col-12">
-                            <p className="mb-0">
-                                <strong>Address:</strong>
-                                <br />
-                                {doctor.address?.line1}
-                                <br />
-                                {doctor.address?.line2}
-                                <br />
-                                {doctor.address?.city}, {doctor.address?.state}{" "}
-                                - {doctor.address?.pincode}
-                            </p>
+                        <div className="col-md-6">
+                            <div className="info-card">
+                                <span className="label">Address</span>
+                                <span className="value">
+                                    {doctor.address?.line1} <br />
+                                    {doctor.address?.line2} <br />
+                                    {doctor.address?.city},{" "}
+                                    {doctor.address?.state} -{" "}
+                                    {doctor.address?.pincode}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -457,9 +554,16 @@ export default function DoctorProfile(props) {
                                 </div>
                             </div>
 
+                            {isLimitReached && (
+                                <div className="alert alert-warning">
+                                    Staff limit reached ({staffLimit}). Upgrade
+                                    your plan to add more staff.
+                                </div>
+                            )}
                             <button
                                 className="btn btn-primary w-100 w-md-auto mb-4 rounded-3 d-flex align-items-center gap-2"
                                 onClick={handleAddStaff}
+                                disabled={isLimitReached}
                             >
                                 <UserPlus size={16} />
                                 Add Staff
@@ -508,7 +612,8 @@ export default function DoctorProfile(props) {
                                                                 )
                                                             }
                                                         >
-                                                            ✏️ Edit
+                                                            <Pencil size={18} />{" "}
+                                                            Edit
                                                         </button>
 
                                                         <button
@@ -519,7 +624,7 @@ export default function DoctorProfile(props) {
                                                                 )
                                                             }
                                                         >
-                                                            <Trash2 size={14} />
+                                                            <Trash2 size={18} />{" "}
                                                             Delete
                                                         </button>
                                                     </div>
@@ -624,6 +729,354 @@ export default function DoctorProfile(props) {
                 </div>
             </div>
 
+            {/* ================= AVAILABILITY ================= */}
+            <div className="accordion my-4" id="availabilityAccordion">
+                <div className="accordion-item border-0 rounded-4">
+                    <h2 className="accordion-header">
+                        <button
+                            className="accordion-button collapsed fw-semibold rounded-4"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#availabilitySection"
+                        >
+                            <TimerIcon size={18} className="me-2" />
+                            Availability(Timings)
+                        </button>
+                    </h2>
+
+                    <div
+                        id="availabilitySection"
+                        className="accordion-collapse collapse"
+                    >
+                        <div className="accordion-body">
+                            {availability.length === 0 ? (
+                                <p className="text-theme-secondary text-center">
+                                    No availability added
+                                </p>
+                            ) : (
+                                <div className="row g-3">
+                                    {availability.map((dayBlock, index) => (
+                                        <div
+                                            key={index}
+                                            className="col-12 col-md-6"
+                                        >
+                                            <div className="availability-card p-3 rounded-4">
+                                                {/* DAY HEADER */}
+                                                <div className="fw-bold mb-2 text-primary">
+                                                    {dayBlock.day}
+                                                </div>
+
+                                                {/* SLOTS */}
+                                                {dayBlock.slots?.map(
+                                                    (slot, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="slot-item d-flex justify-content-between align-items-center mb-2 px-2 py-1 rounded-3"
+                                                        >
+                                                            <span>
+                                                                {formatTime(
+                                                                    slot.startTime,
+                                                                )}{" "}
+                                                                →{" "}
+                                                                {formatTime(
+                                                                    slot.endTime,
+                                                                )}
+                                                            </span>
+
+                                                            <span className="badge bg-primary-subtle text-primary">
+                                                                {
+                                                                    slot.slotDuration
+                                                                }{" "}
+                                                                min
+                                                            </span>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="d-flex justify-content-end mt-4">
+                                <button
+                                    className="btn btn-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#availabilityModal"
+                                    onClick={() => {
+                                        setEditAvailability(
+                                            JSON.parse(
+                                                JSON.stringify(availability),
+                                            ),
+                                        );
+                                        setSelectedDays([]);
+                                    }}
+                                >
+                                    <Pencil size={18} /> Edit Availability
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="modal fade" id="availabilityModal" tabIndex="-1">
+                <div className="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div className="modal-content">
+                        {/* HEADER */}
+                        <div className="modal-header">
+                            <h5 className="modal-title">Edit Availability</h5>
+                            <button
+                                className="btn-close"
+                                data-bs-dismiss="modal"
+                            />
+                        </div>
+
+                        {/* BODY */}
+                        <div className="modal-body">
+                            {/* ===== SELECT DAYS ===== */}
+                            <div className="mb-4">
+                                <label className="form-label fw-semibold">
+                                    Select Days
+                                </label>
+
+                                <div className="d-flex flex-wrap gap-2">
+                                    {[
+                                        "Mon",
+                                        "Tue",
+                                        "Wed",
+                                        "Thu",
+                                        "Fri",
+                                        "Sat",
+                                        "Sun",
+                                    ].map((day) => (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            className={`btn btn-sm ${
+                                                selectedDays.includes(day)
+                                                    ? "btn-primary"
+                                                    : "btn-outline-secondary"
+                                            }`}
+                                            onClick={() => {
+                                                setSelectedDays((prev) =>
+                                                    prev.includes(day)
+                                                        ? prev.filter(
+                                                              (d) => d !== day,
+                                                          )
+                                                        : [...prev, day],
+                                                );
+                                            }}
+                                        >
+                                            {day}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ===== COMMON TIME SLOTS ===== */}
+                            <div className="mb-4">
+                                <label className="form-label fw-semibold">
+                                    Time Slots
+                                </label>
+
+                                {tempSlots.map((slot, index) => (
+                                    <div key={index} className="row g-2 mb-2">
+                                        <div className="col-4">
+                                            <input
+                                                type="time"
+                                                className="form-control"
+                                                value={slot.startTime}
+                                                onChange={(e) => {
+                                                    const updated = [
+                                                        ...tempSlots,
+                                                    ];
+                                                    updated[index].startTime =
+                                                        e.target.value;
+                                                    setTempSlots(updated);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="col-4">
+                                            <input
+                                                type="time"
+                                                className="form-control"
+                                                value={slot.endTime}
+                                                onChange={(e) => {
+                                                    const updated = [
+                                                        ...tempSlots,
+                                                    ];
+                                                    updated[index].endTime =
+                                                        e.target.value;
+                                                    setTempSlots(updated);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="col-3">
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                value={slot.slotDuration}
+                                                onChange={(e) => {
+                                                    const updated = [
+                                                        ...tempSlots,
+                                                    ];
+                                                    updated[
+                                                        index
+                                                    ].slotDuration = Number(
+                                                        e.target.value,
+                                                    );
+                                                    setTempSlots(updated);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="col-1">
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => {
+                                                    const updated = [
+                                                        ...tempSlots,
+                                                    ];
+                                                    updated.splice(index, 1);
+                                                    setTempSlots(updated);
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() =>
+                                        setTempSlots([
+                                            ...tempSlots,
+                                            {
+                                                startTime: "10:00",
+                                                endTime: "11:00",
+                                                slotDuration: 15,
+                                            },
+                                        ])
+                                    }
+                                >
+                                    + Add Slot
+                                </button>
+                            </div>
+
+                            {/* ===== APPLY BUTTON ===== */}
+                            <button
+                                className="btn btn-success mb-4"
+                                onClick={() => {
+                                    if (selectedDays.length === 0) return;
+
+                                    let updated = [...editAvailability];
+
+                                    selectedDays.forEach((day) => {
+                                        const index = updated.findIndex(
+                                            (d) => d.day === day,
+                                        );
+
+                                        if (index !== -1) {
+                                            updated[index].slots = tempSlots;
+                                        } else {
+                                            updated.push({
+                                                day,
+                                                slots: tempSlots,
+                                            });
+                                        }
+                                    });
+
+                                    setEditAvailability(updated);
+                                }}
+                            >
+                                Apply to Selected Days
+                            </button>
+
+                            <hr />
+
+                            {/* ===== PREVIEW / EDIT PER DAY ===== */}
+                            {editAvailability.map((dayBlock, dayIndex) => (
+                                <div key={dayIndex} className="mb-3">
+                                    <div className="fw-bold text-primary">
+                                        {dayBlock.day}
+                                    </div>
+
+                                    {dayBlock.slots.map((slot, slotIndex) => (
+                                        <div
+                                            key={slotIndex}
+                                            className="d-flex justify-content-between small mb-1"
+                                        >
+                                            <span>
+                                                {slot.startTime} →{" "}
+                                                {slot.endTime}
+                                            </span>
+                                            <span>{slot.slotDuration}m</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* FOOTER */}
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-outline-secondary"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                className="btn btn-primary"
+                                data-bs-dismiss="modal"
+                                onClick={async () => {
+                                    try {
+                                        const res = await authFetch(
+                                            `${API_BASE_URL}/api/doctor/timing/update_availability`,
+                                            {
+                                                method: "PUT",
+                                                headers: {
+                                                    "Content-Type":
+                                                        "application/json",
+                                                },
+                                                body: JSON.stringify({
+                                                    availability:
+                                                        editAvailability,
+                                                }),
+                                            },
+                                        );
+
+                                        const data = await res.json();
+
+                                        if (data.success) {
+                                            setAvailability(editAvailability);
+                                            props.showAlert(
+                                                "Updated successfully",
+                                                "success",
+                                            );
+                                        } else {
+                                            props.showAlert(
+                                                "Update failed",
+                                                "danger",
+                                            );
+                                        }
+                                    } catch (err) {
+                                        props.showAlert(
+                                            "Server error",
+                                            "danger",
+                                        );
+                                    }
+                                }}
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {/* ================= CHANGE PASSWORD ================= */}
             <div className="accordion my-4" id="doctorAccordion">
                 <div className="accordion-item border-0 shadow-sm rounded-4">

@@ -87,7 +87,7 @@ export default function Terms() {
                     <h5 className="mt-4">10. Contact</h5>
                     <p className="text-theme-secondary">
                         For any questions regarding these Terms & Conditions,
-                        please contact: agarwalabhed@gmail.com
+                        please contact: invohealth.app@gmail.com
                     </p>
                 </div>
             </div>

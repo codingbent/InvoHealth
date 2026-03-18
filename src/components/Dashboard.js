@@ -11,7 +11,7 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import FilterPanel from "./FilterPanel";
 import { authFetch } from "./authfetch";
-import { SlidersHorizontal, IndianRupee } from "lucide-react";
+import { SlidersHorizontal, IndianRupee, LockIcon } from "lucide-react";
 import { Link } from "react-router";
 
 ChartJS.register(
@@ -352,7 +352,7 @@ export default function Dashboard() {
                     {plan !== "PRO" && plan !== "ENTERPRISE" && (
                         <div className="dashboard-lock-overlay">
                             <div className="lock-card">
-                                <div className="lock-icon">🔒</div>
+                                <div className="lock-icon"><LockIcon size={50}/></div>
 
                                 <p className="text-theme-secondary fw-bold">
                                     {plan === "EXPIRED"

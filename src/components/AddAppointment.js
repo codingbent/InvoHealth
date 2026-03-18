@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import ServiceList from "./ServiceList";
 import { authFetch } from "./authfetch";
-import { IndianRupee } from "lucide-react";
-
-const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-        ? "https://gmsc-backend.onrender.com"
-        : "http://localhost:5001";
+import { IndianRupee, Plus } from "lucide-react";
+import SlotPicker from "./Slotpicker";
+import {
+    generateSlots,
+    getNextAvailableSlot,
+} from "../components/utils/Slotsutils";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/dark.css";
 
 export default function AddAppointment({ showAlert }) {
     /* ===================== STATES ===================== */
+    const API_BASE_URL =
+        process.env.NODE_ENV === "production"
+            ? "https://gmsc-backend.onrender.com"
+            : "http://localhost:5001";
     const [searchText, setSearchText] = useState("");
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
@@ -18,13 +24,23 @@ export default function AddAppointment({ showAlert }) {
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [appointmentDate, setAppointmentDate] = useState(
-        new Date().toISOString().slice(0, 10),
-    );
+    const getTodayIST = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset(); // in minutes
+        const istTime = new Date(now.getTime() - offset * 60000);
+        return istTime.toISOString().slice(0, 10);
+    };
+    const [appointmentDate, setAppointmentDate] = useState(getTodayIST());
     const [paymentType, setPaymentType] = useState("Cash");
     const [manualOverride, setManualOverride] = useState(false);
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
+    const [availability, setAvailability] = useState([]);
+    const [timeSlots, setTimeSlots] = useState([]);
+    const [selectedSlot, setSelectedSlot] = useState("");
+    const [openSection, setOpenSection] = useState("Morning");
+    // eslint-disable-next-line
+    const [bookedSlots, setBookedSlots] = useState([]);
 
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
@@ -37,10 +53,142 @@ export default function AddAppointment({ showAlert }) {
         total,
     );
 
+    // ✅ FIRST: groupedSlots
+    const groupedSlots = useMemo(() => {
+        const groups = {
+            Morning: [],
+            Afternoon: [],
+            Evening: [],
+        };
+
+        timeSlots.forEach((slot) => {
+            const hour = parseInt(slot.split(":")[0]);
+
+            if (hour < 12) groups.Morning.push(slot);
+            else if (hour < 16) groups.Afternoon.push(slot);
+            else groups.Evening.push(slot);
+        });
+
+        return groups;
+    }, [timeSlots]);
+
+    const currentSlot = useMemo(() => {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        let current = null;
+
+        timeSlots.forEach((slot) => {
+            const [h, m] = slot.split(":").map(Number);
+            const minutes = h * 60 + m;
+
+            if (minutes <= currentMinutes) {
+                current = slot;
+            }
+        });
+
+        return current;
+    }, [timeSlots]);
+
+    const nextSlot = useMemo(() => {
+        if (!currentSlot) {
+            return timeSlots.find((s) => !bookedSlots.includes(s)) || null;
+        }
+
+        const index = timeSlots.indexOf(currentSlot);
+
+        for (let i = index + 1; i < timeSlots.length; i++) {
+            if (!bookedSlots.includes(timeSlots[i])) {
+                return timeSlots[i];
+            }
+        }
+
+        return null;
+    }, [timeSlots, currentSlot, bookedSlots]);
     const remaining = Math.max(finalAmount - collected, 0);
 
     const status =
         remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
+
+    const normalizeTime = (time) => {
+        if (!time) return "";
+
+        const [h, m] = time.split(":");
+        return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
+    };
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/timing/get_availability`,
+                );
+                const data = await res.json();
+
+                if (data.success) {
+                    setAvailability(data.availability || []);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchAvailability();
+    }, [API_BASE_URL]);
+
+    useEffect(() => {
+        if (!timeSlots.length) return;
+
+        const next = getNextAvailableSlot(timeSlots, bookedSlots);
+
+        if (next) {
+            setSelectedSlot(next);
+        }
+    }, [timeSlots, bookedSlots]);
+
+    useEffect(() => {
+        if (!availability.length) return;
+
+        const selectedDay = new Date(appointmentDate)
+            .toLocaleDateString("en-US", { weekday: "short" })
+            .slice(0, 3);
+
+        const today = new Date();
+        const isToday =
+            new Date(appointmentDate).toDateString() === today.toDateString();
+
+        const dayData = availability.find((d) =>
+            d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
+        );
+        if (!dayData) {
+            setTimeSlots([]);
+            return;
+        }
+
+        let allSlots = [];
+
+        dayData.slots.forEach((slot) => {
+            const generated = generateSlots(
+                slot.startTime,
+                slot.endTime,
+                slot.duration || slot.slotduration,
+            ).map(normalizeTime);
+            allSlots = [...allSlots, ...generated];
+        });
+
+        if (isToday) {
+            const currentTime = today.getHours() * 60 + today.getMinutes();
+
+            allSlots = allSlots.filter((time) => {
+                const [h, m] = time.split(":").map(Number);
+                return h * 60 + m > currentTime;
+            });
+        }
+
+        setTimeSlots(allSlots);
+    }, [appointmentDate, availability]);
+    const formatTime = (time) => {
+        return time;
+    };
     /* ===================== FETCH SERVICES ===================== */
     useEffect(() => {
         const fetchServices = async () => {
@@ -55,7 +203,7 @@ export default function AddAppointment({ showAlert }) {
             }
         };
         fetchServices();
-    }, []);
+    }, [API_BASE_URL]);
 
     /* ===================== PATIENT SEARCH (DEBOUNCED) ===================== */
     useEffect(() => {
@@ -77,7 +225,7 @@ export default function AddAppointment({ showAlert }) {
         }, 300);
 
         return () => clearTimeout(delay);
-    }, [searchText]);
+    }, [searchText, API_BASE_URL]);
 
     /* ===================== CALCULATE TOTAL ===================== */
     useEffect(() => {
@@ -116,6 +264,55 @@ export default function AddAppointment({ showAlert }) {
         setPaymentType("Cash");
         setAppointmentDate(new Date().toISOString().slice(0, 10));
     };
+    useEffect(() => {
+        if (!availability.length) return;
+
+        const fetchData = async () => {
+            try {
+                // 1. Fetch booked slots
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
+                );
+                const data = await res.json();
+                const booked = data.slots || [];
+                setBookedSlots(booked);
+
+                // 2. Get day
+                const selectedDay = new Date(appointmentDate)
+                    .toLocaleDateString("en-US", { weekday: "short" })
+                    .slice(0, 3);
+
+                const dayData = availability.find((d) =>
+                    d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
+                );
+
+                if (!dayData) {
+                    setTimeSlots([]);
+                    return;
+                }
+
+                // 3. Generate slots (ONLY ONCE)
+                let allSlots = [];
+
+                dayData.slots.forEach((slot) => {
+                    const generated = generateSlots(
+                        slot.startTime,
+                        slot.endTime,
+                        slot.slotDuration, // ✅ ONLY THIS
+                    );
+
+                    allSlots = [...allSlots, ...generated];
+                });
+
+                setTimeSlots(allSlots);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchData();
+    }, [appointmentDate, availability, API_BASE_URL]);
+
     useEffect(() => {
         if (!manualOverride) {
             setCollected(finalAmount);
@@ -158,6 +355,7 @@ export default function AddAppointment({ showAlert }) {
                         discount,
                         isPercent,
                         date: appointmentDate,
+                        time: selectedSlot,
                     }),
                 },
             );
@@ -186,7 +384,7 @@ export default function AddAppointment({ showAlert }) {
         <div className="card modify-modal shadow-sm border-0 rounded-4">
             <div className="card-body">
                 <h5 className="fw-bold mb-3 text-theme-primary">
-                    ➕ Add Appointment
+                    <Plus size={18} /> Add Appointment
                 </h5>
 
                 {/* PATIENT SEARCH */}
@@ -229,19 +427,36 @@ export default function AddAppointment({ showAlert }) {
                 {selectedPatient && (
                     <form onSubmit={handleSubmit}>
                         {/* DATE */}
-                        <div className="mb-3">
-                            <label className="form-label">
+                        <div className="col-md-6">
+                            <label className="form-label small">
                                 Appointment Date
                             </label>
-                            <input
-                                type="date"
-                                className="form-control"
+
+                            <Flatpickr
                                 value={appointmentDate}
-                                onChange={(e) =>
-                                    setAppointmentDate(e.target.value)
-                                }
+                                options={{
+                                    dateFormat: "Y-m-d",
+                                }}
+                                onChange={([date]) => {
+                                    setAppointmentDate(
+                                        date.toLocaleDateString("en-CA"),
+                                    );
+                                }}
+                                className="form-control rounded-3"
+                                placeholder="Select date"
                             />
                         </div>
+                        <SlotPicker
+                            groupedSlots={groupedSlots}
+                            selectedSlot={selectedSlot}
+                            setSelectedSlot={setSelectedSlot}
+                            bookedSlots={bookedSlots}
+                            openSection={openSection}
+                            setOpenSection={setOpenSection}
+                            formatTime={formatTime}
+                            currentSlot={currentSlot}
+                            nextSlot={nextSlot}
+                        />
 
                         {/* SERVICES */}
                         <label className="form-label fw-semibold">
@@ -329,7 +544,8 @@ export default function AddAppointment({ showAlert }) {
                                 {/* SUMMARY */}
                                 <div className="summary-box">
                                     <div className="my-1">
-                                        Total: <IndianRupee size={15} /> {formatCurrency(total)}
+                                        Total: <IndianRupee size={15} />{" "}
+                                        {formatCurrency(total)}
                                     </div>
                                     <div className="my-1">
                                         Discount: <IndianRupee size={15} />{" "}

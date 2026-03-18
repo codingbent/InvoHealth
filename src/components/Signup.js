@@ -12,7 +12,13 @@ const Signup = (props) => {
     const params = new URLSearchParams(location.search);
     const selectedPlan = params.get("plan");
     const selectedBilling = params.get("billing");
-
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const [availability, setAvailability] = useState([
+        {
+            days: [],
+            slots: [{ startTime: "", endTime: "", slotDuration: 15 }],
+        },
+    ]);
     const [credentials, setcredentials] = useState({
         name: "",
         email: "",
@@ -79,6 +85,71 @@ const Signup = (props) => {
         ? selectedPlan.toUpperCase()
         : "FREE";
 
+    const updateSlotTime = (blockIndex, slotIndex, field, value) => {
+        const updated = [...availability];
+        updated[blockIndex].slots[slotIndex][field] = value;
+        setAvailability(updated);
+    };
+
+    const addTimeSlot = (blockIndex) => {
+        const updated = [...availability];
+        updated[blockIndex].slots.push({
+            startTime: "",
+            endTime: "",
+            slotDuration: 15,
+        });
+        setAvailability(updated);
+    };
+    const removeTimeSlot = (blockIndex, slotIndex) => {
+        const updated = [...availability];
+
+        if (updated[blockIndex].slots.length === 1) return;
+
+        updated[blockIndex].slots.splice(slotIndex, 1);
+        setAvailability(updated);
+    };
+
+    const toggleDay = (index, day) => {
+        const updated = [...availability];
+
+        if (updated[index].days.includes(day)) {
+            updated[index].days = updated[index].days.filter((d) => d !== day);
+        } else {
+            updated[index].days.push(day);
+        }
+
+        setAvailability(updated);
+    };
+
+    const formatAvailability = () => {
+        const dayMap = {};
+
+        availability.forEach((block) => {
+            block.days.forEach((day) => {
+                if (!dayMap[day]) {
+                    dayMap[day] = [];
+                }
+
+                block.slots.forEach((slot) => {
+                    dayMap[day].push({
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        slotDuration: slot.slotDuration,
+                    });
+                });
+            });
+        });
+
+        Object.keys(dayMap).forEach((day) => {
+            dayMap[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
+        });
+
+        return Object.keys(dayMap).map((day) => ({
+            day,
+            slots: dayMap[day],
+        }));
+    };
+
     const handlesubmit = async (e) => {
         e.preventDefault();
         if (
@@ -108,6 +179,47 @@ const Signup = (props) => {
             return;
         }
 
+        const conflictDay = isDayOverlapping(availability);
+
+        if (conflictDay) {
+            props.showAlert(`Overlapping slots on ${conflictDay}`, "danger");
+            return;
+        }
+
+        if (
+            !availability.length ||
+            availability.every((b) => b.days.length === 0)
+        ) {
+            props.showAlert("Please add at least one working day", "danger");
+            return;
+        }
+
+        for (const block of availability) {
+            if (block.days.length === 0) {
+                props.showAlert(
+                    `Please select days for Slot ${availability.indexOf(block) + 1}`,
+                    "danger",
+                );
+                return;
+            }
+
+            if (isOverlapping(block.slots)) {
+                props.showAlert("Time slots are overlapping", "danger");
+                return;
+            }
+
+            for (const slot of block.slots) {
+                if (!slot.startTime || !slot.endTime) {
+                    props.showAlert("Fill all time slots", "danger");
+                    return;
+                }
+
+                if (slot.startTime >= slot.endTime) {
+                    props.showAlert("Invalid time range", "danger");
+                    return;
+                }
+            }
+        }
         const bodyToSend = {
             name: credentials.name,
             email: credentials.email,
@@ -153,8 +265,36 @@ const Signup = (props) => {
         const json = await response.json();
 
         if (json.success) {
-            localStorage.setItem("token", json.authtoken);
+            const token = json.authtoken;
+
+            localStorage.setItem("token", token);
             localStorage.setItem("name", credentials.name);
+
+            const formattedAvailability = formatAvailability();
+
+            const availabilityRes = await authFetch(
+                `${API_BASE_URL}/api/doctor/timing/set_availability`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "auth-token": token,
+                    },
+                    body: JSON.stringify({
+                        availability: formattedAvailability,
+                    }),
+                },
+            );
+
+            const availabilityJson = await availabilityRes.json();
+
+            if (!availabilityJson.success) {
+                props.showAlert(
+                    "Account created but failed to save timings",
+                    "warning",
+                );
+            }
+
             navigate("/");
             props.showAlert("Successfully Signed up", "success");
         } else {
@@ -202,7 +342,7 @@ const Signup = (props) => {
             setSendingOtp(true);
 
             const checkRes = await authFetch(
-                `${API_BASE_URL}/api/doctor/check-phone`,
+                `${API_BASE_URL}/api/authentication/check-phone`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -296,6 +436,73 @@ const Signup = (props) => {
         });
     };
 
+    function isOverlapping(slots) {
+        for (let i = 0; i < slots.length; i++) {
+            for (let j = i + 1; j < slots.length; j++) {
+                if (
+                    slots[i].startTime < slots[j].endTime &&
+                    slots[j].startTime < slots[i].endTime
+                ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    function isDayOverlapping(availability) {
+        const dayMap = {};
+
+        for (const block of availability) {
+            for (const day of block.days) {
+                if (!dayMap[day]) {
+                    dayMap[day] = [];
+                }
+
+                for (const slot of block.slots) {
+                    dayMap[day].push({
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                    });
+                }
+            }
+        }
+
+        // Now check overlap per day
+        for (const day in dayMap) {
+            const slots = dayMap[day];
+
+            for (let i = 0; i < slots.length; i++) {
+                for (let j = i + 1; j < slots.length; j++) {
+                    if (
+                        slots[i].startTime < slots[j].endTime &&
+                        slots[j].startTime < slots[i].endTime
+                    ) {
+                        return day;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    const addTimingBlock = () => {
+        setAvailability([
+            ...availability,
+            {
+                days: [],
+                slots: [{ startTime: "", endTime: "", slotDuration: 15 }],
+            },
+        ]);
+    };
+    const removeTimingBlock = (index) => {
+        if (availability.length === 1) return;
+
+        const updated = [...availability];
+        updated.splice(index, 1);
+        setAvailability(updated);
+    };
+
     const removeDegreeField = (index) => {
         const updated = [...credentials.degrees];
         updated.splice(index, 1);
@@ -325,7 +532,6 @@ const Signup = (props) => {
                             </div>
                         )}
                     </div>
-
                     <form onSubmit={handlesubmit}>
                         {/* ================= ACCOUNT INFO ================= */}
                         <h5 className="mb-3">Account Information</h5>
@@ -484,6 +690,11 @@ const Signup = (props) => {
                                 onChange={onChange}
                                 disabled={phoneVerified}
                                 placeholder="Enter 10-digit phone number"
+                                style={{
+                                    background: "var(--bg-alt)",
+                                    color: "var(--text-primary)",
+                                    border: "1px solid var(--border-color)",
+                                }}
                             />
 
                             {!phoneVerified && (
@@ -505,25 +716,79 @@ const Signup = (props) => {
                                         </button>
                                     ) : (
                                         <>
-                                            <input
-                                                type="text"
-                                                className="form-control mt-3 text-center fs-5"
-                                                placeholder="Enter OTP"
-                                                value={otp}
-                                                onChange={(e) =>
-                                                    setOtp(
-                                                        e.target.value.replace(
-                                                            /\D/g,
-                                                            "",
-                                                        ),
-                                                    )
-                                                }
-                                                maxLength={6}
-                                                autoFocus
-                                            />
+                                            <div className="otp-container mt-3">
+                                                {otp
+                                                    .split("")
+                                                    .concat(Array(6).fill(""))
+                                                    .slice(0, 6)
+                                                    .map((digit, i) => (
+                                                        <input
+                                                            key={i}
+                                                            type="text"
+                                                            maxLength={1}
+                                                            className="otp-box"
+                                                            value={digit || ""}
+                                                            onChange={(e) => {
+                                                                const val =
+                                                                    e.target.value.replace(
+                                                                        /\D/g,
+                                                                        "",
+                                                                    );
+                                                                if (!val)
+                                                                    return;
 
+                                                                const newOtp =
+                                                                    otp.split(
+                                                                        "",
+                                                                    );
+                                                                newOtp[i] = val;
+                                                                setOtp(
+                                                                    newOtp
+                                                                        .join(
+                                                                            "",
+                                                                        )
+                                                                        .slice(
+                                                                            0,
+                                                                            6,
+                                                                        ),
+                                                                );
+
+                                                                // move to next
+                                                                const next =
+                                                                    e.target
+                                                                        .nextSibling;
+                                                                if (next)
+                                                                    next.focus();
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (
+                                                                    e.key ===
+                                                                    "Backspace"
+                                                                ) {
+                                                                    const newOtp =
+                                                                        otp.split(
+                                                                            "",
+                                                                        );
+                                                                    newOtp[i] =
+                                                                        "";
+                                                                    setOtp(
+                                                                        newOtp.join(
+                                                                            "",
+                                                                        ),
+                                                                    );
+
+                                                                    const prev =
+                                                                        e.target
+                                                                            .previousSibling;
+                                                                    if (prev)
+                                                                        prev.focus();
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                            </div>
                                             <button
-                                                className="btn btn-outline-primary mt-2"
+                                                className="btn btn-primary mt-3 w-100 rounded-3"
                                                 type="button"
                                                 onClick={verifyNumber}
                                                 disabled={otp.length !== 6}
@@ -606,7 +871,177 @@ const Signup = (props) => {
                             required
                             onChange={onChange}
                         />
+                        <h5 className="mt-4 mb-3"> Availability</h5>
 
+                        {availability.map((block, index) => (
+                            <div key={index} className="p-3 mb-3">
+                                {/* REMOVE BUTTON */}
+                                <div className="d-flex justify-content-between mb-2">
+                                    <strong>Slot {index + 1}</strong>
+                                    {availability.length > 1 && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-danger"
+                                            onClick={() =>
+                                                removeTimingBlock(index)
+                                            }
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* DAYS */}
+                                <div className="mb-3 d-flex flex-wrap gap-2">
+                                    {days.map((day) => (
+                                        <button
+                                            type="button"
+                                            key={day}
+                                            className={`btn btn-sm ${
+                                                block.days.includes(day)
+                                                    ? "btn-primary"
+                                                    : "btn-outline-light"
+                                            }`}
+                                            onClick={() =>
+                                                toggleDay(index, day)
+                                            }
+                                        >
+                                            {day}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* TIME + SLOT */}
+                                {block.slots.map((slot, slotIndex) => (
+                                    <div key={slotIndex} className="row mb-2">
+                                        <div className="mb-3 px-2 py-3 bg-opacity-10">
+                                            <div className="row align-items-end g-3">
+                                                {/* START */}
+                                                <div className="col-md-3">
+                                                    <label className="form-label small text-theme-secondary mb-1">
+                                                        Start Time
+                                                    </label>
+                                                    <input
+                                                        type="time"
+                                                        className="form-control"
+                                                        value={slot.startTime}
+                                                        onChange={(e) =>
+                                                            updateSlotTime(
+                                                                index,
+                                                                slotIndex,
+                                                                "startTime",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+
+                                                {/* END */}
+                                                <div className="col-md-3">
+                                                    <label className="form-label small text-theme-secondary mb-1">
+                                                        End Time
+                                                    </label>
+                                                    <input
+                                                        type="time"
+                                                        className="form-control"
+                                                        value={slot.endTime}
+                                                        onChange={(e) =>
+                                                            updateSlotTime(
+                                                                index,
+                                                                slotIndex,
+                                                                "endTime",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+
+                                                {/* GAP */}
+                                                <div className="col-md-3">
+                                                    <label className="form-label small text-theme-secondary mb-1">
+                                                        Slot Gap
+                                                    </label>
+                                                    <select
+                                                        className="form-select"
+                                                        value={
+                                                            slot.slotDuration
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateSlotTime(
+                                                                index,
+                                                                slotIndex,
+                                                                "slotDuration",
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                    >
+                                                        <option value={10}>
+                                                            10 minutes
+                                                        </option>
+                                                        <option value={15}>
+                                                            15 minutes
+                                                        </option>
+                                                        <option value={20}>
+                                                            20 minutes
+                                                        </option>
+                                                        <option value={30}>
+                                                            30 minutes
+                                                        </option>
+                                                    </select>
+                                                </div>
+
+                                                {/* REMOVE */}
+                                                <div className="col-md-3">
+                                                    {block.slots.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline-danger w-100"
+                                                            onClick={() =>
+                                                                removeTimeSlot(
+                                                                    index,
+                                                                    slotIndex,
+                                                                )
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* PREVIEW */}
+                                            {slot.startTime && slot.endTime && (
+                                                <div className="mt-2 small text-theme-secondary">
+                                                    {slot.startTime} →{" "}
+                                                    {slot.endTime} •{" "}
+                                                    {slot.slotDuration} min
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary mt-2"
+                                    onClick={() => addTimeSlot(index)}
+                                >
+                                    + Add Time Slot
+                                </button>
+                            </div>
+                        ))}
+
+                        {/* ADD BUTTON */}
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary"
+                            onClick={addTimingBlock}
+                        >
+                            + Add Day Slot
+                        </button>
                         {/* ================= PROFESSIONAL ================= */}
                         <h5 className="mt-4 mb-3">Professional Details</h5>
 

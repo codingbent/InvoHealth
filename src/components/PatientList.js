@@ -30,7 +30,7 @@ export default function PatientList(props) {
     const [filterOpen, setFilterOpen] = useState(false);
     const [total, setTotal] = useState(0);
 
-    const limit = 10;
+    const limit = 20;
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -48,9 +48,24 @@ export default function PatientList(props) {
         (startDate || endDate ? 1 : 0) +
         (selectedFY ? 1 : 0);
 
-    // =============================
+    const addRowWithFormat = (
+        sheet,
+        label,
+        value,
+        isCurrency = false,
+        bold = false,
+    ) => {
+        const row = sheet.addRow([label, value]);
+
+        if (bold) row.font = { bold: true };
+
+        if (isCurrency) {
+            row.getCell(2).numFmt = "₹#,##0";
+        }
+
+        return row;
+    };
     // DEBOUNCED SEARCH
-    // =============================
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
@@ -58,13 +73,11 @@ export default function PatientList(props) {
     useEffect(() => {
         const t = setTimeout(() => {
             setDebouncedSearch(searchTerm);
-        }, 400);
+        }, 1000);
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    // =============================
     // FETCH SERVICES
-    // =============================
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
@@ -86,9 +99,7 @@ export default function PatientList(props) {
         fetchServices();
     }, [fetchServices]);
 
-    // =============================
     // FETCH APPOINTMENTS
-    // =============================
     const fetchAppointments = useCallback(async () => {
         try {
             setLoading(true);
@@ -111,10 +122,24 @@ export default function PatientList(props) {
 
             const data = await res.json();
 
-            setAppointments((prev) =>
-                page === 0 ? data.data : [...prev, ...data.data],
-            );
+            const sortAppointments = (arr) => {
+                return [...arr].sort((a, b) => {
+                    const dateTimeA = new Date(
+                        `${a.date}T${a.time || "00:00"}`,
+                    );
+                    const dateTimeB = new Date(
+                        `${b.date}T${b.time || "00:00"}`,
+                    );
+                    return dateTimeB - dateTimeA;
+                });
+            };
 
+            const flatData = data.data;
+
+            setAppointments((prev) => {
+                const merged = page === 0 ? flatData : [...prev, ...flatData];
+                return sortAppointments(merged);
+            });
             setTotal(data.total || 0);
         } catch (err) {
             console.error(err);
@@ -171,9 +196,17 @@ export default function PatientList(props) {
             grouped[monthKey][dayKey].push(a);
         });
 
+        // ✅ SORT EACH DAY BY TIME (DESC)
+        Object.keys(grouped).forEach((month) => {
+            Object.keys(grouped[month]).forEach((day) => {
+                grouped[month][day].sort((a, b) => {
+                    return new Date(b.date) - new Date(a.date);
+                });
+            });
+        });
+
         return grouped;
     }, [appointments]);
-
     const applyFilters = (data) => {
         return data.filter((a) => {
             const searchMatch =
@@ -303,20 +336,23 @@ export default function PatientList(props) {
         sheet.addRow(["To", toDate]);
         sheet.addRow([]);
 
-        sheet.addRow(["TOTAL REVENUE", totalRevenue]).font = { bold: true };
-        sheet.addRow(["TOTAL COLLECTED", totalCollected]).font = { bold: true };
-        sheet.addRow(["TOTAL PENDING", totalPending]).font = { bold: true };
+        addRowWithFormat(sheet, "TOTAL REVENUE", totalRevenue, true, true);
+        addRowWithFormat(sheet, "TOTAL COLLECTED", totalCollected, true, true);
+        addRowWithFormat(sheet, "TOTAL PENDING", totalPending, true, true);
+
         sheet.addRow([]);
 
-        sheet.addRow(["Paid Visits", paidCount]);
-        sheet.addRow(["Partial Visits", partialCount]);
-        sheet.addRow(["Unpaid Visits", unpaidCount]);
+        addRowWithFormat(sheet, "Paid Visits", paidCount);
+        addRowWithFormat(sheet, "Partial Visits", partialCount);
+        addRowWithFormat(sheet, "Unpaid Visits", unpaidCount);
+
         sheet.addRow([]);
 
         sheet.addRow(["COLLECTION SUMMARY"]).font = { bold: true };
 
         Object.entries(paymentSummary).forEach(([type, amount]) => {
-            sheet.addRow([type, amount]);
+            const row = sheet.addRow([type, amount]);
+            row.getCell(2).numFmt = "₹#,##0";
         });
 
         sheet.addRow([]);
@@ -337,16 +373,17 @@ export default function PatientList(props) {
 
             if (day !== currentDay) {
                 if (currentDay !== null) {
-                    sheet.addRow([
+                    const totalRow = sheet.addRow([
                         "",
                         "",
                         "",
                         "",
                         "DAY TOTAL (Collected)",
                         dayCollectedTotal,
-                    ]).font = {
-                        bold: true,
-                    };
+                    ]);
+
+                    totalRow.font = { bold: true };
+                    totalRow.getCell(6).numFmt = "₹#,##0";
                     sheet.addRow([]);
                 }
 
@@ -374,7 +411,7 @@ export default function PatientList(props) {
 
             dayCollectedTotal += collected;
 
-            sheet.addRow([
+            const row = sheet.addRow([
                 a.name,
                 a.number || "",
                 new Date(a.date).toLocaleDateString("en-IN"),
@@ -388,18 +425,21 @@ export default function PatientList(props) {
                     .map((s) => (typeof s === "object" ? s.name : s))
                     .join(", "),
             ]);
-
+            row.getCell(5).numFmt = "₹#,##0";
+            row.getCell(6).numFmt = "₹#,##0";
+            row.getCell(7).numFmt = "₹#,##0";
             if (index === sorted.length - 1) {
-                sheet.addRow([
+                const lastTotalRow = sheet.addRow([
                     "",
                     "",
                     "",
                     "",
                     "DAY TOTAL (Collected)",
                     dayCollectedTotal,
-                ]).font = {
-                    bold: true,
-                };
+                ]);
+
+                lastTotalRow.font = { bold: true };
+                lastTotalRow.getCell(6).numFmt = "₹#,##0";
             }
         });
 
@@ -428,9 +468,7 @@ export default function PatientList(props) {
         return totals;
     }, [appointmentsByMonth]);
 
-    // =============================
     // LOAD MORE
-    // =============================
     const IncreaseLimit = () => {
         setPage((prev) => prev + 1);
     };
@@ -442,9 +480,7 @@ export default function PatientList(props) {
         HDFC: "payment-tag payment-bank",
         Other: "payment-tag payment-other",
     };
-    // =============================
-    // RENDER
-    // =============================
+
     return (
         <div className="records-container">
             {/* HEADER */}

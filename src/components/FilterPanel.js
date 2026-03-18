@@ -116,31 +116,36 @@ export default function FilterPanel({
                                     "ICICI",
                                     "HDFC",
                                     "Other",
-                                ].map((type) => (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        className={`btn btn-sm rounded-pill ${
-                                            selectedPayments.includes(type)
-                                                ? "btn-primary"
-                                                : "btn-outline-secondary"
-                                        }`}
-                                        onClick={() =>
-                                            setSelectedPayments(
-                                                selectedPayments.includes(type)
-                                                    ? selectedPayments.filter(
-                                                          (p) => p !== type,
-                                                      )
-                                                    : [
-                                                          ...selectedPayments,
-                                                          type,
-                                                      ],
-                                            )
-                                        }
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
+                                ].map((type) => {
+                                    const isActive =
+                                        selectedPayments.includes(type);
+
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill ${
+                                                isActive
+                                                    ? "btn-primary"
+                                                    : "btn-outline-primary"
+                                            }`}
+                                            onClick={() =>
+                                                setSelectedPayments(
+                                                    isActive
+                                                        ? selectedPayments.filter(
+                                                              (p) => p !== type,
+                                                          )
+                                                        : [
+                                                              ...selectedPayments,
+                                                              type,
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            {type}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -151,28 +156,36 @@ export default function FilterPanel({
                             </label>
 
                             <div className="d-flex flex-wrap gap-2">
-                                {["Unpaid", "Paid", "Partial"].map((type) => (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        className={`btn btn-sm rounded-pill ${
-                                            selectedStatus.includes(type)
-                                                ? "btn-primary"
-                                                : "btn-outline-secondary"
-                                        }`}
-                                        onClick={() =>
-                                            setSelectedStatus(
-                                                selectedStatus.includes(type)
-                                                    ? selectedStatus.filter(
-                                                          (p) => p !== type,
-                                                      )
-                                                    : [...selectedStatus, type],
-                                            )
-                                        }
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
+                                {["Unpaid", "Paid", "Partial"].map((type) => {
+                                    const isActive =
+                                        selectedStatus.includes(type);
+
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill ${
+                                                isActive
+                                                    ? "btn-primary"
+                                                    : "btn-outline-primary"
+                                            }`}
+                                            onClick={() =>
+                                                setSelectedStatus(
+                                                    isActive
+                                                        ? selectedStatus.filter(
+                                                              (p) => p !== type,
+                                                          )
+                                                        : [
+                                                              ...selectedStatus,
+                                                              type,
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            {type}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
@@ -198,11 +211,11 @@ export default function FilterPanel({
 
                         {/* SERVICES */}
                         <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
+                            <span className="form-label small fw-semibold text-theme-secondary">
                                 Services
-                            </label>
+                            </span>
 
-                            <div className="d-flex flex-wrap gap-2 border rounded-3 p-2 theme-border theme-surface">
+                            <div className="d-flex flex-wrap gap-2 rounded-3 pt-3 theme-border theme-surface">
                                 {allServices.map((s) => {
                                     const active = selectedServices.includes(s);
 
@@ -213,7 +226,7 @@ export default function FilterPanel({
                                             className={`btn btn-sm rounded-pill ${
                                                 active
                                                     ? "btn-primary"
-                                                    : "btn-outline-secondary"
+                                                    : "btn-outline-primary"
                                             }`}
                                             onClick={() =>
                                                 setSelectedServices(

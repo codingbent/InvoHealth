@@ -28,13 +28,12 @@ export default function AppointmentList({
 
                     IncreaseLimit();
 
-                    // prevent multiple triggers
                     setTimeout(() => {
                         isFetchingRef.current = false;
-                    }, 800);
+                    }, 4000);
                 }
             },
-            { threshold: 0.5 },
+            { threshold: 1 },
         );
 
         const current = loadMoreRef.current;
@@ -54,10 +53,8 @@ export default function AppointmentList({
 
     return (
         <>
-            {/* DATA */}
             {Object.keys(appointmentsByMonth).map((month) => (
                 <div key={month} className="container-fluid px-3 px-lg-5 py-3">
-                    {/* MONTH HEADER */}
                     <div className="d-flex justify-content-between align-items-center bg-primary bg-gradient text-white rounded-4 px-3 py-3 mb-3 shadow">
                         <div>
                             <h5 className="mb-0 fw-semibold">{month}</h5>
@@ -70,7 +67,6 @@ export default function AppointmentList({
                         )}
                     </div>
 
-                    {/* DAYS */}
                     {Object.keys(appointmentsByMonth[month]).map((day) => (
                         <AppointmentDay
                             key={day}
@@ -83,14 +79,12 @@ export default function AppointmentList({
                 </div>
             ))}
 
-            {/* AUTO LOAD */}
             {appointments.length < total && (
                 <div ref={loadMoreRef} style={{ height: "40px" }}>
                     {loading && <p className="text-center">Loading...</p>}
                 </div>
             )}
 
-            {/* EMPTY */}
             {!loading && appointments.length === 0 && (
                 <p className="text-center mt-3">
                     No records match the selected filters

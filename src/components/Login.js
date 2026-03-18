@@ -12,9 +12,6 @@ export default function Login(props) {
     const [loginAs, setLoginAs] = useState("doctor");
     const [inputType, setInputType] = useState("typing");
     const [showInvalid, setShowInvalid] = useState(false);
-    // const [otp, setOtp] = useState("");
-    // const [sessionId, setSessionId] = useState("");
-    // const [isOtpLogin, setIsOtpLogin] = useState(false);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -37,11 +34,6 @@ export default function Login(props) {
     // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
         let value = e.target.value;
-
-        // 🔒 Restrict to digits for staff / OTP
-        // if (loginAs === "staff" || isOtpLogin) {
-        //     value = value.replace(/\D/g, "");
-        // }
 
         if (loginAs === "staff") {
             value = value.replace(/\D/g, "");
@@ -116,6 +108,11 @@ export default function Login(props) {
             }),
         });
 
+        if (!res) {
+            props.showAlert("Session expired. Login again.", "danger");
+            return;
+        }
+
         const data = await res.json();
 
         if (data.firstLogin) {
@@ -131,15 +128,9 @@ export default function Login(props) {
             localStorage.setItem("role", data.role);
             navigate("/");
         } else {
-            alert(data.error);
+            props.showAlert(data?.error || "Login failed", "danger");
         }
     };
-
-    // useEffect(() => {
-    //     if (loginAs === "staff") {
-    //         setIsOtpLogin(false);
-    //     }
-    // }, [loginAs]);
 
     // ================= FORM SUBMIT =================
     const handleSubmit = (e) => {
@@ -193,63 +184,25 @@ export default function Login(props) {
                 {/* IDENTIFIER */}
                 <div className="mb-3">
                     <label className="form-label">
-                        {/* {loginAs === "staff"
-                            ? "Phone Number"
-                            : isOtpLogin
-                              ? "Phone Number"
-                              : "Email or Phone"} */}
                         {loginAs === "staff"
                             ? "Phone Number"
                             : "Email or Phone"}
                     </label>
 
-                    {/* <div
-                        className={
-                            loginAs === "staff" || isOtpLogin
-                                ? "input-group"
-                                : ""
-                        }
-                    >
-                        {(loginAs === "staff" || isOtpLogin) && (
-                            <span className="input-group-text"> +91</span>
-                        )} */}
-
                     <div className={loginAs === "staff" ? "input-group" : ""}>
                         {loginAs === "staff" && (
-                            <span className="input-group-text">🇮🇳 +91</span>
+                            <span className="input-group-text">+91</span>
                         )}
 
                         <input
-                            // type={
-                            //         loginAs === "staff" || isOtpLogin
-                            //             ? "tel"
-                            //             : "text"
-                            //     }
-                            //     inputMode={
-                            //         loginAs === "staff" || isOtpLogin
-                            //             ? "numeric"
-                            //             : "text"
-                            //     }
-                            //     pattern={
-                            //         loginAs === "staff" || isOtpLogin
-                            //             ? "[0-9]{10}"
-                            //             : undefined
-                            //     }
                             type={loginAs === "staff" ? "tel" : "text"}
                             className="form-control"
                             placeholder={
-                                // loginAs === "staff" || isOtpLogin
                                 loginAs === "staff"
                                     ? "Enter 10-digit phone number"
                                     : "Enter email or phone"
                             }
                             value={identifier}
-                            // maxLength={
-                            //     loginAs === "staff" || isOtpLogin
-                            //         ? 10
-                            //         : undefined
-                            // }
-                            // onWheel={(e) => e.target.blur()}
                             maxLength={loginAs === "staff" ? 10 : undefined}
                             onChange={handleIdentifierChange}
                             required
@@ -263,35 +216,6 @@ export default function Login(props) {
                     )}
                 </div>
 
-                {/* SWITCH
-                {loginAs === "doctor" && (
-                    <div className="form-check form-switch mb-3">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={isOtpLogin}
-                            onChange={(e) => setIsOtpLogin(e.target.checked)}
-                        />
-                        <label className="form-check-label">
-                            Login with {isOtpLogin ? "OTP" : "Password"}
-                        </label>
-                    </div>
-                )} */}
-
-                {/* PASSWORD LOGIN */}
-                {/* {!isOtpLogin && (
-                    <div className="mb-3">
-                        <label className="form-label">Password</label>
-                        <input
-                            type="password"
-                            className="form-control"
-                            placeholder="Enter password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                )} 
-                {/* PASSWORD */}
                 <div className="mb-3">
                     <label className="form-label">Password</label>
 
@@ -313,51 +237,10 @@ export default function Login(props) {
                     </Link>
                 </div>
 
-                {/* OTP LOGIN */}
-                {/* {loginAs === "doctor" && isOtpLogin && (
-                    <div className="border rounded-3 p-3 bg-light mb-3">
-                        <button
-                            type="button"
-                            className="btn btn-outline-primary w-100 mb-3"
-                            onClick={sendOtp}
-                            disabled={inputType !== "phone"}
-                        >
-                            <Send size={16}/>
-                            Send OTP
-                        </button>
-
-                        <div className="mb-3">
-                            <label className="form-label text-center w-100">
-                                Enter OTP
-                            </label>
-                            <input
-                                type="text"
-                                className="form-control text-center fs-5 letter-spacing"
-                                placeholder="● ● ● ● ● ●"
-                                maxLength={6}
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                            />
-                        </div>
-
-                        <button
-                            type="button"
-                            className="btn btn-success w-100"
-                            onClick={verifyOtp}
-                            disabled={otp.length !== 6}
-                        >
-                            <CheckCircle size={16}/>
-                            Verify OTP
-                        </button>
-                    </div>
-                )}
-*/}
-                {/* {!isOtpLogin && ( */}
                 <button type="submit" className="btn btn-primary w-100 mt-2">
                     <LogIn size={18} />
                     Login
                 </button>
-                {/* // )}  */}
 
                 {/* FOOTER */}
                 <div className="text-center mt-3">

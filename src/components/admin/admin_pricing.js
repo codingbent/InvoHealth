@@ -35,14 +35,16 @@ export default function AdminPricing() {
         },
     });
 
-    // Redirect if not superadmin
+    const [loading, setLoading] = useState(false);
+
+    // 🔐 Redirect if not admin
     useEffect(() => {
         if (localStorage.getItem("role") !== "superadmin") {
             navigate("/");
         }
     }, [navigate]);
 
-    // Fetch pricing
+    // 📦 Fetch pricing
     useEffect(() => {
         const fetchPricing = async () => {
             try {
@@ -56,8 +58,10 @@ export default function AdminPricing() {
 
                 if (data.success && data.pricing) {
                     setPricing({
-                        discount: data.pricing.discount ?? 17,
-                        ...data.pricing,
+                        discount: data.pricing.discount ?? 17, // ✅ fallback fix
+                        starter: data.pricing.starter,
+                        pro: data.pricing.pro,
+                        enterprise: data.pricing.enterprise,
                     });
                 }
             } catch (err) {
@@ -68,12 +72,12 @@ export default function AdminPricing() {
         fetchPricing();
     }, [API_BASE_URL]);
 
-    // Yearly calculation
+    // 📊 Yearly calculation (UI only)
     const calculateYearly = (monthly, discount) => {
-        const discountDecimal = (discount ?? 0) / 100;
-        return Math.round(monthly * 12 * (1 - discountDecimal));
+        return Math.round(monthly * 12 * (1 - discount / 100));
     };
 
+    // ✏️ Handle input
     const handleChange = (plan, field, value) => {
         setPricing((prev) => ({
             ...prev,
@@ -89,25 +93,34 @@ export default function AdminPricing() {
         }));
     };
 
+    // 💾 Save pricing
     const savePricing = async () => {
         try {
+            // ✅ validation
+            if (
+                pricing.starter.monthly <= 0 ||
+                pricing.pro.monthly <= 0 ||
+                pricing.enterprise.monthly <= 0
+            ) {
+                alert("Monthly price must be greater than 0");
+                return;
+            }
+
+            if (pricing.discount < 0 || pricing.discount > 100) {
+                alert("Discount must be between 0 and 100");
+                return;
+            }
+
+            setLoading(true);
+
             const payload = {
-                discount: pricing.discount,
-
-                starter: {
-                    ...pricing.starter,
-                    yearly: calculateYearly(pricing.starter.monthly),
-                },
-
-                pro: {
-                    ...pricing.pro,
-                    yearly: calculateYearly(pricing.pro.monthly),
-                },
-
-                enterprise: {
-                    ...pricing.enterprise,
-                    yearly: calculateYearly(pricing.enterprise.monthly),
-                },
+                discount:
+                    typeof pricing.discount === "number"
+                        ? pricing.discount
+                        : 17,
+                starter: { ...pricing.starter },
+                pro: { ...pricing.pro },
+                enterprise: { ...pricing.enterprise },
             };
 
             const res = await fetch(
@@ -132,6 +145,8 @@ export default function AdminPricing() {
         } catch (err) {
             console.error("Save failed:", err);
             alert("Server error");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -139,11 +154,9 @@ export default function AdminPricing() {
         <div className="container py-5">
             <h2 className="fw-bold text-center mb-5">Pricing Management</h2>
 
-            {/* Discount Card */}
+            {/* DISCOUNT */}
             <div className="card shadow-sm p-4 mb-5">
                 <h5 className="fw-bold mb-3">Yearly Discount</h5>
-
-                <label>Discount Percentage (0 - 100)</label>
 
                 <input
                     type="number"
@@ -151,20 +164,22 @@ export default function AdminPricing() {
                     max="100"
                     className="form-control"
                     value={pricing.discount}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                        let val = Number(e.target.value);
+                        if (val < 0) val = 0;
+                        if (val > 100) val = 100;
+
                         setPricing((prev) => ({
                             ...prev,
-                            discount: Number(e.target.value),
-                        }))
-                    }
+                            discount: val,
+                        }));
+                    }}
                 />
 
-                <div className="small text-theme-secondary mt-2">
-                    Example: 17 means 17% discount on yearly billing
-                </div>
+                <div className="small mt-2">Example: 17 means 17% discount</div>
             </div>
 
-            {/* Pricing Cards */}
+            {/* PLANS */}
             <div className="row g-4">
                 {["starter", "pro", "enterprise"].map((plan) => {
                     const monthly = pricing[plan]?.monthly || 0;
@@ -172,13 +187,13 @@ export default function AdminPricing() {
 
                     return (
                         <div className="col-md-4" key={plan}>
-                            <div className="card shadow-sm p-4 h-100">
+                            <div className="card p-4 h-100">
                                 <h5 className="fw-bold text-uppercase">
                                     {plan}
                                 </h5>
 
-                                {/* Monthly */}
-                                <label className="mt-3">Monthly Price</label>
+                                {/* MONTHLY */}
+                                <label className="mt-3">Monthly</label>
                                 <input
                                     type="number"
                                     className="form-control"
@@ -192,24 +207,18 @@ export default function AdminPricing() {
                                     }
                                 />
 
-                                {/* Yearly */}
+                                {/* YEARLY */}
                                 <div className="mt-3">
-                                    <label>Yearly Price (auto)</label>
-                                    <div className="form-control bg-theme-secondary">
-                                        <IndianRupee size={18} /> {yearly}
+                                    <label>Yearly (auto)</label>
+                                    <div className="form-control">
+                                        <IndianRupee size={16} /> {yearly}
                                     </div>
-                                </div>
-
-                                <div className="mt-2 text-success small">
-                                    Discount Applied: {pricing.discount}%
                                 </div>
 
                                 <hr />
 
-                                <h6 className="fw-bold mt-3">Plan Limits</h6>
-
-                                {/* Staff */}
-                                <label className="mt-2">Staff Limit</label>
+                                {/* LIMITS */}
+                                <label>Staff</label>
                                 <input
                                     type="number"
                                     className="form-control"
@@ -223,10 +232,7 @@ export default function AdminPricing() {
                                     }
                                 />
 
-                                {/* Excel */}
-                                <label className="mt-2">
-                                    Excel Export Limit
-                                </label>
+                                <label className="mt-2">Excel Limit</label>
                                 <input
                                     type="number"
                                     className="form-control"
@@ -240,10 +246,7 @@ export default function AdminPricing() {
                                     }
                                 />
 
-                                {/* Invoice */}
-                                <label className="mt-2">
-                                    Invoice Download Limit
-                                </label>
+                                <label className="mt-2">Invoice Limit</label>
                                 <input
                                     type="number"
                                     className="form-control"
@@ -257,11 +260,10 @@ export default function AdminPricing() {
                                     }
                                 />
 
-                                {/* Analytics */}
                                 <div className="form-check mt-3">
                                     <input
-                                        className="form-check-input"
                                         type="checkbox"
+                                        className="form-check-input"
                                         checked={pricing[plan].analytics}
                                         onChange={(e) =>
                                             handleChange(
@@ -271,10 +273,7 @@ export default function AdminPricing() {
                                             )
                                         }
                                     />
-
-                                    <label className="form-check-label">
-                                        Enable Analytics Dashboard
-                                    </label>
+                                    <label>Analytics</label>
                                 </div>
                             </div>
                         </div>
@@ -282,9 +281,14 @@ export default function AdminPricing() {
                 })}
             </div>
 
+            {/* SAVE BUTTON */}
             <div className="text-center mt-5">
-                <button className="btn btn-primary px-5" onClick={savePricing}>
-                    Save Pricing
+                <button
+                    className="btn btn-primary px-5"
+                    onClick={savePricing}
+                    disabled={loading}
+                >
+                    {loading ? "Saving..." : "Save Pricing"}
                 </button>
             </div>
         </div>

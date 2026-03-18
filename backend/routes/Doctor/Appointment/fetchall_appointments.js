@@ -6,7 +6,7 @@ var fetchuser = require("../../../middleware/fetchuser");
 router.get("/fetchall_appointments", fetchuser, async (req, res) => {
     try {
         const {
-            limit = 10,
+            limit = 20,
             skip = 0,
             search = "",
             gender,
@@ -17,7 +17,7 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
             endDate,
         } = req.query;
 
-        const parsedLimit = parseInt(limit) || 10;
+        const parsedLimit = parseInt(limit) || 20;
         const parsedSkip = parseInt(skip) || 0;
 
         const doctorId =
@@ -58,6 +58,7 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
                     number: appt.patient.number || "",
                     gender: appt.patient.gender || "",
                     date: visit.date,
+                    time: visit.time,
                     payment_type: visit.payment_type,
                     amount,
                     collected,
@@ -114,7 +115,22 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
 
         // ================= SORT =================
 
-        allVisits.sort((a, b) => new Date(b.date) - new Date(a.date));
+        allVisits.sort((a, b) => {
+            const d1 = new Date(a.date);
+            const d2 = new Date(b.date);
+
+            if (a.time) {
+                const [h, m] = a.time.split(":").map(Number);
+                d1.setHours(h, m, 0, 0);
+            }
+
+            if (b.time) {
+                const [h, m] = b.time.split(":").map(Number);
+                d2.setHours(h, m, 0, 0);
+            }
+
+            return d2 - d1; 
+        });
 
         const total = allVisits.length;
 

@@ -14,9 +14,10 @@ import {
     User,
     IndianRupee,
     Phone,
+    ReceiptIndianRupee,
 } from "lucide-react";
 
-export default function PatientDetails() {
+export default function PatientDetails(props) {
     const navigate = useNavigate();
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -35,9 +36,13 @@ export default function PatientDetails() {
     const [collected, setCollected] = useState(0);
     const [isFullPaid, setIsFullPaid] = useState(false);
     const [initialCollected, setInitialCollected] = useState(0);
-
+    const [availability, setAvailability] = useState([]);
+    const [timeSlots, setTimeSlots] = useState([]);
+    const [bookedSlots, setBookedSlots] = useState([]);
+    const [openSection, setOpenSection] = useState("Morning");
     const [apptData, setApptData] = useState({
         date: "",
+        time: "",
         service: [],
         payment_type: "",
     });
@@ -89,6 +94,169 @@ export default function PatientDetails() {
         }
     }, [API_BASE_URL]);
 
+    const generateSlots = useCallback((start, end, duration) => {
+        const step = duration || 15;
+        const slots = [];
+
+        let [h, m] = start.split(":").map(Number);
+        let [endH, endM] = end.split(":").map(Number);
+
+        let current = new Date();
+        current.setHours(h, m, 0, 0);
+
+        const endTime = new Date();
+        endTime.setHours(endH, endM, 0, 0);
+
+        while (current < endTime) {
+            slots.push(current.toTimeString().slice(0, 5));
+            current.setMinutes(current.getMinutes() + step);
+        }
+
+        return slots;
+    }, []);
+
+    const fetchSlotsForDate = useCallback(
+        async (date, isEdit = false) => {
+            try {
+                const selectedDay = new Date(date)
+                    .toLocaleDateString("en-US", { weekday: "short" })
+                    .slice(0, 3);
+
+                const dayData = availability.find((d) => d.day === selectedDay);
+
+                if (!dayData) {
+                    setTimeSlots([]);
+                    return;
+                }
+
+                let allSlots = [];
+
+                dayData.slots.forEach((slot) => {
+                    const generated = generateSlots(
+                        slot.startTime,
+                        slot.endTime,
+                        slot.slotDuration,
+                    );
+                    allSlots = [...allSlots, ...generated];
+                });
+
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${date}`,
+                );
+
+                const data = await res.json();
+                const booked = data.slots || [];
+
+                setBookedSlots(booked);
+
+                if (isEdit) {
+                    setTimeSlots(allSlots);
+                    return;
+                }
+
+                const today = new Date();
+                const isToday =
+                    new Date(date).toDateString() === today.toDateString();
+
+                if (isToday) {
+                    const currentTime =
+                        today.getHours() * 60 + today.getMinutes();
+
+                    allSlots = allSlots.filter((time) => {
+                        const [h, m] = time.split(":").map(Number);
+                        return h * 60 + m > currentTime;
+                    });
+                }
+
+                const finalSlots = allSlots.filter(
+                    (slot) => !booked.includes(slot),
+                );
+
+                setTimeSlots(finalSlots);
+            } catch (err) {
+                console.error(err);
+            }
+        },
+        [availability, API_BASE_URL, generateSlots],
+    );
+
+    const allSlotsWithSelected = useMemo(() => {
+        if (!apptData.time) return timeSlots;
+
+        if (!timeSlots.includes(apptData.time)) {
+            return [apptData.time, ...timeSlots];
+        }
+
+        return timeSlots;
+    }, [timeSlots, apptData.time]);
+
+    const groupedSlots = useMemo(() => {
+        const groups = {
+            Morning: [],
+            Afternoon: [],
+            Evening: [],
+        };
+
+        allSlotsWithSelected.forEach((slot) => {
+            const hour = parseInt(slot.split(":")[0]);
+
+            if (hour < 12) groups.Morning.push(slot);
+            else if (hour < 16) groups.Afternoon.push(slot);
+            else groups.Evening.push(slot);
+        });
+
+        return groups;
+    }, [allSlotsWithSelected]);
+
+    useEffect(() => {
+        if (!apptData.date || !availability.length) return;
+
+        fetchSlotsForDate(apptData.date, !!editingAppt);
+    }, [apptData.date, availability, editingAppt, fetchSlotsForDate]);
+
+    useEffect(() => {
+        if (editingAppt) return;
+
+        if (
+            apptData.time &&
+            timeSlots.length > 0 &&
+            !timeSlots.includes(apptData.time)
+        ) {
+            setApptData((prev) => ({
+                ...prev,
+                time: "",
+            }));
+        }
+    }, [timeSlots, apptData.time, editingAppt]);
+
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/timing/get_availability`,
+                );
+                const data = await res.json();
+
+                if (data.success) {
+                    setAvailability(data.availability || []);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchAvailability();
+    }, [API_BASE_URL]);
+
+    useEffect(() => {
+        if (!timeSlots.length) return;
+        if (apptData.time) return;
+
+        if (groupedSlots.Morning.length) setOpenSection("Morning");
+        else if (groupedSlots.Afternoon.length) setOpenSection("Afternoon");
+        else if (groupedSlots.Evening.length) setOpenSection("Evening");
+    }, [timeSlots, groupedSlots, apptData.time]);
+
     useEffect(() => {
         if (!availableServices.length) return;
 
@@ -130,7 +298,7 @@ export default function PatientDetails() {
             const data = await res.json();
 
             if (data.success) {
-                alert("Patient deleted successfully");
+                props.showAlert("Patient deleted successfully", "success");
                 navigate("/");
             } else {
                 alert(data.message || "Failed to delete patient");
@@ -189,6 +357,16 @@ export default function PatientDetails() {
     }, [fetchData, fetchDoctor]);
 
     useEffect(() => {
+        if (!apptData.time) return;
+
+        const hour = parseInt(apptData.time.split(":")[0]);
+
+        if (hour < 12) setOpenSection("Morning");
+        else if (hour < 16) setOpenSection("Afternoon");
+        else setOpenSection("Evening");
+    }, [apptData.time]);
+
+    useEffect(() => {
         const total = apptData.service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
             0,
@@ -204,6 +382,27 @@ export default function PatientDetails() {
 
         setFinalAmount(Math.round((total - discountValue) * 100) / 100);
     }, [apptData.service, serviceAmounts, discount, isPercent]);
+
+    const formatTime = (time) => {
+        if (!time) return "";
+
+        const [h, m] = time.split(":");
+        let hour = parseInt(h);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+
+        return `${hour}:${m} ${ampm}`;
+    };
+
+    const validateForm = () => {
+        if (!apptData.date) return "Please select a date";
+        if (timeSlots.length > 0 && !apptData.time)
+            return "Please select a time slot";
+        if (!apptData.service.length) return "Please add at least one service";
+        if (!apptData.payment_type) return "Please select payment type";
+
+        return "";
+    };
 
     // ------------------------------------------------------------
     // UPDATE PATIENT DETAILS
@@ -233,7 +432,7 @@ export default function PatientDetails() {
 
             const result = await response.json();
             if (response.ok) {
-                alert("Patient updated successfully");
+                props.showAlert("Patient updated successfully", "success");
                 setDetails((prev) => ({ ...prev, ...patient }));
             } else {
                 alert(result.message || "Update failed");
@@ -245,9 +444,11 @@ export default function PatientDetails() {
     };
 
     const sortedAppointments = useMemo(() => {
-        return [...appointments].sort(
-            (a, b) => new Date(b.date) - new Date(a.date),
-        );
+        return [...appointments].sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time || "00:00"}`);
+            const dateB = new Date(`${b.date}T${b.time || "00:00"}`);
+            return dateB - dateA;
+        });
     }, [appointments]);
 
     const serviceTotal = useMemo(() => {
@@ -559,11 +760,12 @@ export default function PatientDetails() {
         }
     };
 
-    const editInvoice = (appointmentId, visit) => {
+    const editInvoice = async (appointmentId, visit) => {
         setEditingAppt({
             appointmentId,
             _id: visit._id,
         });
+
         const normalizedServices = (visit.service || []).map((s) => {
             const realService = availableServices.find(
                 (as) => as._id === (s._id || s.id),
@@ -576,13 +778,18 @@ export default function PatientDetails() {
             };
         });
 
+        const date = visit.date?.slice(0, 10);
+
         setApptData({
-            date: visit.date?.slice(0, 10),
+            date,
+            time: visit.time || "",
             service: normalizedServices,
             payment_type: visit.payment_type || "",
         });
 
-        // Service amount map
+        await fetchSlotsForDate(date, true);
+
+        // rest unchanged
         const amountMap = {};
         normalizedServices.forEach((s) => {
             amountMap[s._id] = s.amount || 0;
@@ -601,6 +808,22 @@ export default function PatientDetails() {
             alert("No appointment selected");
             return;
         }
+
+        if (!apptData.date) {
+            props.showAlert("Please select a date", "danger");
+            return;
+        }
+
+        if (!apptData.time && timeSlots.length > 0) {
+            props.showAlert("Please select a time slot", "danger");
+            return;
+        }
+
+        if (!apptData.service.length) {
+            props.showAlert("Please add at least one service", "danger");
+            return;
+        }
+
         try {
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/edit_appointment/${editingAppt.appointmentId}/${editingAppt._id}`,
@@ -611,6 +834,7 @@ export default function PatientDetails() {
                     },
                     body: JSON.stringify({
                         date: apptData.date,
+                        time: apptData.time,
                         service: apptData.service.map((s) => ({
                             id: s._id,
                             name: s.name,
@@ -627,9 +851,10 @@ export default function PatientDetails() {
             const data = await response.json();
 
             if (data.success) {
-                alert("Appointment updated successfully!");
+                props.showAlert("Appointment updated successfully!", "success");
                 setIsFullPaid(false);
                 fetchData();
+                window.location.reload();
             } else {
                 alert("Update failed: " + data.message);
             }
@@ -742,15 +967,17 @@ export default function PatientDetails() {
                             </div>
 
                             <div className="col-6 col-md-4">
-                                <div className="info-box d-flex align-items-center gap-2">
-                                    <span className="label">Contact: </span>
+                                <div className="info-box">
+                                    <span className="label">Contact:</span>
 
                                     <a
                                         href={`tel:${details?.number}`}
-                                        className="value text-decoration-none d-flex align-items-center gap-1"
+                                        className="value text-decoration-none d-flex align-items-center gap-1 mt-1 contact-text"
                                     >
-                                        {details?.number}
-                                        <Phone size={16} />
+                                        <span className="text-truncate">
+                                            {details?.number}
+                                        </span>
+                                        <Phone size={14} />
                                     </a>
                                 </div>
                             </div>
@@ -824,7 +1051,19 @@ export default function PatientDetails() {
                                     {appointmentsForView.map((visit) => (
                                         <tr key={visit._id}>
                                             <td className="text-theme-primary">
-                                                {visit.formattedDate}
+                                                <div>
+                                                    <strong>
+                                                        {visit.formattedDate}
+                                                    </strong>
+
+                                                    {visit.time && (
+                                                        <div className="small text-theme-secondary">
+                                                            {formatTime(
+                                                                visit.time,
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td className="text-theme-primary">
@@ -945,7 +1184,17 @@ export default function PatientDetails() {
                     >
                         <div className="card-body">
                             <div className="d-flex justify-content-between align-items-center mb-2">
-                                <strong>{visit.formattedDate}</strong>
+                                <div className="text-theme-primary">
+                                    <div className="d-flex flex-column">
+                                        <span>{visit.formattedDate}</span>
+
+                                        {visit.time && (
+                                            <small className="text-theme-secondary">
+                                                {formatTime(visit.time)}
+                                            </small>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <div className="text-end">
                                     {Number(visit.collected ?? 0) >=
@@ -1006,32 +1255,33 @@ export default function PatientDetails() {
                                 {visit.payment_type || "N/A"}
                             </span>
 
-                            <div className="d-flex gap-2">
+                            <div className="d-flex flex-row flex-md-row gap-2">
                                 <button
-                                    className="btn btn-success w-100"
+                                    className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-1"
                                     onClick={() =>
                                         handleInvoiceClick(id, visit, details)
                                     }
                                 >
-                                    Invoice
+                                    <ReceiptIndianRupee size={18} /> Invoice
                                 </button>
 
                                 <button
-                                    className="btn btn-outline-warning w-100"
+                                    className="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center gap-1"
                                     onClick={() =>
                                         editInvoice(appointmentId, visit)
                                     }
                                 >
+                                    <Pencil size={18} />
                                     Edit
                                 </button>
 
                                 <button
-                                    className="btn btn-outline-danger w-100"
+                                    className="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-1"
                                     onClick={() =>
                                         deleteInvoice(appointmentId, visit)
                                     }
                                 >
-                                    Delete
+                                    <Trash2 size={18} /> Delete
                                 </button>
                             </div>
                         </div>
@@ -1060,7 +1310,9 @@ export default function PatientDetails() {
                         <div className="modal-body pt-3">
                             {/* DATE */}
                             <div className="mb-4">
-                                <label className="form-label small">Date</label>
+                                <label className="form-label small">
+                                    Date <span className="text-danger">*</span>
+                                </label>{" "}
                                 <input
                                     type="date"
                                     className="form-control rounded-3"
@@ -1069,14 +1321,127 @@ export default function PatientDetails() {
                                         setApptData((prev) => ({
                                             ...prev,
                                             date: e.target.value,
+                                            time: "",
                                         }))
                                     }
                                 />
                             </div>
+                            {/* TIME SLOT */}
+                            <div className="mb-4">
+                                {editingAppt && (
+                                    <div className="mb-3">
+                                        <label className="form-label small">
+                                            Time Slot{" "}
+                                            <span className="text-danger">
+                                                *
+                                            </span>
+                                        </label>
+                                        <div className="current-slot-box">
+                                            {apptData.time
+                                                ? formatTime(apptData.time)
+                                                : "No time selected"}
+                                        </div>
+                                    </div>
+                                )}
+                                {Object.entries(groupedSlots).map(
+                                    ([label, slots]) =>
+                                        slots.length ? (
+                                            <div
+                                                key={label}
+                                                className="accordion-slot"
+                                            >
+                                                {/* HEADER */}
+                                                <div
+                                                    className="accordion-header"
+                                                    onClick={() =>
+                                                        setOpenSection(
+                                                            (prev) =>
+                                                                prev === label
+                                                                    ? null
+                                                                    : label,
+                                                        )
+                                                    }
+                                                >
+                                                    <span>{label}</span>
+                                                    <span>
+                                                        {openSection === label
+                                                            ? "-"
+                                                            : "+"}
+                                                    </span>
+                                                </div>
+
+                                                {/* CONTENT */}
+                                                {openSection === label && (
+                                                    <div className="slot-grid">
+                                                        {slots
+                                                            .filter((slot) => {
+                                                                const isBooked =
+                                                                    bookedSlots.includes(
+                                                                        slot,
+                                                                    );
+                                                                const isSameSlot =
+                                                                    apptData.time ===
+                                                                    slot;
+
+                                                                // ✅ keep current slot in edit mode
+                                                                return (
+                                                                    !isBooked ||
+                                                                    isSameSlot
+                                                                );
+                                                            })
+                                                            .map((slot) => {
+                                                                const isBooked =
+                                                                    bookedSlots.includes(
+                                                                        slot,
+                                                                    );
+                                                                const isSelected =
+                                                                    apptData.time ===
+                                                                    slot;
+                                                                const isSameSlot =
+                                                                    apptData.time ===
+                                                                    slot;
+
+                                                                return (
+                                                                    <button
+                                                                        key={
+                                                                            slot
+                                                                        }
+                                                                        type="button"
+                                                                        disabled={
+                                                                            isBooked &&
+                                                                            !isSameSlot
+                                                                        }
+                                                                        className={`slot-btn 
+                                        ${isSelected ? "selected" : ""} 
+                                        ${isBooked ? "booked" : ""}`}
+                                                                        onClick={() =>
+                                                                            setApptData(
+                                                                                (
+                                                                                    prev,
+                                                                                ) => ({
+                                                                                    ...prev,
+                                                                                    time: slot,
+                                                                                }),
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {formatTime(
+                                                                            slot,
+                                                                        )}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null,
+                                )}
+                            </div>
 
                             {/* SERVICES */}
                             <h6 className="text-uppercase text-theme-secondary small mb-2">
-                                Services & Billing
+                                Services & Billing{" "}
+                                <span className="text-danger">*</span>
                             </h6>
 
                             <div className="mb-3">
@@ -1111,12 +1476,18 @@ export default function PatientDetails() {
 
                             {/* SERVICES TABLE */}
                             {apptData.service.length > 0 && (
-                                <div className="border rounded-4 p-3 mb-4">
-                                    <table className="table table-sm align-middle mb-3">
-                                        <thead className="table-theme">
+                                <div
+                                    className="rounded-4 p-3 mb-4"
+                                    style={{
+                                        background: "rgba(255,255,255,0.02)",
+                                    }}
+                                >
+                                    {" "}
+                                    <table className="table table-sm align-middle mb-3 clean-table">
+                                        <thead>
                                             <tr>
-                                                <th>Service</th>
-                                                <th className="text-end">
+                                                <th className="text-white">Service</th>
+                                                <th className="text-end text-white">
                                                     Amount
                                                 </th>
                                             </tr>
@@ -1124,13 +1495,13 @@ export default function PatientDetails() {
 
                                         <tbody>
                                             {apptData.service.map((s) => (
-                                                <tr key={s._id}>
+                                                <tr className="clean-row" key={s._id}>
                                                     <td className="service-name">
                                                         {s.name}
                                                     </td>
 
                                                     <td className="text-end">
-                                                        <div className="amount-input-wrapper">
+                                                        <div className="amount-input-wrapper text-white">
                                                             <IndianRupee
                                                                 size={14}
                                                             />
@@ -1165,11 +1536,11 @@ export default function PatientDetails() {
                                             ))}
                                         </tbody>
                                     </table>
-
                                     <div className="final-amount-box">
                                         <span>Total</span>
                                         <span className="text-primary fw-bold">
-                                            ₹ {formatCurrency(serviceTotal)}
+                                            {<IndianRupee size={18} />}
+                                            {formatCurrency(serviceTotal)}
                                         </span>
                                     </div>
                                 </div>
@@ -1211,7 +1582,7 @@ export default function PatientDetails() {
                                 <div className="d-flex justify-content-between mt-2 text-danger small">
                                     <span>Discount Applied</span>
                                     <span>
-                                        ₹{" "}
+                                        <IndianRupee size={16} />{" "}
                                         {formatCurrency(
                                             serviceTotal - finalAmount,
                                         )}
@@ -1301,7 +1672,7 @@ export default function PatientDetails() {
 
                                         return (
                                             <span
-                                                className={`status-badge px-3 py-2 ${badgeClass}`}
+                                                className={`status-pill ${badgeClass}`}
                                             >
                                                 {status}
                                             </span>
@@ -1321,6 +1692,7 @@ export default function PatientDetails() {
                             <div className="mb-3">
                                 <label className="form-label small">
                                     Payment Type
+                                    <span className="text-danger">*</span>
                                 </label>
                                 <select
                                     className="form-select rounded-3"
@@ -1352,8 +1724,21 @@ export default function PatientDetails() {
                             </button>
                             <button
                                 className="btn btn-primary"
-                                data-bs-dismiss="modal"
-                                onClick={handleUpdateAppt}
+                                onClick={() => {
+                                    const error = validateForm();
+
+                                    if (error) {
+                                        props.showAlert(error, "warning");
+                                        return;
+                                    }
+
+                                    handleUpdateAppt();
+                                }}
+                                // disabled={
+                                //     !apptData.date ||
+                                //     (timeSlots.length > 0 && !apptData.time) ||
+                                //     !apptData.service.length
+                                // }
                             >
                                 Save Changes
                             </button>
@@ -1431,10 +1816,8 @@ export default function PatientDetails() {
                                     value={patient.gender}
                                     onChange={handleChange}
                                 >
-                                    <option value="">Select</option>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
-                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                         </div>

@@ -13,6 +13,7 @@ const AppointmentSchema = new Schema({
     visits: [
         {
             date: { type: Date, default: Date.now },
+             time: { type: String }, 
             service: [
                 {
                     id: { type: Schema.Types.ObjectId, ref: "Service" },

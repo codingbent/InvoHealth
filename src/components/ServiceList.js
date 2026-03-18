@@ -1,4 +1,4 @@
-import { IndianRupee } from "lucide-react";
+import { IndianRupee, X } from "lucide-react";
 
 export default function ServiceList({
     services = [],
@@ -12,7 +12,6 @@ export default function ServiceList({
     };
     return (
         <>
-            {/* Available services to ADD */}
             <div className="mb-2 d-flex flex-wrap gap-2">
                 {services
                     .filter((s) => !selectedIds.has(s._id))
@@ -20,31 +19,42 @@ export default function ServiceList({
                         <button
                             key={service._id}
                             type="button"
-                            className="btn btn-outline-primary btn-sm"
+                            className="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center gap-1"
                             onClick={() => onAdd(service)}
                         >
-                            {service.name} <IndianRupee size={18} />
-                            {formatCurrency(service.amount) ?? 0}
+                            <span className="text-theme-secondary">
+                                {service.name}
+                            </span>
+                            <span className="d-flex align-items-center gap-1 text-theme-secondary small">
+                                <IndianRupee size={14} />
+                                {formatCurrency(service.amount ?? 0)}
+                            </span>
                         </button>
                     ))}
             </div>
 
-            {/* Selected services as TAGS */}
             {selectedServices.length > 0 && (
-                <div className="d-flex flex-wrap gap-2">
+                <div className="d-flex flex-wrap gap-2 mt-2">
                     {selectedServices.map((service) => (
-                        <span
+                        <div
                             key={service._id}
-                            className="badge bg-primary d-flex align-items-center gap-2"
-                            style={{ padding: "8px 10px" }}
+                            className="service-pill selected d-flex align-items-center gap-2"
                         >
-                            {service.name}
+                            <span>{service.name}</span>
+
+                            <span className="d-flex align-items-center gap-1 small opacity-75">
+                                <IndianRupee size={13} />
+                                {formatCurrency(service.amount ?? 0)}
+                            </span>
+
                             <button
                                 type="button"
-                                className="btn-close btn-close-white btn-sm"
+                                className="remove-btn d-flex align-items-center justify-content-center"
                                 onClick={() => onRemove(service._id)}
-                            />
-                        </span>
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}

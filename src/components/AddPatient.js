@@ -4,8 +4,22 @@ import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
 import { IndianRupee } from "lucide-react";
+import SlotPicker from "./Slotpicker";
+import {
+    generateSlots,
+    // getNextAvailableSlot,
+} from "../components/utils/Slotsutils";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/themes/dark.css";
 
-const AddPatient = ({ showAlert }) => {
+const AddPatient = ({ showAlert, showModal, setShowModal }) => {
+    const API_BASE_URL = useMemo(
+        () =>
+            process.env.NODE_ENV === "production"
+                ? "https://gmsc-backend.onrender.com"
+                : "http://localhost:5001",
+        [],
+    );
     const [patient, setPatient] = useState({
         name: "",
         service: [],
@@ -16,33 +30,38 @@ const AddPatient = ({ showAlert }) => {
     });
 
     const navigate = useNavigate();
-
+    const formatTime = (time) => {
+        return time;
+    };
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
-    const [showModal, setShowModal] = useState(false);
-    const [appointmentDate, setAppointmentDate] = useState(
-        new Date().toISOString().slice(0, 10),
-    );
+    const getTodayIST = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset(); // in minutes
+        const istTime = new Date(now.getTime() - offset * 60000);
+        return istTime.toISOString().slice(0, 10);
+    };
+
+    const [appointmentDate, setAppointmentDate] = useState(getTodayIST());
     const [payment_type, setPaymentType] = useState("Cash");
     const [collectFull, setCollectFull] = useState(true);
     const { name, service, number, age, gender } = patient;
     const token = localStorage.getItem("token");
     const decoded = jwtDecode(token);
     const doctorId = decoded.user?.doctorId;
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        [],
-    );
+    //es
+    const [availability, setAvailability] = useState([]);
+    const [timeSlots, setTimeSlots] = useState([]);
+    const [selectedSlot, setSelectedSlot] = useState("");
+    const [openSection, setOpenSection] = useState("Morning");
+    const [bookedSlots, setBookedSlots] = useState([]);
+    // const isBooked = bookedSlots.includes(slot);
 
     const formatCurrency = (value) => {
         return new Intl.NumberFormat("en-IN").format(value);
     };
-    // FETCH SERVICES
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -60,6 +79,139 @@ const AddPatient = ({ showAlert }) => {
         fetchServices();
     }, [API_BASE_URL]);
 
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/timing/get_availability`,
+            );
+            const data = await res.json();
+
+            if (data.success) {
+                setAvailability(data.availability || []);
+            }
+        };
+
+        fetchAvailability();
+    }, [API_BASE_URL]);
+
+    useEffect(() => {
+        if (!availability.length) return;
+
+        const fetchSlots = async () => {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
+            );
+            const data = await res.json();
+
+            const booked = data.slots || [];
+            setBookedSlots(booked);
+
+            const selectedDay = new Date(appointmentDate)
+                .toLocaleDateString("en-US", { weekday: "short" })
+                .slice(0, 3);
+
+            const dayData = availability.find((d) =>
+                d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
+            );
+            if (!dayData) {
+                setTimeSlots([]);
+                return;
+            }
+
+            let allSlots = [];
+
+            dayData.slots.forEach((slot) => {
+                const generated = generateSlots(
+                    slot.startTime,
+                    slot.endTime,
+                    slot.slotDuration,
+                );
+                allSlots = [...allSlots, ...generated];
+            });
+
+            setTimeSlots(allSlots);
+        };
+
+        fetchSlots();
+    }, [appointmentDate, availability, API_BASE_URL]);
+
+    // ✅ FIRST: groupedSlots
+    const groupedSlots = useMemo(() => {
+        const groups = {
+            Morning: [],
+            Afternoon: [],
+            Evening: [],
+        };
+
+        timeSlots.forEach((slot) => {
+            const hour = parseInt(slot.split(":")[0]);
+
+            if (hour < 12) groups.Morning.push(slot);
+            else if (hour < 16) groups.Afternoon.push(slot);
+            else groups.Evening.push(slot);
+        });
+
+        return groups;
+    }, [timeSlots]);
+
+    // ✅ SECOND: allSlots
+    const allSlots = useMemo(() => {
+        let slots = [];
+
+        Object.values(groupedSlots).forEach((group) => {
+            slots = [...slots, ...group];
+        });
+
+        return slots.sort((a, b) => {
+            const [h1, m1] = a.split(":").map(Number);
+            const [h2, m2] = b.split(":").map(Number);
+            return h1 * 60 + m1 - (h2 * 60 + m2);
+        });
+    }, [groupedSlots]);
+
+    // ✅ CURRENT SLOT
+    const currentSlot = useMemo(() => {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        let current = null;
+
+        for (let slot of allSlots) {
+            const [h, m] = slot.split(":").map(Number);
+            const minutes = h * 60 + m;
+
+            if (minutes <= currentMinutes) {
+                current = slot;
+            } else {
+                break;
+            }
+        }
+
+        return current;
+    }, [allSlots]);
+
+    // ✅ NEXT SLOT (AFTER CURRENT)
+    const nextSlot = useMemo(() => {
+        if (!currentSlot) {
+            return allSlots.find((s) => !bookedSlots.includes(s)) || null;
+        }
+
+        const index = allSlots.indexOf(currentSlot);
+
+        for (let i = index + 1; i < allSlots.length; i++) {
+            if (!bookedSlots.includes(allSlots[i])) {
+                return allSlots[i];
+            }
+        }
+
+        return null;
+    }, [allSlots, currentSlot, bookedSlots]);
+
+    useEffect(() => {
+        if (!nextSlot) return;
+
+        setSelectedSlot(nextSlot);
+    }, [nextSlot]);
     // CALCULATE TOTAL
     const serviceTotal = useMemo(() => {
         return service.reduce(
@@ -87,16 +239,17 @@ const AddPatient = ({ showAlert }) => {
     const calculatedDiscount = useMemo(() => {
         if (!discount || discount <= 0) return 0;
 
-        if (isPercent) {
-            return (finalAmount * discount) / 100;
-        }
+        let value = isPercent ? (finalAmount * discount) / 100 : discount;
 
-        return discount;
+        return Math.round(value);
     }, [discount, isPercent, finalAmount]);
 
     useEffect(() => {
         if (collectFull) {
-            const autoCollected = Math.max(finalAmount - calculatedDiscount, 0);
+            const autoCollected = Math.max(
+                Math.round(finalAmount - calculatedDiscount),
+                0,
+            );
 
             setPatient((prev) => ({
                 ...prev,
@@ -105,8 +258,24 @@ const AddPatient = ({ showAlert }) => {
         }
     }, [calculatedDiscount, finalAmount, collectFull]);
 
-    // SUBMIT
+    const resetForm = () => {
+        setPatient({
+            name: "",
+            service: [],
+            number: "",
+            amount: 0,
+            age: "",
+            gender: "Male",
+        });
+        setServiceAmounts({});
+        setDiscount(0);
+        setIsPercent(false);
+        setCollectFull(true);
+        setAppointmentDate(new Date().toISOString().slice(0, 10));
+        setPaymentType("Cash");
+    };
 
+    // SUBMIT
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -116,24 +285,24 @@ const AddPatient = ({ showAlert }) => {
             return;
         }
         if (number.length !== 10) {
-            alert("Mobile number must be exactly 10 digits");
+            showAlert("Mobile number must be exactly 10 digits", "warning");
             return;
         }
 
         let finalNumber = number.trim();
         if (!isPercent && discount > serviceTotal) {
-            alert("Discount cannot exceed total amount");
+            showAlert("Discount cannot exceed total amount", "warning");
             return;
         }
         if (
             patient.amount > finalAmount ||
             patient.amount > finalAmount - calculatedDiscount
         ) {
-            alert("Collected amount cannot exceed final amount");
+            showAlert("Collected amount cannot exceed final amount", "warning");
             return;
         }
         if (isPercent && discount > 100) {
-            alert("Percentage cannot exceed 100%");
+            showAlert("Percentage cannot exceed 100%", "warning");
             return;
         }
         // extract doctorId once
@@ -195,6 +364,7 @@ const AddPatient = ({ showAlert }) => {
                         status: computedStatus,
                         remaining: computedRemaining,
                         date: appointmentDate,
+                        time: selectedSlot,
                         payment_type,
                         doctorId,
                         discount,
@@ -207,6 +377,7 @@ const AddPatient = ({ showAlert }) => {
 
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
+                resetForm();
                 setShowModal(false);
                 navigate("/");
             } else {
@@ -219,14 +390,14 @@ const AddPatient = ({ showAlert }) => {
     };
 
     return (
-        { showModal } && (
+        showModal && (
             <form onSubmit={handleSubmit}>
                 <div className="modal-content border-0 shadow-lg rounded-4">
                     {/* HEADER */}
                     <div className="modal-header border-0 pb-2">
                         <div>
                             <h5 className="modal-title fw-semibold mb-0">
-                                🧑‍⚕️ Add Patient
+                                Add Patient
                             </h5>
                             <small className="text-theme-secondary">
                                 Create patient & initial appointment
@@ -235,7 +406,7 @@ const AddPatient = ({ showAlert }) => {
                         <button
                             type="button"
                             className="btn-close"
-                            data-bs-dismiss="modal"
+                            onClick={() => setShowModal(false)}
                         />
                     </div>
 
@@ -360,7 +531,7 @@ const AddPatient = ({ showAlert }) => {
                         </div>
                         {/* BILLING */}
                         {service.length > 0 && (
-                            <div className="border rounded-4 p-3 mb-4">
+                            <div className="mb-4">
                                 {/* SERVICES TABLE */}
                                 <table className="table table-sm align-middle mb-3">
                                     <thead className="table-theme">
@@ -545,13 +716,19 @@ const AddPatient = ({ showAlert }) => {
                                 <label className="form-label small">
                                     Appointment Date
                                 </label>
-                                <input
-                                    type="date"
-                                    className="form-control text-theme-secondary rounded-3"
+
+                                <Flatpickr
                                     value={appointmentDate}
-                                    onChange={(e) =>
-                                        setAppointmentDate(e.target.value)
-                                    }
+                                    options={{
+                                        dateFormat: "Y-m-d",
+                                    }}
+                                    onChange={([date]) => {
+                                        setAppointmentDate(
+                                            date.toLocaleDateString("en-CA"),
+                                        );
+                                    }}
+                                    className="form-control rounded-3"
+                                    placeholder="Select date"
                                 />
                             </div>
 
@@ -575,6 +752,17 @@ const AddPatient = ({ showAlert }) => {
                                 </select>
                             </div>
                         </div>
+                        <SlotPicker
+                            groupedSlots={groupedSlots}
+                            selectedSlot={selectedSlot}
+                            setSelectedSlot={setSelectedSlot}
+                            bookedSlots={bookedSlots}
+                            openSection={openSection}
+                            setOpenSection={setOpenSection}
+                            formatTime={formatTime}
+                            currentSlot={currentSlot}
+                            nextSlot={nextSlot}
+                        />
                     </div>
 
                     {/* FOOTER */}
@@ -582,7 +770,7 @@ const AddPatient = ({ showAlert }) => {
                         <button
                             type="button"
                             className="btn btn-outline-secondary rounded-3"
-                            data-bs-dismiss="modal"
+                            onClick={() => setShowModal(false)}
                         >
                             Cancel
                         </button>

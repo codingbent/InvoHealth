@@ -7,10 +7,6 @@ const PlanSchema = new Schema(
             type: Number,
             required: true,
         },
-        yearly: {
-            type: Number,
-            required: true,
-        },
 
         staffLimit: {
             type: Number,
@@ -36,10 +32,13 @@ const PlanSchema = new Schema(
 );
 
 const PricingSchema = new Schema({
+    discount: {
+        type: Number,
+        default: 17,
+    },
+
     starter: PlanSchema,
-
     pro: PlanSchema,
-
     enterprise: PlanSchema,
 
     updatedAt: {

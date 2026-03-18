@@ -5,9 +5,18 @@ const Pricing = require("../../../models/Pricing");
 
 router.post("/pricing/update", fetchadmin, async (req, res) => {
     try {
-        const { starter, pro, enterprise } = req.body;
+        const { starter, pro, enterprise, discount } = req.body;
 
-        // Validate payload
+        const validatePlan = (plan) => {
+            return (
+                typeof plan.monthly === "number" &&
+                plan.monthly > 0 &&
+                typeof plan.staffLimit === "number" &&
+                typeof plan.excelLimit === "number" &&
+                typeof plan.invoiceLimit === "number"
+            );
+        };
+
         if (!starter || !pro || !enterprise) {
             return res.status(400).json({
                 success: false,
@@ -15,46 +24,34 @@ router.post("/pricing/update", fetchadmin, async (req, res) => {
             });
         }
 
+        if (
+            !validatePlan(starter) ||
+            !validatePlan(pro) ||
+            !validatePlan(enterprise)
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid plan values",
+            });
+        }
+
+        const safeDiscount =
+            typeof discount === "number" && discount >= 0 && discount <= 100
+                ? discount
+                : 17;
+
         const pricingData = {
-            starter: {
-                monthly: starter.monthly,
-                yearly: starter.yearly,
-                staffLimit: starter.staffLimit,
-                excelLimit: starter.excelLimit,
-                invoiceLimit: starter.invoiceLimit,
-                analytics: starter.analytics,
-            },
-            pro: {
-                monthly: pro.monthly,
-                yearly: pro.yearly,
-                staffLimit: pro.staffLimit,
-                excelLimit: pro.excelLimit,
-                invoiceLimit: pro.invoiceLimit,
-                analytics: pro.analytics,
-            },
-            enterprise: {
-                monthly: enterprise.monthly,
-                yearly: enterprise.yearly,
-                staffLimit: enterprise.staffLimit,
-                excelLimit: enterprise.excelLimit,
-                invoiceLimit: enterprise.invoiceLimit,
-                analytics: enterprise.analytics,
-            },
+            discount: safeDiscount,
+            starter,
+            pro,
+            enterprise,
             updatedAt: new Date(),
         };
 
-        let pricing = await Pricing.findOne();
-
-        if (!pricing) {
-            pricing = new Pricing(pricingData);
-        } else {
-            pricing.starter = pricingData.starter;
-            pricing.pro = pricingData.pro;
-            pricing.enterprise = pricingData.enterprise;
-            pricing.updatedAt = pricingData.updatedAt;
-        }
-
-        await pricing.save();
+        const pricing = await Pricing.findOneAndUpdate({}, pricingData, {
+            new: true,
+            upsert: true,
+        });
 
         res.json({
             success: true,

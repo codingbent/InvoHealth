@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { authFetch } from "./authfetch";
 import { Link } from "react-router-dom";
 import { IndianRupee } from "lucide-react";
@@ -75,7 +75,7 @@ export default function Pricing() {
         if (!prices || !prices[plan]) return 0;
 
         const monthly = prices[plan].monthly;
-        const yearly = prices[plan].yearly;
+        const yearly = Math.round(monthly * 12 * (1 - prices.discount / 100));
 
         return monthly * 12 - yearly;
     };
@@ -149,11 +149,25 @@ export default function Pricing() {
     const renderLimits = (planKey) => {
         const p = prices[planKey];
 
+        const excelLimit =
+            p.excelLimit === -1
+                ? "Unlimited"
+                : billing === "monthly"
+                  ? p.excelLimit
+                  : p.excelLimit * 12;
+
+        const invoiceLimit =
+            p.invoiceLimit === -1
+                ? "Unlimited"
+                : billing === "monthly"
+                  ? p.invoiceLimit
+                  : p.invoiceLimit * 12;
+
         return (
             <>
                 <li className="feature-check">✔ Unlimited Patients</li>
                 {p.staffLimit === -1 ? (
-                    <li className="feature-check"> ✔ Unlimited Staff</li>
+                    <li className="feature-check">✔ Unlimited Staff</li>
                 ) : (
                     <li className="feature-limit">
                         ⚠ {p.staffLimit} Staff Accounts
@@ -168,26 +182,35 @@ export default function Pricing() {
                 </li>
                 <li className={p.analytics ? "feature-check" : "feature-cross"}>
                     {p.analytics ? "✔ Revenue Insights" : "✖ Revenue Insights"}
-                </li>{" "}
+                </li>
+
                 <li className={p.analytics ? "feature-check" : "feature-cross"}>
                     {p.analytics
                         ? "✔ Payment Analytics"
                         : "✖ Payment Analytics"}
                 </li>
+
                 {p.excelLimit === -1 ? (
-                    <li className="feature-check">Unlimited Excel Downloads</li>
+                    <li className="feature-check">
+                        {" "}
+                        ✔ Unlimited Excel Downloads
+                    </li>
                 ) : (
                     <li className="feature-limit">
-                        ⚠ {p.excelLimit} Excel Downloads
+                        ⚠ {excelLimit} Excel Downloads{" "}
+                        {billing === "monthly" ? "/ month" : "/ year"}
                     </li>
                 )}
+
                 {p.invoiceLimit === -1 ? (
                     <li className="feature-check">
-                        Unlimited Invoice Downloads
+                        {" "}
+                        ✔ Unlimited Excel Downloads
                     </li>
                 ) : (
                     <li className="feature-limit">
-                        ⚠ {p.invoiceLimit} Invoice Downloads
+                        ⚠ {invoiceLimit} Invoice Downloads{" "}
+                        {billing === "monthly" ? "/ month" : "/ year"}
                     </li>
                 )}
             </>
@@ -262,7 +285,13 @@ export default function Pricing() {
 
                                 <h2 className="fw-bold mt-2">
                                     <IndianRupee size={28} />
-                                    {prices[p][billing]}
+                                    {billing === "monthly"
+                                        ? prices[p].monthly
+                                        : Math.round(
+                                              prices[p].monthly *
+                                                  12 *
+                                                  (1 - prices.discount / 100),
+                                          )}
                                 </h2>
 
                                 {billing === "yearly" && (

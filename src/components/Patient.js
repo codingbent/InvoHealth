@@ -28,6 +28,7 @@ const Patient = ({ showAlert }) => {
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [fabOpen, setFabOpen] = useState(false);
+    const [showModal, setShowModal] = useState(false);
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -230,7 +231,7 @@ const Patient = ({ showAlert }) => {
                         setFabOpen(!fabOpen);
                     }}
                 >
-                    {fabOpen ? <Plus size={24} /> : <Plus size={24} />}
+                    {fabOpen ? <Plus size={37} /> : <Plus size={37} />}
                 </button>
 
                 {role && (
@@ -246,6 +247,7 @@ const Patient = ({ showAlert }) => {
                                 return;
                             }
                             setFabOpen(false);
+                            setShowModal(true);
                         }}
                         data-bs-toggle="modal"
                         data-bs-target="#patientModal"
@@ -258,7 +260,7 @@ const Patient = ({ showAlert }) => {
                 {role && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 3 }}
+                        style={{ "--i": 2 }}
                         onClick={(e) => {
                             setFabOpen(false);
 
@@ -281,7 +283,7 @@ const Patient = ({ showAlert }) => {
                 {role === "doctor" && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 2 }}
+                        style={{ "--i": 3 }}
                         data-bs-toggle="modal"
                         data-bs-target="#serviceModal"
                         onClick={(e) => {
@@ -315,7 +317,11 @@ const Patient = ({ showAlert }) => {
             <div className="modal fade" id="patientModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     {subscriptionStatus === "active" && (
-                        <AddPatient showAlert={showAlert} />
+                        <AddPatient
+                            showAlert={showAlert}
+                            showModal={showModal}
+                            setShowModal={setShowModal}
+                        />
                     )}
                 </div>
             </div>

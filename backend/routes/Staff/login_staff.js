@@ -9,10 +9,7 @@ router.post("/login_staff", async (req, res) => {
     try {
         const { phone, password } = req.body;
 
-        const staff = await Staff.findOne({
-            phone,
-            isActive: true,
-        });
+        const staff = await Staff.findOne({ phone });
 
         if (!staff) {
             return res.status(404).json({
@@ -21,7 +18,14 @@ router.post("/login_staff", async (req, res) => {
             });
         }
 
-        // 🔹 FIRST LOGIN (NO PASSWORD YET)
+        if (!staff.isActive) {
+            return res.status(403).json({
+                success: false,
+                error: "You no longer have access to this clinic. Contact your doctor.",
+            });
+        }
+
+        // FIRST LOGIN
         if (!staff.password) {
             return res.json({
                 success: true,
@@ -30,7 +34,7 @@ router.post("/login_staff", async (req, res) => {
             });
         }
 
-        // 🔹 NORMAL LOGIN
+        // NORMAL LOGIN
         const match = await bcrypt.compare(password, staff.password);
         if (!match) {
             return res.status(400).json({

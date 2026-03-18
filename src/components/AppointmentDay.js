@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { IndianRupee } from "lucide-react";
+import { IndianRupee, Eye } from "lucide-react";
 
 const AppointmentDay = memo(function AppointmentDay({
     day,
@@ -14,9 +14,13 @@ const AppointmentDay = memo(function AppointmentDay({
     const formatCurrency = (value) => {
         return new Intl.NumberFormat("en-IN").format(value);
     };
+    const getTime = (a) => {
+        if (!a.time) return "";
+
+        return a.time;
+    };
     return (
         <div className="mb-4">
-            {/* DAY HEADER */}
             <div className="d-flex justify-content-between align-items-center day-header rounded-3 px-3 py-2 mb-2">
                 <h6 className="mb-0 fw-semibold">
                     {new Date(day).toLocaleDateString("en-IN", {
@@ -33,21 +37,22 @@ const AppointmentDay = memo(function AppointmentDay({
                 )}
             </div>
 
-            {/* DESKTOP TABLE */}
             <div className="d-none d-lg-block">
                 <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
                     <table className="table table-hover align-middle mb-0 table-theme">
                         <colgroup>
                             <col style={{ width: "25%" }} />
-                            <col style={{ width: "25%" }} />
-                            <col style={{ width: "20%" }} />
-                            <col style={{ width: "20%" }} />
-                            <col style={{ width: "10%" }} />
+                            <col style={{ width: "15%" }} />
+                            <col style={{ width: "15%" }} />
+                            <col style={{ width: "15%" }} />
+                            <col style={{ width: "15%" }} />
+                            <col style={{ width: "15%" }} />
                         </colgroup>
 
                         <thead>
                             <tr>
                                 <th>Patient</th>
+                                <th>Time</th>
                                 <th>Payment</th>
                                 <th className="text-end">Amount</th>
                                 <th className="text-end">Status</th>
@@ -61,6 +66,8 @@ const AppointmentDay = memo(function AppointmentDay({
                                     <td className="fw-semibold text-theme-primary">
                                         {a.name}
                                     </td>
+
+                                    <td>{getTime(a)}</td>
 
                                     <td>
                                         <span
@@ -97,14 +104,18 @@ const AppointmentDay = memo(function AppointmentDay({
                                                             <IndianRupee
                                                                 size={12}
                                                             />{" "}
-                                                            {formatCurrency(collected)}
+                                                            {formatCurrency(
+                                                                collected,
+                                                            )}
                                                         </div>
                                                         <small className="text-theme-primary d-block">
                                                             of{" "}
                                                             <IndianRupee
                                                                 size={12}
                                                             />{" "}
-                                                            {formatCurrency(total)}
+                                                            {formatCurrency(
+                                                                total,
+                                                            )}
                                                         </small>
                                                     </div>
                                                 </>
@@ -133,7 +144,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                                 )
                                             }
                                         >
-                                            View
+                                            <Eye size={18} />
                                         </button>
                                     </td>
                                 </tr>
@@ -143,7 +154,6 @@ const AppointmentDay = memo(function AppointmentDay({
                 </div>
             </div>
 
-            {/* MOBILE CARDS */}
             <div className="d-lg-none">
                 {dayApps.map((a, i) => (
                     <div
@@ -159,6 +169,9 @@ const AppointmentDay = memo(function AppointmentDay({
                                         {a.name}
                                     </h6>
 
+                                    <small className="text-theme-muted d-block">
+                                        {getTime(a)}
+                                    </small>
                                     <span
                                         className={`payment-tag ${
                                             paymentColor[a.payment_type] ||

@@ -16,12 +16,10 @@ router.delete(
                     .status(404)
                     .json({ message: "Appointment not found" });
 
-            // Remove visit
             appointment.visits = appointment.visits.filter(
                 (v) => v._id.toString() !== visitId,
             );
 
-            // 🛑 NEW FIX: Also remove broken/empty visits
             appointment.visits = appointment.visits.filter((v) => {
                 const isEmptyVisit =
                     (!v.service || v.service.length === 0) &&

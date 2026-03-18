@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Pricing from "./Pricing";
 
@@ -11,6 +11,8 @@ export default function SubscriptionPage(props) {
     const [data, setData] = useState(null);
     const [payments, setPayments] = useState([]);
     const [pricing, setPricing] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -53,13 +55,17 @@ export default function SubscriptionPage(props) {
         loadData();
     }, [API_BASE_URL]);
 
+    const sortedPayments = useMemo(() => {
+        return [...payments].sort(
+            (a, b) => new Date(b.paidAt) - new Date(a.paidAt),
+        );
+    }, [payments]);
+
     if (!data || !pricing) {
         return <div className="text-center mt-5">Loading...</div>;
     }
 
     const { subscription, usage } = data;
-    const lastPayment = payments.length > 0 ? payments[0] : null;
-    const lastPlan = lastPayment?.plan || subscription.plan;
 
     const isExpired = subscription.status === "expired";
 
@@ -68,10 +74,31 @@ export default function SubscriptionPage(props) {
         : usage;
 
     const planKey = subscription.plan.toLowerCase();
-    const planLimits = pricing[planKey] || {};
 
-    const excelLimit = planLimits.excelLimit ?? -1;
-    const invoiceLimit = planLimits.invoiceLimit ?? -1;
+    const planLimits =
+        planKey === "free"
+            ? { excelLimit: 2, invoiceLimit: 2 }
+            : (pricing?.[planKey] ?? {
+                  excelLimit: 0,
+                  invoiceLimit: 0,
+              });
+
+    const baseExcelLimit = planLimits.excelLimit ?? -1;
+    const baseInvoiceLimit = planLimits.invoiceLimit ?? -1;
+    const billingCycle = subscription.billingCycle || "monthly";
+    const excelLimit =
+        baseExcelLimit === -1
+            ? -1
+            : billingCycle === "yearly"
+              ? baseExcelLimit * 12
+              : baseExcelLimit;
+
+    const invoiceLimit =
+        baseInvoiceLimit === -1
+            ? -1
+            : billingCycle === "yearly"
+              ? baseInvoiceLimit * 12
+              : baseInvoiceLimit;
 
     const startDate = subscription.startDate
         ? new Date(subscription.startDate).toLocaleDateString("en-IN")
@@ -80,37 +107,56 @@ export default function SubscriptionPage(props) {
     const expiryDate = subscription.expiryDate
         ? new Date(subscription.expiryDate).toLocaleDateString("en-IN")
         : "No Expiry";
+    const excelPercent =
+        isExpired || excelLimit <= 0
+            ? 0
+            : excelLimit === -1
+              ? safeUsage.excelExports > 0
+                  ? 10
+                  : 0
+              : Math.min(100, (safeUsage.excelExports / excelLimit) * 100);
 
-    const excelPercent = isExpired
-        ? 0
-        : excelLimit === -1
-          ? safeUsage.excelExports > 0
-              ? 10
-              : 0
-          : Math.min(100, (safeUsage.excelExports / excelLimit) * 100);
+    const invoicePercent =
+        isExpired || invoiceLimit === 0
+            ? 0
+            : invoiceLimit === -1
+              ? safeUsage.invoiceDownloads > 0
+                  ? 10
+                  : 0
+              : Math.min(
+                    100,
+                    (safeUsage.invoiceDownloads / invoiceLimit) * 100,
+                );
 
-    const invoicePercent = isExpired
-        ? 0
-        : invoiceLimit === -1
-          ? safeUsage.invoiceDownloads > 0
-              ? 10
-              : 0
-          : Math.min(100, (safeUsage.invoiceDownloads / invoiceLimit) * 100);
+    // const copyToClipboard = (text) => {
+    //     if (navigator.clipboard) {
+    //         navigator.clipboard.writeText(text);
+    //     } else {
+    //         const textarea = document.createElement("textarea");
+    //         textarea.value = text;
+    //         document.body.appendChild(textarea);
+    //         textarea.select();
+    //         document.execCommand("copy");
+    //         document.body.removeChild(textarea);
+    //     }
 
-    const copyToClipboard = (text) => {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text);
-        } else {
-            const textarea = document.createElement("textarea");
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textarea);
-        }
+    //     props.showAlert("Payment ID copied!", "success");
+    // };
+    // ✅ ALWAYS at top (before return)
 
-        props.showAlert("Payment ID copied!", "success");
-    };
+    const lastPayment = sortedPayments[0] || null;
+    const lastPlan = lastPayment?.plan || subscription.plan;
+
+    const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
+
+    const paginatedPayments = sortedPayments.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage,
+    );
+
+    if (!data || !pricing) {
+        return <div className="text-center mt-5">Loading...</div>;
+    }
 
     return (
         <div className="container py-4">
@@ -173,9 +219,7 @@ export default function SubscriptionPage(props) {
                         <div className="col-md-6">
                             <p className="mb-2">
                                 <strong>Billing Cycle:</strong>{" "}
-                                {(
-                                    subscription.billingCycle || ""
-                                ).toUpperCase()}
+                                {(billingCycle || "").toUpperCase()}
                             </p>
 
                             <p className="mb-2">
@@ -253,7 +297,7 @@ export default function SubscriptionPage(props) {
                                     <th>Plan</th>
                                     <th>Billing</th>
                                     <th>Amount</th>
-                                    <th>Payment ID</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
 
@@ -268,7 +312,7 @@ export default function SubscriptionPage(props) {
                                         </td>
                                     </tr>
                                 ) : (
-                                    payments.map((p) => (
+                                    paginatedPayments.map((p) => (
                                         <tr key={p._id}>
                                             <td>
                                                 {new Date(
@@ -294,17 +338,31 @@ export default function SubscriptionPage(props) {
                                                 ₹{p.amountPaid}
                                             </td>
 
-                                            <td style={{ fontSize: "13px" }}>
-                                                <span
-                                                    className="copy-text"
-                                                    onClick={() =>
-                                                        copyToClipboard(
-                                                            p.paymentId,
-                                                        )
-                                                    }
-                                                >
-                                                    {p.paymentId || "-"}
-                                                </span>
+                                            <td>
+                                                {(() => {
+                                                    const status = (
+                                                        p.status || "success"
+                                                    ).toLowerCase();
+
+                                                    const badgeClass =
+                                                        status === "success"
+                                                            ? "bg-success"
+                                                            : status ===
+                                                                "failed"
+                                                              ? "bg-danger"
+                                                              : status ===
+                                                                  "pending"
+                                                                ? "bg-warning text-dark"
+                                                                : "bg-secondary";
+
+                                                    return (
+                                                        <span
+                                                            className={`badge ${badgeClass} text-uppercase`}
+                                                        >
+                                                            {status}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                         </tr>
                                     ))
@@ -320,7 +378,7 @@ export default function SubscriptionPage(props) {
                                 No payments yet
                             </div>
                         ) : (
-                            payments.map((p) => (
+                            paginatedPayments.map((p) => (
                                 <div
                                     key={p._id}
                                     className="card mb-3 p-3 border-0 shadow-sm"
@@ -347,18 +405,29 @@ export default function SubscriptionPage(props) {
                                         ₹{p.amountPaid}
                                     </div>
 
-                                    <div className="small text-theme-secondary mt-2">
-                                        <span
-                                            style={{
-                                                cursor: "pointer",
-                                                textDecoration: "underline",
-                                            }}
-                                            onClick={() =>
-                                                copyToClipboard(p.paymentId)
-                                            }
-                                        >
-                                            {p.paymentId}
-                                        </span>
+                                    <div className="mt-2">
+                                        {(() => {
+                                            const status = (
+                                                p.status || "success"
+                                            ).toLowerCase();
+
+                                            const badgeClass =
+                                                status === "success"
+                                                    ? "bg-success"
+                                                    : status === "failed"
+                                                      ? "bg-danger"
+                                                      : status === "pending"
+                                                        ? "bg-warning text-dark"
+                                                        : "bg-secondary";
+
+                                            return (
+                                                <span
+                                                    className={`badge ${badgeClass}`}
+                                                >
+                                                    {status}
+                                                </span>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             ))
@@ -366,7 +435,60 @@ export default function SubscriptionPage(props) {
                     </div>
                 </div>
             </div>
+            {totalPages > 1 && (
+                <div className="pagination-container">
+                    <button
+                        className="page-btn nav-btn"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                    >
+                        ←
+                    </button>
 
+                    {[...Array(totalPages)].map((_, i) => {
+                        const page = i + 1;
+
+                        if (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(currentPage - page) <= 1
+                        ) {
+                            return (
+                                <button
+                                    key={i}
+                                    className={`page-btn ${
+                                        currentPage === page ? "active" : ""
+                                    }`}
+                                    onClick={() => setCurrentPage(page)}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        }
+
+                        if (
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
+                        ) {
+                            return (
+                                <span key={i} className="dots">
+                                    ...
+                                </span>
+                            );
+                        }
+
+                        return null;
+                    })}
+
+                    <button
+                        className="page-btn nav-btn"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                    >
+                        →
+                    </button>
+                </div>
+            )}
             <div id="pricing">
                 <Pricing />
             </div>

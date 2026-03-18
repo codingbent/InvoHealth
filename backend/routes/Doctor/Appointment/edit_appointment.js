@@ -11,6 +11,7 @@ router.put(
             const { appointmentId, visitId } = req.params;
             const {
                 date,
+                time,
                 service,
                 payment_type,
                 discount,
@@ -26,6 +27,13 @@ router.put(
                 });
             }
 
+            // ✅ TIME VALIDATION
+            if (time && !/^\d{2}:\d{2}$/.test(time)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid time format",
+                });
+            }
             // 2️⃣ Find appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
@@ -34,7 +42,6 @@ router.put(
                     message: "Appointment not found",
                 });
             }
-
             // 3️⃣ Find visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
@@ -44,8 +51,37 @@ router.put(
                 });
             }
 
-            // 4️⃣ Update date
-            visit.date = new Date(date);
+            let conflict = null;
+
+            if (time) {
+                const selectedDateStr = new Date(date).toDateString();
+
+                conflict = appointment.visits.find(
+                    (v) =>
+                        v._id.toString() !== visitId &&
+                        v.time &&
+                        v.time === time &&
+                        new Date(v.date).toDateString() === selectedDateStr,
+                );
+            }
+
+            if (conflict) {
+                return res.status(400).json({
+                    success: false,
+                    message: "This time slot is already booked",
+                });
+            }
+
+            if (time) {
+                const [hours, minutes] = time.split(":").map(Number);
+                const fullDate = new Date(date);
+                fullDate.setHours(hours, minutes, 0, 0);
+
+                visit.date = fullDate;
+                visit.time = time;
+            } else {
+                visit.date = new Date(date);
+            }
 
             // 5️⃣ Normalize services
             visit.service = service.map((s) => ({

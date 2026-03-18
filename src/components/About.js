@@ -160,10 +160,10 @@ export default function About() {
                             Feedback & support:{" "}
                             <strong className="text-theme-primary">
                                 <a
-                                    href="mailto:agarwalabhed@gmail.com"
+                                    href="mailto:invohealth.app@gmail.com"
                                     className="text-theme-primary fw-semibold"
                                 >
-                                    agarwalabhed@gmail.com
+                                    invohealth.app@gmail.com
                                 </a>
                             </strong>
                         </p>

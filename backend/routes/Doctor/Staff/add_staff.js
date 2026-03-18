@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Staff = require("../../../models/Staff");
+const Doctor = require("../../../models/Doc");
+const Pricing = require("../../../models/Pricing");
 var fetchuser = require("../../../middleware/fetchuser");
 
 router.post("/add_staff", fetchuser, async (req, res) => {
@@ -32,29 +34,89 @@ router.post("/add_staff", fetchuser, async (req, res) => {
             });
         }
 
-        const existingStaff = await Staff.findOne({ phone, doctorId });
+        // ================= 🔥 GET DOCTOR =================
+        const doctor = await Doctor.findById(doctorId);
 
-        if (existingStaff) {
-            if (!existingStaff.isActive) {
-                existingStaff.isActive = true;
-                existingStaff.name = name;
-                existingStaff.role = role;
-                await existingStaff.save();
-
-                return res.json({
-                    success: true,
-                    message: "Staff reactivated",
-                });
-            }
-
-            return res.status(400).json({
+        if (!doctor) {
+            return res.status(404).json({
                 success: false,
-                error: "Staff already exists",
+                error: "Doctor not found",
             });
         }
 
+        const plan = doctor.subscription?.plan?.toLowerCase() || "free";
+
+        // ================= 🔥 GET STAFF LIMIT =================
+        let staffLimit = 1; // default FREE plan
+
+        if (plan !== "free") {
+            const pricing = await Pricing.findOne();
+
+            if (!pricing || !pricing[plan]) {
+                return res.status(500).json({
+                    success: false,
+                    error: "Pricing not configured",
+                });
+            }
+
+            staffLimit = pricing[plan].staffLimit;
+        }
+
+        // ================= 🔥 COUNT STAFF =================
+        const currentStaffCount = await Staff.countDocuments({
+            doctorId,
+            isActive: true,
+        });
+
+        // ================= 🚫 LIMIT CHECK =================
+        if (staffLimit !== -1 && currentStaffCount >= staffLimit) {
+            return res.status(403).json({
+                success: false,
+                error: `Staff limit reached (${staffLimit}). Upgrade your plan.`,
+            });
+        }
+
+        // ================= EXISTING STAFF =================
+        const existingStaff = await Staff.findOne({ phone });
+
+        if (existingStaff) {
+            // SAME DOCTOR
+            if (existingStaff.doctorId.toString() === doctorId.toString()) {
+                if (!existingStaff.isActive) {
+                    existingStaff.isActive = true;
+                    existingStaff.name = name;
+                    existingStaff.role = role;
+                    await existingStaff.save();
+
+                    return res.json({
+                        success: true,
+                        message: "Staff reactivated",
+                    });
+                }
+
+                return res.status(400).json({
+                    success: false,
+                    error: "Staff already exists",
+                });
+            }
+
+            existingStaff.doctorId = doctorId;
+            existingStaff.name = name;
+            existingStaff.role = role;
+            existingStaff.isActive = true;
+
+            await existingStaff.save();
+
+            return res.json({
+                success: true,
+                message: "Staff transferred",
+                staff: existingStaff,
+            });
+        }
+
+        // ================= CREATE STAFF =================
         const staff = await Staff.create({
-            doctorId: doctorId,
+            doctorId,
             name,
             phone,
             role,
@@ -68,7 +130,7 @@ router.post("/add_staff", fetchuser, async (req, res) => {
         console.error(err);
         res.status(500).json({
             success: false,
-            error: err,
+            error: "Server error",
         });
     }
 });

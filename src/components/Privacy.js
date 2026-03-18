@@ -96,7 +96,7 @@ export default function Privacy() {
                     <h5 className="mt-4">9. Contact</h5>
                     <p className="text-theme-secondary">
                         For privacy-related inquiries, please contact:
-                        agarwalabhed@gmail.com
+                        invohealth.app@gmail.com
                     </p>
                 </div>
             </div>
