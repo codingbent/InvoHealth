@@ -1486,7 +1486,9 @@ export default function PatientDetails(props) {
                                     <table className="table table-sm align-middle mb-3 clean-table">
                                         <thead>
                                             <tr>
-                                                <th className="text-white">Service</th>
+                                                <th className="text-white">
+                                                    Service
+                                                </th>
                                                 <th className="text-end text-white">
                                                     Amount
                                                 </th>
@@ -1495,7 +1497,10 @@ export default function PatientDetails(props) {
 
                                         <tbody>
                                             {apptData.service.map((s) => (
-                                                <tr className="clean-row" key={s._id}>
+                                                <tr
+                                                    className="clean-row"
+                                                    key={s._id}
+                                                >
                                                     <td className="service-name">
                                                         {s.name}
                                                     </td>
@@ -1563,9 +1568,14 @@ export default function PatientDetails(props) {
                                             }
                                         />
                                         <label className="form-check-label small">
-                                            {isPercent
-                                                ? "Percentage (%)"
-                                                : "Flat Amount <IndianRupee size={18}/>"}
+                                            {isPercent ? (
+                                                "Percentage (%)"
+                                            ) : (
+                                                <>
+                                                    Flat Amount{" "}
+                                                    <IndianRupee size={18} />
+                                                </>
+                                            )}
                                         </label>
                                     </div>
                                 </div>
@@ -1642,7 +1652,7 @@ export default function PatientDetails(props) {
                                         Remaining
                                     </small>
                                     <div className="fw-bold text-warning">
-                                        <IndianRupee size={18}/>{" "}
+                                        <IndianRupee size={18} />{" "}
                                         {formatCurrency(
                                             finalAmount - collected,
                                         )}
@@ -1684,7 +1694,8 @@ export default function PatientDetails(props) {
                             <div className="final-amount-box mb-4">
                                 <span>Final Amount</span>
                                 <span className="text-primary fw-bold">
-                                    <IndianRupee size={18}/> {formatCurrency(finalAmount)}
+                                    <IndianRupee size={18} />{" "}
+                                    {formatCurrency(finalAmount)}
                                 </span>
                             </div>
 
