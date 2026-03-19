@@ -160,7 +160,8 @@ export default function Navbar(props) {
     }
 
     return (
-        <nav className="navbar navbar-expand-lg shadow-sm app-navbar">
+        <nav className="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
+            {" "}
             <div className="container-fluid">
                 {/* Brand */}
                 <Link className="navbar-brand fw-bold" to="/">
