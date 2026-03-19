@@ -9,7 +9,54 @@ import {
     Lock,
     RefreshCcw,
     TimerIcon,
+    Eye,
+    EyeOff,
 } from "lucide-react";
+const PasswordInput = ({
+    label,
+    placeholder,
+    value,
+    onChange,
+    typeKey,
+    showPasswords,
+    setShowPasswords,
+}) => {
+    const isVisible = showPasswords[typeKey];
+
+    return (
+        <div>
+            <label className="form-label small text-theme-secondary">
+                {label}
+            </label>
+
+            <div className="password-wrapper">
+                <input
+                    type={isVisible ? "text" : "password"}
+                    className="form-control rounded-3 pe-5"
+                    placeholder={placeholder}
+                    value={value}
+                    onChange={onChange}
+                />
+
+                <button
+                    type="button"
+                    tabIndex={-1}
+                    className="eye-btn"
+                    onClick={() =>
+                        setShowPasswords((prev) => ({
+                            ...prev,
+                            [typeKey]: !prev[typeKey],
+                        }))
+                    }
+                >
+                    <span className={`eye-icon ${isVisible ? "show" : ""}`}>
+                        {isVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </span>
+                </button>
+            </div>
+        </div>
+    );
+};
 
 export default function DoctorProfile(props) {
     const [doctor, setDoctor] = useState(null);
@@ -42,7 +89,11 @@ export default function DoctorProfile(props) {
         role: "",
     });
     const [editData, setEditData] = useState({});
-
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false,
+    });
     // ================= FETCH DOCTOR =================
     const API_BASE_URL = useMemo(
         () =>
@@ -52,6 +103,8 @@ export default function DoctorProfile(props) {
         [],
     );
 
+    const passwordsMatch =
+        passwordData.newPassword === passwordData.confirmPassword;
     const fetchDoctor = useCallback(async () => {
         try {
             const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
@@ -156,6 +209,14 @@ export default function DoctorProfile(props) {
             props.showAlert("Profile update failed", "danger");
         }
     };
+
+    const getPasswordStrength = (password) => {
+        if (password.length < 6) return "Weak";
+        if (password.match(/[A-Z]/) && password.match(/[0-9]/)) return "Strong";
+        return "Medium";
+    };
+
+    const strength = getPasswordStrength(passwordData.newPassword);
     // ================= FETCH STAFF =================
     const fetchStaff = useCallback(async () => {
         try {
@@ -299,6 +360,11 @@ export default function DoctorProfile(props) {
                 currentPassword: "",
                 newPassword: "",
                 confirmPassword: "",
+            });
+            setShowPasswords({
+                current: false,
+                new: false,
+                confirm: false,
             });
             fetchAvailability();
         } else {
@@ -1103,12 +1169,8 @@ export default function DoctorProfile(props) {
                             <div className="row g-3">
                                 {/* Current Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        Current Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control rounded-3"
+                                    <PasswordInput
+                                        label="Current Password"
                                         placeholder="••••••••"
                                         value={passwordData.currentPassword}
                                         onChange={(e) =>
@@ -1117,17 +1179,16 @@ export default function DoctorProfile(props) {
                                                 currentPassword: e.target.value,
                                             })
                                         }
+                                        typeKey="current"
+                                        showPasswords={showPasswords}
+                                        setShowPasswords={setShowPasswords}
                                     />
                                 </div>
 
                                 {/* New Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        New Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control rounded-3"
+                                    <PasswordInput
+                                        label="New Password"
                                         placeholder="Minimum 6 characters"
                                         value={passwordData.newPassword}
                                         onChange={(e) =>
@@ -1136,17 +1197,29 @@ export default function DoctorProfile(props) {
                                                 newPassword: e.target.value,
                                             })
                                         }
+                                        typeKey="new"
+                                        showPasswords={showPasswords}
+                                        setShowPasswords={setShowPasswords}
                                     />
+                                    {passwordData.newPassword && (
+                                        <small
+                                            className={
+                                                strength === "Strong"
+                                                    ? "text-success"
+                                                    : strength === "Medium"
+                                                      ? "text-warning"
+                                                      : "text-danger"
+                                            }
+                                        >
+                                            Strength: {strength}
+                                        </small>
+                                    )}
                                 </div>
 
                                 {/* Confirm Password */}
                                 <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        Confirm Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control rounded-3"
+                                    <PasswordInput
+                                        label="Confirm Password"
                                         placeholder="Re-enter password"
                                         value={passwordData.confirmPassword}
                                         onChange={(e) =>
@@ -1155,7 +1228,23 @@ export default function DoctorProfile(props) {
                                                 confirmPassword: e.target.value,
                                             })
                                         }
+                                        typeKey="confirm"
+                                        showPasswords={showPasswords}
+                                        setShowPasswords={setShowPasswords}
                                     />
+                                    {passwordData.confirmPassword && (
+                                        <small
+                                            className={
+                                                passwordsMatch
+                                                    ? "text-success"
+                                                    : "text-danger"
+                                            }
+                                        >
+                                            {passwordsMatch
+                                                ? "Passwords match"
+                                                : "Passwords do not match"}
+                                        </small>
+                                    )}
                                 </div>
                             </div>
 
@@ -1164,6 +1253,12 @@ export default function DoctorProfile(props) {
                                 <button
                                     className="btn btn-danger px-4 rounded-3"
                                     onClick={handleChangePassword}
+                                    disabled={
+                                        !passwordData.currentPassword ||
+                                        !passwordData.newPassword ||
+                                        !passwordData.confirmPassword ||
+                                        !passwordsMatch
+                                    }
                                 >
                                     <RefreshCcw size={16} />
                                     Update Password

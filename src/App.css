@@ -1828,3 +1828,62 @@ section h5 {
     padding: 3px 8px;
     border-radius: 999px;
 }
+
+.password-wrapper {
+    position: relative;
+}
+
+.eye-btn {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.eye-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.eye-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    transition: all 0.25s ease;
+    transform: scale(0.9);
+    opacity: 0.7;
+}
+
+.eye-icon.show {
+    transform: scale(1.15);
+    opacity: 1;
+    color: #22c55e;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.15rem rgba(34, 197, 94, 0.25);
+    border-color: #22c55e;
+}
+
+.form-control.pe-5 {
+    padding-right: 2.5rem;
+}
+.brand-text {
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #3b82f6, #ca2917);
+    background-clip: text;
+    -webkit-background-clip: text; 
+    color: transparent;
+}
+
+.active-nav {
+    color: #22c55e !important;
+    font-weight: 600;
+}

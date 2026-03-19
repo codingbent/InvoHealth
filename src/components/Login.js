@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
-import { Stethoscope, Users, LogIn, UserPlus } from "lucide-react";
+import { Stethoscope, Users, LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
 
 export default function Login(props) {
     const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function Login(props) {
     const [loginAs, setLoginAs] = useState("doctor");
     const [inputType, setInputType] = useState("typing");
     const [showInvalid, setShowInvalid] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -219,14 +220,32 @@ export default function Login(props) {
                 <div className="mb-3">
                     <label className="form-label">Password</label>
 
-                    <input
-                        type="password"
-                        className="form-control"
-                        placeholder="Enter password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
+                    <div className="password-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            className="form-control pe-5"
+                            placeholder="Enter password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+
+                        <button
+                            type="button"
+                            className="eye-btn"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                            <span
+                                className={`eye-icon ${showPassword ? "show" : ""}`}
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={18} />
+                                ) : (
+                                    <Eye size={18} />
+                                )}
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="text-end mt-2">

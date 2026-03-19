@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
 import { Pencil, IndianRupee } from "lucide-react";
+import { useNavigate } from "react-router";
 
 const EditService = ({ showAlert }) => {
     const [services, setServices] = useState([]);
     const [selectedService, setSelectedService] = useState("");
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
-
+    const navigate = useNavigate();
     const API_BASE_URL = useMemo(
         () =>
             process.env.NODE_ENV === "production"
@@ -68,6 +69,15 @@ const EditService = ({ showAlert }) => {
 
             if (data.success) {
                 showAlert("Service updated successfully", "success");
+
+                const modalEl = document.getElementById("editServiceModal");
+                const modalInstance =
+                    window.bootstrap.Modal.getInstance(modalEl);
+                modalInstance?.hide();
+
+                setSelectedService("");
+                setName("");
+                setAmount("");
                 window.location.reload();
             } else {
                 showAlert("Failed to update service", "danger");
@@ -79,7 +89,7 @@ const EditService = ({ showAlert }) => {
     };
 
     return (
-        <div className="modal-content edit-service-modal shadow-lg rounded-4">
+        <div className="edit-service-modal shadow-lg rounded-4">
             <div className="modal-header border-0">
                 <h5 className="modal-title d-flex align-items-center gap-2">
                     <Pencil size={18} />

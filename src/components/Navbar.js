@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, NavLink } from "react-router-dom";
 import { Stethoscope, User, LogOut, IndianRupee } from "lucide-react";
 
 export default function Navbar(props) {
@@ -30,18 +30,21 @@ export default function Navbar(props) {
                         {/* Brand */}
                         {role === "superadmin" ? (
                             <>
-                                <Link
+                                <NavLink
                                     className="navbar-brand fw-bold"
                                     to="/admin/fetchall_doctors"
                                 >
                                     InvoHealth
-                                </Link>
+                                </NavLink>
                             </>
                         ) : (
                             <>
-                                <Link className="navbar-brand fw-bold" to="/">
+                                <NavLink
+                                    className="navbar-brand fw-bold"
+                                    to="/"
+                                >
                                     InvoHealth
-                                </Link>
+                                </NavLink>
                             </>
                         )}
 
@@ -62,18 +65,18 @@ export default function Navbar(props) {
                             {/* Left Links */}
                             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
                                 <li className="nav-item">
-                                    <Link
+                                    <NavLink
                                         className="nav-link"
                                         to="/admin/fetchall_doctors"
                                     >
                                         Home
-                                    </Link>
+                                    </NavLink>
                                 </li>
 
                                 <li className="nav-item">
-                                    <Link className="nav-link" to="/about">
+                                    <NavLink className="nav-link" to="/about">
                                         About
-                                    </Link>
+                                    </NavLink>
                                 </li>
                             </ul>
 
@@ -92,7 +95,9 @@ export default function Navbar(props) {
                                                 height: "32px",
                                             }}
                                         >
-                                            <User size={18} />
+                                            <span className="avatar">
+                                                {name?.charAt(0)?.toUpperCase()}
+                                            </span>
                                         </span>
                                         <span className="d-sm-inline text-theme-secondary">
                                             {}
@@ -137,19 +142,19 @@ export default function Navbar(props) {
                                 </div>
                             ) : (
                                 <div className="d-flex gap-2">
-                                    <Link
+                                    <NavLink
                                         to="/login"
                                         className="btn btn-primary btn-sm rounded-pill"
                                     >
                                         Login
-                                    </Link>
+                                    </NavLink>
 
-                                    <Link
+                                    <NavLink
                                         to="/signup"
                                         className="btn btn-outline-primary btn-sm rounded-pill"
                                     >
                                         Sign Up
-                                    </Link>
+                                    </NavLink>
                                 </div>
                             )}
                         </div>
@@ -164,9 +169,9 @@ export default function Navbar(props) {
             {" "}
             <div className="container-fluid">
                 {/* Brand */}
-                <Link className="navbar-brand fw-bold" to="/">
-                    InvoHealth
-                </Link>
+                <NavLink className="navbar-brand fw-bold" to="/">
+                    <span className="brand-text">InvoHealth</span>
+                </NavLink>
 
                 {/* Mobile Toggle */}
                 <button
@@ -185,27 +190,27 @@ export default function Navbar(props) {
                     {/* Left Links */}
                     <ul className="navbar-nav me-auto mb-2 mb-lg-0">
                         <li className="nav-item">
-                            <Link className="nav-link" to="/">
+                            <NavLink className="nav-link" to="/">
                                 Home
-                            </Link>
+                            </NavLink>
                         </li>
 
                         {role === "doctor" && (
                             <li className="nav-item">
-                                <Link className="nav-link" to="/dashboard">
+                                <NavLink className="nav-link" to="/dashboard">
                                     Dashboard
-                                </Link>
+                                </NavLink>
                             </li>
                         )}
                         <li className="nav-item">
-                            <Link className="nav-link" to="/tutorials">
+                            <NavLink className="nav-link" to="/tutorials">
                                 Tutorials
-                            </Link>
+                            </NavLink>
                         </li>
                         <li className="nav-item">
-                            <Link className="nav-link" to="/about">
+                            <NavLink className="nav-link" to="/about">
                                 About
-                            </Link>
+                            </NavLink>
                         </li>
                     </ul>
 
@@ -221,7 +226,9 @@ export default function Navbar(props) {
                                     className="avatar"
                                     style={{ width: "32px", height: "32px" }}
                                 >
-                                    <User size={18} />
+                                    <span className="avatar">
+                                        {name?.charAt(0)?.toUpperCase()}
+                                    </span>
                                 </span>
                                 <span className="d-sm-inline text-theme-secondary">
                                     {name}

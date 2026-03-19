@@ -370,7 +370,9 @@ const Patient = ({ showAlert }) => {
 
             <div className="modal fade" id="editServiceModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <EditService showAlert={showAlert} />
+                    <div className="modal-content">
+                        <EditService showAlert={showAlert} />
+                    </div>
                 </div>
             </div>
         </>

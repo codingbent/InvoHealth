@@ -244,7 +244,7 @@ export default function Dashboard() {
             labels: analytics.serviceSummary.map((s) => s.service),
             datasets: [
                 {
-                    label: "Revenue (<IndianRupee size={18}/>)",
+                    label: "Revenue (₹)",
                     data: analytics.serviceSummary.map((s) => s.total),
                     backgroundColor: (context) => {
                         const { chart } = context;
@@ -278,7 +278,7 @@ export default function Dashboard() {
                 bodyColor: "#e5e7eb",
                 callbacks: {
                     label: function (context) {
-                        return `<IndianRupee size={18}/> ${formatCurrency(context.raw)}`;
+                        return `₹ ${formatCurrency(context.raw)}`;
                     },
                 },
             },
@@ -296,7 +296,7 @@ export default function Dashboard() {
                 ticks: {
                     color: chartColors.textColor,
                     callback: function (value) {
-                        return "<IndianRupee size={18}/> " + formatCurrency(value);
+                        return `₹ ${formatCurrency(value)}`;
                     },
                 },
                 grid: {
@@ -352,7 +352,9 @@ export default function Dashboard() {
                     {plan !== "PRO" && plan !== "ENTERPRISE" && (
                         <div className="dashboard-lock-overlay">
                             <div className="lock-card">
-                                <div className="lock-icon"><LockIcon size={50}/></div>
+                                <div className="lock-icon">
+                                    <LockIcon size={50} />
+                                </div>
 
                                 <p className="text-theme-secondary fw-bold">
                                     {plan === "EXPIRED"

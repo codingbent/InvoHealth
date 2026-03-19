@@ -34,7 +34,7 @@ const AddServices = (props) => {
             if (json.success) {
                 setService({ name: "", amount: "" });
                 props.showAlert("Service added successfully", "success");
-                document.querySelector("#serviceModal .btn-close")?.click();
+                window.location.reload();
             } else {
                 props.showAlert(
                     json.error || "Service already exists",
