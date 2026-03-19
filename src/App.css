@@ -666,27 +666,36 @@ body {
 }
 
 .skeleton {
-    height: 14px;
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 6px;
+}
+
+.shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 150%;
+    height: 100%;
     background: linear-gradient(
         90deg,
-        var(--bg-alt) 25%,
-        var(--bg-surface) 37%,
-        var(--bg-alt) 63%
+        transparent,
+        rgba(255, 255, 255, 0.15),
+        transparent
     );
-    background-size: 400% 100%;
-    animation: shimmer 1.4s infinite linear;
+    animation: shimmer 1.2s infinite;
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: 100% 0;
-    }
     100% {
-        background-position: -100% 0;
+        left: 100%;
     }
 }
-
 .table-theme thead {
     background: var(--bg-alt);
     color: var(--text-primary);

@@ -75,6 +75,7 @@ export default function AppointmentList({
                             dayApps={appointmentsByMonth[month][day]}
                             paymentColor={paymentColor}
                             navigate={navigate}
+                            loading={loading}
                         />
                     ))}
                 </div>

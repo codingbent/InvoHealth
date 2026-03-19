@@ -6,6 +6,7 @@ const AppointmentDay = memo(function AppointmentDay({
     dayApps,
     paymentColor,
     navigate,
+    loading,
 }) {
     const dayTotal = dayApps.reduce(
         (sum, a) => sum + Number(a.collected ?? a.amount ?? 0),
@@ -19,6 +20,102 @@ const AppointmentDay = memo(function AppointmentDay({
 
         return a.time;
     };
+    if (loading) {
+        return (
+            <div className="mb-4">
+                {/* Day Header Skeleton */}
+                <div
+                    className="day-header rounded-3 px-3 py-2 mb-2 skeleton shimmer"
+                    style={{ height: "40px" }}
+                />
+
+                {/* Desktop Table Skeleton */}
+                <div className="d-none d-lg-block">
+                    <div className="card border-0 shadow-sm rounded-4 overflow-hidden p-3">
+                        {[...Array(4)].map((_, i) => (
+                            <div
+                                key={i}
+                                className="d-flex justify-content-between align-items-center mb-3"
+                            >
+                                <div
+                                    className="skeleton shimmer"
+                                    style={{ width: "20%", height: "16px" }}
+                                />
+                                <div
+                                    className="skeleton shimmer"
+                                    style={{ width: "10%", height: "16px" }}
+                                />
+                                <div
+                                    className="skeleton shimmer"
+                                    style={{ width: "15%", height: "16px" }}
+                                />
+                                <div
+                                    className="skeleton shimmer"
+                                    style={{ width: "10%", height: "16px" }}
+                                />
+                                <div
+                                    className="skeleton shimmer"
+                                    style={{ width: "10%", height: "16px" }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Mobile Card Skeleton */}
+                <div className="d-lg-none">
+                    {[...Array(3)].map((_, i) => (
+                        <div
+                            key={i}
+                            className="card theme-card rounded-4 mb-2 p-3"
+                        >
+                            <div className="d-flex justify-content-between">
+                                <div>
+                                    <div
+                                        className="skeleton shimmer mb-2"
+                                        style={{
+                                            width: "120px",
+                                            height: "14px",
+                                        }}
+                                    />
+                                    <div
+                                        className="skeleton shimmer mb-2"
+                                        style={{
+                                            width: "80px",
+                                            height: "12px",
+                                        }}
+                                    />
+                                    <div
+                                        className="skeleton shimmer"
+                                        style={{
+                                            width: "60px",
+                                            height: "12px",
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <div
+                                        className="skeleton shimmer mb-2"
+                                        style={{
+                                            width: "60px",
+                                            height: "14px",
+                                        }}
+                                    />
+                                    <div
+                                        className="skeleton shimmer"
+                                        style={{
+                                            width: "50px",
+                                            height: "12px",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center day-header rounded-3 px-3 py-2 mb-2">
