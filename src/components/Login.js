@@ -225,6 +225,7 @@ export default function Login(props) {
                         placeholder="Enter password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        required
                     />
                 </div>
 
