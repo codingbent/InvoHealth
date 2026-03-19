@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
-const Staff = require("../../models/Staff");
 const bcrypt = require("bcryptjs");
-var jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 router.post("/login_doctor", async (req, res) => {
@@ -11,38 +11,46 @@ router.post("/login_doctor", async (req, res) => {
 
     try {
         let user = null;
-        let userRole = null;
 
         if (identifierType === "email") {
             user = await Doc.findOne({ email: identifier });
-            if (user) userRole = "doctor";
-        }
-
-        if (!user && identifierType === "phone") {
+        } else if (identifierType === "phone") {
             user = await Doc.findOne({ phone: identifier });
-            if (user) userRole = "doctor";
-        }
-
-        if (!user && identifierType === "phone") {
-            user = await Staff.findOne({ phone: identifier, isActive: true });
-            if (user) userRole = user.role;
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid identifier type",
+            });
         }
 
         if (!user) {
-            return res.status(400).json({ error: "Invalid credentials" });
+            return res.status(400).json({
+                success: false,
+                error: "Invalid credentials",
+            });
         }
 
-        const match = bcrypt.compare(password, user.password);
+        if (!user.password) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid credentials",
+            });
+        }
+
+        const match = await bcrypt.compare(password, user.password);
 
         if (!match) {
-            return res.status(400).json({ error: "Invalid credentials" });
+            return res.status(400).json({
+                success: false,
+                error: "Invalid credentials",
+            });
         }
 
         const payload = {
             user: {
                 id: user._id,
-                role: userRole,
-                doctorId: userRole === "doctor" ? user._id : user.doctorId,
+                role: "doctor",
+                doctorId: user._id,
             },
         };
 
@@ -53,13 +61,13 @@ router.post("/login_doctor", async (req, res) => {
         res.json({
             success: true,
             authtoken,
-            role: userRole,
+            role: "doctor",
             name: user.name,
-            doctorId: userRole === "doctor" ? user._id : user.doctorId,
-            subscription: userRole === "doctor" ? user.subscription : null,
+            doctorId: user._id,
+            subscription: user.subscription || null,
         });
     } catch (err) {
-        console.error(err);
+        console.error("Doctor Login Error:", err);
         res.status(500).json({
             success: false,
             error: "Internal server error",
