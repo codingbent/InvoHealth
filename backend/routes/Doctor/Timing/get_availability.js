@@ -5,9 +5,10 @@ const fetchuser = require("../../../middleware/fetchuser");
 
 router.get("/get_availability", fetchuser, async (req, res) => {
     try {
-        const doctorId = req.user.id;
+        const doctorId =
+            req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
-        const data = await Timing.findOne({ doctorId: doctorId });
+        const data = await Timing.findOne({ doctorId });
 
         if (!data) {
             return res.json({

@@ -27,7 +27,7 @@ export default function Slotpicker({
 
             setOpenSection(label);
         }
-    }, [currentSlot, nextSlot, selectedSlot, groupedSlots,setOpenSection]);
+    }, [currentSlot, nextSlot, selectedSlot, groupedSlots, setOpenSection]);
     return (
         <div className="mt-2">
             {/* HEADER */}
@@ -55,9 +55,7 @@ export default function Slotpicker({
                         {/* SECTION HEADER */}
                         <div
                             className="accordion-header"
-                            onClick={() =>
-                                setOpenSection(label)
-                            }
+                            onClick={() => setOpenSection(label)}
                         >
                             <span>{label}</span>
                             <span>{openSection === label ? "-" : "+"}</span>
