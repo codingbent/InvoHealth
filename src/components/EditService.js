@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
 import { Pencil, IndianRupee } from "lucide-react";
-import { useNavigate } from "react-router";
 
 const EditService = ({ showAlert }) => {
     const [services, setServices] = useState([]);
     const [selectedService, setSelectedService] = useState("");
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
-    const navigate = useNavigate();
     const API_BASE_URL = useMemo(
         () =>
             process.env.NODE_ENV === "production"

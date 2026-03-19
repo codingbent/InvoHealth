@@ -1,6 +1,6 @@
 import React from "react";
-import { Link, useNavigate, NavLink } from "react-router-dom";
-import { Stethoscope, User, LogOut, IndianRupee } from "lucide-react";
+import { useNavigate, NavLink } from "react-router-dom";
+import { Stethoscope, LogOut, IndianRupee } from "lucide-react";
 
 export default function Navbar(props) {
     const navigate = useNavigate();
