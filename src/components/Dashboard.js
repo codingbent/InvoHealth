@@ -244,7 +244,7 @@ export default function Dashboard() {
             labels: analytics.serviceSummary.map((s) => s.service),
             datasets: [
                 {
-                    label: "Revenue (₹)",
+                    label: "Revenue (<IndianRupee size={18}/>)",
                     data: analytics.serviceSummary.map((s) => s.total),
                     backgroundColor: (context) => {
                         const { chart } = context;
@@ -278,7 +278,7 @@ export default function Dashboard() {
                 bodyColor: "#e5e7eb",
                 callbacks: {
                     label: function (context) {
-                        return `₹ ${formatCurrency(context.raw)}`;
+                        return `<IndianRupee size={18}/> ${formatCurrency(context.raw)}`;
                     },
                 },
             },
@@ -296,7 +296,7 @@ export default function Dashboard() {
                 ticks: {
                     color: chartColors.textColor,
                     callback: function (value) {
-                        return "₹ " + formatCurrency(value);
+                        return "<IndianRupee size={18}/> " + formatCurrency(value);
                     },
                 },
                 grid: {

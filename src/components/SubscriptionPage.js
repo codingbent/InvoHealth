@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Pricing from "./Pricing";
+import { IndianRupee } from "lucide-react";
 
 export default function SubscriptionPage(props) {
     const API_BASE_URL =
@@ -335,7 +336,7 @@ export default function SubscriptionPage(props) {
                                             </td>
 
                                             <td className="fw-semibold text-success">
-                                                ₹{p.amountPaid}
+                                                <IndianRupee size={18}/>{p.amountPaid}
                                             </td>
 
                                             <td>
@@ -402,7 +403,7 @@ export default function SubscriptionPage(props) {
                                     </div>
 
                                     <div className="fw-bold text-success mt-1">
-                                        ₹{p.amountPaid}
+                                        <IndianRupee size={18}/>{p.amountPaid}
                                     </div>
 
                                     <div className="mt-2">

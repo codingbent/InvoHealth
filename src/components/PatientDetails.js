@@ -1565,7 +1565,7 @@ export default function PatientDetails(props) {
                                         <label className="form-check-label small">
                                             {isPercent
                                                 ? "Percentage (%)"
-                                                : "Flat Amount ₹"}
+                                                : "Flat Amount <IndianRupee size={18}/>"}
                                         </label>
                                     </div>
                                 </div>
@@ -1642,7 +1642,7 @@ export default function PatientDetails(props) {
                                         Remaining
                                     </small>
                                     <div className="fw-bold text-warning">
-                                        ₹{" "}
+                                        <IndianRupee size={18}/>{" "}
                                         {formatCurrency(
                                             finalAmount - collected,
                                         )}
@@ -1684,7 +1684,7 @@ export default function PatientDetails(props) {
                             <div className="final-amount-box mb-4">
                                 <span>Final Amount</span>
                                 <span className="text-primary fw-bold">
-                                    ₹ {formatCurrency(finalAmount)}
+                                    <IndianRupee size={18}/> {formatCurrency(finalAmount)}
                                 </span>
                             </div>
 

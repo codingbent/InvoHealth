@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import AppointmentDay from "./AppointmentDay";
+import { IndianRupee } from "lucide-react";
 
 export default function AppointmentList({
     appointmentsByMonth,
@@ -62,7 +63,7 @@ export default function AppointmentList({
 
                         {role === "doctor" && (
                             <h4 className="mb-0 fw-bold">
-                                ₹ {formatCurrency(monthTotal[month])}
+                                <IndianRupee size={18}/> {formatCurrency(monthTotal[month])}
                             </h4>
                         )}
                     </div>

@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 export default function Slotpicker({
     groupedSlots,
     selectedSlot,
@@ -11,6 +13,21 @@ export default function Slotpicker({
 }) {
     const displaySlot = selectedSlot || currentSlot;
 
+    useEffect(() => {
+        const targetSlot = selectedSlot || currentSlot || nextSlot;
+
+        if (!targetSlot) return;
+
+        const foundSection = Object.entries(groupedSlots).find(([_, slots]) =>
+            slots.includes(targetSlot),
+        );
+
+        if (foundSection) {
+            const [label] = foundSection;
+
+            setOpenSection(label);
+        }
+    }, [currentSlot, nextSlot, selectedSlot, groupedSlots,setOpenSection]);
     return (
         <div className="mt-2">
             {/* HEADER */}
@@ -39,9 +56,7 @@ export default function Slotpicker({
                         <div
                             className="accordion-header"
                             onClick={() =>
-                                setOpenSection((prev) =>
-                                    prev === label ? null : label,
-                                )
+                                setOpenSection(label)
                             }
                         >
                             <span>{label}</span>
