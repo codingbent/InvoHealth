@@ -1153,6 +1153,56 @@ body {
     align-items: center;
 }
 
+/* Skeleton Base */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 25%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+/* Animation */
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Sizes */
+.skeleton-text {
+    height: 12px;
+    width: 60%;
+}
+
+.skeleton-value {
+    height: 24px;
+    width: 80%;
+}
+
+.skeleton-title {
+    height: 16px;
+    width: 50%;
+}
+
+.skeleton-chart {
+    height: 200px;
+    width: 100%;
+    border-radius: 12px;
+}
+
+/* Card effect */
+.skeleton-card {
+    opacity: 0.7;
+}
+
 .lock-card {
     background: var(--card-bg);
     color: var(--text-primary);
@@ -1879,7 +1929,7 @@ section h5 {
     letter-spacing: 0.5px;
     background: linear-gradient(90deg, #3b82f6, #ca2917);
     background-clip: text;
-    -webkit-background-clip: text; 
+    -webkit-background-clip: text;
     color: transparent;
 }
 

@@ -13,6 +13,7 @@ import FilterPanel from "./FilterPanel";
 import { authFetch } from "./authfetch";
 import { SlidersHorizontal, IndianRupee, LockIcon } from "lucide-react";
 import { Link } from "react-router";
+import DashboardSkeleton from "./DashboardSkeleton";
 
 ChartJS.register(
     ArcElement,
@@ -431,123 +432,134 @@ export default function Dashboard() {
                 isdashboard={true}
             />
 
-            {loading && (
-                <p className="text-center text-theme-secondary mt-3">
-                    Updating dashboard…
-                </p>
-            )}
+            {loading ? (
+                <DashboardSkeleton />
+            ) : (
+                <>
+                    {/* CHARTS */}
+                    <div className="row g-3 mb-4">
+                        <KPI
+                            title="Total Revenue"
+                            value={analytics.totalRevenue}
+                            color="primary"
+                        />
+                        <KPI
+                            title="Collected"
+                            value={analytics.totalCollection}
+                            color="success"
+                        />
+                        <KPI
+                            title="Pending"
+                            value={analytics.totalPending}
+                            color="danger"
+                        />
+                        <KPI
+                            title="Total Visits"
+                            value={analytics.totalVisits}
+                            color="secondary"
+                            isCurrency={false}
+                        />
+                    </div>
+                    <div className="row g-4">
+                        {/* Payment Section */}
+                        <div className="col-lg-6">
+                            <div className="dashboard-card p-4 shadow-sm rounded-4">
+                                <h6 className="fw-semibold mb-3 text-center">
+                                    Payment Distribution
+                                </h6>
 
-            {/* ================= KPI CARDS ================= */}
-            <div className="row g-3 mb-4">
-                <KPI
-                    title="Total Revenue"
-                    value={analytics.totalRevenue}
-                    color="primary"
-                />
-                <KPI
-                    title="Collected"
-                    value={analytics.totalCollection}
-                    color="success"
-                />
-                <KPI
-                    title="Pending"
-                    value={analytics.totalPending}
-                    color="danger"
-                />
-                <KPI
-                    title="Total Visits"
-                    value={analytics.totalVisits}
-                    color="secondary"
-                    isCurrency={false}
-                />
-            </div>
+                                <div className="row">
+                                    <div className="col-md-6">
+                                        <div style={{ height: 250 }}>
+                                            <Doughnut
+                                                data={paymentChartData}
+                                                options={chartOptions}
+                                                key={themeVersion}
+                                            />
+                                        </div>
+                                    </div>
 
-            {/* ================= CHART SECTION ================= */}
-            <div className="row g-4">
-                {/* Payment Section */}
-                <div className="col-lg-6">
-                    <div className="dashboard-card p-4 shadow-sm rounded-4">
-                        <h6 className="fw-semibold mb-3 text-center">
-                            Payment Distribution
-                        </h6>
+                                    <div className="col-md-6">
+                                        {analytics.paymentSummary.map(
+                                            (p, index) => {
+                                                const percent =
+                                                    analytics.totalCollection >
+                                                    0
+                                                        ? (
+                                                              (p.total /
+                                                                  analytics.totalCollection) *
+                                                              100
+                                                          ).toFixed(1)
+                                                        : 0;
 
-                        <div className="row">
-                            <div className="col-md-6">
+                                                return (
+                                                    <div
+                                                        key={p.type}
+                                                        className="d-flex justify-content-between align-items-center mb-2"
+                                                    >
+                                                        <div className="d-flex align-items-center gap-2">
+                                                            <span
+                                                                style={{
+                                                                    width: 10,
+                                                                    height: 10,
+                                                                    borderRadius:
+                                                                        "50%",
+                                                                    backgroundColor:
+                                                                        [
+                                                                            "#0D6EFD",
+                                                                            "#198754",
+                                                                            "#FFC107",
+                                                                            "#0DCAF0",
+                                                                            "#6F42C1",
+                                                                            "#ADB5BD",
+                                                                        ][
+                                                                            index
+                                                                        ],
+                                                                }}
+                                                            ></span>
+
+                                                            <span>
+                                                                {p.type}
+                                                            </span>
+                                                        </div>
+
+                                                        <span className="fw-bold">
+                                                            <IndianRupee
+                                                                size={16}
+                                                            />{" "}
+                                                            {formatCurrency(
+                                                                p.total,
+                                                            )}{" "}
+                                                            ({percent}%)
+                                                        </span>
+                                                    </div>
+                                                );
+                                            },
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Service Revenue */}
+                        <div className="col-lg-6">
+                            <div className="dashboard-card">
+                                {" "}
+                                <h6 className="fw-semibold mb-3 text-center">
+                                    Top Revenue Services
+                                </h6>
                                 <div style={{ height: 250 }}>
-                                    <Doughnut
-                                        data={paymentChartData}
+                                    <Bar
+                                        data={serviceChartData}
                                         options={chartOptions}
                                         key={themeVersion}
                                     />
                                 </div>
                             </div>
-
-                            <div className="col-md-6">
-                                {analytics.paymentSummary.map((p, index) => {
-                                    const percent =
-                                        analytics.totalCollection > 0
-                                            ? (
-                                                  (p.total /
-                                                      analytics.totalCollection) *
-                                                  100
-                                              ).toFixed(1)
-                                            : 0;
-
-                                    return (
-                                        <div
-                                            key={p.type}
-                                            className="d-flex justify-content-between align-items-center mb-2"
-                                        >
-                                            <div className="d-flex align-items-center gap-2">
-                                                <span
-                                                    style={{
-                                                        width: 10,
-                                                        height: 10,
-                                                        borderRadius: "50%",
-                                                        backgroundColor: [
-                                                            "#0D6EFD",
-                                                            "#198754",
-                                                            "#FFC107",
-                                                            "#0DCAF0",
-                                                            "#6F42C1",
-                                                            "#ADB5BD",
-                                                        ][index],
-                                                    }}
-                                                ></span>
-
-                                                <span>{p.type}</span>
-                                            </div>
-
-                                            <span className="fw-bold">
-                                                <IndianRupee size={16} />{" "}
-                                                {formatCurrency(p.total)} (
-                                                {percent}%)
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Service Revenue */}
-                <div className="col-lg-6">
-                    <div className="dashboard-card">
-                        {" "}
-                        <h6 className="fw-semibold mb-3 text-center">
-                            Top Revenue Services
-                        </h6>
-                        <div style={{ height: 250 }}>
-                            <Bar
-                                data={serviceChartData}
-                                options={chartOptions}
-                                key={themeVersion}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }
