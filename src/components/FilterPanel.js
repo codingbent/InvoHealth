@@ -307,7 +307,7 @@ export default function FilterPanel({
                                     <input
                                         type="date"
                                         className="form-control rounded-3"
-                                        value={startDate}
+                                        value={startDate || ""}
                                         onChange={(e) => {
                                             setSelectedFY("");
                                             setStartDate(e.target.value);
@@ -319,7 +319,7 @@ export default function FilterPanel({
                                     <input
                                         type="date"
                                         className="form-control rounded-3"
-                                        value={endDate}
+                                        value={endDate || ""}
                                         onChange={(e) => {
                                             setSelectedFY("");
                                             setEndDate(e.target.value);
@@ -356,13 +356,17 @@ export default function FilterPanel({
                             <button
                                 className="btn btn-outline-theme rounded-3"
                                 onClick={() => {
-                                    setSearchTerm("");
                                     setSelectedPayments([]);
                                     setSelectedServices([]);
                                     setSelectedGender("");
-                                    setStartDate("");
-                                    setEndDate("");
+                                    setSelectedStatus([]);
+                                    setStartDate(null);
+                                    setEndDate(null);
                                     setSelectedFY("");
+                                    setTimeout(() => {
+                                        setStartDate(undefined);
+                                        setEndDate(undefined);
+                                    }, 0);
                                 }}
                             >
                                 ♻ Reset Filters

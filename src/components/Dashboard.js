@@ -155,13 +155,16 @@ export default function Dashboard() {
             try {
                 setLoading(true);
 
-                const params = new URLSearchParams({
+                const paramsObj = {
                     payments: selectedPayments.join(","),
                     services: selectedServices.join(","),
                     gender: selectedGender,
-                    startDate,
-                    endDate,
-                }).toString();
+                };
+
+                if (startDate) paramsObj.startDate = startDate;
+                if (endDate) paramsObj.endDate = endDate;
+
+                const params = new URLSearchParams(paramsObj).toString();
 
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/dashboard/analytics?${params}`,
