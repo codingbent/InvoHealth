@@ -11,13 +11,8 @@ import {
     CheckCircle,
 } from "lucide-react";
 import SlotPicker from "./Slotpicker";
-import {
-    generateSlots,
-    // getNextAvailableSlot,
-} from "../components/utils/Slotsutils";
-// eslint-disable-next-line
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { generateSlots } from "../components/utils/Slotsutils";
+import { DayPicker } from "react-day-picker";
 
 export default function AddAppointment({ showAlert }) {
     const API_BASE_URL =
@@ -52,6 +47,7 @@ export default function AddAppointment({ showAlert }) {
     const [bookedSlots, setBookedSlots] = useState([]);
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
     const discountValue = Math.min(
@@ -63,7 +59,6 @@ export default function AddAppointment({ showAlert }) {
         const today = new Date().toISOString().slice(0, 10);
         return appointmentDate === today;
     }, [appointmentDate]);
-
     const groupedSlots = useMemo(() => {
         const groups = { Morning: [], Afternoon: [], Evening: [] };
         timeSlots.forEach((slot) => {
@@ -77,43 +72,25 @@ export default function AddAppointment({ showAlert }) {
 
     const currentSlot = useMemo(() => {
         if (!timeSlots.length) return null;
-
-        // 🔥 if future date → return first available
-        if (!isToday) {
+        if (!isToday)
             return (
                 timeSlots.find((slot) => !bookedSlots.includes(slot)) || null
             );
-        }
-
-        // ✅ today logic
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
+        const now = new Date(),
+            currentMinutes = now.getHours() * 60 + now.getMinutes();
         let index = -1;
-
         for (let i = 0; i < timeSlots.length; i++) {
             const [h, m] = timeSlots[i].split(":").map(Number);
-            const minutes = h * 60 + m;
-
-            if (minutes <= currentMinutes) {
-                index = i;
-            } else break;
+            if (h * 60 + m <= currentMinutes) index = i;
+            else break;
         }
-
         if (index === -1) index = 0;
-
         for (let i = index; i < timeSlots.length; i++) {
-            if (!bookedSlots.includes(timeSlots[i])) {
-                return timeSlots[i];
-            }
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
         }
-
         for (let i = index - 1; i >= 0; i--) {
-            if (!bookedSlots.includes(timeSlots[i])) {
-                return timeSlots[i];
-            }
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
         }
-
         return null;
     }, [timeSlots, bookedSlots, isToday]);
 
@@ -135,64 +112,50 @@ export default function AddAppointment({ showAlert }) {
         };
         fetchAvailability();
     }, [API_BASE_URL]);
-const nextSlot = useMemo(() => {
-    if (!currentSlot || !timeSlots.length) return null;
 
-    let index = timeSlots.indexOf(currentSlot);
-
-    // 🔥 FIX: if not found, find closest slot
-    if (index === -1) {
-        const [h, m] = currentSlot.split(":").map(Number);
-        const currentMinutes = h * 60 + m;
-
-        index = timeSlots.findIndex((slot) => {
-            const [sh, sm] = slot.split(":").map(Number);
-            return sh * 60 + sm > currentMinutes;
-        }) - 1;
-
-        if (index < 0) index = 0;
-    }
-
-    // ✅ forward search only
-    for (let i = index + 1; i < timeSlots.length; i++) {
-        if (!bookedSlots.includes(timeSlots[i])) {
-            return timeSlots[i];
+    const nextSlot = useMemo(() => {
+        if (!currentSlot || !timeSlots.length) return null;
+        let index = timeSlots.indexOf(currentSlot);
+        if (index === -1) {
+            const [h, m] = currentSlot.split(":").map(Number);
+            const currentMinutes = h * 60 + m;
+            index =
+                timeSlots.findIndex((slot) => {
+                    const [sh, sm] = slot.split(":").map(Number);
+                    return sh * 60 + sm > currentMinutes;
+                }) - 1;
+            if (index < 0) index = 0;
         }
-    }
+        for (let i = index + 1; i < timeSlots.length; i++) {
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
+        }
+        return null;
+    }, [timeSlots, currentSlot, bookedSlots]);
 
-    return null;
-}, [timeSlots, currentSlot, bookedSlots]);
     useEffect(() => {
         if (currentSlot) setSelectedSlot(currentSlot);
     }, [currentSlot]);
 
     useEffect(() => {
         if (!availability.length) return;
-
         const fetchData = async () => {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
             );
             const data = await res.json();
-
             const booked = data.slots || [];
             setBookedSlots(booked);
-
             const selectedDay = new Date(appointmentDate)
                 .toLocaleDateString("en-US", { weekday: "short" })
                 .slice(0, 3);
-
             const dayData = availability.find((d) =>
                 d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
             );
-
             if (!dayData) {
                 setTimeSlots([]);
                 return;
             }
-
             let allSlots = [];
-
             dayData.slots.forEach((slot) => {
                 const generated = generateSlots(
                     slot.startTime,
@@ -201,10 +164,8 @@ const nextSlot = useMemo(() => {
                 );
                 allSlots = [...allSlots, ...generated];
             });
-
             setTimeSlots(allSlots);
         };
-
         fetchData();
     }, [appointmentDate, availability, API_BASE_URL]);
 
@@ -276,43 +237,6 @@ const nextSlot = useMemo(() => {
     };
 
     useEffect(() => {
-        if (!availability.length) return;
-        const fetchData = async () => {
-            try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
-                );
-                const data = await res.json();
-                const booked = data.slots || [];
-                setBookedSlots(booked);
-                const selectedDay = new Date(appointmentDate)
-                    .toLocaleDateString("en-US", { weekday: "short" })
-                    .slice(0, 3);
-                const dayData = availability.find((d) =>
-                    d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
-                );
-                if (!dayData) {
-                    setTimeSlots([]);
-                    return;
-                }
-                let allSlots = [];
-                dayData.slots.forEach((slot) => {
-                    const generated = generateSlots(
-                        slot.startTime,
-                        slot.endTime,
-                        slot.slotDuration,
-                    );
-                    allSlots = [...allSlots, ...generated];
-                });
-                setTimeSlots(allSlots);
-            } catch (err) {
-                console.error(err);
-            }
-        };
-        fetchData();
-    }, [appointmentDate, availability, API_BASE_URL]);
-
-    useEffect(() => {
         if (!manualOverride) setCollected(finalAmount);
     }, [manualOverride, finalAmount]);
 
@@ -371,11 +295,18 @@ const nextSlot = useMemo(() => {
             : status === "Partial"
               ? "#fb923c"
               : "#f87171";
+    const dateLabel = (d) =>
+        !d
+            ? "Select date"
+            : new Date(d).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+              });
 
     return (
         <>
             <div className="aa-root">
-                {/* Header */}
                 <div className="aa-header">
                     <div className="aa-header-icon">
                         <Plus size={16} />
@@ -386,7 +317,6 @@ const nextSlot = useMemo(() => {
                 </div>
 
                 <div className="aa-body">
-                    {/* Patient search */}
                     <div className="aa-section">
                         <div className="aa-section-line" />
                         <span className="aa-section-title">Patient</span>
@@ -445,7 +375,6 @@ const nextSlot = useMemo(() => {
 
                     {selectedPatient && (
                         <form onSubmit={handleSubmit}>
-                            {/* Date & Slot */}
                             <div className="aa-section">
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
@@ -454,6 +383,7 @@ const nextSlot = useMemo(() => {
                                 <div className="aa-section-line" />
                             </div>
 
+                            {/* Date toggle */}
                             <div className="aa-mb">
                                 <label className="aa-label">
                                     <CalendarDays
@@ -465,22 +395,54 @@ const nextSlot = useMemo(() => {
                                     />
                                     Appointment Date
                                 </label>
-                                <DatePicker
-                                    selected={
-                                        appointmentDate
-                                            ? new Date(appointmentDate)
-                                            : null
-                                    }
-                                    onChange={(date) =>
-                                        setAppointmentDate(
-                                            date.toLocaleDateString("en-CA"),
-                                        )
-                                    }
-                                    dateFormat="yyyy-MM-dd"
-                                    className="ap-input"
-                                    placeholderText="Select date"
-                                    calendarClassName="dp-dark-calendar"
-                                />
+                                <button
+                                    type="button"
+                                    className={`aa-date-btn ${showCalendar ? "open" : ""}`}
+                                    onClick={() => setShowCalendar((p) => !p)}
+                                >
+                                    <span
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 7,
+                                        }}
+                                    >
+                                        <CalendarDays
+                                            size={13}
+                                            style={{ color: "#3a4a6b" }}
+                                        />
+                                        {dateLabel(appointmentDate)}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            color: "#2e3d5c",
+                                        }}
+                                    >
+                                        {showCalendar ? "▲" : "▼"}
+                                    </span>
+                                </button>
+                                {showCalendar && (
+                                    <div className="aa-cal-drop">
+                                        <DayPicker
+                                            mode="single"
+                                            selected={
+                                                appointmentDate
+                                                    ? new Date(appointmentDate)
+                                                    : undefined
+                                            }
+                                            onSelect={(date) => {
+                                                if (!date) return;
+                                                setAppointmentDate(
+                                                    date.toLocaleDateString(
+                                                        "en-CA",
+                                                    ),
+                                                );
+                                                setShowCalendar(false);
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <SlotPicker
@@ -495,7 +457,6 @@ const nextSlot = useMemo(() => {
                                 nextSlot={nextSlot}
                             />
 
-                            {/* Services */}
                             <div className="aa-section">
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
@@ -528,7 +489,6 @@ const nextSlot = useMemo(() => {
                                 />
                             </div>
 
-                            {/* Billing */}
                             {services.length > 0 && (
                                 <>
                                     <div className="aa-section">
@@ -538,8 +498,6 @@ const nextSlot = useMemo(() => {
                                         </span>
                                         <div className="aa-section-line" />
                                     </div>
-
-                                    {/* Service amounts */}
                                     <div className="aa-mb">
                                         {services.map((s) => (
                                             <div
@@ -566,8 +524,6 @@ const nextSlot = useMemo(() => {
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Discount */}
                                     <div className="aa-discount-row aa-mb">
                                         <label className="aa-label">
                                             Discount
@@ -595,12 +551,10 @@ const nextSlot = useMemo(() => {
                                                         e.target.checked,
                                                     )
                                                 }
-                                            />
+                                            />{" "}
                                             % Percent
                                         </label>
                                     </div>
-
-                                    {/* Summary */}
                                     <div className="aa-summary">
                                         <div className="aa-summary-row">
                                             <span>Total</span>
@@ -629,8 +583,6 @@ const nextSlot = useMemo(() => {
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Collected */}
                                     <div className="aa-mb">
                                         <label className="aa-label">
                                             Amount Collected
@@ -649,8 +601,6 @@ const nextSlot = useMemo(() => {
                                             }}
                                         />
                                     </div>
-
-                                    {/* Status */}
                                     <div className="aa-status-row">
                                         <span>
                                             Remaining{" "}
@@ -674,7 +624,6 @@ const nextSlot = useMemo(() => {
                                 </>
                             )}
 
-                            {/* Payment type */}
                             <div className="aa-section">
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
@@ -682,7 +631,6 @@ const nextSlot = useMemo(() => {
                                 </span>
                                 <div className="aa-section-line" />
                             </div>
-
                             <div className="aa-mb">
                                 <label className="aa-label">
                                     <CreditCard

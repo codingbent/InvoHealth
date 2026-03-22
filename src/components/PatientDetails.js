@@ -5,8 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { authFetch } from "./authfetch";
 import { toWords } from "number-to-words";
-// eslint-disable-next-line
-import DatePicker from "react-datepicker";
+import { DayPicker } from "react-day-picker";
 import {
     Pencil,
     Trash2,
@@ -20,7 +19,9 @@ import {
     Check,
     ChevronLeft,
     FileText,
+    CalendarDays,
 } from "lucide-react";
+
 
 export default function PatientDetails(props) {
     const navigate = useNavigate();
@@ -64,8 +65,17 @@ export default function PatientDetails(props) {
     const [doctor, setDoctor] = useState(null);
     const [editApptOpen, setEditApptOpen] = useState(false);
     const [editPatientOpen, setEditPatientOpen] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+    const dateLabel = (d) =>
+        !d
+            ? "Select date"
+            : new Date(d).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+              });
 
     const fetchDoctor = useCallback(async () => {
         try {
@@ -76,7 +86,6 @@ export default function PatientDetails(props) {
             console.error(err);
         }
     }, [API_BASE_URL]);
-
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
@@ -90,7 +99,6 @@ export default function PatientDetails(props) {
             console.error(err);
         }
     }, [API_BASE_URL]);
-
     const generateSlots = useCallback((start, end, duration) => {
         const step = duration || 15,
             slots = [];
@@ -432,10 +440,10 @@ export default function PatientDetails(props) {
                 alert("Doctor details not loaded yet!");
                 return;
             }
-            const margin = 20;
-            const invoiceNumber = visit.invoiceNumber || "N/A";
-            const docPdf = new jsPDF();
-            const pageWidth = docPdf.internal.pageSize.getWidth();
+            const margin = 20,
+                invoiceNumber = visit.invoiceNumber || "N/A",
+                docPdf = new jsPDF(),
+                pageWidth = docPdf.internal.pageSize.getWidth();
             let leftY = 20,
                 rightY = 20;
             docPdf.setFontSize(16);
@@ -461,7 +469,6 @@ export default function PatientDetails(props) {
                 leftY,
             );
             leftY += 6;
-            docPdf.setFontSize(11);
             if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
@@ -498,11 +505,11 @@ export default function PatientDetails(props) {
                 rightY,
                 { align: "right" },
             );
-            const services = visit.service || [];
-            const baseAmount = services.reduce(
-                (sum, s) => sum + Number(s.amount || 0),
-                0,
-            );
+            const services = visit.service || [],
+                baseAmount = services.reduce(
+                    (sum, s) => sum + Number(s.amount || 0),
+                    0,
+                );
             let discountValue = 0,
                 finalAmt = baseAmount;
             if (includeDiscount && visit.discount > 0) {
@@ -513,8 +520,8 @@ export default function PatientDetails(props) {
                 if (discountValue < 0) discountValue = 0;
                 finalAmt = baseAmount - discountValue;
             }
-            const collectedAmount = Number(visit.collected ?? finalAmt);
-            const remainingAmount = finalAmt - collectedAmount;
+            const collectedAmount = Number(visit.collected ?? finalAmt),
+                remainingAmount = finalAmt - collectedAmount;
             const paymentStatus =
                 remainingAmount <= 0
                     ? "Paid"
@@ -538,9 +545,8 @@ export default function PatientDetails(props) {
                     `Rs ${fmt(remainingAmount)}`,
                 ]);
             tableRows.push(["Status", paymentStatus]);
-            const tableStartY = leftY + 4;
             autoTable(docPdf, {
-                startY: tableStartY,
+                startY: leftY + 4,
                 head: [["Service", "Amount"]],
                 body: tableRows,
                 theme: "grid",
@@ -550,7 +556,7 @@ export default function PatientDetails(props) {
                     textColor: [255, 255, 255],
                     fontStyle: "bold",
                 },
-                didParseCell: function (data) {
+                didParseCell: (data) => {
                     if (data.row.index >= tableRows.length - 4)
                         data.cell.styles.fontStyle = "bold";
                 },
@@ -567,13 +573,12 @@ export default function PatientDetails(props) {
             docPdf.setFont(undefined, "normal");
             docPdf.text(amountInWords, margin + 40, y);
             y += 8;
-            let receiptText = "";
-            if (paymentStatus === "Paid")
-                receiptText = `Received with thanks from ${details.name} the sum of Rupees ${fmt(collectedAmount)} only towards full settlement.`;
-            else if (paymentStatus === "Partial")
-                receiptText = `Part payment of Rupees ${fmt(collectedAmount)} received from ${details.name}. Remaining amount of Rupees ${fmt(remainingAmount)} is pending.`;
-            else
-                receiptText = `Total amount of Rupees ${fmt(finalAmt)} is pending from ${details.name}.`;
+            let receiptText =
+                paymentStatus === "Paid"
+                    ? `Received with thanks from ${details.name} the sum of Rupees ${fmt(collectedAmount)} only towards full settlement.`
+                    : paymentStatus === "Partial"
+                      ? `Part payment of Rupees ${fmt(collectedAmount)} received from ${details.name}. Remaining amount of Rupees ${fmt(remainingAmount)} is pending.`
+                      : `Total amount of Rupees ${fmt(finalAmt)} is pending from ${details.name}.`;
             docPdf.setFontSize(11);
             docPdf.text(receiptText, margin, y, {
                 maxWidth: pageWidth - margin * 2,
@@ -618,6 +623,7 @@ export default function PatientDetails(props) {
         setDiscount(visit.discount || 0);
         setIsPercent(!!visit.isPercent);
         setInitialCollected(visit.collected || 0);
+        setShowCalendar(false);
         setEditApptOpen(true);
     };
 
@@ -736,7 +742,6 @@ export default function PatientDetails(props) {
                     <ChevronLeft size={14} /> Back
                 </button>
 
-                {/* Patient card */}
                 <div className="pd-card">
                     <div className="pd-patient-header">
                         <div className="pd-patient-left">
@@ -808,7 +813,6 @@ export default function PatientDetails(props) {
                     </div>
                 </div>
 
-                {/* Appointments */}
                 <div className="pd-card">
                     <div className="pd-section-title">
                         Previous Appointments
@@ -827,7 +831,6 @@ export default function PatientDetails(props) {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop */}
                             <table className="pd-table">
                                 <thead>
                                     <tr>
@@ -944,7 +947,6 @@ export default function PatientDetails(props) {
                                 </tbody>
                             </table>
 
-                            {/* Mobile */}
                             <div className="pd-mob-table">
                                 {appointmentsForView.map((visit) => (
                                     <div
@@ -1081,11 +1083,14 @@ export default function PatientDetails(props) {
                 </div>
             </div>
 
-            {/* ── Edit Appointment Modal ── */}
+            {/* Edit Appointment Modal */}
             {editApptOpen && (
                 <div
                     className="pd-modal-bg"
-                    onClick={() => setEditApptOpen(false)}
+                    onClick={() => {
+                        setEditApptOpen(false);
+                        setShowCalendar(false);
+                    }}
                 >
                     <div
                         className="pd-modal"
@@ -1097,34 +1102,68 @@ export default function PatientDetails(props) {
                             </div>
                             <button
                                 className="pd-modal-close"
-                                onClick={() => setEditApptOpen(false)}
+                                onClick={() => {
+                                    setEditApptOpen(false);
+                                    setShowCalendar(false);
+                                }}
                             >
                                 <X size={13} />
                             </button>
                         </div>
                         <div className="pd-modal-body">
+                            {/* Date toggle */}
                             <div className="pd-field">
                                 <label className="pd-label">Date *</label>
-                                <DatePicker
-                                    selected={
-                                        apptData.date
-                                            ? new Date(apptData.date)
-                                            : null
-                                    }
-                                    onChange={(date) =>
-                                        setApptData((prev) => ({
-                                            ...prev,
-                                            date: date.toLocaleDateString(
-                                                "en-CA",
-                                            ),
-                                            time: "",
-                                        }))
-                                    }
-                                    dateFormat="yyyy-MM-dd"
-                                    className="pd-input"
-                                    placeholderText="Select date"
-                                    calendarClassName="dp-dark-calendar"
-                                />
+                                <button
+                                    type="button"
+                                    className={`pd-date-btn ${showCalendar ? "open" : ""}`}
+                                    onClick={() => setShowCalendar((p) => !p)}
+                                >
+                                    <span
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 7,
+                                        }}
+                                    >
+                                        <CalendarDays
+                                            size={13}
+                                            style={{ color: "#3a4a6b" }}
+                                        />
+                                        {dateLabel(apptData.date)}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            color: "#2e3d5c",
+                                        }}
+                                    >
+                                        {showCalendar ? "▲" : "▼"}
+                                    </span>
+                                </button>
+                                {showCalendar && (
+                                    <div className="pd-cal-drop">
+                                        <DayPicker
+                                            mode="single"
+                                            selected={
+                                                apptData.date
+                                                    ? new Date(apptData.date)
+                                                    : undefined
+                                            }
+                                            onSelect={(date) => {
+                                                if (!date) return;
+                                                setApptData((prev) => ({
+                                                    ...prev,
+                                                    date: date.toLocaleDateString(
+                                                        "en-CA",
+                                                    ),
+                                                    time: "",
+                                                }));
+                                                setShowCalendar(false);
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {editingAppt && (
@@ -1134,6 +1173,7 @@ export default function PatientDetails(props) {
                                         : "No time selected"}
                                 </div>
                             )}
+
                             {Object.entries(groupedSlots).map(
                                 ([label, slots]) =>
                                     slots.length ? (
@@ -1166,51 +1206,40 @@ export default function PatientDetails(props) {
                                                                 bookedSlots.includes(
                                                                     slot,
                                                                 );
-                                                            const isSame =
-                                                                apptData.time ===
-                                                                slot;
                                                             return (
                                                                 !isBooked ||
-                                                                isSame
+                                                                apptData.time ===
+                                                                    slot
                                                             );
                                                         })
-                                                        .map((slot) => {
-                                                            const isBooked =
-                                                                bookedSlots.includes(
-                                                                    slot,
-                                                                );
-                                                            const isSelected =
-                                                                apptData.time ===
-                                                                slot;
-                                                            const isSame =
-                                                                apptData.time ===
-                                                                slot;
-                                                            return (
-                                                                <button
-                                                                    key={slot}
-                                                                    type="button"
-                                                                    disabled={
-                                                                        isBooked &&
-                                                                        !isSame
-                                                                    }
-                                                                    className={`pd-slot ${isSelected ? "selected" : ""} ${isBooked ? "booked" : ""}`}
-                                                                    onClick={() =>
-                                                                        setApptData(
-                                                                            (
-                                                                                prev,
-                                                                            ) => ({
-                                                                                ...prev,
-                                                                                time: slot,
-                                                                            }),
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {formatTime(
+                                                        .map((slot) => (
+                                                            <button
+                                                                key={slot}
+                                                                type="button"
+                                                                disabled={
+                                                                    bookedSlots.includes(
                                                                         slot,
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
+                                                                    ) &&
+                                                                    apptData.time !==
+                                                                        slot
+                                                                }
+                                                                className={`pd-slot ${apptData.time === slot ? "selected" : ""} ${bookedSlots.includes(slot) ? "booked" : ""}`}
+                                                                onClick={() =>
+                                                                    setApptData(
+                                                                        (
+                                                                            prev,
+                                                                        ) => ({
+                                                                            ...prev,
+                                                                            time: slot,
+                                                                        }),
+                                                                    )
+                                                                }
+                                                            >
+                                                                {formatTime(
+                                                                    slot,
+                                                                )}
+                                                            </button>
+                                                        ))}
                                                 </div>
                                             )}
                                         </div>
@@ -1521,7 +1550,10 @@ export default function PatientDetails(props) {
                         <div className="pd-modal-footer">
                             <button
                                 className="pd-btn pd-btn-outline"
-                                onClick={() => setEditApptOpen(false)}
+                                onClick={() => {
+                                    setEditApptOpen(false);
+                                    setShowCalendar(false);
+                                }}
                             >
                                 Cancel
                             </button>
@@ -1543,7 +1575,7 @@ export default function PatientDetails(props) {
                 </div>
             )}
 
-            {/* ── Edit Patient Modal ── */}
+            {/* Edit Patient Modal */}
             {editPatientOpen && (
                 <div
                     className="pd-modal-bg"

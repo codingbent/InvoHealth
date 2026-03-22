@@ -3,13 +3,12 @@ import { useNavigate } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
-import { IndianRupee, UserPlus, X, Check } from "lucide-react";
+import { IndianRupee, UserPlus, X, Check, CalendarArrowDown } from "lucide-react";
 import SlotPicker from "./Slotpicker";
 import { generateSlots } from "../components/utils/Slotsutils";
 import "flatpickr/dist/themes/dark.css";
-// eslint-disable-next-line
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const API_BASE_URL = useMemo(
@@ -52,6 +51,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
     const [bookedSlots, setBookedSlots] = useState([]);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
 
@@ -729,24 +729,83 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                             <div className="ap-grid2">
                                 <div className="ap-field">
                                     <label className="ap-label">Date</label>
-                                    <DatePicker
-                                        selected={
-                                            appointmentDate
-                                                ? new Date(appointmentDate)
-                                                : null
-                                        }
-                                        onChange={(date) =>
-                                            setAppointmentDate(
-                                                date.toLocaleDateString(
-                                                    "en-CA",
-                                                ),
-                                            )
-                                        }
-                                        dateFormat="yyyy-MM-dd"
+
+                                    {/* Trigger button showing selected date */}
+                                    <button
+                                        type="button"
                                         className="ap-input"
-                                        placeholderText="Select date"
-                                        calendarClassName="dp-dark-calendar"
-                                    />
+                                        onClick={() =>
+                                            setShowCalendar((p) => !p)
+                                        }
+                                        style={{
+                                            textAlign: "left",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                color: appointmentDate
+                                                    ? "#c5d0e8"
+                                                    : "#252e45",
+                                            }}
+                                        >
+                                            {appointmentDate
+                                                ? new Date(
+                                                      appointmentDate,
+                                                  ).toLocaleDateString(
+                                                      "en-IN",
+                                                      {
+                                                          day: "numeric",
+                                                          month: "short",
+                                                          year: "numeric",
+                                                      },
+                                                  )
+                                                : "Select date"}
+                                        </span>
+                                        <span
+                                            style={{
+                                                fontSize: 13,
+                                                color: "#3a4a6b",
+                                            }}
+                                        >
+                                            <CalendarArrowDown size={18}/>
+                                        </span>
+                                    </button>
+
+                                    {/* Calendar dropdown */}
+                                    {showCalendar && (
+                                        <div
+                                            className="dp-wrapper"
+                                            style={{
+                                                position: "absolute",
+                                                zIndex: 100,
+                                                marginTop: 4,
+                                            }}
+                                        >
+                                            <DayPicker
+                                                mode="single"
+                                                selected={
+                                                    appointmentDate
+                                                        ? new Date(
+                                                              appointmentDate,
+                                                          )
+                                                        : undefined
+                                                }
+                                                onSelect={(date) => {
+                                                    if (!date) return;
+                                                    setAppointmentDate(
+                                                        date.toLocaleDateString(
+                                                            "en-CA",
+                                                        ),
+                                                    );
+                                                    setShowCalendar(false); // close on select
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="ap-field">
                                     <label className="ap-label">

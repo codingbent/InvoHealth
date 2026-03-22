@@ -8479,7 +8479,7 @@ _________________________________ */
     font-size: 9px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: #2e3d5c;
+    color: var(--text-muted);
     margin: 18px 0 10px;
     display: flex;
     align-items: center;
@@ -8499,7 +8499,7 @@ _________________________________ */
     font-size: 9px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #2e3d5c;
+    color: var(--text-muted);
     margin-bottom: 6px;
 }
 .ap-input,
@@ -9737,7 +9737,7 @@ ________________________________ */
     font-size: 9px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #2e3d5c;
+    color: var(--text-muted);
 }
 .sp-badges {
     display: flex;
@@ -9849,40 +9849,111 @@ ________________________________ */
         Date 
 _______________________ */
 
-.dp-dark-calendar {
-    background: #0d1117 !important;
-    border: 1px solid #161d2e !important;
-    border-radius: 12px !important;
-    font-size: 11px !important;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
-}
-.dp-dark-calendar .react-datepicker__header {
-    background: #080c18 !important;
-    border-bottom: 1px solid #161d2e !important;
-}
-.dp-dark-calendar .react-datepicker__current-month,
-.dp-dark-calendar .react-datepicker__day-name {
-    color: #4a5a7a !important;
-}
-.dp-dark-calendar .react-datepicker__day {
-    color: #8ba0c4 !important;
-    border-radius: 6px !important;
-}
-.dp-dark-calendar .react-datepicker__day:hover {
-    background: rgba(77, 124, 246, 0.12) !important;
-    color: #60a5fa !important;
-}
-.dp-dark-calendar .react-datepicker__day--selected {
-    background: #4d7cf6 !important;
-    color: #fff !important;
-}
-.dp-dark-calendar .react-datepicker__day--today {
-    border: 1px solid rgba(77, 124, 246, 0.3) !important;
-}
-.dp-dark-calendar .react-datepicker__navigation-icon::before {
-    border-color: #3a4a6b !important;
+/* ── react-day-picker navy theme ── */
+.dp-wrapper {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: inline-block;
 }
 
+/* Month/year caption */
+.dp-wrapper .rdp-caption {
+    margin-bottom: 10px;
+}
+.dp-wrapper .rdp-caption_label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #c5d0e8;
+    letter-spacing: 0.04em;
+}
+
+/* Nav buttons — fix the broken box look */
+.dp-wrapper .rdp-nav_button {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid #161d2e;
+    background: #080c18;
+    color: #3a4a6b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+.dp-wrapper .rdp-nav_button:hover {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    background: rgba(77, 124, 246, 0.08);
+}
+
+/* Day name headers */
+.dp-wrapper .rdp-head_cell {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    font-weight: 600;
+    padding: 6px 0;
+}
+
+/* Day cells */
+.dp-wrapper .rdp-day {
+    font-size: 11px;
+    color: #6b7fa8;
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    transition: all 0.12s;
+    border: 1px solid transparent;
+}
+.dp-wrapper .rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+    background: rgba(77, 124, 246, 0.08);
+    border-color: rgba(77, 124, 246, 0.2);
+    color: #60a5fa;
+}
+
+/* Today */
+.dp-wrapper .rdp-day_today:not(.rdp-day_selected) {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    font-weight: 600;
+}
+
+/* Selected day */
+.dp-wrapper .rdp-day_selected,
+.dp-wrapper .rdp-day_selected:hover {
+    background: #4d7cf6 !important;
+    border-color: #4d7cf6 !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+
+/* Outside month days */
+.dp-wrapper .rdp-day_outside {
+    color: #1e2d4a;
+}
+
+/* Disabled days */
+.dp-wrapper .rdp-day_disabled {
+    color: #1a2540;
+    cursor: not-allowed;
+}
+
+/* Remove default focus ring */
+.dp-wrapper .rdp-day:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(77, 124, 246, 0.3);
+}
+
+/* Table spacing */
+.dp-wrapper .rdp-table {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
 /* _____________________________________
             Admin Pricing
 ____________________________________ */
@@ -10333,4 +10404,241 @@ ____________________________________ */
     position: absolute;
     top: 10px;
     right: 10px;
+}
+
+/* _________________________________
+        Calender Styles
+_________________________________ */
+
+.pd-date-btn {
+    width: 100%;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #c5d0e8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    text-align: left;
+    margin-bottom: 4px;
+}
+.pd-date-btn:hover {
+    border-color: rgba(77, 124, 246, 0.35);
+}
+.pd-date-btn.open {
+    border-color: rgba(77, 124, 246, 0.4);
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+.pd-cal-drop {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    animation: pd-drop 0.15s ease;
+}
+@keyframes pd-drop {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.pd-cal-drop .rdp {
+    margin: 0;
+    --rdp-cell-size: 34px;
+}
+.pd-cal-drop .rdp-caption_label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #c5d0e8;
+}
+.pd-cal-drop .rdp-nav_button {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #161d2e;
+    background: #080c18;
+    color: #3a4a6b;
+    transition: all 0.15s;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pd-cal-drop .rdp-nav_button:hover {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    background: rgba(77, 124, 246, 0.08);
+}
+.pd-cal-drop .rdp-head_cell {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    font-weight: 600;
+}
+.pd-cal-drop .rdp-day {
+    font-size: 11px;
+    color: #6b7fa8;
+    border-radius: 7px;
+    transition: all 0.12s;
+    border: 1px solid transparent;
+}
+.pd-cal-drop .rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+    background: rgba(77, 124, 246, 0.08);
+    border-color: rgba(77, 124, 246, 0.2);
+    color: #60a5fa;
+}
+.pd-cal-drop .rdp-day_today:not(.rdp-day_selected) {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    font-weight: 600;
+}
+.pd-cal-drop .rdp-day_selected,
+.pd-cal-drop .rdp-day_selected:hover {
+    background: #4d7cf6 !important;
+    border-color: #4d7cf6 !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+.pd-cal-drop .rdp-day_outside {
+    color: #1e2d4a;
+}
+.pd-cal-drop .rdp-day_disabled {
+    color: #1a2540;
+    cursor: not-allowed;
+}
+.pd-cal-drop .rdp-day:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(77, 124, 246, 0.3);
+}
+.pd-cal-drop .rdp-table {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
+
+.aa-date-btn {
+    width: 100%;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #c5d0e8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    text-align: left;
+}
+.aa-date-btn:hover {
+    border-color: rgba(77, 124, 246, 0.35);
+}
+.aa-date-btn.open {
+    border-color: rgba(77, 124, 246, 0.4);
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+.aa-cal-drop {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-top: 4px;
+    animation: aa-drop 0.15s ease;
+}
+@keyframes aa-drop {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.aa-cal-drop .rdp {
+    margin: 0;
+    --rdp-cell-size: 34px;
+}
+.aa-cal-drop .rdp-caption_label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #c5d0e8;
+}
+.aa-cal-drop .rdp-nav_button {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #161d2e;
+    background: #080c18;
+    color: #3a4a6b;
+    transition: all 0.15s;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.aa-cal-drop .rdp-nav_button:hover {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    background: rgba(77, 124, 246, 0.08);
+}
+.aa-cal-drop .rdp-head_cell {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    font-weight: 600;
+}
+.aa-cal-drop .rdp-day {
+    font-size: 11px;
+    color: #6b7fa8;
+    border-radius: 7px;
+    transition: all 0.12s;
+    border: 1px solid transparent;
+}
+.aa-cal-drop .rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+    background: rgba(77, 124, 246, 0.08);
+    border-color: rgba(77, 124, 246, 0.2);
+    color: #60a5fa;
+}
+.aa-cal-drop .rdp-day_today:not(.rdp-day_selected) {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+    font-weight: 600;
+}
+.aa-cal-drop .rdp-day_selected,
+.aa-cal-drop .rdp-day_selected:hover {
+    background: #4d7cf6 !important;
+    border-color: #4d7cf6 !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+.aa-cal-drop .rdp-day_outside {
+    color: #1e2d4a;
+}
+.aa-cal-drop .rdp-day_disabled {
+    color: #1a2540;
+    cursor: not-allowed;
+}
+.aa-cal-drop .rdp-day:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(77, 124, 246, 0.3);
+}
+.aa-cal-drop .rdp-table {
+    border-collapse: separate;
+    border-spacing: 2px;
 }
