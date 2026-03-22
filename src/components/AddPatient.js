@@ -3,7 +3,13 @@ import { useNavigate } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
-import { IndianRupee, UserPlus, X, Check, CalendarArrowDown } from "lucide-react";
+import {
+    IndianRupee,
+    UserPlus,
+    X,
+    Check,
+    CalendarArrowDown,
+} from "lucide-react";
 import SlotPicker from "./Slotpicker";
 import { generateSlots } from "../components/utils/Slotsutils";
 import "flatpickr/dist/themes/dark.css";
@@ -52,6 +58,10 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const [openSection, setOpenSection] = useState("Morning");
     const [bookedSlots, setBookedSlots] = useState([]);
     const [showCalendar, setShowCalendar] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState("");
+    // eslint-disable-next-line
+    const [uploading, setUploading] = useState(false);
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
 
@@ -127,17 +137,32 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
         return groups;
     }, [timeSlots]);
 
-    // const allSlots = useMemo(() => {
-    //     let slots = [];
-    //     Object.values(groupedSlots).forEach((g) => {
-    //         slots = [...slots, ...g];
-    //     });
-    //     return slots.sort((a, b) => {
-    //         const [h1, m1] = a.split(":").map(Number);
-    //         const [h2, m2] = b.split(":").map(Number);
-    //         return h1 * 60 + m1 - (h2 * 60 + m2);
-    //     });
-    // }, [groupedSlots]);
+    const uploadImage = async () => {
+        if (!imageFile) return null;
+
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        try {
+            setUploading(true);
+
+            const res = await fetch(`${API_BASE_URL}/api/doctor/image/upload`, {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await res.json();
+
+            setUploading(false);
+
+            return data.url;
+        } catch (err) {
+            console.error(err);
+            setUploading(false);
+            showAlert("Image upload failed", "danger");
+            return null;
+        }
+    };
 
     const isToday = useMemo(() => {
         const today = new Date().toISOString().slice(0, 10);
@@ -291,6 +316,11 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             showAlert("Percentage cannot exceed 100%", "warning");
             return;
         }
+        let imageUrl = null;
+
+        if (imageFile) {
+            imageUrl = await uploadImage();
+        }
         if (isPercent) setDiscount((finalAmount * discount) / 100);
         const collectedAmount = Number(patient.amount) || 0;
         const totalAmount = finalAmount;
@@ -344,6 +374,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                         doctorId,
                         discount,
                         isPercent,
+                        image: imageUrl,
                     }),
                 },
             );
@@ -722,6 +753,87 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                 </>
                             )}
 
+                            <div className="ap-field">
+                                <label className="ap-label">
+                                    Upload Report / Image
+                                    <span
+                                        style={{
+                                            color: "#2e3d5c",
+                                            fontWeight: 400,
+                                            marginLeft: 6,
+                                            fontSize: 9,
+                                        }}
+                                    >
+                                        — max 2 MB
+                                    </span>
+                                </label>
+
+                                <label className="ap-upload-zone">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        style={{ display: "none" }}
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            if (file.size > 2 * 1024 * 1024) {
+                                                showAlert(
+                                                    "Image must be under 2 MB",
+                                                    "danger",
+                                                );
+                                                return;
+                                            }
+                                            setImageFile(file);
+                                            setImagePreview(
+                                                URL.createObjectURL(file),
+                                            );
+                                        }}
+                                    />
+                                    {imagePreview ? (
+                                        <div className="ap-upload-preview">
+                                            <img
+                                                src={imagePreview}
+                                                alt="preview"
+                                                className="ap-preview-img"
+                                            />
+                                            <div className="ap-preview-name">
+                                                {imageFile?.name}
+                                            </div>
+                                            <div className="ap-preview-size">
+                                                {(
+                                                    imageFile?.size / 1024
+                                                ).toFixed(0)}{" "}
+                                                KB
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="ap-upload-empty">
+                                            <div className="ap-upload-icon">
+                                                ↑
+                                            </div>
+                                            <div className="ap-upload-text">
+                                                Click to upload
+                                            </div>
+                                            <div className="ap-upload-hint">
+                                                PNG, JPG, WEBP · max 2 MB
+                                            </div>
+                                        </div>
+                                    )}
+                                </label>
+
+                                {imagePreview && (
+                                    <button
+                                        type="button"
+                                        className="ap-upload-remove"
+                                        onClick={() => {
+                                            setImageFile(null);
+                                            setImagePreview("");
+                                        }}
+                                    >
+                                        Remove image
+                                    </button>
+                                )}
+                            </div>
                             {/* Appointment */}
                             <div className="ap-section">
                                 Appointment & Payment
@@ -771,7 +883,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                                 color: "#3a4a6b",
                                             }}
                                         >
-                                            <CalendarArrowDown size={18}/>
+                                            <CalendarArrowDown size={18} />
                                         </span>
                                     </button>
 

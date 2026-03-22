@@ -39,6 +39,10 @@ const AppointmentSchema = new Schema({
                 default: "Cash",
             },
             invoiceNumber: { type: Number, default: 1 },
+            image: {
+                type: String,
+                default: "",
+            },
         },
     ],
 });

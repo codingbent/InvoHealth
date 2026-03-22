@@ -130,6 +130,13 @@ export default function Pricing() {
                   ? p.invoiceLimit
                   : p.invoiceLimit * 12;
 
+        const imageLimit =
+            p.imageLimit === -1
+                ? "Unlimited"
+                : billing === "monthly"
+                  ? p.imageLimit
+                  : p.imageLimit * 12;
+
         const features = [
             { label: "Unlimited Patients", ok: true },
             {
@@ -160,6 +167,14 @@ export default function Pricing() {
                         : `${invoiceLimit} Invoice Downloads ${billing === "monthly" ? "/ month" : "/ yr"}`,
                 ok: p.invoiceLimit === -1,
                 warn: p.invoiceLimit !== -1,
+            },
+            {
+                label:
+                    p.imageLimit === -1
+                        ? "Unlimited Image Uploads"
+                        : `${imageLimit} Image Uploads ${billing === "monthly" ? "/ month" : "/ yr"}`,
+                ok: p.imageLimit === -1,
+                warn: p.imageLimit !== -1,
             },
         ];
 
@@ -302,8 +317,8 @@ export default function Pricing() {
                                         <span className="pr-price-period">
                                             /
                                             {billing === "monthly"
-                                                ? "mo"
-                                                : "yr"}
+                                                ? "month"
+                                                : "year"}
                                         </span>
                                     </div>
 

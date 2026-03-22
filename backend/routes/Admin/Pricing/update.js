@@ -13,7 +13,8 @@ router.post("/pricing/update", fetchadmin, async (req, res) => {
                 plan.monthly > 0 &&
                 typeof plan.staffLimit === "number" &&
                 typeof plan.excelLimit === "number" &&
-                typeof plan.invoiceLimit === "number"
+                typeof plan.invoiceLimit === "number" &&
+                typeof plan.imageLimit === "number"
             );
         };
 

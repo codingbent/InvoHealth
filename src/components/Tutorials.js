@@ -1,81 +1,69 @@
 import { useState, useMemo } from "react";
+import {
+    Rocket,
+    Users,
+    FileText,
+    UserCog,
+    BarChart3,
+    Image,
+} from "lucide-react";
 
 const tutorials = {
     "Getting Started": [
-        {
-            title: "Create Account (Sign Up)",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Login to Website",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Setup Clinic Profile",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
+        { title: "Create Account (Sign Up)", video: "..." },
+        { title: "Login to Dashboard", video: "..." },
+        { title: "Setup Clinic Profile", video: "..." },
     ],
-    "Patient Management": [
-        {
-            title: "Add New Patient",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Edit Patient Details",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Search Patients",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
+
+    "Patients & Appointments": [
+        { title: "Add New Patient", video: "..." },
+        { title: "Search & Manage Patients", video: "..." },
+        { title: "Add Appointment", video: "..." },
+        { title: "Select Services & Billing", video: "..." },
+        { title: "Use Time Slots", video: "..." },
     ],
+
+    "Records & Image Upload": [
+        { title: "Upload Prescription / X-ray", video: "..." },
+        { title: "Capture Image from Camera", video: "..." },
+        { title: "View Patient Records", video: "..." },
+        { title: "Upload via Appointment", video: "..." },
+    ],
+
     "Billing & Invoices": [
-        {
-            title: "Create Invoice",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Download Invoice PDF",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Export Billing to Excel",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
+        { title: "Generate Invoice", video: "..." },
+        { title: "Track Payments (Paid / Partial / Unpaid)", video: "..." },
+        { title: "Download Invoice PDF", video: "..." },
+        { title: "Export to Excel", video: "..." },
     ],
-    "Staff Management": [
-        { title: "Add Staff", video: "https://www.youtube.com/embed/VIDEO_ID" },
-        {
-            title: "Staff Permissions",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
+
+    "Staff & Roles": [
+        { title: "Add Staff", video: "..." },
+        // { title: "Manage Permissions", video: "..." },
     ],
-    Analytics: [
-        {
-            title: "Dashboard Overview",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
-        {
-            title: "Revenue Analytics",
-            video: "https://www.youtube.com/embed/VIDEO_ID",
-        },
+
+    "Analytics & Reports": [
+        { title: "Dashboard Overview", video: "..." },
+        { title: "Revenue Insights", video: "..." },
     ],
 };
 
 const sectionIcons = {
-    "Getting Started": "◈",
-    "Patient Management": "◉",
-    "Billing & Invoices": "◎",
-    "Staff Management": "⊕",
-    Analytics: "◐",
+    "Getting Started": <Rocket size={16} />,
+    "Patients & Appointments": <Users size={16} />,
+    "Records & Image Upload": <Image size={16} />,
+    "Billing & Invoices": <FileText size={16} />,
+    "Staff & Roles": <UserCog size={16} />,
+    "Analytics & Reports": <BarChart3 size={16} />,
 };
 
 const sectionColors = {
     "Getting Started": "#60a5fa",
-    "Patient Management": "#4ade80",
+    "Patients & Appointments": "#4ade80",
+    "Records & Image Upload": "#38bdf8",
     "Billing & Invoices": "#fb923c",
-    "Staff Management": "#a78bfa",
-    Analytics: "#f472b6",
+    "Staff & Roles": "#a78bfa",
+    "Analytics & Reports": "#f472b6",
 };
 
 export default function Tutorials() {

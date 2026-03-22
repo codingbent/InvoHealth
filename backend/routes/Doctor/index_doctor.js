@@ -16,5 +16,6 @@ router.use("/patient", require("./Patient/index_patient"));
 router.use("/staff", require("./Staff/index_staff"));
 router.use("/services", require("./Services/index_services"));
 router.use("/timing", require("./Timing/index_timing"));
+router.use("/image",require("./Images/index_images"))
 
 module.exports = router;

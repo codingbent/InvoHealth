@@ -15,53 +15,72 @@ import {
     Pencil,
     X,
     ShieldCheck,
-    BarChart2,
-    FileSpreadsheet,
-    Clock,
+    BarChart3,
+    CalendarDays,
+    Folder,
+    CreditCard,
     ChevronRight,
+    User,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Pricing from "./Pricing";
 
 const FEATURES = [
     {
-        icon: <UserPlus size={17} />,
-        color: "#2dd4bf",
-        bg: "rgba(45,212,191,0.1)",
-        border: "rgba(45,212,191,0.18)",
-        glow: "rgba(45,212,191,0.25)",
         name: "Patient Management",
-        desc: "Add patients, track visits, store contact details and full appointment history in one view.",
-    },
-    {
-        icon: <FileSpreadsheet size={17} />,
-        color: "#60a5fa",
-        bg: "rgba(96,165,250,0.1)",
-        border: "rgba(96,165,250,0.18)",
-        glow: "rgba(96,165,250,0.25)",
-        name: "Smart Invoicing",
-        desc: "Generate PDF invoices instantly with automatic billing, discounts and payment status tracking.",
-    },
-    {
-        icon: <Clock size={17} />,
+        desc: "Easily manage patient profiles, history, and visit records in one place.",
+        icon: <User size={18} />,
         color: "#a78bfa",
         bg: "rgba(167,139,250,0.1)",
-        border: "rgba(167,139,250,0.18)",
-        glow: "rgba(167,139,250,0.25)",
-        name: "Slot Booking",
-        desc: "Define your availability and auto-assign slots. Avoid double-bookings and track booked times.",
+        border: "rgba(167,139,250,0.3)",
+        glow: "rgba(167,139,250,0.6)",
     },
     {
-        icon: <BarChart2 size={17} />,
-        color: "#fb923c",
-        bg: "rgba(251,146,60,0.1)",
-        border: "rgba(251,146,60,0.18)",
-        glow: "rgba(251,146,60,0.25)",
-        name: "Reports & Analytics",
-        desc: "Track monthly collections, export Excel reports and gain insights into your practice.",
+        name: "Appointment Scheduling",
+        desc: "Smart scheduling with time slots, availability tracking, and quick booking.",
+        icon: <CalendarDays size={18} />,
+        color: "#38bdf8",
+        bg: "rgba(56,189,248,0.1)",
+        border: "rgba(56,189,248,0.3)",
+        glow: "rgba(56,189,248,0.6)",
+    },
+    {
+        name: "Patient Records",
+        desc: "Upload and store prescriptions, X-rays, and medical reports with full visit history.",
+        icon: <Folder size={18} />,
+        color: "#60a5fa",
+        bg: "rgba(96,165,250,0.1)",
+        border: "rgba(96,165,250,0.3)",
+        glow: "rgba(96,165,250,0.6)",
+    },
+    {
+        name: "Smart Billing",
+        desc: "Generate invoices instantly with automated calculations, discounts, and payment tracking.",
+        icon: <FileText size={18} />,
+        color: "#34d399",
+        bg: "rgba(52,211,153,0.1)",
+        border: "rgba(52,211,153,0.3)",
+        glow: "rgba(52,211,153,0.6)",
+    },
+    {
+        name: "Payment Tracking",
+        desc: "Track paid, partial, and pending payments with clear financial insights.",
+        icon: <CreditCard size={18} />,
+        color: "#f59e0b",
+        bg: "rgba(245,158,11,0.1)",
+        border: "rgba(245,158,11,0.3)",
+        glow: "rgba(245,158,11,0.6)",
+    },
+    {
+        name: "Clinic Insights",
+        desc: "Monitor revenue, patient flow, and performance with simple analytics.",
+        icon: <BarChart3 size={18} />,
+        color: "#f87171",
+        bg: "rgba(248,113,113,0.1)",
+        border: "rgba(248,113,113,0.3)",
+        glow: "rgba(248,113,113,0.6)",
     },
 ];
-
 const Patient = ({ showAlert }) => {
     const [role, setRole] = useState(null);
     //eslint-disable-next-line
@@ -220,72 +239,80 @@ const Patient = ({ showAlert }) => {
     // ── Logged in ──
     return (
         <>
-            {fabOpen && (
-                <div
-                    className="fab-backdrop"
-                    onClick={() => setFabOpen(false)}
-                />
-            )}
+            {!showAppointment && !showPatientDetails && (
+                <>
+                    {fabOpen && (
+                        <div
+                            className="fab-backdrop"
+                            onClick={() => setFabOpen(false)}
+                        />
+                    )}
 
-            <div className={`fab-container ${fabOpen ? "open" : ""}`}>
-                <button
-                    className={`fab-main ${fabOpen ? "open" : ""}`}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setFabOpen(!fabOpen);
-                    }}
-                >
-                    <Plus size={22} />
-                </button>
-                <button
-                    className={`fab-item ${fabOpen ? "show" : ""}`}
-                    style={{ "--i": 1 }}
-                    onClick={() => {
-                        setFabOpen(false);
-                        setShowPatientModal(true);
-                    }}
-                >
-                    <UserPlus size={16} />
-                    <span>Add Patient</span>
-                </button>
-                <button
-                    className={`fab-item ${fabOpen ? "show" : ""}`}
-                    style={{ "--i": 2 }}
-                    onClick={() => {
-                        setFabOpen(false);
-                        setShowAppointment(true);
-                    }}
-                >
-                    <CalendarPlus size={16} />
-                    <span>Add Appointment</span>
-                </button>
-                {role === "doctor" && (
-                    <button
-                        className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 3 }}
-                        onClick={() => {
-                            setFabOpen(false);
-                            setShowServiceModal(true);
-                        }}
-                    >
-                        <FileText size={16} />
-                        <span>Add Service</span>
-                    </button>
-                )}
-                {role === "doctor" && (
-                    <button
-                        className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 4 }}
-                        onClick={() => {
-                            setFabOpen(false);
-                            setShowEditServiceModal(true);
-                        }}
-                    >
-                        <Pencil size={16} />
-                        <span>Edit Service</span>
-                    </button>
-                )}
-            </div>
+                    <div className={`fab-container ${fabOpen ? "open" : ""}`}>
+                        <button
+                            className={`fab-main ${fabOpen ? "open" : ""}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setFabOpen(!fabOpen);
+                            }}
+                        >
+                            <Plus size={22} />
+                        </button>
+
+                        <button
+                            className={`fab-item ${fabOpen ? "show" : ""}`}
+                            style={{ "--i": 1 }}
+                            onClick={() => {
+                                setFabOpen(false);
+                                setShowPatientModal(true);
+                            }}
+                        >
+                            <UserPlus size={16} />
+                            <span>Add Patient</span>
+                        </button>
+
+                        <button
+                            className={`fab-item ${fabOpen ? "show" : ""}`}
+                            style={{ "--i": 2 }}
+                            onClick={() => {
+                                setFabOpen(false);
+                                setShowAppointment(true);
+                            }}
+                        >
+                            <CalendarPlus size={16} />
+                            <span>Add Appointment</span>
+                        </button>
+
+                        {role === "doctor" && (
+                            <button
+                                className={`fab-item ${fabOpen ? "show" : ""}`}
+                                style={{ "--i": 3 }}
+                                onClick={() => {
+                                    setFabOpen(false);
+                                    setShowServiceModal(true);
+                                }}
+                            >
+                                <FileText size={16} />
+                                <span>Add Service</span>
+                            </button>
+                        )}
+
+                        {role === "doctor" && (
+                            <button
+                                className={`fab-item ${fabOpen ? "show" : ""}`}
+                                style={{ "--i": 4 }}
+                                onClick={() => {
+                                    setFabOpen(false);
+                                    setShowEditServiceModal(true);
+                                }}
+                            >
+                                <Pencil size={16} />
+                                <span>Edit Service</span>
+                            </button>
+                        )}
+                    </div>
+                </>
+            )}
 
             <Modal
                 isOpen={showPatientModal}

@@ -43,7 +43,7 @@ export default function AddAppointment({ showAlert }) {
     const [timeSlots, setTimeSlots] = useState([]);
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
-    // eslint-disable-next-line
+    const [image, setImage] = useState(null);
     const [bookedSlots, setBookedSlots] = useState([]);
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
@@ -252,6 +252,32 @@ export default function AddAppointment({ showAlert }) {
             return;
         }
         setIsSubmitting(true);
+
+        let imageUrl = "";
+
+        if (image) {
+            const formData = new FormData();
+            formData.append("image", image);
+
+            const uploadRes = await fetch(
+                `${API_BASE_URL}/api/doctor/image/upload`,
+                {
+                    method: "POST",
+                    body: formData,
+                },
+            );
+
+            const uploadData = await uploadRes.json();
+
+            if (!uploadRes.ok) {
+                showAlert("Image upload failed", "danger");
+                setIsSubmitting(false);
+                return;
+            }
+
+            imageUrl = uploadData.url;
+        }
+
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/add_appointment/${selectedPatient._id}`,
@@ -272,6 +298,7 @@ export default function AddAppointment({ showAlert }) {
                         isPercent,
                         date: appointmentDate,
                         time: selectedSlot,
+                        image: imageUrl,
                     }),
                 },
             );
@@ -303,6 +330,23 @@ export default function AddAppointment({ showAlert }) {
                   month: "short",
                   year: "numeric",
               });
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // validation
+        if (!file.type.startsWith("image/")) {
+            showAlert("Only images allowed", "warning");
+            return;
+        }
+
+        if (file.size > 1 * 1024 * 1024) {
+            showAlert("Max 1MB allowed", "warning");
+            return;
+        }
+
+        setImage(file);
+    };
 
     return (
         <>
@@ -656,6 +700,72 @@ export default function AddAppointment({ showAlert }) {
                                     <option>HDFC</option>
                                     <option>Other</option>
                                 </select>
+                            </div>
+
+                            <div className="aa-mb">
+                                <label className="aa-label">
+                                    Upload Image
+                                    <span
+                                        style={{
+                                            color: "#2e3d5c",
+                                            fontWeight: 400,
+                                            marginLeft: 6,
+                                            fontSize: 9,
+                                        }}
+                                    >
+                                        — max 1 MB
+                                    </span>
+                                </label>
+                                <input
+                                    id="fileInput"
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: "none" }}
+                                    onChange={handleImageChange}
+                                />
+
+                                <div className="aa-upload-btns">
+                                    <button
+                                        type="button"
+                                        className="aa-upload-btn"
+                                        onClick={() =>
+                                            document
+                                                .getElementById("fileInput")
+                                                .click()
+                                        }
+                                    >
+                                        <span className="aa-upload-btn-icon">
+                                            ↑
+                                        </span>{" "}
+                                        Upload File
+                                    </button>
+                                </div>
+
+                                {image && (
+                                    <div className="aa-upload-preview">
+                                        <img
+                                            src={URL.createObjectURL(image)}
+                                            alt="preview"
+                                            className="aa-preview-img"
+                                        />
+                                        <div className="aa-preview-info">
+                                            <div className="aa-preview-name">
+                                                {image.name}
+                                            </div>
+                                            <div className="aa-preview-size">
+                                                {(image.size / 1024).toFixed(0)}{" "}
+                                                KB
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="aa-preview-remove"
+                                            onClick={() => setImage(null)}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <button

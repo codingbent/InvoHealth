@@ -1,7 +1,19 @@
+import {
+    Zap,
+    Building2,
+    Smartphone,
+    ShieldCheck,
+    Mail,
+    Info,
+    Copyright,
+} from "lucide-react";
+
 export default function About() {
     const features = [
         "Patient profile management",
+        "Appointment scheduling with time slots",
         "Appointment & visit history",
+        "Upload prescriptions, X-rays & reports",
         "Service-based billing system",
         "Discounts (flat & percentage)",
         "Partial & full payment support",
@@ -17,10 +29,10 @@ export default function About() {
     ];
 
     const highlights = [
-        { icon: "⚡", label: "Fast & minimal" },
-        { icon: "🏥", label: "Clinic-first design" },
-        { icon: "📱", label: "Mobile & desktop" },
-        { icon: "🔒", label: "Secure access" },
+        { icon: <Zap size={14} />, label: "Fast & minimal" },
+        { icon: <Building2 size={14} />, label: "Clinic-first design" },
+        { icon: <Smartphone size={14} />, label: "Mobile & desktop" },
+        { icon: <ShieldCheck size={14} />, label: "Secure access" },
     ];
 
     return (
@@ -36,8 +48,9 @@ export default function About() {
                         Invo<span>Health</span>
                     </h1>
                     <p className="ab-hero-sub">
-                        A lightweight, fast, and practical record-keeping
-                        solution built specifically for small personal clinics.
+                        A modern clinic management system to manage patients,
+                        appointments with time slots, billing, and medical
+                        records including prescriptions and reports.
                     </p>
                 </div>
 
@@ -61,9 +74,9 @@ export default function About() {
                             InvoHealth is a modern clinic management and billing
                             platform designed to streamline daily healthcare
                             operations. It enables doctors to efficiently manage
-                            patient records, appointments, and billing in one
-                            centralized system — eliminating manual work and
-                            improving overall clinic productivity.
+                            patient records, schedule appointments with time
+                            slots, upload prescriptions and medical reports, and
+                            handle billing — all in one centralized system.
                         </p>
                     </div>
 
@@ -77,7 +90,8 @@ export default function About() {
                             Designed specifically for private clinics,
                             InvoHealth helps reduce manual paperwork and
                             streamline day-to-day operations. From patient
-                            records to billing, it brings efficiency and
+                            records and medical report uploads to billing and
+                            appointment scheduling, it brings efficiency and
                             structure to real-world clinical workflows.
                         </p>
                         <div className="ab-alert warning">
@@ -116,7 +130,9 @@ export default function About() {
                             <li>Excel export for CA</li>
                         </ul>
                         <div className="ab-alert info">
-                            <span className="ab-alert-icon">ℹ</span>
+                            <span className="ab-alert-icon">
+                                <Info size={18} />
+                            </span>
                             <span>
                                 <strong>Note:</strong> Consult a CA for final
                                 filings.
@@ -152,7 +168,7 @@ export default function About() {
                             href="mailto:invohealth.app@gmail.com"
                             className="ab-contact-link"
                         >
-                            ✉ invohealth.app@gmail.com
+                            <Mail size={18} /> invohealth.app@gmail.com
                         </a>
                     </div>
 
@@ -176,7 +192,7 @@ export default function About() {
                 {/* Footer */}
                 <div className="ab-footer">
                     <span className="ab-footer-left">
-                        © {new Date().getFullYear()} InvoHealth. All rights
+                        <Copyright size={18}/> {new Date().getFullYear()} InvoHealth. All rights
                         reserved.
                     </span>
                     <span className="ab-version-badge">

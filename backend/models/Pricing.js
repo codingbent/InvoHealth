@@ -27,6 +27,10 @@ const PlanSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        imageLimit: {
+            type: Number,
+            required: true,
+        },
     },
     { _id: false },
 );

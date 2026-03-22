@@ -14,14 +14,14 @@ import {
     User,
     IndianRupee,
     Phone,
-    ReceiptIndianRupee,
+    ImageIcon,
     X,
     Check,
     ChevronLeft,
     FileText,
     CalendarDays,
+    ReceiptIndianRupee
 } from "lucide-react";
-
 
 export default function PatientDetails(props) {
     const navigate = useNavigate();
@@ -66,6 +66,8 @@ export default function PatientDetails(props) {
     const [editApptOpen, setEditApptOpen] = useState(false);
     const [editPatientOpen, setEditPatientOpen] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
+    const [lightboxImg, setLightboxImg] = useState(null);
+    const [recordView, setRecordView] = useState("history"); // "history" | "images"
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
     const dateLabel = (d) =>
@@ -695,6 +697,17 @@ export default function PatientDetails(props) {
     const statusClass = (s) =>
         s === "Paid" ? "pl-paid" : s === "Partial" ? "pl-partial" : "pl-unpaid";
 
+    const patientImages = useMemo(
+        () =>
+            appointments
+                .filter((v) => v.image && v.image !== "")
+                .map((v) => ({
+                    url: v.image,
+                    date: new Date(v.date).toLocaleDateString("en-IN"),
+                })),
+        [appointments],
+    );
+
     if (loading)
         return (
             <div
@@ -814,98 +827,242 @@ export default function PatientDetails(props) {
                 </div>
 
                 <div className="pd-card">
-                    <div className="pd-section-title">
-                        Previous Appointments
-                    </div>
-                    {appointments.length === 0 ? (
-                        <div
-                            style={{
-                                textAlign: "center",
-                                padding: "24px 0",
-                                fontSize: 11,
-                                color: "#2e3d5c",
-                                letterSpacing: "0.06em",
-                            }}
+                    {/* SWITCH */}
+                    <div className="pd-switch">
+                        <button
+                            className={`pd-switch-btn ${recordView === "history" ? "active" : ""}`}
+                            onClick={() => setRecordView("history")}
                         >
-                            No appointments found
-                        </div>
-                    ) : (
-                        <>
-                            <table className="pd-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Services</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Payment</th>
-                                        <th className="right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            Appointment History
+                        </button>
+
+                        <button
+                            className={`pd-switch-btn ${recordView === "images" ? "active" : ""}`}
+                            onClick={() => setRecordView("images")}
+                        >
+                            Patient Records
+                        </button>
+                    </div>
+
+                    {/* ================= HISTORY VIEW ================= */}
+                    {recordView === "history" ? (
+                        appointmentsForView.length === 0 ? (
+                            <div className="pd-gallery-empty">
+                                No appointment history
+                            </div>
+                        ) : (
+                            <>
+                                <table className="pd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Services</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Payment</th>
+                                            <th className="right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {appointmentsForView.map((visit) => {
+                                            const col = Number(
+                                                visit.collected ?? 0,
+                                            );
+                                            const tot = Number(
+                                                visit.amount ?? 0,
+                                            );
+                                            const rem = tot - col;
+
+                                            const status =
+                                                rem <= 0
+                                                    ? "Paid"
+                                                    : col > 0
+                                                      ? "Partial"
+                                                      : "Unpaid";
+
+                                            return (
+                                                <tr key={visit._id}>
+                                                    <td>
+                                                        {visit.formattedDate}
+                                                    </td>
+
+                                                    <td>
+                                                        {(visit.service || [])
+                                                            .map((s) => s.name)
+                                                            .join(", ")}
+                                                    </td>
+
+                                                    <td>
+                                                        ₹
+                                                        {fmt(visit.amount ?? 0)}
+                                                    </td>
+
+                                                    <td>
+                                                        <span
+                                                            className={`pl-status ${statusClass(status)}`}
+                                                        >
+                                                            {status}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        {visit.payment_type ||
+                                                            "N/A"}
+                                                    </td>
+
+                                                    <td className="right">
+                                                        <div className="pd-action-btns">
+                                                            <button
+                                                                className="pd-icon-btn pd-icon-inv"
+                                                                onClick={() =>
+                                                                    handleInvoiceClick(
+                                                                        appointmentId,
+                                                                        visit,
+                                                                        details,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <FileText
+                                                                    size={13}
+                                                                />
+                                                            </button>
+                                                            <button
+                                                                className="pd-icon-btn pd-icon-edit"
+                                                                onClick={() =>
+                                                                    editInvoice(
+                                                                        appointmentId,
+                                                                        visit,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Pencil
+                                                                    size={13}
+                                                                />
+                                                            </button>
+
+                                                            <button
+                                                                className="pd-icon-btn pd-icon-del danger"
+                                                                onClick={() =>
+                                                                    deleteInvoice(
+                                                                        appointmentId,
+                                                                        visit,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Trash2
+                                                                    size={13}
+                                                                />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <div className="pd-mob-table">
                                     {appointmentsForView.map((visit) => (
-                                        <tr key={visit._id}>
-                                            <td className="pd-td-name">
-                                                <div>{visit.formattedDate}</div>
-                                                {visit.time && (
-                                                    <div className="pd-td-time">
-                                                        {formatTime(visit.time)}
+                                        <div
+                                            key={visit._id}
+                                            className="pd-visit-card"
+                                        >
+                                            <div className="pd-visit-row">
+                                                <div>
+                                                    <div className="pd-visit-date">
+                                                        {visit.formattedDate}
                                                     </div>
-                                                )}
-                                            </td>
-                                            <td className="pd-td-services">
-                                                {(visit.service || [])
-                                                    .map((s) => s.name)
-                                                    .join(", ")}
-                                            </td>
-                                            <td>
-                                                <div className="pd-td-amount">
-                                                    <IndianRupee size={12} />
-                                                    {fmt(
-                                                        visit.collected ??
-                                                            visit.amount ??
-                                                            0,
+                                                    {visit.time && (
+                                                        <div className="pd-visit-time">
+                                                            {formatTime(
+                                                                visit.time,
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div
+                                                        style={{
+                                                            fontSize: 11,
+                                                            color: "#6b7fa8",
+                                                            marginTop: 4,
+                                                        }}
+                                                    >
+                                                        {(visit.service || [])
+                                                            .map((s) => s.name)
+                                                            .join(", ")}
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        textAlign: "right",
+                                                    }}
+                                                >
+                                                    <div className="pd-visit-amount">
+                                                        <IndianRupee
+                                                            size={13}
+                                                        />
+                                                        {fmt(visit.amount ?? 0)}
+                                                    </div>
+                                                    {Number(
+                                                        visit.collected ?? 0,
+                                                    ) <
+                                                        Number(
+                                                            visit.amount ?? 0,
+                                                        ) && (
+                                                        <div className="pd-visit-sub">
+                                                            Collected{" "}
+                                                            <IndianRupee
+                                                                size={11}
+                                                            />
+                                                            {fmt(
+                                                                visit.collected ||
+                                                                    0,
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td>
-                                                {(() => {
-                                                    const col = Number(
-                                                            visit.collected ??
-                                                                0,
-                                                        ),
-                                                        tot = Number(
-                                                            visit.amount ?? 0,
-                                                        ),
-                                                        rem = tot - col;
-                                                    const s =
-                                                        rem <= 0
-                                                            ? "Paid"
-                                                            : col > 0
-                                                              ? "Partial"
-                                                              : "Unpaid";
-                                                    return (
-                                                        <span
-                                                            className={`pl-status ${statusClass(s)}`}
-                                                        >
-                                                            {s}
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </td>
-                                            <td>
-                                                <span
-                                                    className={`pl-tag pl-${(visit.payment_type || "other").toLowerCase()}`}
+                                            </div>
+                                            <div className="pd-visit-footer">
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        gap: 6,
+                                                        flexWrap: "wrap",
+                                                        alignItems: "center",
+                                                    }}
                                                 >
-                                                    {visit.payment_type ||
-                                                        "N/A"}
-                                                </span>
-                                            </td>
-                                            <td className="right">
-                                                <div className="pd-action-btns">
+                                                    <span
+                                                        className={`pl-tag pl-${(visit.payment_type || "other").toLowerCase()}`}
+                                                    >
+                                                        {visit.payment_type ||
+                                                            "N/A"}
+                                                    </span>
+                                                    {(() => {
+                                                        const col = Number(
+                                                                visit.collected ??
+                                                                    0,
+                                                            ),
+                                                            tot = Number(
+                                                                visit.amount ??
+                                                                    0,
+                                                            ),
+                                                            rem = tot - col;
+                                                        const s =
+                                                            rem <= 0
+                                                                ? "Paid"
+                                                                : col > 0
+                                                                  ? "Partial"
+                                                                  : "Unpaid";
+                                                        return (
+                                                            <span
+                                                                className={`pl-status ${statusClass(s)}`}
+                                                            >
+                                                                {s}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+                                                <div className="pd-visit-actions">
                                                     <button
                                                         className="pd-icon-btn pd-icon-inv"
-                                                        title="Invoice"
                                                         onClick={() =>
                                                             handleInvoiceClick(
                                                                 id,
@@ -914,11 +1071,12 @@ export default function PatientDetails(props) {
                                                             )
                                                         }
                                                     >
-                                                        <FileText size={13} />
+                                                        <ReceiptIndianRupee
+                                                            size={13}
+                                                        />
                                                     </button>
                                                     <button
                                                         className="pd-icon-btn pd-icon-edit"
-                                                        title="Edit"
                                                         onClick={() =>
                                                             editInvoice(
                                                                 appointmentId,
@@ -930,7 +1088,6 @@ export default function PatientDetails(props) {
                                                     </button>
                                                     <button
                                                         className="pd-icon-btn pd-icon-del"
-                                                        title="Delete"
                                                         onClick={() =>
                                                             deleteInvoice(
                                                                 appointmentId,
@@ -941,147 +1098,65 @@ export default function PatientDetails(props) {
                                                         <Trash2 size={13} />
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-
-                            <div className="pd-mob-table">
-                                {appointmentsForView.map((visit) => (
-                                    <div
-                                        key={visit._id}
-                                        className="pd-visit-card"
-                                    >
-                                        <div className="pd-visit-row">
-                                            <div>
-                                                <div className="pd-visit-date">
-                                                    {visit.formattedDate}
-                                                </div>
-                                                {visit.time && (
-                                                    <div className="pd-visit-time">
-                                                        {formatTime(visit.time)}
-                                                    </div>
-                                                )}
-                                                <div
-                                                    style={{
-                                                        fontSize: 11,
-                                                        color: "#6b7fa8",
-                                                        marginTop: 4,
-                                                    }}
-                                                >
-                                                    {(visit.service || [])
-                                                        .map((s) => s.name)
-                                                        .join(", ")}
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: "right" }}>
-                                                <div className="pd-visit-amount">
-                                                    <IndianRupee size={13} />
-                                                    {fmt(visit.amount ?? 0)}
-                                                </div>
-                                                {Number(visit.collected ?? 0) <
-                                                    Number(
-                                                        visit.amount ?? 0,
-                                                    ) && (
-                                                    <div className="pd-visit-sub">
-                                                        Collected{" "}
-                                                        <IndianRupee
-                                                            size={11}
-                                                        />
-                                                        {fmt(
-                                                            visit.collected ||
-                                                                0,
-                                                        )}
-                                                    </div>
-                                                )}
+                                </div>
+                            </>
+                        )
+                    ) : (
+                        /* ================= IMAGE VIEW ================= */
+                        <>
+                            {patientImages.length === 0 ? (
+                                <div className="pd-gallery-empty">
+                                    <ImageIcon
+                                        size={14}
+                                        style={{ opacity: 0.3 }}
+                                    />
+                                    No records available
+                                </div>
+                            ) : (
+                                <div className="pd-image-grid">
+                                    {patientImages.map((img, i) => (
+                                        <div
+                                            key={i}
+                                            className="pd-image-item"
+                                            onClick={() => setLightboxImg(img)}
+                                        >
+                                            <img src={img.url} alt="record" />
+                                            <div className="pd-image-overlay">
+                                                {img.date}
                                             </div>
                                         </div>
-                                        <div className="pd-visit-footer">
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    gap: 6,
-                                                    flexWrap: "wrap",
-                                                    alignItems: "center",
-                                                }}
-                                            >
-                                                <span
-                                                    className={`pl-tag pl-${(visit.payment_type || "other").toLowerCase()}`}
-                                                >
-                                                    {visit.payment_type ||
-                                                        "N/A"}
-                                                </span>
-                                                {(() => {
-                                                    const col = Number(
-                                                            visit.collected ??
-                                                                0,
-                                                        ),
-                                                        tot = Number(
-                                                            visit.amount ?? 0,
-                                                        ),
-                                                        rem = tot - col;
-                                                    const s =
-                                                        rem <= 0
-                                                            ? "Paid"
-                                                            : col > 0
-                                                              ? "Partial"
-                                                              : "Unpaid";
-                                                    return (
-                                                        <span
-                                                            className={`pl-status ${statusClass(s)}`}
-                                                        >
-                                                            {s}
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
-                                            <div className="pd-visit-actions">
-                                                <button
-                                                    className="pd-icon-btn pd-icon-inv"
-                                                    onClick={() =>
-                                                        handleInvoiceClick(
-                                                            id,
-                                                            visit,
-                                                            details,
-                                                        )
-                                                    }
-                                                >
-                                                    <ReceiptIndianRupee
-                                                        size={13}
-                                                    />
-                                                </button>
-                                                <button
-                                                    className="pd-icon-btn pd-icon-edit"
-                                                    onClick={() =>
-                                                        editInvoice(
-                                                            appointmentId,
-                                                            visit,
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil size={13} />
-                                                </button>
-                                                <button
-                                                    className="pd-icon-btn pd-icon-del"
-                                                    onClick={() =>
-                                                        deleteInvoice(
-                                                            appointmentId,
-                                                            visit,
-                                                        )
-                                                    }
-                                                >
-                                                    <Trash2 size={13} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
             </div>
+
+            {/* Lightbox */}
+            {lightboxImg && (
+                <div
+                    className="pd-lightbox-bg"
+                    onClick={() => setLightboxImg(null)}
+                >
+                    <button
+                        className="pd-lightbox-close"
+                        onClick={() => setLightboxImg(null)}
+                    >
+                        <X size={15} />
+                    </button>
+                    <img
+                        className="pd-lightbox-img"
+                        src={lightboxImg.url}
+                        alt="patient"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="pd-lightbox-date">{lightboxImg.date}</div>
+                </div>
+            )}
 
             {/* Edit Appointment Modal */}
             {editApptOpen && (

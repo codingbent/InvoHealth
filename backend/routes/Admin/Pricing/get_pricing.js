@@ -15,6 +15,7 @@ router.get("/pricing", async (req, res) => {
                     excelLimit: 0,
                     invoiceLimit: 0,
                     analytics: false,
+                    imageLimit:0,
                 },
                 pro: {
                     monthly: 0,
@@ -22,6 +23,7 @@ router.get("/pricing", async (req, res) => {
                     excelLimit: 0,
                     invoiceLimit: 0,
                     analytics: true,
+                    imageLimit:0,
                 },
                 enterprise: {
                     monthly: 0,
@@ -29,6 +31,7 @@ router.get("/pricing", async (req, res) => {
                     excelLimit: 0,
                     invoiceLimit: 0,
                     analytics: true,
+                    imageLimit:0,
                 },
             };
         }

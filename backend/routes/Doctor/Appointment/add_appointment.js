@@ -15,6 +15,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             isPercent,
             collected,
              time,  
+             image
         } = req.body;
 
         const patientId = req.params.id;
@@ -116,6 +117,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             discount: rawDiscount, // store original input
             isPercent: percentFlag,
             time: time || null, 
+            image:image||"",
         };
 
         // 🔟 SAVE

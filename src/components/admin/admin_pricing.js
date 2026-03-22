@@ -23,6 +23,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: false,
+            imageLimit:0,
         },
         pro: {
             monthly: 0,
@@ -30,6 +31,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: true,
+            imageLimit:0,
         },
         enterprise: {
             monthly: 0,
@@ -37,6 +39,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: true,
+            imageLimit:0,
         },
     });
     const [loading, setLoading] = useState(false);
@@ -247,7 +250,6 @@ export default function AdminPricing() {
                                             Staff Limit{" "}
                                             <span
                                                 style={{
-                                                    color: "#2e3d5c",
                                                     fontSize: 8,
                                                 }}
                                             >
@@ -272,7 +274,6 @@ export default function AdminPricing() {
                                             Excel Limit{" "}
                                             <span
                                                 style={{
-                                                    color: "#2e3d5c",
                                                     fontSize: 8,
                                                 }}
                                             >
@@ -297,7 +298,6 @@ export default function AdminPricing() {
                                             Invoice Limit{" "}
                                             <span
                                                 style={{
-                                                    color: "#2e3d5c",
                                                     fontSize: 8,
                                                 }}
                                             >
@@ -312,6 +312,30 @@ export default function AdminPricing() {
                                                 handleChange(
                                                     plan,
                                                     "invoiceLimit",
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="apr-field">
+                                        <label className="apr-label">
+                                            Image Limit{" "}
+                                            <span
+                                                style={{
+                                                    fontSize: 8,
+                                                }}
+                                            >
+                                                (-1 = unlimited)
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="apr-input"
+                                            value={pricing[plan].imageLimit}
+                                            onChange={(e) =>
+                                                handleChange(
+                                                    plan,
+                                                    "imageLimit",
                                                     e.target.value,
                                                 )
                                             }
