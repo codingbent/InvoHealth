@@ -14,9 +14,53 @@ import {
     CalendarPlus,
     Pencil,
     X,
+    ShieldCheck,
+    BarChart2,
+    FileSpreadsheet,
+    Clock,
+    ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Pricing from "./Pricing";
+
+const FEATURES = [
+    {
+        icon: <UserPlus size={17} />,
+        color: "#2dd4bf",
+        bg: "rgba(45,212,191,0.1)",
+        border: "rgba(45,212,191,0.18)",
+        glow: "rgba(45,212,191,0.25)",
+        name: "Patient Management",
+        desc: "Add patients, track visits, store contact details and full appointment history in one view.",
+    },
+    {
+        icon: <FileSpreadsheet size={17} />,
+        color: "#60a5fa",
+        bg: "rgba(96,165,250,0.1)",
+        border: "rgba(96,165,250,0.18)",
+        glow: "rgba(96,165,250,0.25)",
+        name: "Smart Invoicing",
+        desc: "Generate PDF invoices instantly with automatic billing, discounts and payment status tracking.",
+    },
+    {
+        icon: <Clock size={17} />,
+        color: "#a78bfa",
+        bg: "rgba(167,139,250,0.1)",
+        border: "rgba(167,139,250,0.18)",
+        glow: "rgba(167,139,250,0.25)",
+        name: "Slot Booking",
+        desc: "Define your availability and auto-assign slots. Avoid double-bookings and track booked times.",
+    },
+    {
+        icon: <BarChart2 size={17} />,
+        color: "#fb923c",
+        bg: "rgba(251,146,60,0.1)",
+        border: "rgba(251,146,60,0.18)",
+        glow: "rgba(251,146,60,0.25)",
+        name: "Reports & Analytics",
+        desc: "Track monthly collections, export Excel reports and gain insights into your practice.",
+    },
+];
 
 const Patient = ({ showAlert }) => {
     const [role, setRole] = useState(null);
@@ -26,8 +70,6 @@ const Patient = ({ showAlert }) => {
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [fabOpen, setFabOpen] = useState(false);
-
-    // ✅ Modal states (React controlled)
     const [showPatientModal, setShowPatientModal] = useState(false);
     const [showServiceModal, setShowServiceModal] = useState(false);
     const [showEditServiceModal, setShowEditServiceModal] = useState(false);
@@ -37,10 +79,8 @@ const Patient = ({ showAlert }) => {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // ✅ Custom Modal
     const Modal = ({ isOpen, onClose, children }) => {
         if (!isOpen) return null;
-
         return (
             <div className="modal-backdrop" onClick={onClose}>
                 <div
@@ -85,36 +125,101 @@ const Patient = ({ showAlert }) => {
         setShowAppointment(false);
         localStorage.removeItem("patient");
     };
-
     const openPatientDetails = (id) => {
         setSelectedPatientId(id);
         setShowPatientDetails(true);
     };
-
     const closePatientDetails = () => {
         setShowPatientDetails(false);
         setSelectedPatientId(null);
     };
 
-    // ── Landing ──
+    // ── Landing (not logged in) ──
     if (!localStorage.getItem("token")) {
         return (
-            <motion.div
-                className="lp-root"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <h1>InvoHealth</h1>
-                <Link to="/login">Login</Link>
-                <Pricing />
-            </motion.div>
+            <>
+                <motion.div
+                    className="lp-root"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                >
+                    {/* Hero */}
+                    <section className="lp-hero">
+                        <div className="lp-badge">
+                            <ShieldCheck size={11} /> FinTech for Healthcare
+                        </div>
+                        <h1 className="lp-h1">
+                            Clinic billing,
+                            <br />
+                            <em>simplified</em> for doctors
+                        </h1>
+                        <p className="lp-sub">
+                            Manage patients, appointments, invoices and staff —
+                            all in one place. Built for modern Indian clinics.
+                        </p>
+                        <div className="lp-hero-btns">
+                            <a href="#pricing" className="lp-btn-hero">
+                                Start Free Trial <ChevronRight size={13} />
+                            </a>
+                            <Link to="/login" className="lp-btn-ghost">
+                                Log in
+                            </Link>
+                        </div>
+                    </section>
+
+                    <div className="lp-divider" />
+
+                    {/* Features */}
+                    <section className="lp-features">
+                        <div className="lp-section-eyebrow">What you get</div>
+                        <h2 className="lp-section-title">
+                            Everything a clinic <em>needs</em>
+                        </h2>
+                        <div className="lp-feat-grid">
+                            {FEATURES.map((f) => (
+                                <div key={f.name} className="lp-feat-card">
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            top: 0,
+                                            left: "10%",
+                                            right: "10%",
+                                            height: 1,
+                                            background: `linear-gradient(90deg, transparent, ${f.glow}, transparent)`,
+                                        }}
+                                    />
+                                    <div
+                                        className="lp-feat-icon"
+                                        style={{
+                                            background: f.bg,
+                                            border: `1px solid ${f.border}`,
+                                            color: f.color,
+                                        }}
+                                    >
+                                        {f.icon}
+                                    </div>
+                                    <div className="lp-feat-name">{f.name}</div>
+                                    <div className="lp-feat-desc">{f.desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <div className="lp-divider" />
+
+                    {/* Pricing */}
+                    <div id="pricing">
+                        <Pricing />
+                    </div>
+                </motion.div>
+            </>
         );
     }
 
     // ── Logged in ──
     return (
         <>
-            {/* FAB BACKDROP */}
             {fabOpen && (
                 <div
                     className="fab-backdrop"
@@ -122,7 +227,6 @@ const Patient = ({ showAlert }) => {
                 />
             )}
 
-            {/* FAB */}
             <div className={`fab-container ${fabOpen ? "open" : ""}`}>
                 <button
                     className={`fab-main ${fabOpen ? "open" : ""}`}
@@ -133,8 +237,6 @@ const Patient = ({ showAlert }) => {
                 >
                     <Plus size={22} />
                 </button>
-
-                {/* Add Patient */}
                 <button
                     className={`fab-item ${fabOpen ? "show" : ""}`}
                     style={{ "--i": 1 }}
@@ -146,8 +248,6 @@ const Patient = ({ showAlert }) => {
                     <UserPlus size={16} />
                     <span>Add Patient</span>
                 </button>
-
-                {/* Add Appointment */}
                 <button
                     className={`fab-item ${fabOpen ? "show" : ""}`}
                     style={{ "--i": 2 }}
@@ -159,8 +259,6 @@ const Patient = ({ showAlert }) => {
                     <CalendarPlus size={16} />
                     <span>Add Appointment</span>
                 </button>
-
-                {/* Add Service */}
                 {role === "doctor" && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
@@ -174,8 +272,6 @@ const Patient = ({ showAlert }) => {
                         <span>Add Service</span>
                     </button>
                 )}
-
-                {/* Edit Service */}
                 {role === "doctor" && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
@@ -191,8 +287,6 @@ const Patient = ({ showAlert }) => {
                 )}
             </div>
 
-            {/* ✅ MODALS (React only) */}
-
             <Modal
                 isOpen={showPatientModal}
                 onClose={() => setShowPatientModal(false)}
@@ -203,7 +297,6 @@ const Patient = ({ showAlert }) => {
                     setShowModal={setShowPatientModal}
                 />
             </Modal>
-
             <Modal
                 isOpen={showServiceModal}
                 onClose={() => setShowServiceModal(false)}
@@ -213,7 +306,6 @@ const Patient = ({ showAlert }) => {
                     onClose={() => setShowServiceModal(false)}
                 />
             </Modal>
-
             <Modal
                 isOpen={showEditServiceModal}
                 onClose={() => setShowEditServiceModal(false)}
@@ -224,7 +316,6 @@ const Patient = ({ showAlert }) => {
                 />
             </Modal>
 
-            {/* MAIN CONTENT */}
             <div className="app-page">
                 {!showAppointment && !showPatientDetails && (
                     <PatientList
@@ -232,7 +323,6 @@ const Patient = ({ showAlert }) => {
                         openPatientDetails={openPatientDetails}
                     />
                 )}
-
                 {showAppointment && (
                     <div className="app-section">
                         <AddAppointment showAlert={showAlert} />
@@ -244,7 +334,6 @@ const Patient = ({ showAlert }) => {
                         </button>
                     </div>
                 )}
-
                 {showPatientDetails && selectedPatientId && (
                     <div className="app-section">
                         <PatientDetails
