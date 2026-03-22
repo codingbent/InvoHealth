@@ -1,5 +1,18 @@
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { IndianRupee, Eye } from "lucide-react";
+
+// Responsive hook — re-renders on window resize
+function useIsMobile(breakpoint = 992) {
+    const [isMobile, setIsMobile] = useState(
+        () => window.innerWidth < breakpoint,
+    );
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < breakpoint);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, [breakpoint]);
+    return isMobile;
+}
 
 const AppointmentDay = memo(function AppointmentDay({
     day,
@@ -8,240 +21,171 @@ const AppointmentDay = memo(function AppointmentDay({
     navigate,
     loading,
 }) {
+    const isMobile = useIsMobile();
     const dayTotal = dayApps.reduce(
         (sum, a) => sum + Number(a.collected ?? a.amount ?? 0),
         0,
     );
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat("en-IN").format(value);
-    };
-    const getTime = (a) => {
-        if (!a.time) return "";
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+    const getTime = (a) => a.time || "";
+    const statusClass = (s) =>
+        s === "Paid" ? "pl-paid" : s === "Partial" ? "pl-partial" : "pl-unpaid";
 
-        return a.time;
-    };
     if (loading) {
         return (
-            <div className="mb-4">
-                {/* Day Header Skeleton */}
+            <div style={{ marginBottom: 24 }}>
                 <div
-                    className="day-header rounded-3 px-3 py-2 mb-2 skeleton shimmer"
-                    style={{ height: "40px" }}
+                    className="pl-skeleton"
+                    style={{ height: 36, borderRadius: 8, marginBottom: 10 }}
                 />
-
-                {/* Desktop Table Skeleton */}
-                <div className="d-none d-lg-block">
-                    <div className="card border-0 shadow-sm rounded-4 overflow-hidden p-3">
-                        {[...Array(4)].map((_, i) => (
+                <div className="pl-table-card">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div className="pl-skeleton-row" key={i}>
                             <div
-                                key={i}
-                                className="d-flex justify-content-between align-items-center mb-3"
-                            >
-                                <div
-                                    className="skeleton shimmer"
-                                    style={{ width: "20%", height: "16px" }}
-                                />
-                                <div
-                                    className="skeleton shimmer"
-                                    style={{ width: "10%", height: "16px" }}
-                                />
-                                <div
-                                    className="skeleton shimmer"
-                                    style={{ width: "15%", height: "16px" }}
-                                />
-                                <div
-                                    className="skeleton shimmer"
-                                    style={{ width: "10%", height: "16px" }}
-                                />
-                                <div
-                                    className="skeleton shimmer"
-                                    style={{ width: "10%", height: "16px" }}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Mobile Card Skeleton */}
-                <div className="d-lg-none">
-                    {[...Array(3)].map((_, i) => (
-                        <div
-                            key={i}
-                            className="card theme-card rounded-4 mb-2 p-3"
-                        >
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <div
-                                        className="skeleton shimmer mb-2"
-                                        style={{
-                                            width: "120px",
-                                            height: "14px",
-                                        }}
-                                    />
-                                    <div
-                                        className="skeleton shimmer mb-2"
-                                        style={{
-                                            width: "80px",
-                                            height: "12px",
-                                        }}
-                                    />
-                                    <div
-                                        className="skeleton shimmer"
-                                        style={{
-                                            width: "60px",
-                                            height: "12px",
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <div
-                                        className="skeleton shimmer mb-2"
-                                        style={{
-                                            width: "60px",
-                                            height: "14px",
-                                        }}
-                                    />
-                                    <div
-                                        className="skeleton shimmer"
-                                        style={{
-                                            width: "50px",
-                                            height: "12px",
-                                        }}
-                                    />
-                                </div>
-                            </div>
+                                className="pl-skeleton"
+                                style={{ width: "22%", height: 12 }}
+                            />
+                            <div
+                                className="pl-skeleton"
+                                style={{ width: "10%", height: 12 }}
+                            />
+                            <div
+                                className="pl-skeleton"
+                                style={{
+                                    width: "12%",
+                                    height: 18,
+                                    borderRadius: 20,
+                                }}
+                            />
+                            <div
+                                className="pl-skeleton"
+                                style={{
+                                    width: "10%",
+                                    height: 12,
+                                    marginLeft: "auto",
+                                }}
+                            />
+                            <div
+                                className="pl-skeleton"
+                                style={{
+                                    width: "12%",
+                                    height: 18,
+                                    borderRadius: 20,
+                                }}
+                            />
+                            <div
+                                className="pl-skeleton"
+                                style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 7,
+                                }}
+                            />
                         </div>
                     ))}
                 </div>
             </div>
         );
     }
+
     return (
-        <div className="mb-4">
-            <div className="d-flex justify-content-between align-items-center day-header rounded-3 px-3 py-2 mb-2">
-                <h6 className="mb-0 fw-semibold">
+        <div style={{ marginBottom: 24 }}>
+            {/* Day header */}
+            <div className="pl-day-header">
+                <div className="pl-day-date">
                     {new Date(day).toLocaleDateString("en-IN", {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
                     })}
-                </h6>
-
+                </div>
                 {localStorage.getItem("role") === "doctor" && (
-                    <span className="fw-bold text-success-theme">
-                        <IndianRupee size={18} /> {formatCurrency(dayTotal)}
-                    </span>
+                    <div className="pl-day-total">
+                        <IndianRupee size={13} />
+                        {fmt(dayTotal)}
+                    </div>
                 )}
             </div>
 
-            <div className="d-none d-lg-block">
-                <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-                    <table className="table table-hover align-middle mb-0 table-theme">
+            {/* ── Desktop table ── */}
+            {!isMobile && (
+                <div className="pl-table-card">
+                    <table className="pl-table">
                         <colgroup>
-                            <col style={{ width: "25%" }} />
-                            <col style={{ width: "15%" }} />
-                            <col style={{ width: "15%" }} />
-                            <col style={{ width: "15%" }} />
-                            <col style={{ width: "15%" }} />
-                            <col style={{ width: "15%" }} />
+                            <col style={{ width: "26%" }} />
+                            <col style={{ width: "12%" }} />
+                            <col style={{ width: "14%" }} />
+                            <col style={{ width: "16%" }} />
+                            <col style={{ width: "14%" }} />
+                            <col style={{ width: "10%" }} />
                         </colgroup>
-
                         <thead>
                             <tr>
                                 <th>Patient</th>
                                 <th>Time</th>
                                 <th>Payment</th>
-                                <th className="text-end">Amount</th>
-                                <th className="text-end">Status</th>
+                                <th className="right">Amount</th>
+                                <th className="right">Status</th>
                                 <th />
                             </tr>
                         </thead>
-
                         <tbody>
                             {dayApps.map((a, i) => (
                                 <tr key={i}>
-                                    <td className="fw-semibold text-theme-primary">
+                                    <td className="pl-patient-name">
                                         {a.name}
                                     </td>
-
-                                    <td>{getTime(a)}</td>
-
+                                    <td className="pl-time">{getTime(a)}</td>
                                     <td>
                                         <span
-                                            className={`payment-tag ${
+                                            className={
                                                 paymentColor[a.payment_type] ||
-                                                "payment-other"
-                                            }`}
+                                                "pl-tag pl-other"
+                                            }
                                         >
                                             {a.payment_type}
                                         </span>
                                     </td>
-
-                                    <td className="text-end">
-                                        {(() => {
-                                            const status = a.status;
-                                            const collected = Number(
-                                                a.collected ?? 0,
-                                            );
-                                            const total = Number(a.amount ?? 0);
-
-                                            return status === "Paid" ? (
-                                                <>
-                                                    <span className="fw-bold text-theme-primary">
-                                                        <IndianRupee
-                                                            size={18}
-                                                        />{" "}
-                                                        {formatCurrency(total)}
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div>
-                                                        <div className="fw-bold text-theme-primary">
-                                                            <IndianRupee
-                                                                size={12}
-                                                            />{" "}
-                                                            {formatCurrency(
-                                                                collected,
-                                                            )}
-                                                        </div>
-                                                        <small className="text-theme-primary d-block">
-                                                            of{" "}
-                                                            <IndianRupee
-                                                                size={12}
-                                                            />{" "}
-                                                            {formatCurrency(
-                                                                total,
-                                                            )}
-                                                        </small>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
+                                    <td className="right">
+                                        {a.status === "Paid" ? (
+                                            <div className="pl-amount-main">
+                                                <IndianRupee size={12} />{" "}
+                                                {fmt(Number(a.amount ?? 0))}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="pl-amount-main">
+                                                    <IndianRupee size={12} />{" "}
+                                                    {fmt(
+                                                        Number(
+                                                            a.collected ?? 0,
+                                                        ),
+                                                    )}
+                                                </div>
+                                                <div className="pl-amount-sub">
+                                                    of <IndianRupee size={11} />{" "}
+                                                    {fmt(Number(a.amount ?? 0))}
+                                                </div>
+                                            </>
+                                        )}
                                     </td>
-                                    <td className="text-end">
+                                    <td className="right">
                                         <span
-                                            className={`status-badge ${
-                                                a.status === "Paid"
-                                                    ? "status-paid"
-                                                    : a.status === "Partial"
-                                                      ? "status-partial"
-                                                      : "status-unpaid"
-                                            }`}
+                                            className={`pl-status ${statusClass(a.status)}`}
                                         >
                                             {a.status}
                                         </span>
                                     </td>
-                                    <td className="text-end">
+                                    <td className="right">
                                         <button
-                                            className="btn btn-sm btn-outline-theme"
+                                            className="pl-view-btn"
                                             onClick={() =>
                                                 navigate(
                                                     `/patient/${a.patientId}`,
                                                 )
                                             }
                                         >
-                                            <Eye size={18} />
+                                            <Eye size={14} />
                                         </button>
                                     </td>
                                 </tr>
@@ -249,91 +193,102 @@ const AppointmentDay = memo(function AppointmentDay({
                         </tbody>
                     </table>
                 </div>
-            </div>
+            )}
 
-            <div className="d-lg-none">
-                {dayApps.map((a, i) => (
-                    <div
-                        key={i}
-                        className="card theme-card rounded-4"
-                        onClick={() => navigate(`/patient/${a.patientId}`)}
-                        style={{ cursor: "pointer" }}
-                    >
-                        <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 className="fw-semibold mb-1">
-                                        {a.name}
-                                    </h6>
+            {/* ── Mobile cards ── */}
+            {isMobile && (
+                <div>
+                    {dayApps.map((a, i) => (
+                        <div key={i} className="pl-mob-card">
+                            {/* Top row: name + amount */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    gap: 12,
+                                }}
+                            >
+                                {/* Left */}
+                                <div
+                                    style={{ flex: 1, minWidth: 0 }}
+                                    onClick={() =>
+                                        navigate(`/patient/${a.patientId}`)
+                                    }
+                                >
+                                    <div className="pl-mob-name">{a.name}</div>
+                                    {getTime(a) && (
+                                        <div className="pl-mob-time">
+                                            {getTime(a)}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Right: amount */}
+                                <div
+                                    style={{
+                                        textAlign: "right",
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {a.status === "Paid" ? (
+                                        <div className="pl-mob-amount">
+                                            <IndianRupee size={13} />{" "}
+                                            {fmt(Number(a.amount ?? 0))}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="pl-mob-amount">
+                                                <IndianRupee size={13} />{" "}
+                                                {fmt(Number(a.collected ?? 0))}
+                                            </div>
+                                            <div className="pl-mob-sub">
+                                                of <IndianRupee size={11} />{" "}
+                                                {fmt(Number(a.amount ?? 0))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
 
-                                    <small className="text-theme-muted d-block">
-                                        {getTime(a)}
-                                    </small>
+                            {/* Bottom row: payment tag + status + view */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    marginTop: 10,
+                                    paddingTop: 10,
+                                    borderTop: "1px solid #0d111a",
+                                    gap: 8,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "space-between",
+                                        gap: 8,
+                                        flexWrap: "wrap",
+                                    }}
+                                >
                                     <span
-                                        className={`payment-tag ${
+                                        className={
                                             paymentColor[a.payment_type] ||
-                                            "payment-other"
-                                        }`}
+                                            "pl-tag pl-other"
+                                        }
                                     >
                                         {a.payment_type}
                                     </span>
-                                </div>
-
-                                {/* Amount Section */}
-                                <div className="text-end">
-                                    {(() => {
-                                        const status = a.status;
-                                        const collected = Number(
-                                            a.collected ?? 0,
-                                        );
-                                        const total = Number(a.amount ?? 0);
-
-                                        return status === "Paid" ? (
-                                            <>
-                                                <span className="fw-bold text-success-theme">
-                                                    <IndianRupee size={14} />{" "}
-                                                    {total}{" "}
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div>
-                                                    <div className="fw-bold text-theme-primary">
-                                                        <IndianRupee
-                                                            size={14}
-                                                        />{" "}
-                                                        {collected}
-                                                    </div>
-                                                    <small className="text-theme-muted d-block">
-                                                        of{" "}
-                                                        <IndianRupee
-                                                            size={14}
-                                                        />{" "}
-                                                        {total}
-                                                    </small>
-                                                </div>
-                                            </>
-                                        );
-                                    })()}
-                                    <div className="mt-1">
-                                        <span
-                                            className={`status-badge ${
-                                                a.status === "Paid"
-                                                    ? "status-paid"
-                                                    : a.status === "Partial"
-                                                      ? "status-partial"
-                                                      : "status-unpaid"
-                                            }`}
-                                        >
-                                            {a.status}
-                                        </span>
-                                    </div>
+                                    <span
+                                        className={`pl-status ${statusClass(a.status)}`}
+                                    >
+                                        {a.status}
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 });

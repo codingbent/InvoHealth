@@ -11,89 +11,80 @@ export default function Slotpicker({
     currentSlot,
     nextSlot,
 }) {
-    const displaySlot = selectedSlot || currentSlot;
+    const displaySlot = selectedSlot || nextSlot || currentSlot;
 
     useEffect(() => {
-        const targetSlot = selectedSlot || currentSlot || nextSlot;
-
+        const targetSlot = selectedSlot || nextSlot || currentSlot;
         if (!targetSlot) return;
-
         const foundSection = Object.entries(groupedSlots).find(([_, slots]) =>
             slots.includes(targetSlot),
         );
-
         if (foundSection) {
             const [label] = foundSection;
-
             setOpenSection(label);
         }
     }, [currentSlot, nextSlot, selectedSlot, groupedSlots, setOpenSection]);
+
     return (
-        <div className="mt-2">
-            {/* HEADER */}
-            <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="small">Time Slot</span>
-
-                <div className="d-flex gap-2">
-                    {currentSlot && (
-                        <span className="current-slot-badge">
-                            Now: {formatTime(currentSlot)}
-                        </span>
-                    )}
-
-                    {nextSlot && (
-                        <span className="next-slot-badge">
-                            Next: {formatTime(nextSlot)}
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {Object.entries(groupedSlots).map(([label, slots]) =>
-                slots.length ? (
-                    <div key={label} className="accordion-slot">
-                        {/* SECTION HEADER */}
-                        <div
-                            className="accordion-header"
-                            onClick={() => setOpenSection(label)}
-                        >
-                            <span>{label}</span>
-                            <span>{openSection === label ? "-" : "+"}</span>
-                        </div>
-
-                        {/* SLOTS */}
-                        {openSection === label && (
-                            <div className="slot-grid">
-                                {slots.map((slot) => {
-                                    const isSelected = selectedSlot === slot;
-                                    const isBooked = bookedSlots.includes(slot);
-                                    const isCurrent = slot === displaySlot;
-                                    const isNext = slot === nextSlot;
-
-                                    return (
-                                        <button
-                                            key={slot}
-                                            type="button"
-                                            disabled={isBooked}
-                                            className={`slot-btn 
-                                                ${isSelected ? "selected" : ""} 
-                                                ${isBooked ? "booked" : ""}
-                                                ${isCurrent ? "current" : ""}
-                                                ${isNext ? "next" : ""}
-                                            `}
-                                            onClick={() =>
-                                                setSelectedSlot(slot)
-                                            }
-                                        >
-                                            {formatTime(slot)}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+        <>
+            <div className="sp-wrap">
+                <div className="sp-header-row">
+                    <span className="sp-time-label">Time Slot</span>
+                    <div className="sp-badges">
+                        {currentSlot && (
+                            <span className="sp-now-badge">
+                                Now: {formatTime(selectedSlot)}
+                            </span>
+                        )}
+                        {nextSlot && (
+                            <span className="sp-next-badge">
+                                Next: {formatTime(nextSlot)}
+                            </span>
                         )}
                     </div>
-                ) : null,
-            )}
-        </div>
+                </div>
+
+                {Object.entries(groupedSlots).map(([label, slots]) =>
+                    slots.length ? (
+                        <div key={label} className="sp-section">
+                            <div
+                                className={`sp-section-header ${openSection === label ? "open" : ""}`}
+                                onClick={() => setOpenSection(label)}
+                            >
+                                <span>{label}</span>
+                                <span style={{ fontSize: 14 }}>
+                                    {openSection === label ? "−" : "+"}
+                                </span>
+                            </div>
+                            {openSection === label && (
+                                <div className="sp-slot-grid">
+                                    {slots.map((slot) => {
+                                        const isSelected =
+                                            selectedSlot === slot;
+                                        const isBooked =
+                                            bookedSlots.includes(slot);
+                                        const isCurrent = slot === displaySlot;
+                                        const isNext = slot === nextSlot;
+                                        return (
+                                            <button
+                                                key={slot}
+                                                type="button"
+                                                disabled={isBooked}
+                                                className={`sp-slot ${isSelected ? "selected" : ""} ${isBooked ? "booked" : ""} ${isCurrent && !isSelected ? "current" : ""} ${isNext && !isSelected ? "next" : ""}`}
+                                                onClick={() =>
+                                                    setSelectedSlot(slot)
+                                                }
+                                            >
+                                                {formatTime(slot)}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : null,
+                )}
+            </div>
+        </>
     );
 }

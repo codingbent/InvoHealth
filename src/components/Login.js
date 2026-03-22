@@ -6,7 +6,6 @@ import { Stethoscope, Users, LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
 export default function Login(props) {
     const navigate = useNavigate();
 
-    // ================= STATES =================
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [loginAs, setLoginAs] = useState("doctor");
@@ -24,44 +23,28 @@ export default function Login(props) {
             setShowInvalid(false);
             return;
         }
-
-        const timer = setTimeout(() => {
-            setShowInvalid(true);
-        }, 500);
-
+        const timer = setTimeout(() => setShowInvalid(true), 500);
         return () => clearTimeout(timer);
     }, [inputType]);
 
-    // ================= VALIDATE EMAIL / PHONE =================
     const handleIdentifierChange = (e) => {
         let value = e.target.value;
-
-        if (loginAs === "staff") {
-            value = value.replace(/\D/g, "");
-        }
-
+        if (loginAs === "staff") value = value.replace(/\D/g, "");
         setIdentifier(value);
-
         if (!value || value.length < 4) {
             setInputType("typing");
             return;
         }
-
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const phoneRegex = /^[6-9]\d{9}$/;
-
-        if (emailRegex.test(value)) {
-            setInputType("email");
-        } else if (phoneRegex.test(value)) {
-            setInputType("phone");
-        } else {
-            setInputType("invalid");
-        }
+        if (emailRegex.test(value)) setInputType("email");
+        else if (phoneRegex.test(value)) setInputType("phone");
+        else setInputType("invalid");
     };
+
     const getIdentifierTypeForApi = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const phoneRegex = /^[6-9]\d{9}$/;
-
         if (emailRegex.test(identifier)) return "email";
         if (phoneRegex.test(identifier)) return "phone";
         return null;
@@ -69,12 +52,10 @@ export default function Login(props) {
 
     const loginWithPassword = async () => {
         const identifierTypeForApi = getIdentifierTypeForApi();
-
         if (!identifierTypeForApi) {
             props.showAlert("Enter a valid email or phone number", "danger");
             return;
         }
-
         const res = await fetch(`${API_BASE_URL}/api/doctor/login_doctor`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -85,9 +66,7 @@ export default function Login(props) {
                 identifierType: identifierTypeForApi,
             }),
         });
-
         const json = await res.json();
-
         if (json.success) {
             localStorage.setItem("token", json.authtoken);
             localStorage.setItem("name", json.name);
@@ -103,26 +82,19 @@ export default function Login(props) {
         const res = await authFetch(`${API_BASE_URL}/api/staff/login_staff`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                phone: identifier,
-                password,
-            }),
+            body: JSON.stringify({ phone: identifier, password }),
         });
-
         if (!res) {
             props.showAlert("Session expired. Login again.", "danger");
             return;
         }
-
         const data = await res.json();
-
         if (data.firstLogin) {
             navigate("/set-staff-password", {
                 state: { staffId: data.staffId },
             });
             return;
         }
-
         if (data.success) {
             localStorage.setItem("token", data.token);
             localStorage.setItem("name", data.name);
@@ -133,17 +105,13 @@ export default function Login(props) {
         }
     };
 
-    // ================= FORM SUBMIT =================
     const handleSubmit = (e) => {
         e.preventDefault();
-
         const identifierTypeForApi = getIdentifierTypeForApi();
-
         if (!identifierTypeForApi) {
             alert("Enter a valid email or phone number");
             return;
         }
-
         if (loginAs === "staff") {
             if (identifierTypeForApi !== "phone") {
                 alert("Login using phone number");
@@ -152,123 +120,132 @@ export default function Login(props) {
             staffLogin();
             return;
         }
-
         loginWithPassword();
     };
 
     return (
-        <div className="container mt-5" style={{ maxWidth: "420px" }}>
-            <form onSubmit={handleSubmit} className="card p-4 shadow-sm">
-                <h4 className="text-center mb-4 fw-semibold">Login</h4>
-                <div className="btn-group justify-content-around w-100 mb-3">
-                    <div className="role-toggle">
+        <>
+            <div className="lg-root">
+                <div className="lg-card">
+                    {/* Header */}
+                    <div className="lg-header">
+                        <div className="lg-logo">
+                            <Stethoscope size={22} />
+                        </div>
+                        <h1 className="lg-title">
+                            Welcome <em>back</em>
+                        </h1>
+                        <div className="lg-subtitle">Sign in to InvoHealth</div>
+                    </div>
+
+                    {/* Role toggle */}
+                    <div className="lg-role-toggle">
                         <button
                             type="button"
-                            className={`role-btn ${loginAs === "doctor" ? "active" : ""}`}
+                            className={`lg-role-btn ${loginAs === "doctor" ? "active" : ""}`}
                             onClick={() => setLoginAs("doctor")}
                         >
-                            <Stethoscope size={16} />
-                            Doctor
+                            <Stethoscope size={14} /> Doctor
                         </button>
-
                         <button
                             type="button"
-                            className={`role-btn ${loginAs === "staff" ? "active" : ""}`}
+                            className={`lg-role-btn ${loginAs === "staff" ? "active" : ""}`}
                             onClick={() => setLoginAs("staff")}
                         >
-                            <Users size={16} />
-                            Staff
+                            <Users size={14} /> Staff
                         </button>
                     </div>
-                </div>
 
-                {/* IDENTIFIER */}
-                <div className="mb-3">
-                    <label className="form-label">
-                        {loginAs === "staff"
-                            ? "Phone Number"
-                            : "Email or Phone"}
-                    </label>
-
-                    <div className={loginAs === "staff" ? "input-group" : ""}>
-                        {loginAs === "staff" && (
-                            <span className="input-group-text">+91</span>
-                        )}
-
-                        <input
-                            type={loginAs === "staff" ? "tel" : "text"}
-                            className="form-control"
-                            placeholder={
-                                loginAs === "staff"
-                                    ? "Enter 10-digit phone number"
-                                    : "Enter email or phone"
-                            }
-                            value={identifier}
-                            maxLength={loginAs === "staff" ? 10 : undefined}
-                            onChange={handleIdentifierChange}
-                            required
-                        />
-                    </div>
-
-                    {showInvalid && (
-                        <small className="text-danger">
-                            Enter a valid email or phone number
-                        </small>
-                    )}
-                </div>
-
-                <div className="mb-3">
-                    <label className="form-label">Password</label>
-
-                    <div className="password-wrapper">
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            className="form-control pe-5"
-                            placeholder="Enter password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-
-                        <button
-                            type="button"
-                            className="eye-btn"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                            <span
-                                className={`eye-icon ${showPassword ? "show" : ""}`}
-                            >
-                                {showPassword ? (
-                                    <EyeOff size={18} />
-                                ) : (
-                                    <Eye size={18} />
+                    <form onSubmit={handleSubmit}>
+                        {/* Identifier */}
+                        <div className="lg-field">
+                            <label className="lg-label">
+                                {loginAs === "staff"
+                                    ? "Phone Number"
+                                    : "Email or Phone"}
+                            </label>
+                            <div className="lg-input-wrap">
+                                {loginAs === "staff" && (
+                                    <span className="lg-prefix">+91</span>
                                 )}
-                            </span>
+                                <input
+                                    type={loginAs === "staff" ? "tel" : "text"}
+                                    className={`lg-input${loginAs === "staff" ? " has-prefix" : ""}${showInvalid ? " invalid" : ""}`}
+                                    placeholder={
+                                        loginAs === "staff"
+                                            ? "10-digit phone number"
+                                            : "Email or phone"
+                                    }
+                                    value={identifier}
+                                    maxLength={
+                                        loginAs === "staff" ? 10 : undefined
+                                    }
+                                    onChange={handleIdentifierChange}
+                                    required
+                                />
+                            </div>
+                            {showInvalid && (
+                                <div className="lg-error">
+                                    Enter a valid email or phone number
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Password */}
+                        <div className="lg-field">
+                            <label className="lg-label">Password</label>
+                            <div className="lg-input-wrap">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    className="lg-input has-eye"
+                                    placeholder="Enter password"
+                                    value={password}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="lg-eye-btn"
+                                    onClick={() => setShowPassword((p) => !p)}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={16} />
+                                    ) : (
+                                        <Eye size={16} />
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Forgot */}
+                        <Link to="/forgot-password" className="lg-forgot">
+                            Forgot your password?
+                        </Link>
+
+                        {/* Submit */}
+                        <button type="submit" className="lg-submit">
+                            <LogIn size={15} />
+                            Sign In
                         </button>
+                    </form>
+
+                    {/* Footer */}
+                    <div className="lg-divider">
+                        <div className="lg-divider-line" />
+                        <div className="lg-divider-dot" />
+                        <div className="lg-divider-line" />
+                    </div>
+
+                    <div className="lg-footer">
+                        <span>New to InvoHealth?</span>
+                        <Link to="/signup" className="lg-footer-link">
+                            <UserPlus size={13} /> Create account
+                        </Link>
                     </div>
                 </div>
-
-                <div className="text-end mt-2">
-                    <Link
-                        to="/forgot-password"
-                        className="text-decoration-none text-primary small fw-medium"
-                    >
-                        Forgot your password?
-                    </Link>
-                </div>
-
-                <button type="submit" className="btn btn-primary w-100 mt-2">
-                    <LogIn size={18} />
-                    Login
-                </button>
-
-                {/* FOOTER */}
-                <div className="text-center mt-3">
-                    <span className="text-theme-secondary">New user? </span>
-                    <UserPlus size={18} />
-                    <Link to="/signup">Create an account</Link>
-                </div>
-            </form>
-        </div>
+            </div>
+        </>
     );
 }

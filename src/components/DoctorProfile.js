@@ -11,7 +11,15 @@ import {
     TimerIcon,
     Eye,
     EyeOff,
+    Plus,
+    X,
+    ChevronDown,
+    ChevronUp,
+    Check,
+    AlertTriangle,
 } from "lucide-react";
+
+/* ── Password input sub-component ── */
 const PasswordInput = ({
     label,
     placeholder,
@@ -22,26 +30,22 @@ const PasswordInput = ({
     setShowPasswords,
 }) => {
     const isVisible = showPasswords[typeKey];
-
     return (
-        <div>
-            <label className="form-label small text-theme-secondary">
-                {label}
-            </label>
-
-            <div className="password-wrapper">
+        <div className="dp-field">
+            <label className="dp-label">{label}</label>
+            <div style={{ position: "relative" }}>
                 <input
                     type={isVisible ? "text" : "password"}
-                    className="form-control rounded-3 pe-5"
+                    className="dp-input"
                     placeholder={placeholder}
                     value={value}
                     onChange={onChange}
+                    style={{ paddingRight: 40 }}
                 />
-
                 <button
                     type="button"
                     tabIndex={-1}
-                    className="eye-btn"
+                    className="dp-eye-btn"
                     onClick={() =>
                         setShowPasswords((prev) => ({
                             ...prev,
@@ -49,11 +53,42 @@ const PasswordInput = ({
                         }))
                     }
                 >
-                    <span className={`eye-icon ${isVisible ? "show" : ""}`}>
-                        {isVisible ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </span>
+                    {isVisible ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
             </div>
+        </div>
+    );
+};
+
+/* ── Collapsible section ── */
+const Section = ({ icon: Icon, title, children, accent = "#60a5fa" }) => {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="dp-section">
+            <button
+                className="dp-section-header"
+                onClick={() => setOpen((p) => !p)}
+            >
+                <span
+                    className="dp-section-icon"
+                    style={{ background: `${accent}15`, color: accent }}
+                >
+                    <Icon size={15} />
+                </span>
+                <span className="dp-section-title">{title}</span>
+                {open ? (
+                    <ChevronUp
+                        size={14}
+                        style={{ color: "#2e3d5c", marginLeft: "auto" }}
+                    />
+                ) : (
+                    <ChevronDown
+                        size={14}
+                        style={{ color: "#2e3d5c", marginLeft: "auto" }}
+                    />
+                )}
+            </button>
+            {open && <div className="dp-section-body">{children}</div>}
         </div>
     );
 };
@@ -94,7 +129,10 @@ export default function DoctorProfile(props) {
         new: false,
         confirm: false,
     });
-    // ================= FETCH DOCTOR =================
+    const [editProfileOpen, setEditProfileOpen] = useState(false);
+    const [editStaffOpen, setEditStaffOpen] = useState(false);
+    const [editAvailOpen, setEditAvailOpen] = useState(false);
+
     const API_BASE_URL = useMemo(
         () =>
             process.env.NODE_ENV === "production"
@@ -105,22 +143,17 @@ export default function DoctorProfile(props) {
 
     const passwordsMatch =
         passwordData.newPassword === passwordData.confirmPassword;
+
     const fetchDoctor = useCallback(async () => {
         try {
             const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
-
             if (!data.success) return;
-
             const doc = data.doctor;
-
             setDoctor(doc);
-
-            // NEW
             setSubscription(doc.subscription || {});
             setUsage(doc.usage || {});
             setStaffCount(doc.staffCount || 0);
-
             setEditData({
                 name: doc.name || "",
                 email: doc.email || "",
@@ -129,9 +162,7 @@ export default function DoctorProfile(props) {
                 appointmentPhone: doc.appointmentPhone || "",
                 regNumber: doc.regNumber || "",
                 experience: doc.experience || "",
-
                 degree: doc.degree?.length ? doc.degree : [""],
-
                 address: {
                     line1: doc.address?.line1 || "",
                     line2: doc.address?.line2 || "",
@@ -152,72 +183,13 @@ export default function DoctorProfile(props) {
                 `${API_BASE_URL}/api/doctor/timing/get_availability`,
             );
             const data = await res.json();
-
-            if (data.success) {
+            if (data.success)
                 setAvailability(data.availability || data.timings || []);
-            }
         } catch (err) {
             console.error("Fetch availability error:", err);
         }
     }, [API_BASE_URL]);
 
-    const handleEditChange = (e) =>
-        setEditData({ ...editData, [e.target.name]: e.target.value });
-
-    const handleAddressChange = (e) =>
-        setEditData({
-            ...editData,
-            address: { ...editData.address, [e.target.name]: e.target.value },
-        });
-
-    const handleDegreeChange = (index, value) => {
-        const updated = [...editData.degree];
-        updated[index] = value;
-        setEditData({ ...editData, degree: updated });
-    };
-
-    const addDegreeField = () =>
-        setEditData({ ...editData, degree: [...editData.degree, ""] });
-
-    const removeDegreeField = (index) => {
-        const updated = [...editData.degree];
-        updated.splice(index, 1);
-        setEditData({ ...editData, degree: updated });
-    };
-    const handleSaveProfile = async () => {
-        const payload = {
-            ...editData,
-            degree: editData.degree.filter((d) => d.trim() !== ""),
-        };
-
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/update_profile`,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-            },
-        );
-
-        const data = await res.json();
-        if (data.success) {
-            setDoctor(data.doctor);
-            props.showAlert("Profile updated successfully", "success");
-        } else {
-            props.showAlert("Profile update failed", "danger");
-        }
-    };
-
-    const getPasswordStrength = (password) => {
-        if (password.length < 6) return "Weak";
-        if (password.match(/[A-Z]/) && password.match(/[0-9]/)) return "Strong";
-        return "Medium";
-    };
-
-    const strength = getPasswordStrength(passwordData.newPassword);
-    // ================= FETCH STAFF =================
     const fetchStaff = useCallback(async () => {
         try {
             const res = await authFetch(
@@ -242,23 +214,66 @@ export default function DoctorProfile(props) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
                 const data = await res.json();
-
-                if (data.success) {
-                    setPricing(data.pricing);
-                }
+                if (data.success) setPricing(data.pricing);
             } catch (err) {
                 console.error(err);
             }
         };
-
         fetchPricing();
     }, [API_BASE_URL]);
 
-    const planKey = subscription?.plan?.toLowerCase();
+    const handleEditChange = (e) =>
+        setEditData({ ...editData, [e.target.name]: e.target.value });
+    const handleAddressChange = (e) =>
+        setEditData({
+            ...editData,
+            address: { ...editData.address, [e.target.name]: e.target.value },
+        });
+    const handleDegreeChange = (index, value) => {
+        const u = [...editData.degree];
+        u[index] = value;
+        setEditData({ ...editData, degree: u });
+    };
+    const addDegreeField = () =>
+        setEditData({ ...editData, degree: [...editData.degree, ""] });
+    const removeDegreeField = (index) => {
+        const u = [...editData.degree];
+        u.splice(index, 1);
+        setEditData({ ...editData, degree: u });
+    };
 
+    const handleSaveProfile = async () => {
+        const payload = {
+            ...editData,
+            degree: editData.degree.filter((d) => d.trim() !== ""),
+        };
+        const res = await authFetch(
+            `${API_BASE_URL}/api/doctor/update_profile`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            },
+        );
+        const data = await res.json();
+        if (data.success) {
+            setDoctor(data.doctor);
+            setEditProfileOpen(false);
+            props.showAlert("Profile updated successfully", "success");
+        } else props.showAlert("Profile update failed", "danger");
+    };
+
+    const getPasswordStrength = (pw) => {
+        if (pw.length < 6) return { label: "Weak", color: "#f87171" };
+        if (pw.match(/[A-Z]/) && pw.match(/[0-9]/))
+            return { label: "Strong", color: "#4ade80" };
+        return { label: "Medium", color: "#fb923c" };
+    };
+    const strength = getPasswordStrength(passwordData.newPassword);
+
+    const planKey = subscription?.plan?.toLowerCase();
     const staffLimit =
         planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
-
     const isLimitReached = staffLimit !== -1 && staffCount >= staffLimit;
 
     const formatTime = (time) => {
@@ -268,48 +283,17 @@ export default function DoctorProfile(props) {
         hour = hour % 12 || 12;
         return `${hour}:${m} ${ampm}`;
     };
-    // eslint-disable-next-line
-    const handleUpdateAvailability = async () => {
-        try {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/timing/update_availability`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        availability,
-                    }),
-                },
-            );
 
-            const data = await res.json();
-
-            if (data.success) {
-                props.showAlert("Availability updated", "success");
-            } else {
-                props.showAlert("Failed to update availability", "danger");
-            }
-        } catch (err) {
-            props.showAlert("Server error", "danger");
-        }
-    };
-
-    // ================= ADD STAFF =================
     const handleAddStaff = async () => {
         if (!staffName || !staffPhone || !staffRole) {
             props.showAlert("All fields required", "danger");
             return;
         }
-
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/add_staff`,
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: staffName,
                     phone: staffPhone.replace(/\D/g, "").slice(-10),
@@ -317,22 +301,17 @@ export default function DoctorProfile(props) {
                 }),
             },
         );
-
         const data = await res.json();
         if (data.success) {
             fetchStaff();
             setStaffName("");
             setStaffPhone("");
             setStaffRole("");
-        } else {
-            alert(data.error);
-        }
+        } else alert(data.error);
     };
 
-    // ================= CHANGE PASSWORD =================
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
-
         if (!currentPassword || !newPassword || !confirmPassword) {
             props.showAlert("All fields required", "danger");
             return;
@@ -341,18 +320,14 @@ export default function DoctorProfile(props) {
             props.showAlert("Passwords do not match", "danger");
             return;
         }
-
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/change_password`,
             {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ currentPassword, newPassword }),
             },
         );
-
         const data = await res.json();
         if (data.success) {
             props.showAlert("Password updated", "success");
@@ -361,18 +336,13 @@ export default function DoctorProfile(props) {
                 newPassword: "",
                 confirmPassword: "",
             });
-            setShowPasswords({
-                current: false,
-                new: false,
-                confirm: false,
-            });
+            setShowPasswords({ current: false, new: false, confirm: false });
             fetchAvailability();
-        } else {
+        } else
             props.showAlert(
                 data.error || "Server Error try again later",
                 "danger",
             );
-        }
     };
 
     const deletestaff = async (staffId) => {
@@ -382,18 +352,13 @@ export default function DoctorProfile(props) {
         if (!confirmDelete) return;
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/delete_staff/${staffId}`,
-            {
-                method: "DELETE",
-            },
+            { method: "DELETE" },
         );
-
         const data = await res.json();
-        if (data.success) {
-            fetchStaff();
-        } else {
-            alert(data.error);
-        }
+        if (data.success) fetchStaff();
+        else alert(data.error);
     };
+
     const openEditStaffModal = (staff) => {
         setEditStaffData({
             _id: staff._id,
@@ -401,6 +366,7 @@ export default function DoctorProfile(props) {
             phone: staff.phone,
             role: staff.role,
         });
+        setEditStaffOpen(true);
     };
 
     const editstaff = async () => {
@@ -408,9 +374,7 @@ export default function DoctorProfile(props) {
             `${API_BASE_URL}/api/doctor/staff/edit_staff/${editStaffData._id}`,
             {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: editStaffData.name,
                     phone: editStaffData.phone,
@@ -418,197 +382,661 @@ export default function DoctorProfile(props) {
                 }),
             },
         );
-
         const data = await res.json();
-
         if (data.success) {
             fetchStaff();
-            document.getElementById("editStaffModalClose").click();
-        } else {
-            alert(data.error);
-        }
+            setEditStaffOpen(false);
+        } else alert(data.error);
     };
 
     if (!doctor)
         return (
-            <div className="container my-4">
-                <div className="card shadow-sm border-0 rounded-4">
-                    <div className="card-body">
-                        {/* Header Skeleton */}
-                        <div className="d-flex align-items-center gap-3 mb-4">
+            <>
+                <div className="dp-root">
+                    {[1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            className="dp-card dp-mb"
+                            style={{ padding: 24 }}
+                        >
                             <div
-                                className="placeholder rounded-circle"
-                                style={{ width: 44, height: 44 }}
-                            />
-                            <div className="flex-grow-1">
-                                <div className="placeholder col-5 mb-2" />
-                                <div className="placeholder col-3" />
+                                style={{
+                                    display: "flex",
+                                    gap: 14,
+                                    alignItems: "center",
+                                }}
+                            >
+                                <div
+                                    className="dp-skeleton"
+                                    style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: "50%",
+                                    }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                    <div
+                                        className="dp-skeleton"
+                                        style={{
+                                            height: 12,
+                                            width: "40%",
+                                            marginBottom: 8,
+                                            borderRadius: 4,
+                                        }}
+                                    />
+                                    <div
+                                        className="dp-skeleton"
+                                        style={{
+                                            height: 10,
+                                            width: "25%",
+                                            borderRadius: 4,
+                                        }}
+                                    />
+                                </div>
                             </div>
                         </div>
+                    ))}
+                </div>
+            </>
+        );
 
-                        {/* Info Skeleton */}
-                        <div className="row g-3">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="col-6 col-md-4">
-                                    <div className="placeholder-glow">
-                                        <div
-                                            className="placeholder col-12 rounded-3"
-                                            style={{ height: 56 }}
-                                        />
+    const ROLE_COLORS = {
+        receptionist: {
+            bg: "rgba(96,165,250,0.1)",
+            border: "rgba(96,165,250,0.2)",
+            color: "#60a5fa",
+        },
+        assistant: {
+            bg: "rgba(167,139,250,0.1)",
+            border: "rgba(167,139,250,0.2)",
+            color: "#a78bfa",
+        },
+        nurse: {
+            bg: "rgba(244,114,182,0.1)",
+            border: "rgba(244,114,182,0.2)",
+            color: "#f472b6",
+        },
+    };
+
+    return (
+        <>
+            <div className="dp-root">
+                {/* ── Profile Card ── */}
+                <div className="dp-card dp-mb">
+                    <div className="dp-profile-header">
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 16,
+                            }}
+                        >
+                            <div className="dp-avatar">
+                                {doctor.name?.charAt(0)?.toUpperCase()}
+                            </div>
+                            <div>
+                                <div className="dp-doc-name">{doctor.name}</div>
+                                <div className="dp-doc-clinic">
+                                    {doctor.clinicName}
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            className="dp-edit-btn"
+                            onClick={() => setEditProfileOpen(true)}
+                        >
+                            <Pencil size={13} /> Edit Profile
+                        </button>
+                    </div>
+
+                    <div className="dp-info-grid">
+                        {[
+                            { label: "Email", value: doctor.email },
+                            { label: "Phone", value: doctor.phone },
+                            {
+                                label: "Reg No",
+                                value: doctor.regNumber || "N/A",
+                            },
+                            {
+                                label: "Experience",
+                                value: doctor.experience || "N/A",
+                            },
+                            {
+                                label: "Degree",
+                                value: doctor.degree?.join(", ") || "N/A",
+                            },
+                            {
+                                label: "Address",
+                                value: [
+                                    doctor.address?.line1,
+                                    doctor.address?.city,
+                                    doctor.address?.state,
+                                    doctor.address?.pincode,
+                                ]
+                                    .filter(Boolean)
+                                    .join(", "),
+                            },
+                        ].map((item) => (
+                            <div key={item.label} className="dp-info-item">
+                                <div className="dp-info-label">
+                                    {item.label}
+                                </div>
+                                <div className="dp-info-value">
+                                    {item.value}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Staff Management ── */}
+                <Section icon={Users} title="Staff Management" accent="#60a5fa">
+                    <div className="dp-grid3 dp-mb">
+                        <div className="dp-field">
+                            <label className="dp-label">Staff Name</label>
+                            <input
+                                className="dp-input"
+                                placeholder="Enter name"
+                                value={staffName}
+                                onChange={(e) => setStaffName(e.target.value)}
+                            />
+                        </div>
+                        <div className="dp-field">
+                            <label className="dp-label">Phone Number</label>
+                            <input
+                                className="dp-input"
+                                placeholder="10 digit number"
+                                value={staffPhone}
+                                onChange={(e) => setStaffPhone(e.target.value)}
+                            />
+                        </div>
+                        <div className="dp-field">
+                            <label className="dp-label">Role</label>
+                            <select
+                                className="dp-select"
+                                value={staffRole}
+                                onChange={(e) => setStaffRole(e.target.value)}
+                            >
+                                <option value="">Select Role</option>
+                                <option value="receptionist">
+                                    Receptionist
+                                </option>
+                                <option value="assistant">Assistant</option>
+                                <option value="nurse">Nurse</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {isLimitReached && (
+                        <div className="dp-warn-banner dp-mb">
+                            <AlertTriangle size={14} />
+                            Staff limit reached ({staffLimit}). Upgrade your
+                            plan to add more staff.
+                        </div>
+                    )}
+
+                    <button
+                        className="dp-btn dp-btn-primary dp-mb"
+                        onClick={handleAddStaff}
+                        disabled={isLimitReached}
+                    >
+                        <UserPlus size={14} /> Add Staff
+                    </button>
+
+                    <div className="dp-divider" />
+
+                    {staffList.length === 0 ? (
+                        <div className="dp-empty">No staff added yet</div>
+                    ) : (
+                        <div className="dp-staff-grid">
+                            {staffList.map((s) => {
+                                const rc =
+                                    ROLE_COLORS[s.role] ||
+                                    ROLE_COLORS.assistant;
+                                return (
+                                    <div key={s._id} className="dp-staff-card">
+                                        <div className="dp-staff-avatar">
+                                            {s.name?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                        <div className="dp-staff-info">
+                                            <div className="dp-staff-name">
+                                                {s.name}
+                                            </div>
+                                            <div className="dp-staff-phone">
+                                                <Phone size={11} /> {s.phone}
+                                            </div>
+                                            <span
+                                                className="dp-role-badge"
+                                                style={{
+                                                    background: rc.bg,
+                                                    border: `1px solid ${rc.border}`,
+                                                    color: rc.color,
+                                                }}
+                                            >
+                                                {s.role}
+                                            </span>
+                                        </div>
+                                        <div className="dp-staff-actions">
+                                            <button
+                                                className="dp-icon-btn dp-icon-edit"
+                                                onClick={() =>
+                                                    openEditStaffModal(s)
+                                                }
+                                            >
+                                                <Pencil size={13} />
+                                            </button>
+                                            <button
+                                                className="dp-icon-btn dp-icon-del"
+                                                onClick={() =>
+                                                    deletestaff(s._id)
+                                                }
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
                                     </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </Section>
+
+                {/* ── Availability ── */}
+                <Section
+                    icon={TimerIcon}
+                    title="Availability (Timings)"
+                    accent="#a78bfa"
+                >
+                    {availability.length === 0 ? (
+                        <div className="dp-empty">No availability added</div>
+                    ) : (
+                        <div className="dp-avail-grid dp-mb">
+                            {availability.map((dayBlock, index) => (
+                                <div key={index} className="dp-avail-card">
+                                    <div className="dp-avail-day">
+                                        {dayBlock.day}
+                                    </div>
+                                    {dayBlock.slots?.map((slot, i) => (
+                                        <div key={i} className="dp-slot-row">
+                                            <span>
+                                                {formatTime(slot.startTime)} →{" "}
+                                                {formatTime(slot.endTime)}
+                                            </span>
+                                            <span className="dp-slot-duration">
+                                                {slot.slotDuration} min
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-            </div>
-        );
-
-    return (
-        <div className="container py-3 py-md-4">
-            {/* ================= DOCTOR PROFILE ================= */}
-            <div className="card profile-card mb-4">
-                <div className="card-body p-4">
-                    {/* HEADER */}
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                        <div className="d-flex align-items-center gap-3">
-                            <div className="avatar-circle-lg">
-                                {doctor.name?.charAt(0)}
-                            </div>
-
-                            <div>
-                                <h4 className="mb-1">{doctor.name}</h4>
-                                <span className="text-secondary-theme small">
-                                    {doctor.clinicName}
-                                </span>
-                            </div>
-                        </div>
-
-                        <button
-                            className="btn btn-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-2"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editProfileModal"
-                        >
-                            <Pencil size={16} />
-                            Edit
-                        </button>
-                    </div>
-
-                    {/* INFO GRID */}
-                    <div className="row g-3">
-                        <div className="col-md-4">
-                            <div className="info-card">
-                                <span className="label">Email</span>
-                                <span className="value">{doctor.email}</span>
-                            </div>
-                        </div>
-
-                        <div className="col-md-4">
-                            <div className="info-card">
-                                <span className="label">Phone</span>
-                                <span className="value">{doctor.phone}</span>
-                            </div>
-                        </div>
-
-                        <div className="col-md-4">
-                            <div className="info-card">
-                                <span className="label">Reg No</span>
-                                <span className="value">
-                                    {doctor.regNumber || "N/A"}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="col-md-6">
-                            <div className="info-card">
-                                <span className="label">Degree</span>
-                                <span className="value">
-                                    {doctor.degree?.join(", ") || "N/A"}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="col-md-6">
-                            <div className="info-card">
-                                <span className="label">Address</span>
-                                <span className="value">
-                                    {doctor.address?.line1} <br />
-                                    {doctor.address?.line2} <br />
-                                    {doctor.address?.city},{" "}
-                                    {doctor.address?.state} -{" "}
-                                    {doctor.address?.pincode}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ================= STAFF MANAGEMENT ================= */}
-            <div className="accordion my-4" id="staffAccordion">
-                <div className="accordion-item border-0 shadow-sm rounded-4">
-                    <h2 className="accordion-header">
-                        <button
-                            className="accordion-button collapsed fw-semibold rounded-4"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#staffSection"
-                            aria-expanded="false"
-                            aria-controls="staffSection"
-                        >
-                            <Users size={18} className="me-2" />
-                            Staff Management
-                        </button>
-                    </h2>
-
-                    <div
-                        id="staffSection"
-                        className="accordion-collapse collapse"
-                        data-bs-parent="#staffAccordion"
+                    )}
+                    <button
+                        className="dp-btn dp-btn-outline"
+                        onClick={() => {
+                            setEditAvailability(
+                                JSON.parse(JSON.stringify(availability)),
+                            );
+                            setSelectedDays([]);
+                            setEditAvailOpen(true);
+                        }}
                     >
-                        <div className="accordion-body">
-                            {/* ================= ADD STAFF ================= */}
-                            <div className="row g-3 mb-3">
-                                <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        Staff Name
-                                    </label>
+                        <Pencil size={13} /> Edit Availability
+                    </button>
+                </Section>
+
+                {/* ── Change Password ── */}
+                <Section icon={Lock} title="Change Password" accent="#fb923c">
+                    <div className="dp-grid3 dp-mb">
+                        <PasswordInput
+                            label="Current Password"
+                            placeholder="••••••••"
+                            value={passwordData.currentPassword}
+                            onChange={(e) =>
+                                setPasswordData({
+                                    ...passwordData,
+                                    currentPassword: e.target.value,
+                                })
+                            }
+                            typeKey="current"
+                            showPasswords={showPasswords}
+                            setShowPasswords={setShowPasswords}
+                        />
+                        <div>
+                            <PasswordInput
+                                label="New Password"
+                                placeholder="Min. 6 characters"
+                                value={passwordData.newPassword}
+                                onChange={(e) =>
+                                    setPasswordData({
+                                        ...passwordData,
+                                        newPassword: e.target.value,
+                                    })
+                                }
+                                typeKey="new"
+                                showPasswords={showPasswords}
+                                setShowPasswords={setShowPasswords}
+                            />
+                            {passwordData.newPassword && (
+                                <div
+                                    style={{
+                                        fontSize: 10,
+                                        color: strength.color,
+                                        marginTop: 5,
+                                        letterSpacing: "0.04em",
+                                    }}
+                                >
+                                    Strength: {strength.label}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <PasswordInput
+                                label="Confirm Password"
+                                placeholder="Re-enter password"
+                                value={passwordData.confirmPassword}
+                                onChange={(e) =>
+                                    setPasswordData({
+                                        ...passwordData,
+                                        confirmPassword: e.target.value,
+                                    })
+                                }
+                                typeKey="confirm"
+                                showPasswords={showPasswords}
+                                setShowPasswords={setShowPasswords}
+                            />
+                            {passwordData.confirmPassword && (
+                                <div
+                                    style={{
+                                        fontSize: 10,
+                                        color: passwordsMatch
+                                            ? "#4ade80"
+                                            : "#f87171",
+                                        marginTop: 5,
+                                    }}
+                                >
+                                    {passwordsMatch
+                                        ? "✓ Passwords match"
+                                        : "✗ Do not match"}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div
+                        style={{ display: "flex", justifyContent: "flex-end" }}
+                    >
+                        <button
+                            className="dp-btn dp-btn-danger"
+                            onClick={handleChangePassword}
+                            disabled={
+                                !passwordData.currentPassword ||
+                                !passwordData.newPassword ||
+                                !passwordData.confirmPassword ||
+                                !passwordsMatch
+                            }
+                        >
+                            <RefreshCcw size={13} /> Update Password
+                        </button>
+                    </div>
+                </Section>
+
+                {/* ══════════════ MODALS ══════════════ */}
+
+                {/* Edit Profile Modal */}
+                {editProfileOpen && (
+                    <div
+                        className="dp-modal-bg"
+                        onClick={() => setEditProfileOpen(false)}
+                    >
+                        <div
+                            className="dp-modal"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="dp-modal-header">
+                                <div className="dp-modal-title">
+                                    Edit <em>Profile</em>
+                                </div>
+                                <button
+                                    className="dp-modal-close"
+                                    onClick={() => setEditProfileOpen(false)}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <div className="dp-modal-body">
+                                <div className="dp-modal-section-title">
+                                    Basic Information
+                                </div>
+                                <div className="dp-grid2 dp-mb">
+                                    <div className="dp-field">
+                                        <label className="dp-label">Name</label>
+                                        <input
+                                            className="dp-input"
+                                            name="name"
+                                            value={editData.name}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Clinic Name
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="clinicName"
+                                            value={editData.clinicName}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Phone
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="phone"
+                                            value={editData.phone}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Registration No
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="regNumber"
+                                            value={editData.regNumber}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="dp-modal-section-title">
+                                    Qualifications
+                                </div>
+                                {editData.degree.map((deg, index) => (
+                                    <div
+                                        key={index}
+                                        style={{
+                                            display: "flex",
+                                            gap: 8,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        <input
+                                            className="dp-input"
+                                            placeholder="Enter degree"
+                                            value={deg}
+                                            onChange={(e) =>
+                                                handleDegreeChange(
+                                                    index,
+                                                    e.target.value,
+                                                )
+                                            }
+                                        />
+                                        <button
+                                            className="dp-icon-btn dp-icon-del"
+                                            onClick={() =>
+                                                removeDegreeField(index)
+                                            }
+                                            disabled={
+                                                editData.degree.length === 1
+                                            }
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
+                                    onClick={addDegreeField}
+                                >
+                                    <Plus size={11} /> Add Degree
+                                </button>
+
+                                <div className="dp-modal-section-title">
+                                    Clinic Address
+                                </div>
+                                <div className="dp-field dp-mb">
                                     <input
-                                        className="form-control rounded-3"
-                                        placeholder="Enter name"
-                                        value={staffName}
+                                        className="dp-input"
+                                        name="line1"
+                                        placeholder="Address Line 1"
+                                        value={editData.address.line1}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div className="dp-field dp-mb">
+                                    <input
+                                        className="dp-input"
+                                        name="line2"
+                                        placeholder="Address Line 2 (optional)"
+                                        value={editData.address.line2}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div className="dp-field dp-mb">
+                                    <input
+                                        className="dp-input"
+                                        name="line3"
+                                        placeholder="Address Line 3 (optional)"
+                                        value={editData.address.line3}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div className="dp-grid3">
+                                    <div className="dp-field">
+                                        <label className="dp-label">City</label>
+                                        <input
+                                            className="dp-input"
+                                            name="city"
+                                            value={editData.address.city}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            State
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="state"
+                                            value={editData.address.state}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Pincode
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="pincode"
+                                            value={editData.address.pincode}
+                                            onChange={handleAddressChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="dp-modal-footer">
+                                <button
+                                    className="dp-btn dp-btn-outline"
+                                    onClick={() => setEditProfileOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="dp-btn dp-btn-primary"
+                                    onClick={handleSaveProfile}
+                                >
+                                    <Check size={13} /> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Staff Modal */}
+                {editStaffOpen && (
+                    <div
+                        className="dp-modal-bg"
+                        onClick={() => setEditStaffOpen(false)}
+                    >
+                        <div
+                            className="dp-modal dp-modal-sm"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="dp-modal-header">
+                                <div className="dp-modal-title">
+                                    Edit <em>Staff</em>
+                                </div>
+                                <button
+                                    className="dp-modal-close"
+                                    onClick={() => setEditStaffOpen(false)}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <div className="dp-modal-body">
+                                <div className="dp-field dp-mb">
+                                    <label className="dp-label">Name</label>
+                                    <input
+                                        className="dp-input"
+                                        value={editStaffData.name}
                                         onChange={(e) =>
-                                            setStaffName(e.target.value)
+                                            setEditStaffData({
+                                                ...editStaffData,
+                                                name: e.target.value,
+                                            })
                                         }
                                     />
                                 </div>
-
-                                <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        Phone Number
-                                    </label>
+                                <div className="dp-field dp-mb">
+                                    <label className="dp-label">Phone</label>
                                     <input
-                                        className="form-control rounded-3"
-                                        placeholder="10 digit number"
-                                        value={staffPhone}
+                                        className="dp-input"
+                                        value={editStaffData.phone}
                                         onChange={(e) =>
-                                            setStaffPhone(e.target.value)
+                                            setEditStaffData({
+                                                ...editStaffData,
+                                                phone: e.target.value,
+                                            })
                                         }
                                     />
                                 </div>
-
-                                <div className="col-12 col-md-4">
-                                    <label className="form-label small text-theme-secondary">
-                                        Role
-                                    </label>
+                                <div className="dp-field">
+                                    <label className="dp-label">Role</label>
                                     <select
-                                        className="form-select rounded-3"
-                                        value={staffRole}
+                                        className="dp-select"
+                                        value={editStaffData.role}
                                         onChange={(e) =>
-                                            setStaffRole(e.target.value)
+                                            setEditStaffData({
+                                                ...editStaffData,
+                                                role: e.target.value,
+                                            })
                                         }
                                     >
-                                        <option value="">Select Role</option>
                                         <option value="receptionist">
                                             Receptionist
                                         </option>
@@ -619,293 +1047,50 @@ export default function DoctorProfile(props) {
                                     </select>
                                 </div>
                             </div>
-
-                            {isLimitReached && (
-                                <div className="alert alert-warning">
-                                    Staff limit reached ({staffLimit}). Upgrade
-                                    your plan to add more staff.
-                                </div>
-                            )}
-                            <button
-                                className="btn btn-primary w-100 w-md-auto mb-4 rounded-3 d-flex align-items-center gap-2"
-                                onClick={handleAddStaff}
-                                disabled={isLimitReached}
-                            >
-                                <UserPlus size={16} />
-                                Add Staff
-                            </button>
-
-                            <hr />
-
-                            {/* ================= STAFF LIST ================= */}
-                            {staffList.length === 0 ? (
-                                <p className="text-theme-secondary text-center mb-0">
-                                    No staff added yet
-                                </p>
-                            ) : (
-                                <div className="row g-3">
-                                    {staffList.map((s) => (
-                                        <div
-                                            key={s._id}
-                                            className="col-12 col-md-6"
-                                        >
-                                            <div className="card h-100 border-0 shadow-sm rounded-4 bg-theme-surface">
-                                                <div className="card-body">
-                                                    <h6 className="fw-bold mb-1">
-                                                        {s.name}
-                                                    </h6>
-
-                                                    <div className="small text-theme-secondary mb-2">
-                                                        <Phone
-                                                            size={14}
-                                                            className="me-1"
-                                                        />
-                                                        {s.phone}
-                                                    </div>
-
-                                                    <span className="badge badge-theme mb-3">
-                                                        {s.role}
-                                                    </span>
-
-                                                    <div className="d-flex gap-2 mt-3">
-                                                        <button
-                                                            className="btn btn-sm btn-outline-warning flex-fill rounded-3"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#editStaffModal"
-                                                            onClick={() =>
-                                                                openEditStaffModal(
-                                                                    s,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Pencil size={18} />{" "}
-                                                            Edit
-                                                        </button>
-
-                                                        <button
-                                                            className="btn btn-sm btn-outline-danger flex-fill rounded-3"
-                                                            onClick={() =>
-                                                                deletestaff(
-                                                                    s._id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2 size={18} />{" "}
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ================= EDIT STAFF MODAL ================= */}
-            <div
-                className="modal fade"
-                id="editStaffModal"
-                tabIndex="-1"
-                aria-hidden="true"
-            >
-                <div className="modal-dialog modal-dialog-centered modal-sm modal-md">
-                    <div className="modal-content border-0 shadow">
-                        <div className="modal-header">
-                            <h5 className="modal-title fw-semibold">
-                                <Pencil size={14} />
-                                Edit Staff
-                            </h5>
-                            <button
-                                type="button"
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                                id="editStaffModalClose"
-                            />
-                        </div>
-
-                        <div className="modal-body">
-                            <div className="mb-3">
-                                <label className="form-label">Name</label>
-                                <input
-                                    className="form-control"
-                                    value={editStaffData.name}
-                                    onChange={(e) =>
-                                        setEditStaffData({
-                                            ...editStaffData,
-                                            name: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-
-                            <div className="mb-3">
-                                <label className="form-label">Phone</label>
-                                <input
-                                    className="form-control"
-                                    value={editStaffData.phone}
-                                    onChange={(e) =>
-                                        setEditStaffData({
-                                            ...editStaffData,
-                                            phone: e.target.value,
-                                        })
-                                    }
-                                />
-                            </div>
-
-                            <div className="mb-3">
-                                <label className="form-label">Role</label>
-                                <select
-                                    className="form-select"
-                                    value={editStaffData.role}
-                                    onChange={(e) =>
-                                        setEditStaffData({
-                                            ...editStaffData,
-                                            role: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="receptionist">
-                                        Receptionist
-                                    </option>
-                                    <option value="assistant">Assistant</option>
-                                    <option value="nurse">Nurse</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="modal-footer flex-nowrap">
-                            <button
-                                className="btn btn-outline-secondary w-50"
-                                data-bs-dismiss="modal"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="btn btn-primary w-50"
-                                onClick={editstaff}
-                            >
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ================= AVAILABILITY ================= */}
-            <div className="accordion my-4" id="availabilityAccordion">
-                <div className="accordion-item border-0 rounded-4">
-                    <h2 className="accordion-header">
-                        <button
-                            className="accordion-button collapsed fw-semibold rounded-4"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#availabilitySection"
-                        >
-                            <TimerIcon size={18} className="me-2" />
-                            Availability(Timings)
-                        </button>
-                    </h2>
-
-                    <div
-                        id="availabilitySection"
-                        className="accordion-collapse collapse"
-                    >
-                        <div className="accordion-body">
-                            {availability.length === 0 ? (
-                                <p className="text-theme-secondary text-center">
-                                    No availability added
-                                </p>
-                            ) : (
-                                <div className="row g-3">
-                                    {availability.map((dayBlock, index) => (
-                                        <div
-                                            key={index}
-                                            className="col-12 col-md-6"
-                                        >
-                                            <div className="availability-card p-3 rounded-4">
-                                                {/* DAY HEADER */}
-                                                <div className="fw-bold mb-2 text-primary">
-                                                    {dayBlock.day}
-                                                </div>
-
-                                                {/* SLOTS */}
-                                                {dayBlock.slots?.map(
-                                                    (slot, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="slot-item d-flex justify-content-between align-items-center mb-2 px-2 py-1 rounded-3"
-                                                        >
-                                                            <span>
-                                                                {formatTime(
-                                                                    slot.startTime,
-                                                                )}{" "}
-                                                                →{" "}
-                                                                {formatTime(
-                                                                    slot.endTime,
-                                                                )}
-                                                            </span>
-
-                                                            <span className="badge bg-primary-subtle text-primary">
-                                                                {
-                                                                    slot.slotDuration
-                                                                }{" "}
-                                                                min
-                                                            </span>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="d-flex justify-content-end mt-4">
+                            <div className="dp-modal-footer">
                                 <button
-                                    className="btn btn-primary"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#availabilityModal"
-                                    onClick={() => {
-                                        setEditAvailability(
-                                            JSON.parse(
-                                                JSON.stringify(availability),
-                                            ),
-                                        );
-                                        setSelectedDays([]);
-                                    }}
+                                    className="dp-btn dp-btn-outline"
+                                    onClick={() => setEditStaffOpen(false)}
                                 >
-                                    <Pencil size={18} /> Edit Availability
+                                    Cancel
+                                </button>
+                                <button
+                                    className="dp-btn dp-btn-primary"
+                                    onClick={editstaff}
+                                >
+                                    <Check size={13} /> Save
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="modal fade" id="availabilityModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-scrollable">
-                    <div className="modal-content">
-                        {/* HEADER */}
-                        <div className="modal-header">
-                            <h5 className="modal-title">Edit Availability</h5>
-                            <button
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            />
-                        </div>
+                )}
 
-                        {/* BODY */}
-                        <div className="modal-body">
-                            {/* ===== SELECT DAYS ===== */}
-                            <div className="mb-4">
-                                <label className="form-label fw-semibold">
+                {/* Edit Availability Modal */}
+                {editAvailOpen && (
+                    <div
+                        className="dp-modal-bg"
+                        onClick={() => setEditAvailOpen(false)}
+                    >
+                        <div
+                            className="dp-modal"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="dp-modal-header">
+                                <div className="dp-modal-title">
+                                    Edit <em>Availability</em>
+                                </div>
+                                <button
+                                    className="dp-modal-close"
+                                    onClick={() => setEditAvailOpen(false)}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <div className="dp-modal-body">
+                                <div className="dp-modal-section-title">
                                     Select Days
-                                </label>
-
-                                <div className="d-flex flex-wrap gap-2">
+                                </div>
+                                <div className="dp-days-row dp-mb">
                                     {[
                                         "Mon",
                                         "Tue",
@@ -918,105 +1103,93 @@ export default function DoctorProfile(props) {
                                         <button
                                             key={day}
                                             type="button"
-                                            className={`btn btn-sm ${
-                                                selectedDays.includes(day)
-                                                    ? "btn-primary"
-                                                    : "btn-outline-secondary"
-                                            }`}
-                                            onClick={() => {
+                                            className={`dp-day-chip ${selectedDays.includes(day) ? "active" : ""}`}
+                                            onClick={() =>
                                                 setSelectedDays((prev) =>
                                                     prev.includes(day)
                                                         ? prev.filter(
                                                               (d) => d !== day,
                                                           )
                                                         : [...prev, day],
-                                                );
-                                            }}
+                                                )
+                                            }
                                         >
                                             {day}
                                         </button>
                                     ))}
                                 </div>
-                            </div>
 
-                            {/* ===== COMMON TIME SLOTS ===== */}
-                            <div className="mb-4">
-                                <label className="form-label fw-semibold">
+                                <div className="dp-modal-section-title">
                                     Time Slots
-                                </label>
-
+                                </div>
                                 {tempSlots.map((slot, index) => (
-                                    <div key={index} className="row g-2 mb-2">
-                                        <div className="col-4">
+                                    <div
+                                        key={index}
+                                        className="dp-slot-edit-row dp-mb"
+                                    >
+                                        <div className="dp-field">
+                                            <label className="dp-label">
+                                                Start
+                                            </label>
                                             <input
                                                 type="time"
-                                                className="form-control"
+                                                className="dp-input"
                                                 value={slot.startTime}
                                                 onChange={(e) => {
-                                                    const updated = [
-                                                        ...tempSlots,
-                                                    ];
-                                                    updated[index].startTime =
+                                                    const u = [...tempSlots];
+                                                    u[index].startTime =
                                                         e.target.value;
-                                                    setTempSlots(updated);
+                                                    setTempSlots(u);
                                                 }}
                                             />
                                         </div>
-
-                                        <div className="col-4">
+                                        <div className="dp-field">
+                                            <label className="dp-label">
+                                                End
+                                            </label>
                                             <input
                                                 type="time"
-                                                className="form-control"
+                                                className="dp-input"
                                                 value={slot.endTime}
                                                 onChange={(e) => {
-                                                    const updated = [
-                                                        ...tempSlots,
-                                                    ];
-                                                    updated[index].endTime =
+                                                    const u = [...tempSlots];
+                                                    u[index].endTime =
                                                         e.target.value;
-                                                    setTempSlots(updated);
+                                                    setTempSlots(u);
                                                 }}
                                             />
                                         </div>
-
-                                        <div className="col-3">
+                                        <div className="dp-field">
+                                            <label className="dp-label">
+                                                Gap (min)
+                                            </label>
                                             <input
                                                 type="number"
-                                                className="form-control"
+                                                className="dp-input"
                                                 value={slot.slotDuration}
                                                 onChange={(e) => {
-                                                    const updated = [
-                                                        ...tempSlots,
-                                                    ];
-                                                    updated[
-                                                        index
-                                                    ].slotDuration = Number(
-                                                        e.target.value,
-                                                    );
-                                                    setTempSlots(updated);
+                                                    const u = [...tempSlots];
+                                                    u[index].slotDuration =
+                                                        Number(e.target.value);
+                                                    setTempSlots(u);
                                                 }}
                                             />
                                         </div>
-
-                                        <div className="col-1">
-                                            <button
-                                                className="btn btn-danger btn-sm"
-                                                onClick={() => {
-                                                    const updated = [
-                                                        ...tempSlots,
-                                                    ];
-                                                    updated.splice(index, 1);
-                                                    setTempSlots(updated);
-                                                }}
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
+                                        <button
+                                            className="dp-icon-btn dp-icon-del"
+                                            style={{ alignSelf: "flex-end" }}
+                                            onClick={() => {
+                                                const u = [...tempSlots];
+                                                u.splice(index, 1);
+                                                setTempSlots(u);
+                                            }}
+                                        >
+                                            <X size={12} />
+                                        </button>
                                     </div>
                                 ))}
-
                                 <button
-                                    className="btn btn-sm btn-outline-primary"
+                                    className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
                                     onClick={() =>
                                         setTempSlots([
                                             ...tempSlots,
@@ -1028,448 +1201,124 @@ export default function DoctorProfile(props) {
                                         ])
                                     }
                                 >
-                                    + Add Slot
+                                    <Plus size={11} /> Add Slot
                                 </button>
-                            </div>
 
-                            {/* ===== APPLY BUTTON ===== */}
-                            <button
-                                className="btn btn-success mb-4"
-                                onClick={() => {
-                                    if (selectedDays.length === 0) return;
-
-                                    let updated = [...editAvailability];
-
-                                    selectedDays.forEach((day) => {
-                                        const index = updated.findIndex(
-                                            (d) => d.day === day,
-                                        );
-
-                                        if (index !== -1) {
-                                            updated[index].slots = tempSlots;
-                                        } else {
-                                            updated.push({
-                                                day,
-                                                slots: tempSlots,
-                                            });
-                                        }
-                                    });
-
-                                    setEditAvailability(updated);
-                                }}
-                            >
-                                Apply to Selected Days
-                            </button>
-
-                            <hr />
-
-                            {/* ===== PREVIEW / EDIT PER DAY ===== */}
-                            {editAvailability.map((dayBlock, dayIndex) => (
-                                <div key={dayIndex} className="mb-3">
-                                    <div className="fw-bold text-primary">
-                                        {dayBlock.day}
-                                    </div>
-
-                                    {dayBlock.slots.map((slot, slotIndex) => (
-                                        <div
-                                            key={slotIndex}
-                                            className="d-flex justify-content-between small mb-1"
-                                        >
-                                            <span>
-                                                {slot.startTime} →{" "}
-                                                {slot.endTime}
-                                            </span>
-                                            <span>{slot.slotDuration}m</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* FOOTER */}
-                        <div className="modal-footer">
-                            <button
-                                className="btn btn-outline-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                className="btn btn-primary"
-                                data-bs-dismiss="modal"
-                                onClick={async () => {
-                                    try {
-                                        const res = await authFetch(
-                                            `${API_BASE_URL}/api/doctor/timing/update_availability`,
-                                            {
-                                                method: "PUT",
-                                                headers: {
-                                                    "Content-Type":
-                                                        "application/json",
-                                                },
-                                                body: JSON.stringify({
-                                                    availability:
-                                                        editAvailability,
-                                                }),
-                                            },
-                                        );
-
-                                        const data = await res.json();
-
-                                        if (data.success) {
-                                            setAvailability(editAvailability);
-                                            props.showAlert(
-                                                "Updated successfully",
-                                                "success",
+                                <button
+                                    className="dp-btn dp-btn-primary dp-mb"
+                                    onClick={() => {
+                                        if (selectedDays.length === 0) return;
+                                        let updated = [...editAvailability];
+                                        selectedDays.forEach((day) => {
+                                            const idx = updated.findIndex(
+                                                (d) => d.day === day,
                                             );
-                                        } else {
+                                            if (idx !== -1)
+                                                updated[idx].slots = tempSlots;
+                                            else
+                                                updated.push({
+                                                    day,
+                                                    slots: tempSlots,
+                                                });
+                                        });
+                                        setEditAvailability(updated);
+                                    }}
+                                >
+                                    <Check size={13} /> Apply to Selected Days
+                                </button>
+
+                                <div className="dp-divider" />
+
+                                <div className="dp-modal-section-title">
+                                    Preview
+                                </div>
+                                {editAvailability.map((dayBlock, dayIndex) => (
+                                    <div
+                                        key={dayIndex}
+                                        style={{ marginBottom: 12 }}
+                                    >
+                                        <div
+                                            style={{
+                                                fontSize: 11,
+                                                color: "#a78bfa",
+                                                letterSpacing: "0.08em",
+                                                marginBottom: 4,
+                                            }}
+                                        >
+                                            {dayBlock.day}
+                                        </div>
+                                        {dayBlock.slots.map((slot, si) => (
+                                            <div
+                                                key={si}
+                                                className="dp-slot-row"
+                                            >
+                                                <span>
+                                                    {slot.startTime} →{" "}
+                                                    {slot.endTime}
+                                                </span>
+                                                <span className="dp-slot-duration">
+                                                    {slot.slotDuration} min
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="dp-modal-footer">
+                                <button
+                                    className="dp-btn dp-btn-outline"
+                                    onClick={() => setEditAvailOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="dp-btn dp-btn-primary"
+                                    onClick={async () => {
+                                        try {
+                                            const res = await authFetch(
+                                                `${API_BASE_URL}/api/doctor/timing/update_availability`,
+                                                {
+                                                    method: "PUT",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        availability:
+                                                            editAvailability,
+                                                    }),
+                                                },
+                                            );
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                setAvailability(
+                                                    editAvailability,
+                                                );
+                                                setEditAvailOpen(false);
+                                                props.showAlert(
+                                                    "Updated successfully",
+                                                    "success",
+                                                );
+                                            } else
+                                                props.showAlert(
+                                                    "Update failed",
+                                                    "danger",
+                                                );
+                                        } catch {
                                             props.showAlert(
-                                                "Update failed",
+                                                "Server error",
                                                 "danger",
                                             );
                                         }
-                                    } catch (err) {
-                                        props.showAlert(
-                                            "Server error",
-                                            "danger",
-                                        );
-                                    }
-                                }}
-                            >
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {/* ================= CHANGE PASSWORD ================= */}
-            <div className="accordion my-4" id="doctorAccordion">
-                <div className="accordion-item border-0 shadow-sm rounded-4">
-                    <h2 className="accordion-header">
-                        <button
-                            className="accordion-button collapsed fw-semibold rounded-4"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#passwordSection"
-                            aria-expanded="false"
-                            aria-controls="passwordSection"
-                        >
-                            <Lock size={18} className="me-2" />
-                            Change Password
-                        </button>
-                    </h2>
-
-                    <div
-                        id="passwordSection"
-                        className="accordion-collapse collapse"
-                        data-bs-parent="#doctorAccordion"
-                    >
-                        <div className="accordion-body">
-                            <div className="row g-3">
-                                {/* Current Password */}
-                                <div className="col-12 col-md-4">
-                                    <PasswordInput
-                                        label="Current Password"
-                                        placeholder="••••••••"
-                                        value={passwordData.currentPassword}
-                                        onChange={(e) =>
-                                            setPasswordData({
-                                                ...passwordData,
-                                                currentPassword: e.target.value,
-                                            })
-                                        }
-                                        typeKey="current"
-                                        showPasswords={showPasswords}
-                                        setShowPasswords={setShowPasswords}
-                                    />
-                                </div>
-
-                                {/* New Password */}
-                                <div className="col-12 col-md-4">
-                                    <PasswordInput
-                                        label="New Password"
-                                        placeholder="Minimum 6 characters"
-                                        value={passwordData.newPassword}
-                                        onChange={(e) =>
-                                            setPasswordData({
-                                                ...passwordData,
-                                                newPassword: e.target.value,
-                                            })
-                                        }
-                                        typeKey="new"
-                                        showPasswords={showPasswords}
-                                        setShowPasswords={setShowPasswords}
-                                    />
-                                    {passwordData.newPassword && (
-                                        <small
-                                            className={
-                                                strength === "Strong"
-                                                    ? "text-success"
-                                                    : strength === "Medium"
-                                                      ? "text-warning"
-                                                      : "text-danger"
-                                            }
-                                        >
-                                            Strength: {strength}
-                                        </small>
-                                    )}
-                                </div>
-
-                                {/* Confirm Password */}
-                                <div className="col-12 col-md-4">
-                                    <PasswordInput
-                                        label="Confirm Password"
-                                        placeholder="Re-enter password"
-                                        value={passwordData.confirmPassword}
-                                        onChange={(e) =>
-                                            setPasswordData({
-                                                ...passwordData,
-                                                confirmPassword: e.target.value,
-                                            })
-                                        }
-                                        typeKey="confirm"
-                                        showPasswords={showPasswords}
-                                        setShowPasswords={setShowPasswords}
-                                    />
-                                    {passwordData.confirmPassword && (
-                                        <small
-                                            className={
-                                                passwordsMatch
-                                                    ? "text-success"
-                                                    : "text-danger"
-                                            }
-                                        >
-                                            {passwordsMatch
-                                                ? "Passwords match"
-                                                : "Passwords do not match"}
-                                        </small>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Action */}
-                            <div className="d-flex justify-content-end mt-4">
-                                <button
-                                    className="btn btn-danger px-4 rounded-3"
-                                    onClick={handleChangePassword}
-                                    disabled={
-                                        !passwordData.currentPassword ||
-                                        !passwordData.newPassword ||
-                                        !passwordData.confirmPassword ||
-                                        !passwordsMatch
-                                    }
+                                    }}
                                 >
-                                    <RefreshCcw size={16} />
-                                    Update Password
+                                    <Check size={13} /> Save Changes
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
-
-            {/* ================= EDIT PROFILE MODAL ================= */}
-            <div
-                className="modal fade"
-                id="editProfileModal"
-                tabIndex="-1"
-                aria-hidden="true"
-            >
-                <div className="modal-dialog modal-lg modal-dialog-scrollable">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h5 className="modal-title">Edit Profile</h5>
-                            <button
-                                className="btn-close"
-                                data-bs-dismiss="modal"
-                            ></button>
-                        </div>
-
-                        <div className="modal-body">
-                            {/* BASIC INFO */}
-                            <h6 className="text-uppercase text-theme-secondary mb-3">
-                                Basic Information
-                            </h6>
-
-                            <div className="row g-3 mb-4">
-                                <div className="col-md-6">
-                                    <label className="form-label">Name</label>
-                                    <input
-                                        className="form-control"
-                                        name="name"
-                                        value={editData.name}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-6">
-                                    <label className="form-label">
-                                        Clinic Name
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="clinicName"
-                                        value={editData.clinicName}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-6">
-                                    <label className="form-label">Phone</label>
-                                    <input
-                                        className="form-control"
-                                        name="phone"
-                                        value={editData.phone}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-6">
-                                    <label className="form-label">
-                                        Registration Number
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="regNumber"
-                                        value={editData.regNumber}
-                                        onChange={handleEditChange}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* DEGREE */}
-                            <h6 className="text-uppercase text-theme-secondary mb-3">
-                                Qualifications
-                            </h6>
-
-                            {editData.degree.map((deg, index) => (
-                                <div key={index} className="d-flex mb-2">
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Enter degree"
-                                        value={deg}
-                                        onChange={(e) =>
-                                            handleDegreeChange(
-                                                index,
-                                                e.target.value,
-                                            )
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-danger ms-2"
-                                        onClick={() => removeDegreeField(index)}
-                                        disabled={editData.degree.length === 1}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-
-                            <button
-                                type="button"
-                                className="btn btn-sm btn-outline-primary mt-2 mb-4"
-                                onClick={addDegreeField}
-                            >
-                                + Add Degree
-                            </button>
-
-                            {/* ADDRESS */}
-                            <h6 className="text-uppercase text-theme-secondary mb-3">
-                                Clinic Address
-                            </h6>
-
-                            <div className="row g-3">
-                                <div className="col-12">
-                                    <label className="form-label">
-                                        Address Line 1
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="line1"
-                                        value={editData.address.line1}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-
-                                <div className="col-12">
-                                    <label className="form-label">
-                                        Address Line 2 (optional)
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="line2"
-                                        value={editData.address.line2}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-
-                                <div className="col-12">
-                                    <label className="form-label">
-                                        Address Line 3 (optional)
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="line3"
-                                        value={editData.address.line3}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <label className="form-label">City</label>
-                                    <input
-                                        className="form-control"
-                                        name="city"
-                                        value={editData.address.city}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <label className="form-label">State</label>
-                                    <input
-                                        className="form-control"
-                                        name="state"
-                                        value={editData.address.state}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <label className="form-label">
-                                        Pincode
-                                    </label>
-                                    <input
-                                        className="form-control"
-                                        name="pincode"
-                                        value={editData.address.pincode}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="modal-footer">
-                            <button
-                                className="btn btn-outline-secondary"
-                                data-bs-dismiss="modal"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                data-bs-dismiss="modal"
-                                onClick={handleSaveProfile}
-                            >
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </>
     );
 }

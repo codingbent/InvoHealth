@@ -16,13 +16,37 @@ export default function Profile(props) {
 
     if (!role)
         return (
-            <div className="d-flex flex-column align-items-center justify-content-center mt-5">
+            <>
+                <style>{`
+                @keyframes pf-pulse {
+                    0%,80%,100% { transform:scale(1);opacity:.4; }
+                    40% { transform:scale(1.4);opacity:1; }
+                }
+            `}</style>
                 <div
-                    className="spinner-border text-primary mb-2"
-                    role="status"
-                />
-                <span className="text-theme-secondary">Loading profile…</span>
-            </div>
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minHeight: "60vh",
+                        gap: 8,
+                    }}
+                >
+                    {[0, 1, 2].map((i) => (
+                        <span
+                            key={i}
+                            style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background: "#2e3d5c",
+                                display: "inline-block",
+                                animation: `pf-pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                            }}
+                        />
+                    ))}
+                </div>
+            </>
         );
 
     if (role === "doctor") return <DoctorProfile showAlert={props.showAlert} />;

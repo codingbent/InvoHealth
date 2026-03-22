@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { authFetch } from "./authfetch";
-import { Pencil, IndianRupee } from "lucide-react";
+import { Pencil, IndianRupee, X, Check } from "lucide-react";
 
-const EditService = ({ showAlert }) => {
+const EditService = ({ showAlert, onClose }) => {
     const [services, setServices] = useState([]);
     const [selectedService, setSelectedService] = useState("");
     const [name, setName] = useState("");
     const [amount, setAmount] = useState("");
+
     const API_BASE_URL = useMemo(
         () =>
             process.env.NODE_ENV === "production"
@@ -20,9 +21,7 @@ const EditService = ({ showAlert }) => {
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/services/fetchall_services`,
             );
-
             const data = await response.json();
-
             if (Array.isArray(data)) setServices(data);
             else if (Array.isArray(data.services)) setServices(data.services);
             else setServices([]);
@@ -47,12 +46,10 @@ const EditService = ({ showAlert }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!selectedService) {
             showAlert("Please select a service", "warning");
             return;
         }
-
         try {
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/services/update_service/${selectedService}`,
@@ -62,21 +59,12 @@ const EditService = ({ showAlert }) => {
                     body: JSON.stringify({ name, amount }),
                 },
             );
-
             const data = await response.json();
-
             if (data.success) {
                 showAlert("Service updated successfully", "success");
-
-                const modalEl = document.getElementById("editServiceModal");
-                const modalInstance =
-                    window.bootstrap.Modal.getInstance(modalEl);
-                modalInstance?.hide();
-
                 setSelectedService("");
                 setName("");
                 setAmount("");
-                window.location.reload();
             } else {
                 showAlert("Failed to update service", "danger");
             }
@@ -86,84 +74,111 @@ const EditService = ({ showAlert }) => {
         }
     };
 
+    const selectedObj = services.find((s) => s._id === selectedService);
+
     return (
-        <div className="edit-service-modal shadow-lg rounded-4">
-            <div className="modal-header border-0">
-                <h5 className="modal-title d-flex align-items-center gap-2">
-                    <Pencil size={18} />
-                    Edit Service
-                </h5>
-
-                <button
-                    type="button"
-                    className="btn-close btn-close-white"
-                    data-bs-dismiss="modal"
-                />
-            </div>
-
-            <div className="modal-body">
-                {/* Service selector */}
-
-                <label className="form-label text-theme-secondary small">
-                    Select Service
-                </label>
-
-                <select
-                    className="form-select theme-input mb-3"
-                    value={selectedService}
-                    onChange={(e) => handleSelect(e.target.value)}
-                >
-                    <option value="">Choose service</option>
-
-                    {services.map((s) => (
-                        <option key={s._id} value={s._id}>
-                            {s.name}
-                        </option>
-                    ))}
-                </select>
-
-                {/* Service amount */}
-
-                <div className="form-floating">
-                    <input
-                        type="number"
-                        className="form-control theme-input"
-                        id="editServiceAmount"
-                        placeholder="Service Amount"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        min="0"
-                        disabled={!selectedService}
-                    />
-
-                    <label htmlFor="editServiceAmount">
-                        Service Amount
-                        <IndianRupee size={14} className="ms-1" />
-                    </label>
+        <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content es-modal">
+                {/* Header */}
+                <div className="es-header">
+                    <div className="es-header-left">
+                        <div className="es-icon">
+                            <Pencil size={15} />
+                        </div>
+                        <div className="es-title">
+                            Edit <em>Service</em>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="es-close"
+                        onClick={onClose}
+                    >
+                        <X size={14} />
+                    </button>
                 </div>
 
-                {!selectedService && (
-                    <small className="text-theme-secondary d-block mt-2">
-                        Select a service to edit
-                    </small>
-                )}
-            </div>
+                {/* Body */}
+                <div className="es-body">
+                    <div>
+                        <label className="es-label">Select Service</label>
+                        <select
+                            className="es-select"
+                            value={selectedService}
+                            onChange={(e) => handleSelect(e.target.value)}
+                        >
+                            <option value="">Choose a service to edit</option>
+                            {services.map((s) => (
+                                <option key={s._id} value={s._id}>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-            <div className="modal-footer border-0">
-                <button
-                    className="btn btn-outline-secondary"
-                    data-bs-dismiss="modal"
-                >
-                    Cancel
-                </button>
-                <button
-                    className="btn btn-primary px-4"
-                    onClick={handleSubmit}
-                    disabled={!selectedService}
-                >
-                    <Pencil size={16} className="me-1" />
-                    Update
-                </button>
+                    {selectedObj && (
+                        <div className="es-selected-badge">
+                            <div className="es-selected-badge-icon">
+                                <Pencil size={11} />
+                            </div>
+                            <span>{selectedObj.name}</span>
+                            <Check
+                                size={13}
+                                style={{
+                                    marginLeft: "auto",
+                                    color: "#a78bfa",
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="es-label">
+                            Service Amount{" "}
+                            <IndianRupee
+                                size={10}
+                                style={{ display: "inline" }}
+                            />
+                        </label>
+                        <div className="es-input-wrap">
+                            <span className="es-input-prefix">
+                                <IndianRupee size={13} />
+                            </span>
+                            <input
+                                type="number"
+                                className="es-input"
+                                placeholder="Enter amount"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                min="0"
+                                disabled={!selectedService}
+                            />
+                        </div>
+                        {!selectedService && (
+                            <div className="es-hint">
+                                ◦ Select a service above to edit its details
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="es-footer">
+                    <button
+                        type="button"
+                        className="es-btn es-btn-cancel"
+                        onClick={onClose}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        className="es-btn es-btn-submit"
+                        onClick={handleSubmit}
+                        disabled={!selectedService}
+                    >
+                        <Check size={13} /> Update Service
+                    </button>
+                </div>
             </div>
         </div>
     );

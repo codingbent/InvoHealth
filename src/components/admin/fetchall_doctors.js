@@ -3,6 +3,29 @@ import { useNavigate } from "react-router-dom";
 
 const subscriptionPlans = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
 
+const PLAN_COLORS = {
+    FREE: {
+        bg: "rgba(148,163,184,0.1)",
+        border: "rgba(148,163,184,0.2)",
+        color: "#94a3b8",
+    },
+    STARTER: {
+        bg: "rgba(96,165,250,0.1)",
+        border: "rgba(96,165,250,0.2)",
+        color: "#60a5fa",
+    },
+    PRO: {
+        bg: "rgba(167,139,250,0.1)",
+        border: "rgba(167,139,250,0.2)",
+        color: "#a78bfa",
+    },
+    ENTERPRISE: {
+        bg: "rgba(251,146,60,0.1)",
+        border: "rgba(251,146,60,0.2)",
+        color: "#fb923c",
+    },
+};
+
 const AdminDoctors = () => {
     const navigate = useNavigate();
     const [doctors, setDoctors] = useState([]);
@@ -14,6 +37,7 @@ const AdminDoctors = () => {
         document.body.classList.remove("light-theme", "dark-theme");
         document.body.classList.add("dark-theme");
     }, []);
+
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
@@ -22,12 +46,10 @@ const AdminDoctors = () => {
     const fetchDoctors = useCallback(async () => {
         try {
             const token = localStorage.getItem("admintoken");
-
             if (!token) {
                 navigate("/admin/login");
                 return;
             }
-
             const response = await fetch(
                 `${API_BASE_URL}/api/admin/fetchall_doctors`,
                 {
@@ -37,15 +59,12 @@ const AdminDoctors = () => {
                     },
                 },
             );
-
             const data = await response.json();
-
             if (!response.ok) {
                 setError(data.error || "Failed to fetch doctors");
                 setLoading(false);
                 return;
             }
-
             setDoctors(data.doctors);
             setLoading(false);
         } catch {
@@ -61,9 +80,7 @@ const AdminDoctors = () => {
     const handleSubscriptionChange = async (doctorId, newPlan) => {
         try {
             setUpdating(doctorId);
-
             const token = localStorage.getItem("admintoken");
-
             const res = await fetch(
                 `${API_BASE_URL}/api/admin/update_subscription/${doctorId}`,
                 {
@@ -75,14 +92,11 @@ const AdminDoctors = () => {
                     body: JSON.stringify({ plan: newPlan }),
                 },
             );
-
             const data = await res.json();
-
             if (!res.ok) {
                 alert(data.error || "Failed to update subscription");
                 return;
             }
-
             setDoctors((prev) =>
                 prev.map((doc) =>
                     doc._id === doctorId
@@ -103,100 +117,179 @@ const AdminDoctors = () => {
         }
     };
 
-    if (loading) return <div className="center">Loading...</div>;
-    if (error) return <div className="center error">{error}</div>;
     if (localStorage.getItem("role") !== "superadmin") {
         navigate("/");
+        return null;
     }
 
     return (
-        <div className={"admin-container container-fluid dark-theme"}>
-            <h2 className="admin-title">Registered Doctors</h2>
-
-            <div className="table-theme">
-                <table className="modern-table table-theme">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Clinic</th>
-                            <th>Phone</th>
-                            <th>Subscription</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {doctors.map((doc) => (
-                            <tr key={doc._id}>
-                                <td>{doc.name}</td>
-                                <td>{doc.email}</td>
-                                <td>{doc.clinicName}</td>
-                                <td>{doc.phone}</td>
-
-                                <td>
-                                    <select
-                                        value={doc.subscription?.plan || "FREE"}
-                                        disabled={updating === doc._id}
-                                        onChange={(e) =>
-                                            handleSubscriptionChange(
-                                                doc._id,
-                                                e.target.value,
-                                            )
-                                        }
-                                        className={`subscription-select plan-${doc.subscription?.plan?.toLowerCase()}`}
-                                    >
-                                        {subscriptionPlans.map((plan) => (
-                                            <option key={plan} value={plan}>
-                                                {plan}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {/* Mobile View */}
-                <div className="mobile-cards">
-                    {doctors.map((doc) => (
-                        <div key={doc._id} className="doctor-card">
-                            <h3>{doc.name}</h3>
-
-                            <p>
-                                <strong>Email:</strong> {doc.email}
-                            </p>
-
-                            <p>
-                                <strong>Clinic:</strong> {doc.clinicName}
-                            </p>
-
-                            <p>
-                                <strong>Phone:</strong> {doc.phone}
-                            </p>
-
-                            <select
-                                value={doc.subscription?.plan || "FREE"}
-                                disabled={updating === doc._id}
-                                onChange={(e) =>
-                                    handleSubscriptionChange(
-                                        doc._id,
-                                        e.target.value,
-                                    )
-                                }
-                                className="subscription-select"
-                            >
-                                {subscriptionPlans.map((plan) => (
-                                    <option key={plan} value={plan}>
-                                        {plan}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ))}
+        <>
+            <div className="ad-root">
+                <div className="ad-eyebrow">InvoHealth · Admin</div>
+                <div className="ad-title">
+                    Registered <em>Doctors</em>
                 </div>
+
+                {loading ? (
+                    <div className="ad-center">
+                        <span className="ad-dot" />
+                        <span className="ad-dot" />
+                        <span className="ad-dot" />
+                    </div>
+                ) : error ? (
+                    <div className="ad-center ad-error-msg">{error}</div>
+                ) : (
+                    <div className="ad-card">
+                        {/* Desktop */}
+                        <table className="ad-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Clinic</th>
+                                    <th>Phone</th>
+                                    <th>Subscription</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {doctors.map((doc) => {
+                                    const plan =
+                                        doc.subscription?.plan?.toUpperCase() ||
+                                        "FREE";
+                                    const pc =
+                                        PLAN_COLORS[plan] || PLAN_COLORS.FREE;
+                                    return (
+                                        <tr key={doc._id}>
+                                            <td className="ad-td-name">
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            width: 28,
+                                                            height: 28,
+                                                            borderRadius: 7,
+                                                            background:
+                                                                "rgba(77,124,246,0.1)",
+                                                            border: "1px solid rgba(77,124,246,0.15)",
+                                                            color: "#60a5fa",
+                                                            display: "flex",
+                                                            alignItems:
+                                                                "center",
+                                                            justifyContent:
+                                                                "center",
+                                                            fontSize: 11,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        {doc.name
+                                                            ?.charAt(0)
+                                                            ?.toUpperCase()}
+                                                    </span>
+                                                    {doc.name}
+                                                </div>
+                                            </td>
+                                            <td>{doc.email}</td>
+                                            <td>{doc.clinicName}</td>
+                                            <td>{doc.phone}</td>
+                                            <td>
+                                                <select
+                                                    value={
+                                                        doc.subscription
+                                                            ?.plan || "FREE"
+                                                    }
+                                                    disabled={
+                                                        updating === doc._id
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleSubscriptionChange(
+                                                            doc._id,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="ad-plan-select"
+                                                    style={{
+                                                        background: pc.bg,
+                                                        borderColor: pc.border,
+                                                        color: pc.color,
+                                                    }}
+                                                >
+                                                    {subscriptionPlans.map(
+                                                        (p) => (
+                                                            <option
+                                                                key={p}
+                                                                value={p}
+                                                            >
+                                                                {p}
+                                                            </option>
+                                                        ),
+                                                    )}
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        {/* Mobile */}
+                        <div className="ad-mob-cards" style={{ padding: 12 }}>
+                            {doctors.map((doc) => {
+                                const plan =
+                                    doc.subscription?.plan?.toUpperCase() ||
+                                    "FREE";
+                                const pc =
+                                    PLAN_COLORS[plan] || PLAN_COLORS.FREE;
+                                return (
+                                    <div key={doc._id} className="ad-mob-card">
+                                        <div className="ad-mob-name">
+                                            {doc.name}
+                                        </div>
+                                        <div className="ad-mob-meta">
+                                            {doc.email}
+                                        </div>
+                                        <div className="ad-mob-meta">
+                                            {doc.clinicName} · {doc.phone}
+                                        </div>
+                                        <div className="ad-mob-footer">
+                                            <select
+                                                value={
+                                                    doc.subscription?.plan ||
+                                                    "FREE"
+                                                }
+                                                disabled={updating === doc._id}
+                                                onChange={(e) =>
+                                                    handleSubscriptionChange(
+                                                        doc._id,
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="ad-plan-select"
+                                                style={{
+                                                    background: pc.bg,
+                                                    borderColor: pc.border,
+                                                    color: pc.color,
+                                                }}
+                                            >
+                                                {subscriptionPlans.map((p) => (
+                                                    <option key={p} value={p}>
+                                                        {p}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </>
     );
 };
 

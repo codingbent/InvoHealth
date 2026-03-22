@@ -1,123 +1,280 @@
-// import { useState } from "react";
+import { useState, useMemo } from "react";
+
+const tutorials = {
+    "Getting Started": [
+        {
+            title: "Create Account (Sign Up)",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Login to Website",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Setup Clinic Profile",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+    ],
+    "Patient Management": [
+        {
+            title: "Add New Patient",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Edit Patient Details",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Search Patients",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+    ],
+    "Billing & Invoices": [
+        {
+            title: "Create Invoice",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Download Invoice PDF",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Export Billing to Excel",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+    ],
+    "Staff Management": [
+        { title: "Add Staff", video: "https://www.youtube.com/embed/VIDEO_ID" },
+        {
+            title: "Staff Permissions",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+    ],
+    Analytics: [
+        {
+            title: "Dashboard Overview",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+        {
+            title: "Revenue Analytics",
+            video: "https://www.youtube.com/embed/VIDEO_ID",
+        },
+    ],
+};
+
+const sectionIcons = {
+    "Getting Started": "◈",
+    "Patient Management": "◉",
+    "Billing & Invoices": "◎",
+    "Staff Management": "⊕",
+    Analytics: "◐",
+};
+
+const sectionColors = {
+    "Getting Started": "#60a5fa",
+    "Patient Management": "#4ade80",
+    "Billing & Invoices": "#fb923c",
+    "Staff Management": "#a78bfa",
+    Analytics: "#f472b6",
+};
 
 export default function Tutorials() {
-    // const tutorials = {
-    //     "Getting Started": [
-    //         {
-    //             title: "Create Account (Sign Up)",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Login to Dashboard",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Setup Clinic Profile",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //     ],
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [expandedSections, setExpandedSections] = useState(
+        Object.keys(tutorials).reduce((acc, k) => ({ ...acc, [k]: true }), {}),
+    );
+    const allVideos = useMemo(() => Object.values(tutorials).flat(), []);
+    const [currentVideo, setCurrentVideo] = useState(allVideos[0]);
 
-    //     "Patient Management": [
-    //         {
-    //             title: "Add New Patient",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Edit Patient Details",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Search Patients",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //     ],
-
-    //     "Billing & Invoices": [
-    //         {
-    //             title: "Create Invoice",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Download Invoice PDF",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Export Billing to Excel",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //     ],
-
-    //     "Staff Management": [
-    //         {
-    //             title: "Add Staff",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Staff Permissions",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //     ],
-
-    //     Analytics: [
-    //         {
-    //             title: "Dashboard Overview",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //         {
-    //             title: "Revenue Analytics",
-    //             video: "https://www.youtube.com/embed/VIDEO_ID",
-    //         },
-    //     ],
-    // };
-
-    // const firstVideo = Object.values(tutorials)[0][0];
-
-    // const [currentVideo, setCurrentVideo] = useState(firstVideo);
+    const handleVideoClick = (video) => {
+        setCurrentVideo(video);
+        setSidebarOpen(false);
+    };
+    const toggleSection = (section) =>
+        setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+    const currentIndex = allVideos.findIndex(
+        (v) => v.title === currentVideo.title,
+    );
+    const goNext = () =>
+        currentIndex < allVideos.length - 1 &&
+        handleVideoClick(allVideos[currentIndex + 1]);
+    const goPrev = () =>
+        currentIndex > 0 && handleVideoClick(allVideos[currentIndex - 1]);
+    const currentSection = Object.entries(tutorials).find(([, vids]) =>
+        vids.some((v) => v.title === currentVideo.title),
+    )?.[0];
 
     return (
         <>
-            {/* <div className="tutorial-layout">
-                {/* SIDEBAR 
+            <div className="tut-root">
+                {sidebarOpen && (
+                    <div
+                        className="tut-overlay"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
 
-                <div className="tutorial-sidebar">
-                    <h3>Tutorials</h3>
-
-                    {Object.entries(tutorials).map(([section, videos]) => (
-                        <div key={section}>
-                            <h4 className="tutorial-section">{section}</h4>
-
-                            {videos.map((video, index) => (
-                                <div
-                                    key={index}
-                                    className={`tutorial-item ${
-                                        currentVideo.title === video.title
-                                            ? "active"
-                                            : ""
-                                    }`}
-                                    onClick={() => setCurrentVideo(video)}
-                                >
-                                    {video.title}
-                                </div>
-                            ))}
+                {/* ── Sidebar ── */}
+                <aside className={`tut-sidebar ${sidebarOpen ? "open" : ""}`}>
+                    <div className="tut-sidebar-header">
+                        {/* <div className="tut-brand">InvoHealth · Learn</div> */}
+                        <div className="tut-sidebar-title">
+                            Tutorial <em>Library</em>
                         </div>
-                    ))}
-                </div>
-
-                {/* VIDEO PLAYER *
-
-                <div className="tutorial-player">
-                    <h2>{currentVideo.title}</h2>
-
-                    <div className="video-container">
-                        <iframe
-                            src={currentVideo.video}
-                            title={currentVideo.title}
-                            allowFullScreen
-                        />
                     </div>
-                </div>
-            </div> */}
-            <span>Currently In production</span>
+
+                    <nav className="tut-nav">
+                        {Object.entries(tutorials).map(([section, vids]) => (
+                            <div className="tut-section" key={section}>
+                                <div
+                                    className="tut-section-header"
+                                    onClick={() => toggleSection(section)}
+                                >
+                                    <span
+                                        className="tut-section-icon"
+                                        style={{
+                                            color: sectionColors[section],
+                                        }}
+                                    >
+                                        {sectionIcons[section]}
+                                    </span>
+                                    <span className="tut-section-name">
+                                        {section}
+                                    </span>
+                                    <span
+                                        className={`tut-section-chevron ${expandedSections[section] ? "open" : ""}`}
+                                    >
+                                        ▶
+                                    </span>
+                                </div>
+                                {expandedSections[section] && (
+                                    <div className="tut-items">
+                                        {vids.map((video, i) => (
+                                            <div
+                                                key={i}
+                                                className={`tut-item ${currentVideo.title === video.title ? "active" : ""}`}
+                                                style={
+                                                    currentVideo.title ===
+                                                    video.title
+                                                        ? {
+                                                              color: sectionColors[
+                                                                  section
+                                                              ],
+                                                          }
+                                                        : {}
+                                                }
+                                                onClick={() =>
+                                                    handleVideoClick(video)
+                                                }
+                                            >
+                                                <span className="tut-item-dot" />
+                                                <span>{video.title}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </nav>
+                </aside>
+
+                {/* ── Main ── */}
+                <main className="tut-main">
+                    <div className="tut-topbar">
+                        <div className="tut-breadcrumb">
+                            <span className="tut-breadcrumb-section">
+                                {currentSection}
+                            </span>
+                            <span className="tut-breadcrumb-sep">/</span>
+                            <span className="tut-breadcrumb-title">
+                                {currentVideo.title}
+                            </span>
+                        </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 10,
+                                alignItems: "center",
+                            }}
+                        >
+                            <div className="tut-nav-btns">
+                                <button
+                                    className="tut-nav-btn"
+                                    onClick={goPrev}
+                                    disabled={currentIndex === 0}
+                                >
+                                    ← Prev
+                                </button>
+                                <button
+                                    className="tut-nav-btn"
+                                    onClick={goNext}
+                                    disabled={
+                                        currentIndex === allVideos.length - 1
+                                    }
+                                >
+                                    Next →
+                                </button>
+                            </div>
+                            <button
+                                className="tut-menu-btn"
+                                onClick={() => setSidebarOpen(true)}
+                            >
+                                ☰
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="tut-content">
+                        <div className="tut-video-label">
+                            <span
+                                className="tut-video-label-dot"
+                                style={{
+                                    background: sectionColors[currentSection],
+                                }}
+                            />
+                            {currentSection}
+                        </div>
+                        <h1 className="tut-video-title">
+                            {currentVideo.title}
+                        </h1>
+
+                        <div className="tut-video-frame">
+                            <div className="tut-video-placeholder">
+                                <div className="tut-play-icon">▶</div>
+                                <div className="tut-placeholder-text">
+                                    Video · {currentVideo.title}
+                                </div>
+                            </div>
+                            {/* <iframe src={currentVideo.video} title={currentVideo.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> */}
+                        </div>
+
+                        <div className="tut-meta">
+                            <div className="tut-counter">
+                                <span>{currentIndex + 1}</span> /{" "}
+                                {allVideos.length}
+                            </div>
+                            <div className="tut-bottom-nav">
+                                <button
+                                    className="tut-big-btn prev"
+                                    onClick={goPrev}
+                                    disabled={currentIndex === 0}
+                                >
+                                    ← Previous
+                                </button>
+                                <button
+                                    className="tut-big-btn next"
+                                    onClick={goNext}
+                                    disabled={
+                                        currentIndex === allVideos.length - 1
+                                    }
+                                >
+                                    Next lesson →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
         </>
     );
 }

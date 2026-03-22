@@ -14,18 +14,56 @@ export const generateSlots = (start, end, duration = 15) => {
         const hours = String(current.getHours()).padStart(2, "0");
         const minutes = String(current.getMinutes()).padStart(2, "0");
 
-        slots.push(`${hours}:${minutes}`); // ✅ always 24-hour
+        slots.push(`${hours}:${minutes}`);
 
-        current.setMinutes(current.getMinutes() + duration);
+        current = new Date(current.getTime() + duration * 60000);
     }
 
     return slots;
 };
 
-export const getNextAvailableSlot = (slots, bookedSlots) => {
+export const getNextAvailableSlot = (
+    slots,
+    bookedSlots,
+    currentSlot,
+    isToday,
+) => {
     if (!slots?.length) return null;
 
     const bookedSet = new Set(bookedSlots || []);
 
-    return slots.find((slot) => !bookedSet.has(slot)) || null;
+    // 🔥 FUTURE DATE → always return first available
+    if (!isToday) {
+        return slots.find((s) => !bookedSet.has(s)) || null;
+    }
+
+    // 👉 If no currentSlot → return first available
+    if (!currentSlot) {
+        return slots.find((s) => !bookedSet.has(s)) || null;
+    }
+
+    let currentIndex = slots.indexOf(currentSlot);
+
+    // 🔥 FIX: if not found, find closest past slot
+    if (currentIndex === -1) {
+        const [h, m] = currentSlot.split(":").map(Number);
+        const nowMinutes = h * 60 + m;
+
+        currentIndex = slots.findLastIndex((slot) => {
+            const [sh, sm] = slot.split(":").map(Number);
+            return sh * 60 + sm <= nowMinutes;
+        });
+    }
+
+    // ✅ forward search
+    for (let i = currentIndex + 1; i < slots.length; i++) {
+        if (!bookedSet.has(slots[i])) return slots[i];
+    }
+
+    // ✅ backward fallback
+    for (let i = currentIndex - 1; i >= 0; i--) {
+        if (!bookedSet.has(slots[i])) return slots[i];
+    }
+
+    return null;
 };

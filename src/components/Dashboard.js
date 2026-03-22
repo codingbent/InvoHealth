@@ -11,7 +11,14 @@ import {
 import { Doughnut, Bar } from "react-chartjs-2";
 import FilterPanel from "./FilterPanel";
 import { authFetch } from "./authfetch";
-import { SlidersHorizontal, IndianRupee, LockIcon } from "lucide-react";
+import {
+    SlidersHorizontal,
+    IndianRupee,
+    LockIcon,
+    TrendingUp,
+    Users,
+    Clock,
+} from "lucide-react";
 import { Link } from "react-router";
 import DashboardSkeleton from "./DashboardSkeleton";
 
@@ -24,11 +31,22 @@ ChartJS.register(
     BarElement,
 );
 
+/* ── palette — navy blue theme ── */
+const DONUT_COLORS = [
+    "#0D6EFD",
+    "#198754",
+    "#FFC107",
+    "#0DCAF0",
+    "#6F42C1",
+    "#ADB5BD",
+];
+
 export default function Dashboard() {
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
+
     const [analytics, setAnalytics] = useState({
         paymentSummary: [],
         serviceSummary: [],
@@ -37,11 +55,8 @@ export default function Dashboard() {
         totalPending: 0,
         totalVisits: 0,
     });
-
     const [loading, setLoading] = useState(false);
     const [allServices, setAllServices] = useState([]);
-
-    // FILTER STATES
     const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedStatus, setSelectedStatus] = useState([]);
@@ -51,129 +66,64 @@ export default function Dashboard() {
     const [selectedFY, setSelectedFY] = useState("");
     const [filterOpen, setFilterOpen] = useState(false);
     const [themeVersion, setThemeVersion] = useState(0);
-    const [chartColors, setChartColors] = useState({
-        textColor: "#1f2937",
-        gridColor: "rgba(0,0,0,0.08)",
-    });
     const [plan, setPlan] = useState(null);
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat("en-IN").format(value);
-    };
 
-    const getGradient = (ctx, chartArea) => {
-        if (!chartArea) return "#0D6EFD";
-
-        const gradient = ctx.createLinearGradient(
-            0,
-            chartArea.bottom,
-            0,
-            chartArea.top,
-        );
-
-        gradient.addColorStop(0, "#0D6EFD");
-        gradient.addColorStop(1, "#60A5FA");
-
-        return gradient;
-    };
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(Number(v || 0));
 
     useEffect(() => {
-        const fetchSubscription = async () => {
+        const fetchSub = async () => {
             try {
                 const token = localStorage.getItem("token");
-
                 if (!token) {
                     setPlan("FREE");
                     return;
                 }
-
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/subscription`,
                 );
-
                 const data = await res.json();
-
                 if (data.success && data.subscription) {
-                    const sub = data.subscription;
-
-                    // 🔥 HANDLE EXPIRED FIRST
-                    if (sub.status === "expired") {
-                        setPlan("EXPIRED");
-                    } else {
-                        setPlan(sub.plan?.toUpperCase() || "FREE");
-                    }
+                    setPlan(
+                        data.subscription.status === "expired"
+                            ? "EXPIRED"
+                            : data.subscription.plan?.toUpperCase() || "FREE",
+                    );
                 } else {
                     setPlan("FREE");
                 }
-            } catch (err) {
-                console.error("Subscription fetch error:", err);
+            } catch {
                 setPlan("FREE");
             }
         };
-
-        fetchSubscription();
+        fetchSub();
     }, [API_BASE_URL]);
 
     useEffect(() => {
-        const observer = new MutationObserver(() => {
-            setThemeVersion((prev) => prev + 1);
-        });
-
-        observer.observe(document.documentElement, {
+        const obs = new MutationObserver(() => setThemeVersion((p) => p + 1));
+        obs.observe(document.documentElement, {
             attributes: true,
             attributeFilter: ["class"],
         });
-
-        return () => observer.disconnect();
+        return () => obs.disconnect();
     }, []);
 
-    useEffect(() => {
-        const updateColors = () => {
-            const styles = getComputedStyle(document.body);
-
-            setChartColors({
-                textColor: styles.getPropertyValue("--chart-text").trim(),
-                gridColor: styles.getPropertyValue("--chart-grid").trim(),
-            });
-        };
-
-        updateColors();
-
-        const observer = new MutationObserver(updateColors);
-
-        observer.observe(document.body, {
-            attributes: true,
-            attributeFilter: ["class"],
-        });
-
-        return () => observer.disconnect();
-    }, []);
-
-    /* ================= FETCH ANALYTICS ================= */
     useEffect(() => {
         if (!["PRO", "ENTERPRISE"].includes(plan)) return;
-
-        const fetchAnalytics = async () => {
+        const fetch$ = async () => {
+            setLoading(true);
             try {
-                setLoading(true);
-
-                const paramsObj = {
+                const p = new URLSearchParams({
                     payments: selectedPayments.join(","),
                     services: selectedServices.join(","),
                     gender: selectedGender,
-                };
-
-                if (startDate) paramsObj.startDate = startDate;
-                if (endDate) paramsObj.endDate = endDate;
-
-                const params = new URLSearchParams(paramsObj).toString();
-
+                    ...(startDate && { startDate }),
+                    ...(endDate && { endDate }),
+                }).toString();
                 const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/dashboard/analytics?${params}`,
+                    `${API_BASE_URL}/api/doctor/dashboard/analytics?${p}`,
                 );
-
                 const data = await res.json();
-
-                if (data.success) {
+                if (data.success)
                     setAnalytics({
                         paymentSummary: data.paymentSummary || [],
                         serviceSummary: data.serviceSummary || [],
@@ -182,15 +132,13 @@ export default function Dashboard() {
                         totalPending: data.totalPending || 0,
                         totalVisits: data.totalVisits || 0,
                     });
-                }
-            } catch (err) {
-                console.error("Dashboard fetch error:", err);
+            } catch (e) {
+                console.error(e);
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchAnalytics();
+        fetch$();
     }, [
         API_BASE_URL,
         plan,
@@ -201,388 +149,294 @@ export default function Dashboard() {
         endDate,
     ]);
 
-    /* ================= FETCH SERVICES ================= */
     useEffect(() => {
-        const fetchServices = async () => {
+        const fetch$ = async () => {
             try {
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/services/fetchall_services`,
                 );
-
                 const data = await res.json();
-
-                if (data.success && Array.isArray(data.services)) {
+                if (data.success && Array.isArray(data.services))
                     setAllServices(data.services.map((s) => s.name).sort());
-                }
-            } catch (err) {
-                console.error("Service fetch error:", err);
+            } catch (e) {
+                console.error(e);
             }
         };
-
-        fetchServices();
+        fetch$();
     }, [API_BASE_URL]);
 
-    /* ================= CHART DATA ================= */
     const paymentChartData = useMemo(
         () => ({
             labels: analytics.paymentSummary.map((p) => p.type),
             datasets: [
                 {
                     data: analytics.paymentSummary.map((p) => p.total),
-                    backgroundColor: [
-                        "#0D6EFD",
-                        "#198754",
-                        "#FFC107",
-                        "#0DCAF0",
-                        "#6F42C1",
-                        "#ADB5BD",
-                    ],
+                    backgroundColor: DONUT_COLORS,
+                    borderWidth: 0,
+                    hoverOffset: 6,
                 },
             ],
         }),
         [analytics.paymentSummary],
     );
 
-    const serviceChartData = useMemo(() => {
-        return {
+    const serviceChartData = useMemo(
+        () => ({
             labels: analytics.serviceSummary.map((s) => s.service),
             datasets: [
                 {
                     label: "Revenue (₹)",
                     data: analytics.serviceSummary.map((s) => s.total),
-                    backgroundColor: (context) => {
-                        const { chart } = context;
-                        const { ctx, chartArea } = chart;
-                        return getGradient(ctx, chartArea);
+                    backgroundColor: (ctx) => {
+                        const { chart } = ctx;
+                        const { ctx: c, chartArea: a } = chart;
+                        if (!a) return "#4d7cf6";
+                        const g = c.createLinearGradient(0, a.bottom, 0, a.top);
+                        g.addColorStop(0, "#0891b2");
+                        g.addColorStop(1, "#38bdf8");
+                        return g;
                     },
-                    borderRadius: 10,
+                    borderRadius: 8,
                     borderSkipped: false,
                 },
             ],
-        };
-    }, [analytics.serviceSummary]);
+        }),
+        [analytics.serviceSummary],
+    );
 
-    const chartOptions = {
+    const baseChartOpts = {
         responsive: true,
         maintainAspectRatio: false,
-        animation: {
-            duration: 800,
-            easing: "easeOutQuart",
-        },
+        animation: { duration: 700, easing: "easeOutQuart" },
         plugins: {
-            legend: {
-                display: false,
-            },
+            legend: { display: false },
             tooltip: {
-                backgroundColor: "#020617",
-                borderColor: "#1e293b",
+                backgroundColor: "#0d1117",
+                borderColor: "#1e2a3a",
                 borderWidth: 1,
-                padding: 10,
+                padding: 12,
                 titleColor: "#e5e7eb",
                 bodyColor: "#e5e7eb",
-                callbacks: {
-                    label: function (context) {
-                        return `₹ ${formatCurrency(context.raw)}`;
-                    },
-                },
+                callbacks: { label: (ctx) => ` ₹ ${fmt(ctx.raw)}` },
             },
         },
         scales: {
-            x: {
-                ticks: {
-                    color: chartColors.textColor,
-                },
-                grid: {
-                    display: false,
-                },
-            },
+            x: { ticks: { color: "#6b7280" }, grid: { display: false } },
             y: {
-                ticks: {
-                    color: chartColors.textColor,
-                    callback: function (value) {
-                        return `₹ ${formatCurrency(value)}`;
-                    },
-                },
-                grid: {
-                    color: chartColors.gridColor,
-                },
+                ticks: { color: "#6b7280", callback: (v) => `₹${fmt(v)}` },
+                grid: { color: "rgba(255,255,255,0.05)" },
             },
         },
     };
-    function renderDashboardContent() {
+
+    function DashboardContent() {
         return (
-            <div className="container mt-4 mb-5">
-                {/* KPI */}
-                <div className="row g-3 mb-4">
-                    <KPI title="Total Revenue" value={analytics.totalRevenue} />
-                    <KPI title="Collected" value={analytics.totalCollection} />
-                    <KPI title="Pending" value={analytics.totalPending} />
+            <>
+                <div className="db-kpi-row">
                     <KPI
-                        title="Total Visits"
+                        icon={<IndianRupee size={15} />}
+                        label="Total Revenue"
+                        value={analytics.totalRevenue}
+                        accent="#60a5fa"
+                    />
+                    <KPI
+                        icon={<TrendingUp size={15} />}
+                        label="Collected"
+                        value={analytics.totalCollection}
+                        accent="#22c55e"
+                    />
+                    <KPI
+                        icon={<Clock size={15} />}
+                        label="Pending"
+                        value={analytics.totalPending}
+                        accent="#f97316"
+                    />
+                    <KPI
+                        icon={<Users size={15} />}
+                        label="Total Visits"
                         value={analytics.totalVisits}
+                        accent="#a78bfa"
                         isCurrency={false}
                     />
                 </div>
 
-                {/* Charts */}
-                <div className="row g-4">...</div>
-            </div>
-        );
-    }
-    if (plan === null) {
-        return (
-            <div className="container text-center mt-5">
-                <p className="text-theme-secondary">Loading dashboard...</p>
-            </div>
-        );
-    }
-
-    if (!["PRO", "ENTERPRISE"].includes(plan)) {
-        return (
-            <div className="container mt-4 mb-5">
-                <div className="dashboard-wrapper">
-                    {/* BLURRED DASHBOARD */}
-                    <div
-                        className={
-                            plan !== "PRO" && plan !== "ENTERPRISE"
-                                ? "dashboard-blur"
-                                : ""
-                        }
-                    >
-                        {renderDashboardContent()}
+                <div className="db-charts-row">
+                    <div className="db-card">
+                        <div className="db-card-label">
+                            Payment Distribution
+                        </div>
+                        <div className="db-card-body db-card-split">
+                            <div className="db-donut-wrap">
+                                <Doughnut
+                                    data={paymentChartData}
+                                    options={{
+                                        ...baseChartOpts,
+                                        cutout: "70%",
+                                    }}
+                                    key={themeVersion}
+                                />
+                            </div>
+                            <ul className="db-legend">
+                                {analytics.paymentSummary.map((p, i) => {
+                                    const pct =
+                                        analytics.totalCollection > 0
+                                            ? (
+                                                  (p.total /
+                                                      analytics.totalCollection) *
+                                                  100
+                                              ).toFixed(1)
+                                            : 0;
+                                    return (
+                                        <li
+                                            key={p.type}
+                                            className="db-legend-item"
+                                        >
+                                            <span
+                                                className="db-legend-dot"
+                                                style={{
+                                                    background: DONUT_COLORS[i],
+                                                }}
+                                            />
+                                            <span className="db-legend-name text-theme-primary">
+                                                {p.type}
+                                            </span>
+                                            <span className="db-legend-val">
+                                                ₹{fmt(p.total)}{" "}
+                                                <span className="db-legend-pct">
+                                                    {pct}%
+                                                </span>
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
                     </div>
 
-                    {/* LOCK OVERLAY */}
-                    {plan !== "PRO" && plan !== "ENTERPRISE" && (
-                        <div className="dashboard-lock-overlay">
-                            <div className="lock-card">
-                                <div className="lock-icon">
-                                    <LockIcon size={50} />
+                    <div className="db-card">
+                        <div className="db-card-label">Revenue by Service</div>
+                        <div className="db-card-body" style={{ height: 260 }}>
+                            <Bar
+                                data={serviceChartData}
+                                options={baseChartOpts}
+                                key={themeVersion}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (plan === null)
+        return (
+            <div className="db-loading-state">
+                <span className="db-loading-dot" />
+                <span className="db-loading-dot" />
+                <span className="db-loading-dot" />
+            </div>
+        );
+
+    const isLocked = !["PRO", "ENTERPRISE"].includes(plan);
+
+    return (
+        <>
+            <div className="db-root">
+                <div className="db-header">
+                    <div>
+                        <div className="db-eyebrow"> Analytics</div>
+                        <h1 className="db-title">
+                            Revenue <em>Overview</em>
+                        </h1>
+                    </div>
+                    {!isLocked && (
+                        <button
+                            className="db-filter-btn"
+                            onClick={() => setFilterOpen(true)}
+                        >
+                            <SlidersHorizontal size={14} /> Filters
+                        </button>
+                    )}
+                </div>
+
+                <FilterPanel
+                    open={filterOpen}
+                    setOpen={setFilterOpen}
+                    selectedPayments={selectedPayments}
+                    setSelectedPayments={setSelectedPayments}
+                    selectedStatus={selectedStatus}
+                    setSelectedStatus={setSelectedStatus}
+                    selectedGender={selectedGender}
+                    setSelectedGender={setSelectedGender}
+                    allServices={allServices}
+                    selectedServices={selectedServices}
+                    setSelectedServices={setSelectedServices}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    selectedFY={selectedFY}
+                    setSelectedFY={setSelectedFY}
+                    isdashboard={true}
+                />
+
+                {isLocked ? (
+                    <div className="db-wrapper">
+                        <div className="db-blur">
+                            <DashboardContent />
+                        </div>
+                        <div className="db-lock-overlay">
+                            <div className="db-lock-card">
+                                <div className="db-lock-icon">
+                                    <LockIcon size={24} />
                                 </div>
-
-                                <p className="text-theme-secondary fw-bold">
+                                <div className="db-lock-heading">
                                     {plan === "EXPIRED"
-                                        ? "Your subscription has expired"
+                                        ? "Subscription Expired"
                                         : "Analytics Locked"}
-                                </p>
-
-                                <p className="text-theme-secondary">
+                                </div>
+                                <p className="db-lock-body">
                                     {plan === "EXPIRED"
-                                        ? "Renew your plan to regain access to analytics."
-                                        : "Upgrade to Pro or Enterprise to unlock advanced analytics."}
+                                        ? "Your plan has expired. Renew to regain full access to revenue analytics and insights."
+                                        : "Upgrade to Pro or Enterprise to unlock advanced analytics, revenue insights, and more."}
                                 </p>
-
-                                <p className="text-theme-secondary">
-                                    Upgrade to <strong>Pro</strong> or{" "}
-                                    <strong>Enterprise</strong>
-                                    to unlock advanced analytics and revenue
-                                    insights.
-                                </p>
-
                                 <Link
                                     to="/subscriptionpage"
-                                    className="btn btn-primary"
+                                    className="db-upgrade-btn"
                                 >
-                                    Upgrade Plan
+                                    {plan === "EXPIRED"
+                                        ? "Renew Plan"
+                                        : "Upgrade Plan"}
                                 </Link>
                             </div>
                         </div>
-                    )}
-                </div>
-            </div>
-        );
-    }
-    return (
-        <div className="container mt-4 mb-5">
-            <div className="dashboard-header">
-                <div>
-                    <h3 className="fw-bold mb-1">Dashboard</h3>
-                    <small className="text-theme-secondary">
-                        Overview of revenue, collections & services
-                    </small>
-                </div>
-
-                <button
-                    className="btn btn-outline-theme btn-sm d-flex align-items-center gap-2"
-                    onClick={() => setFilterOpen(true)}
-                >
-                    <SlidersHorizontal size={16} />
-                    Filters
-                </button>
-            </div>
-
-            <FilterPanel
-                open={filterOpen}
-                setOpen={setFilterOpen}
-                selectedPayments={selectedPayments}
-                setSelectedPayments={setSelectedPayments}
-                selectedStatus={selectedStatus}
-                setSelectedStatus={setSelectedStatus}
-                selectedGender={selectedGender}
-                setSelectedGender={setSelectedGender}
-                allServices={allServices}
-                selectedServices={selectedServices}
-                setSelectedServices={setSelectedServices}
-                startDate={startDate}
-                setStartDate={setStartDate}
-                endDate={endDate}
-                setEndDate={setEndDate}
-                selectedFY={selectedFY}
-                setSelectedFY={setSelectedFY}
-                isdashboard={true}
-            />
-
-            {loading ? (
-                <DashboardSkeleton />
-            ) : (
-                <>
-                    {/* CHARTS */}
-                    <div className="row g-3 mb-4">
-                        <KPI
-                            title="Total Revenue"
-                            value={analytics.totalRevenue}
-                            color="primary"
-                        />
-                        <KPI
-                            title="Collected"
-                            value={analytics.totalCollection}
-                            color="success"
-                        />
-                        <KPI
-                            title="Pending"
-                            value={analytics.totalPending}
-                            color="danger"
-                        />
-                        <KPI
-                            title="Total Visits"
-                            value={analytics.totalVisits}
-                            color="secondary"
-                            isCurrency={false}
-                        />
                     </div>
-                    <div className="row g-4">
-                        {/* Payment Section */}
-                        <div className="col-lg-6">
-                            <div className="dashboard-card p-4 shadow-sm rounded-4">
-                                <h6 className="fw-semibold mb-3 text-center">
-                                    Payment Distribution
-                                </h6>
-
-                                <div className="row">
-                                    <div className="col-md-6">
-                                        <div style={{ height: 250 }}>
-                                            <Doughnut
-                                                data={paymentChartData}
-                                                options={chartOptions}
-                                                key={themeVersion}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="col-md-6">
-                                        {analytics.paymentSummary.map(
-                                            (p, index) => {
-                                                const percent =
-                                                    analytics.totalCollection >
-                                                    0
-                                                        ? (
-                                                              (p.total /
-                                                                  analytics.totalCollection) *
-                                                              100
-                                                          ).toFixed(1)
-                                                        : 0;
-
-                                                return (
-                                                    <div
-                                                        key={p.type}
-                                                        className="d-flex justify-content-between align-items-center mb-2"
-                                                    >
-                                                        <div className="d-flex align-items-center gap-2">
-                                                            <span
-                                                                style={{
-                                                                    width: 10,
-                                                                    height: 10,
-                                                                    borderRadius:
-                                                                        "50%",
-                                                                    backgroundColor:
-                                                                        [
-                                                                            "#0D6EFD",
-                                                                            "#198754",
-                                                                            "#FFC107",
-                                                                            "#0DCAF0",
-                                                                            "#6F42C1",
-                                                                            "#ADB5BD",
-                                                                        ][
-                                                                            index
-                                                                        ],
-                                                                }}
-                                                            ></span>
-
-                                                            <span>
-                                                                {p.type}
-                                                            </span>
-                                                        </div>
-
-                                                        <span className="fw-bold">
-                                                            <IndianRupee
-                                                                size={16}
-                                                            />{" "}
-                                                            {formatCurrency(
-                                                                p.total,
-                                                            )}{" "}
-                                                            ({percent}%)
-                                                        </span>
-                                                    </div>
-                                                );
-                                            },
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Service Revenue */}
-                        <div className="col-lg-6">
-                            <div className="dashboard-card">
-                                {" "}
-                                <h6 className="fw-semibold mb-3 text-center">
-                                    Top Revenue Services
-                                </h6>
-                                <div style={{ height: 250 }}>
-                                    <Bar
-                                        data={serviceChartData}
-                                        options={chartOptions}
-                                        key={themeVersion}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
-        </div>
+                ) : loading ? (
+                    <DashboardSkeleton />
+                ) : (
+                    <DashboardContent />
+                )}
+            </div>
+        </>
     );
 }
 
-/* ================= KPI COMPONENT ================= */
-function KPI({ title, value, color, isCurrency = true }) {
-    const formatCurrency = (val) =>
-        new Intl.NumberFormat("en-IN").format(Number(val || 0));
-
+function KPI({ icon, label, value, accent, isCurrency = true }) {
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(Number(v || 0));
     return (
-        <div className="col-6 col-md-3">
-            <div className="kpi-card">
-                <p className="kpi-label">{title}</p>
-
-                <h4 className="kpi-value">
-                    {isCurrency ? (
-                        <>
-                            <IndianRupee size={18} /> {formatCurrency(value)}
-                        </>
-                    ) : (
-                        formatCurrency(value)
-                    )}
-                </h4>
+        <div className="db-kpi">
+            <div className="db-kpi-top">
+                <span className="db-kpi-label">{label}</span>
+                <span
+                    className="db-kpi-icon"
+                    style={{ background: `${accent}18`, color: accent }}
+                >
+                    {icon}
+                </span>
+            </div>
+            <div className="db-kpi-value" style={{ color: accent }}>
+                {isCurrency && <IndianRupee size={16} />}
+                {fmt(value)}
             </div>
         </div>
     );

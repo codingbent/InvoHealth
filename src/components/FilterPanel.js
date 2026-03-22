@@ -29,17 +29,13 @@ export default function FilterPanel({
 
     const getTodayRange = () => {
         const today = new Date();
-        return {
-            start: formatDate(today),
-            end: formatDate(today),
-        };
+        return { start: formatDate(today), end: formatDate(today) };
     };
+
     const applyFinancialYear = (fy) => {
         if (!fy) return;
-
-        const start = new Date(Number(fy), 3, 1); // 1 April
-        const end = new Date(Number(fy) + 1, 2, 31); // 31 March
-
+        const start = new Date(Number(fy), 3, 1);
+        const end = new Date(Number(fy) + 1, 2, 31);
         setStartDate(formatDate(start));
         setEndDate(formatDate(end));
     };
@@ -48,341 +44,273 @@ export default function FilterPanel({
         const end = new Date();
         const start = new Date();
         start.setDate(end.getDate() - 30);
-
-        return {
-            start: formatDate(start),
-            end: formatDate(end),
-        };
+        return { start: formatDate(start), end: formatDate(end) };
     };
 
     const getThisMonthRange = () => {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-        return {
-            start: formatDate(start),
-            end: formatDate(end),
-        };
+        return { start: formatDate(start), end: formatDate(end) };
     };
+
     return (
         <>
-            {/* OFFCANVAS */}
-            <div
-                className={`offcanvas offcanvas-end shadow-lg theme-offcanvas ${
-                    open ? "show" : ""
-                }`}
-            >
-                {/* HEADER */}
-                <div className="offcanvas-header border-bottom theme-border">
-                    <h5 className="fw-semibold mb-0">🔍 Filters</h5>
-                    <button
-                        className="btn-close"
-                        onClick={() => setOpen(false)}
-                    />
+            {/* Backdrop */}
+            {open && (
+                <div className="fp-backdrop" onClick={() => setOpen(false)} />
+            )}
+
+            {/* Panel */}
+            <div className={`fp-panel ${open ? "open" : ""}`}>
+                {/* Header */}
+                <div className="fp-header">
+                    <div className="fp-header-left">
+                        <div className="fp-title">
+                            Filter <em>Results</em>
+                        </div>
+                    </div>
+                    <button className="fp-close" onClick={() => setOpen(false)}>
+                        ✕
+                    </button>
                 </div>
 
-                {/* BODY */}
-                <div className="offcanvas-body">
-                    <div className="offcanvas-body">
-                        {/* SEARCH */}
-                        {!isdashboard && (
-                            <div className="mb-4">
-                                <label className="form-label small fw-semibold text-theme-secondary">
-                                    Search Patient
-                                </label>
-                                <input
-                                    className="form-control rounded-3 theme-input"
-                                    placeholder="Name or phone number"
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                />
-                            </div>
-                        )}
+                {/* Body */}
+                <div className="fp-body">
+                    {/* Search */}
+                    {!isdashboard && (
+                        <div className="fp-section">
+                            <label className="fp-label">Search Patient</label>
+                            <input
+                                className="fp-input"
+                                placeholder="Name or phone number"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    )}
 
-                        {/* PAYMENT TYPES */}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Payment Method
-                            </label>
-
-                            <div className="d-flex flex-wrap gap-2">
-                                {[
-                                    "Cash",
-                                    "Card",
-                                    "SBI",
-                                    "ICICI",
-                                    "HDFC",
-                                    "Other",
-                                ].map((type) => {
-                                    const isActive =
-                                        selectedPayments.includes(type);
-
-                                    return (
-                                        <button
-                                            key={type}
-                                            type="button"
-                                            className={`btn btn-sm rounded-pill ${
+                    {/* Payment Method */}
+                    <div className="fp-section">
+                        <label className="fp-label">Payment Method</label>
+                        <div className="fp-chips">
+                            {[
+                                "Cash",
+                                "Card",
+                                "SBI",
+                                "ICICI",
+                                "HDFC",
+                                "Other",
+                            ].map((type) => {
+                                const isActive =
+                                    selectedPayments.includes(type);
+                                return (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        className={`fp-chip ${isActive ? "active" : ""}`}
+                                        onClick={() =>
+                                            setSelectedPayments(
                                                 isActive
-                                                    ? "btn-primary"
-                                                    : "btn-outline-primary"
-                                            }`}
-                                            onClick={() =>
-                                                setSelectedPayments(
-                                                    isActive
-                                                        ? selectedPayments.filter(
-                                                              (p) => p !== type,
-                                                          )
-                                                        : [
-                                                              ...selectedPayments,
-                                                              type,
-                                                          ],
-                                                )
-                                            }
-                                        >
-                                            {type}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                                    ? selectedPayments.filter(
+                                                          (p) => p !== type,
+                                                      )
+                                                    : [
+                                                          ...selectedPayments,
+                                                          type,
+                                                      ],
+                                            )
+                                        }
+                                    >
+                                        {type}
+                                    </button>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        {/*Payment Status*/}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Payment Status
-                            </label>
-
-                            <div className="d-flex flex-wrap gap-2">
-                                {["Unpaid", "Paid", "Partial"].map((type) => {
-                                    const isActive =
-                                        selectedStatus.includes(type);
-
-                                    return (
-                                        <button
-                                            key={type}
-                                            type="button"
-                                            className={`btn btn-sm rounded-pill ${
+                    {/* Payment Status */}
+                    <div className="fp-section">
+                        <label className="fp-label">Payment Status</label>
+                        <div className="fp-chips">
+                            {["Unpaid", "Paid", "Partial"].map((type) => {
+                                const isActive = selectedStatus.includes(type);
+                                return (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        className={`fp-chip ${isActive ? "active" : ""}`}
+                                        onClick={() =>
+                                            setSelectedStatus(
                                                 isActive
-                                                    ? "btn-primary"
-                                                    : "btn-outline-primary"
-                                            }`}
-                                            onClick={() =>
-                                                setSelectedStatus(
-                                                    isActive
-                                                        ? selectedStatus.filter(
-                                                              (p) => p !== type,
-                                                          )
-                                                        : [
-                                                              ...selectedStatus,
-                                                              type,
-                                                          ],
-                                                )
-                                            }
-                                        >
-                                            {type}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                                    ? selectedStatus.filter(
+                                                          (p) => p !== type,
+                                                      )
+                                                    : [...selectedStatus, type],
+                                            )
+                                        }
+                                    >
+                                        {type}
+                                    </button>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        {/* GENDER */}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Gender
-                            </label>
-                            <select
-                                className="form-select rounded-3 theme-input"
-                                value={selectedGender}
-                                onChange={(e) =>
-                                    setSelectedGender(e.target.value)
-                                }
-                            >
-                                <option value="">All</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
-                        </div>
+                    {/* Gender */}
+                    <div className="fp-section">
+                        <label className="fp-label">Gender</label>
+                        <select
+                            className="fp-select"
+                            value={selectedGender}
+                            onChange={(e) => setSelectedGender(e.target.value)}
+                        >
+                            <option value="">All</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
 
-                        <hr />
+                    <div className="fp-divider" />
 
-                        {/* SERVICES */}
-                        <div className="mb-4">
-                            <span className="form-label small fw-semibold text-theme-secondary">
-                                Services
-                            </span>
-
-                            <div className="d-flex flex-wrap gap-2 rounded-3 pt-3 theme-border theme-surface">
-                                {allServices.map((s) => {
-                                    const active = selectedServices.includes(s);
-
-                                    return (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            className={`btn btn-sm rounded-pill ${
+                    {/* Services */}
+                    <div className="fp-section">
+                        <label className="fp-label">Services</label>
+                        <div className="fp-chips">
+                            {allServices.map((s) => {
+                                const active = selectedServices.includes(s);
+                                return (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        className={`fp-chip ${active ? "active" : ""}`}
+                                        onClick={() =>
+                                            setSelectedServices(
                                                 active
-                                                    ? "btn-primary"
-                                                    : "btn-outline-primary"
-                                            }`}
-                                            onClick={() =>
-                                                setSelectedServices(
-                                                    active
-                                                        ? selectedServices.filter(
-                                                              (x) => x !== s,
-                                                          )
-                                                        : [
-                                                              ...selectedServices,
-                                                              s,
-                                                          ],
-                                                )
-                                            }
-                                        >
-                                            {s}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                                    ? selectedServices.filter(
+                                                          (x) => x !== s,
+                                                      )
+                                                    : [...selectedServices, s],
+                                            )
+                                        }
+                                    >
+                                        {s}
+                                    </button>
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        <hr />
-                        {/* QUICK FILTERS */}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Quick Filters
-                            </label>
+                    <div className="fp-divider" />
 
-                            <div className="d-flex flex-wrap gap-2">
-                                <button
-                                    className="btn btn-sm btn-outline-primary rounded-pill"
-                                    onClick={() => {
-                                        const { start, end } = getTodayRange();
-                                        setStartDate(start);
-                                        setEndDate(end);
-                                        setSelectedFY("");
-                                    }}
-                                >
-                                    Today
-                                </button>
-
-                                <button
-                                    className="btn btn-sm btn-outline-primary rounded-pill"
-                                    onClick={() => {
-                                        const { start, end } =
-                                            getThisMonthRange();
-                                        setStartDate(start);
-                                        setEndDate(end);
-                                        setSelectedFY("");
-                                    }}
-                                >
-                                    This Month
-                                </button>
-
-                                <button
-                                    className="btn btn-sm btn-outline-primary rounded-pill"
-                                    onClick={() => {
-                                        const { start, end } =
-                                            getLast30DaysRange();
-                                        setStartDate(start);
-                                        setEndDate(end);
-                                        setSelectedFY("");
-                                    }}
-                                >
-                                    Last 30 Days
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* DATE RANGE */}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Date Range
-                            </label>
-
-                            <div className="row g-2">
-                                <div className="col-6">
-                                    <input
-                                        type="date"
-                                        className="form-control rounded-3"
-                                        value={startDate || ""}
-                                        onChange={(e) => {
-                                            setSelectedFY("");
-                                            setStartDate(e.target.value);
-                                        }}
-                                    />
-                                </div>
-
-                                <div className="col-6">
-                                    <input
-                                        type="date"
-                                        className="form-control rounded-3"
-                                        value={endDate || ""}
-                                        onChange={(e) => {
-                                            setSelectedFY("");
-                                            setEndDate(e.target.value);
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* FINANCIAL YEAR */}
-                        <div className="mb-4">
-                            <label className="form-label small fw-semibold text-theme-secondary">
-                                Financial Year
-                            </label>
-                            <select
-                                className="form-select rounded-3 theme-input"
-                                value={selectedFY}
-                                onChange={(e) => {
-                                    const fy = e.target.value;
-                                    setSelectedFY(fy);
-                                    applyFinancialYear(fy);
-                                }}
-                            >
-                                <option value="">All Years</option>
-                                <option value="2025">FY 2025-26</option>
-                                <option value="2026">FY 2026-27</option>
-                                <option value="2027">FY 2027-28</option>
-                                <option value="2028">FY 2028-29</option>
-                            </select>
-                        </div>
-
-                        {/* RESET */}
-                        <div className="d-grid gap-2 mt-4">
+                    {/* Quick Filters */}
+                    <div className="fp-section">
+                        <label className="fp-label">Quick Filters</label>
+                        <div className="fp-chips">
                             <button
-                                className="btn btn-outline-theme rounded-3"
+                                className="fp-chip quick"
                                 onClick={() => {
-                                    setSelectedPayments([]);
-                                    setSelectedServices([]);
-                                    setSelectedGender("");
-                                    setSelectedStatus([]);
-                                    setStartDate(null);
-                                    setEndDate(null);
+                                    const { start, end } = getTodayRange();
+                                    setStartDate(start);
+                                    setEndDate(end);
                                     setSelectedFY("");
-                                    setTimeout(() => {
-                                        setStartDate(undefined);
-                                        setEndDate(undefined);
-                                    }, 0);
                                 }}
                             >
-                                ♻ Reset Filters
+                                Today
+                            </button>
+                            <button
+                                className="fp-chip quick"
+                                onClick={() => {
+                                    const { start, end } = getThisMonthRange();
+                                    setStartDate(start);
+                                    setEndDate(end);
+                                    setSelectedFY("");
+                                }}
+                            >
+                                This Month
+                            </button>
+                            <button
+                                className="fp-chip quick"
+                                onClick={() => {
+                                    const { start, end } = getLast30DaysRange();
+                                    setStartDate(start);
+                                    setEndDate(end);
+                                    setSelectedFY("");
+                                }}
+                            >
+                                Last 30 Days
                             </button>
                         </div>
                     </div>
+
+                    {/* Date Range */}
+                    <div className="fp-section">
+                        <label className="fp-label">Date Range</label>
+                        <div className="fp-date-row">
+                            <input
+                                type="date"
+                                className="fp-input"
+                                value={startDate || ""}
+                                onChange={(e) => {
+                                    setSelectedFY("");
+                                    setStartDate(e.target.value);
+                                }}
+                            />
+                            <input
+                                type="date"
+                                className="fp-input"
+                                value={endDate || ""}
+                                onChange={(e) => {
+                                    setSelectedFY("");
+                                    setEndDate(e.target.value);
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Financial Year */}
+                    <div className="fp-section">
+                        <label className="fp-label">Financial Year</label>
+                        <select
+                            className="fp-select"
+                            value={selectedFY}
+                            onChange={(e) => {
+                                const fy = e.target.value;
+                                setSelectedFY(fy);
+                                applyFinancialYear(fy);
+                            }}
+                        >
+                            <option value="">All Years</option>
+                            <option value="2025">FY 2025-26</option>
+                            <option value="2026">FY 2026-27</option>
+                            <option value="2027">FY 2027-28</option>
+                            <option value="2028">FY 2028-29</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Footer — Reset */}
+                <div className="fp-footer">
+                    <button
+                        className="fp-reset"
+                        onClick={() => {
+                            setSelectedPayments([]);
+                            setSelectedServices([]);
+                            setSelectedGender("");
+                            setSelectedStatus([]);
+                            setStartDate(null);
+                            setEndDate(null);
+                            setSelectedFY("");
+                            setTimeout(() => {
+                                setStartDate(undefined);
+                                setEndDate(undefined);
+                            }, 0);
+                        }}
+                    >
+                        ↺ Reset all filters
+                    </button>
                 </div>
             </div>
-
-            {/* BACKDROP */}
-            {open && (
-                <div
-                    className="offcanvas-backdrop fade show"
-                    onClick={() => setOpen(false)}
-                />
-            )}
         </>
     );
 }

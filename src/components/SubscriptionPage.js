@@ -1,7 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Pricing from "./Pricing";
-import { IndianRupee } from "lucide-react";
+import {
+    IndianRupee,
+    Calendar,
+    Clock,
+    CreditCard,
+    RefreshCw,
+    AlertTriangle,
+    CheckCircle,
+    FileSpreadsheet,
+    FileText,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 
 export default function SubscriptionPage(props) {
     const API_BASE_URL =
@@ -18,7 +30,6 @@ export default function SubscriptionPage(props) {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
-
         async function loadData() {
             try {
                 const [subscriptionRes, paymentRes, pricingRes] =
@@ -28,62 +39,85 @@ export default function SubscriptionPage(props) {
                         }),
                         axios.get(
                             `${API_BASE_URL}/api/doctor/payment-history`,
-                            {
-                                headers: { "auth-token": token },
-                            },
+                            { headers: { "auth-token": token } },
                         ),
                         fetch(`${API_BASE_URL}/api/admin/pricing`),
                     ]);
-
                 const pricingData = await pricingRes.json();
-
-                if (subscriptionRes.data.success) {
-                    setData(subscriptionRes.data);
-                }
-
-                if (paymentRes.data.success) {
+                if (subscriptionRes.data.success) setData(subscriptionRes.data);
+                if (paymentRes.data.success)
                     setPayments(paymentRes.data.payments);
-                }
-
-                if (pricingData.success) {
-                    setPricing(pricingData.pricing);
-                }
+                if (pricingData.success) setPricing(pricingData.pricing);
             } catch (err) {
                 console.error("Subscription page error:", err);
             }
         }
-
         loadData();
     }, [API_BASE_URL]);
 
-    const sortedPayments = useMemo(() => {
-        return [...payments].sort(
-            (a, b) => new Date(b.paidAt) - new Date(a.paidAt),
-        );
-    }, [payments]);
+    const sortedPayments = useMemo(
+        () =>
+            [...payments].sort(
+                (a, b) => new Date(b.paidAt) - new Date(a.paidAt),
+            ),
+        [payments],
+    );
 
     if (!data || !pricing) {
-        return <div className="text-center mt-5">Loading...</div>;
+        return (
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: "60vh",
+                    gap: 8,
+                }}
+            >
+                <span
+                    style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#2e3d5c",
+                        animation: "sp-pulse 1.2s ease-in-out infinite",
+                        display: "inline-block",
+                    }}
+                />
+                <span
+                    style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#2e3d5c",
+                        animation: "sp-pulse 1.2s ease-in-out 0.2s infinite",
+                        display: "inline-block",
+                    }}
+                />
+                <span
+                    style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#2e3d5c",
+                        animation: "sp-pulse 1.2s ease-in-out 0.4s infinite",
+                        display: "inline-block",
+                    }}
+                />
+            </div>
+        );
     }
 
     const { subscription, usage } = data;
-
     const isExpired = subscription.status === "expired";
-
     const safeUsage = isExpired
         ? { excelExports: 0, invoiceDownloads: 0 }
         : usage;
-
     const planKey = subscription.plan.toLowerCase();
-
     const planLimits =
         planKey === "free"
             ? { excelLimit: 2, invoiceLimit: 2 }
-            : (pricing?.[planKey] ?? {
-                  excelLimit: 0,
-                  invoiceLimit: 0,
-              });
-
+            : (pricing?.[planKey] ?? { excelLimit: 0, invoiceLimit: 0 });
     const baseExcelLimit = planLimits.excelLimit ?? -1;
     const baseInvoiceLimit = planLimits.invoiceLimit ?? -1;
     const billingCycle = subscription.billingCycle || "monthly";
@@ -93,18 +127,15 @@ export default function SubscriptionPage(props) {
             : billingCycle === "yearly"
               ? baseExcelLimit * 12
               : baseExcelLimit;
-
     const invoiceLimit =
         baseInvoiceLimit === -1
             ? -1
             : billingCycle === "yearly"
               ? baseInvoiceLimit * 12
               : baseInvoiceLimit;
-
     const startDate = subscription.startDate
         ? new Date(subscription.startDate).toLocaleDateString("en-IN")
         : "-";
-
     const expiryDate = subscription.expiryDate
         ? new Date(subscription.expiryDate).toLocaleDateString("en-IN")
         : "No Expiry";
@@ -116,7 +147,6 @@ export default function SubscriptionPage(props) {
                   ? 10
                   : 0
               : Math.min(100, (safeUsage.excelExports / excelLimit) * 100);
-
     const invoicePercent =
         isExpired || invoiceLimit === 0
             ? 0
@@ -128,371 +158,554 @@ export default function SubscriptionPage(props) {
                     100,
                     (safeUsage.invoiceDownloads / invoiceLimit) * 100,
                 );
-
-    // const copyToClipboard = (text) => {
-    //     if (navigator.clipboard) {
-    //         navigator.clipboard.writeText(text);
-    //     } else {
-    //         const textarea = document.createElement("textarea");
-    //         textarea.value = text;
-    //         document.body.appendChild(textarea);
-    //         textarea.select();
-    //         document.execCommand("copy");
-    //         document.body.removeChild(textarea);
-    //     }
-
-    //     props.showAlert("Payment ID copied!", "success");
-    // };
-    // ✅ ALWAYS at top (before return)
-
     const lastPayment = sortedPayments[0] || null;
     const lastPlan = lastPayment?.plan || subscription.plan;
-
     const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
-
     const paginatedPayments = sortedPayments.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage,
     );
 
-    if (!data || !pricing) {
-        return <div className="text-center mt-5">Loading...</div>;
-    }
+    const planName =
+        isExpired && lastPayment
+            ? lastPlan.toUpperCase()
+            : subscription.plan.toUpperCase();
+    const statusColor =
+        subscription.status === "active"
+            ? "#4ade80"
+            : subscription.status === "expired"
+              ? "#fb923c"
+              : "#f87171";
+    const statusLabel =
+        subscription.status === "expired"
+            ? "EXPIRED"
+            : subscription.status.toUpperCase();
+
+    const PLAN_COLORS = {
+        free: "#94a3b8",
+        starter: "#60a5fa",
+        pro: "#a78bfa",
+        enterprise: "#fb923c",
+    };
+    const planColor = PLAN_COLORS[planKey] || "#60a5fa";
+
+    const paymentStatusStyle = (s) => {
+        const st = (s || "success").toLowerCase();
+        if (st === "success")
+            return {
+                bg: "rgba(74,222,128,0.1)",
+                border: "rgba(74,222,128,0.2)",
+                color: "#4ade80",
+            };
+        if (st === "failed")
+            return {
+                bg: "rgba(248,113,113,0.1)",
+                border: "rgba(248,113,113,0.2)",
+                color: "#f87171",
+            };
+        if (st === "pending")
+            return {
+                bg: "rgba(251,146,60,0.1)",
+                border: "rgba(251,146,60,0.2)",
+                color: "#fb923c",
+            };
+        return {
+            bg: "rgba(148,163,184,0.1)",
+            border: "rgba(148,163,184,0.2)",
+            color: "#94a3b8",
+        };
+    };
 
     return (
-        <div className="container py-4">
-            <h3 className="fw-bold mb-4">Subscription</h3>
-
-            {/* PLAN CARD */}
-            <div className="card shadow-sm border-0 mb-4">
-                <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 className="fw-bold mb-1 text-primary">
-                                {isExpired && lastPayment
-                                    ? `${lastPlan.toUpperCase()} Plan`
-                                    : `${subscription.plan.toUpperCase()} Plan`}
-                            </h4>
-
-                            <span
-                                className={`badge ${
-                                    subscription.status === "active"
-                                        ? "bg-success"
-                                        : subscription.status === "expired"
-                                          ? "bg-warning text-dark"
-                                          : "bg-danger"
-                                }`}
-                            >
-                                {subscription.status === "expired"
-                                    ? "EXPIRED"
-                                    : subscription.status.toUpperCase()}
-                            </span>
-                        </div>
-
-                        <div className="text-end">
-                            <div className="text-theme-secondary small">
-                                Days Remaining
-                            </div>
-
-                            <h5 className="fw-bold text-theme-secondary">
-                                {isExpired
-                                    ? "0"
-                                    : subscription.plan === "FREE"
-                                      ? "Unlimited"
-                                      : subscription.daysRemaining}
-                            </h5>
-                        </div>
-                    </div>
-
-                    <hr />
-
-                    <div className="row">
-                        <div className="col-md-6">
-                            <p className="mb-2">
-                                <strong>Start Date:</strong> {startDate}
-                            </p>
-
-                            <p className="mb-2">
-                                <strong>Expiry Date:</strong> {expiryDate}
-                            </p>
-                        </div>
-
-                        <div className="col-md-6">
-                            <p className="mb-2">
-                                <strong>Billing Cycle:</strong>{" "}
-                                {(billingCycle || "").toUpperCase()}
-                            </p>
-
-                            <p className="mb-2">
-                                <strong>Currency:</strong>{" "}
-                                {subscription.currency}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* EXPIRED ALERT */}
-                    {isExpired && (
-                        <div className="alert alert-warning mt-3">
-                            Your <strong>{lastPlan.toUpperCase()}</strong> plan
-                            has expired.
-                            <a href="#pricing">
-                                <span className="ms-2">Upgrade</span>
-                            </a>{" "}
-                            to continue using features.
-                        </div>
-                    )}
+        <>
+            <div className="sp-root">
+                {/* Header */}
+                <div className="sp-header">
+                    <h1 className="sp-title">
+                        Billing &amp; <em>Subscription</em>
+                    </h1>
                 </div>
-            </div>
 
-            {/* USAGE CARD */}
-            <div className="card shadow-sm border-0 mb-4">
-                <div className="card-body">
-                    <h5 className="fw-bold mb-3">Current Plan Usage</h5>
-
-                    <div className="mb-3">
-                        <div className="d-flex justify-content-between">
-                            <span>Excel Exports</span>
-                            <span>
-                                {safeUsage.excelExports} /{" "}
-                                {excelLimit === -1 ? "∞" : excelLimit}
-                            </span>
+                {/* ── Plan Card ── */}
+                <div className="sp-card" style={{ "--accent": planColor }}>
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 0,
+                            left: "10%",
+                            right: "10%",
+                            height: 1,
+                            background: `linear-gradient(90deg, transparent, ${planColor}55, transparent)`,
+                        }}
+                    />
+                    <div className="sp-card-header">
+                        <div
+                            className="sp-card-icon"
+                            style={{
+                                background: `${planColor}18`,
+                                color: planColor,
+                            }}
+                        >
+                            <CreditCard size={15} />
                         </div>
-
-                        <div className="progress">
-                            <div
-                                className="progress-bar"
-                                style={{ width: `${excelPercent}%` }}
-                            />
-                        </div>
+                        <div className="sp-card-title">Current Plan</div>
                     </div>
-
-                    <div>
-                        <div className="d-flex justify-content-between">
-                            <span>Invoice Downloads</span>
-                            <span>
-                                {safeUsage.invoiceDownloads} /{" "}
-                                {invoiceLimit === -1 ? "∞" : invoiceLimit}
-                            </span>
-                        </div>
-
-                        <div className="progress">
-                            <div
-                                className="progress-bar bg-success"
-                                style={{ width: `${invoicePercent}%` }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* PAYMENT HISTORY */}
-            <div className="card shadow-sm border-0 mb-4">
-                <div className="card-body">
-                    <h5 className="fw-bold mb-3">Payment History</h5>
-
-                    <div className="table-responsive d-none d-md-block">
-                        <table className="table table-dark table-hover align-middle">
-                            <thead className="border-bottom border-secondary">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Plan</th>
-                                    <th>Billing</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {payments.length === 0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan="5"
-                                            className="text-center py-4 text-theme-secondary"
-                                        >
-                                            No payments yet
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    paginatedPayments.map((p) => (
-                                        <tr key={p._id}>
-                                            <td>
-                                                {new Date(
-                                                    p.paidAt,
-                                                ).toLocaleDateString("en-IN")}
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-primary text-uppercase">
-                                                    {p.plan}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-secondary">
-                                                    {(
-                                                        p.billingCycle || ""
-                                                    ).toUpperCase()}
-                                                </span>
-                                            </td>
-
-                                            <td className="fw-semibold text-success">
-                                                <IndianRupee size={18}/>{p.amountPaid}
-                                            </td>
-
-                                            <td>
-                                                {(() => {
-                                                    const status = (
-                                                        p.status || "success"
-                                                    ).toLowerCase();
-
-                                                    const badgeClass =
-                                                        status === "success"
-                                                            ? "bg-success"
-                                                            : status ===
-                                                                "failed"
-                                                              ? "bg-danger"
-                                                              : status ===
-                                                                  "pending"
-                                                                ? "bg-warning text-dark"
-                                                                : "bg-secondary";
-
-                                                    return (
-                                                        <span
-                                                            className={`badge ${badgeClass} text-uppercase`}
-                                                        >
-                                                            {status}
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* MOBILE */}
-                    <div className="d-md-none">
-                        {payments.length === 0 ? (
-                            <div className="text-center text-theme-secondary py-3">
-                                No payments yet
-                            </div>
-                        ) : (
-                            paginatedPayments.map((p) => (
+                    <div className="sp-card-body">
+                        <div className="sp-plan-row">
+                            <div>
                                 <div
-                                    key={p._id}
-                                    className="card mb-3 p-3 border-0 shadow-sm"
-                                    style={{ background: "#0f172a" }}
+                                    className="sp-plan-name"
+                                    style={{ color: planColor }}
                                 >
-                                    <div className="d-flex justify-content-between mb-2">
-                                        <span className="badge bg-primary">
-                                            {p.plan}
-                                        </span>
-                                        <span className="badge bg-secondary">
-                                            {(
-                                                p.billingCycle || ""
-                                            ).toUpperCase()}
-                                        </span>
-                                    </div>
-
-                                    <div className="text-theme-secondary small">
-                                        {new Date(p.paidAt).toLocaleDateString(
-                                            "en-IN",
-                                        )}
-                                    </div>
-
-                                    <div className="fw-bold text-success mt-1">
-                                        <IndianRupee size={18}/>{p.amountPaid}
-                                    </div>
-
-                                    <div className="mt-2">
-                                        {(() => {
-                                            const status = (
-                                                p.status || "success"
-                                            ).toLowerCase();
-
-                                            const badgeClass =
-                                                status === "success"
-                                                    ? "bg-success"
-                                                    : status === "failed"
-                                                      ? "bg-danger"
-                                                      : status === "pending"
-                                                        ? "bg-warning text-dark"
-                                                        : "bg-secondary";
-
-                                            return (
-                                                <span
-                                                    className={`badge ${badgeClass}`}
-                                                >
-                                                    {status}
-                                                </span>
-                                            );
-                                        })()}
-                                    </div>
+                                    {planName}
                                 </div>
-                            ))
+                                <span
+                                    className="sp-status-badge"
+                                    style={{
+                                        background: `${statusColor}12`,
+                                        borderColor: `${statusColor}30`,
+                                        color: statusColor,
+                                    }}
+                                >
+                                    {subscription.status === "active" ? (
+                                        <CheckCircle size={10} />
+                                    ) : (
+                                        <AlertTriangle size={10} />
+                                    )}
+                                    {statusLabel}
+                                </span>
+                            </div>
+                            <div className="sp-days-box">
+                                <div className="sp-days-label">
+                                    Days Remaining
+                                </div>
+                                <div className="sp-days-value">
+                                    {isExpired
+                                        ? "0"
+                                        : subscription.plan === "FREE"
+                                          ? "∞"
+                                          : subscription.daysRemaining}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="sp-meta-grid">
+                            <div className="sp-meta-item">
+                                <div className="sp-meta-label">
+                                    <Calendar
+                                        size={10}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Start Date
+                                </div>
+                                <div className="sp-meta-value">{startDate}</div>
+                            </div>
+                            <div className="sp-meta-item">
+                                <div className="sp-meta-label">
+                                    <Clock
+                                        size={10}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Expiry Date
+                                </div>
+                                <div className="sp-meta-value">
+                                    {expiryDate}
+                                </div>
+                            </div>
+                            <div className="sp-meta-item">
+                                <div className="sp-meta-label">
+                                    <RefreshCw
+                                        size={10}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Billing Cycle
+                                </div>
+                                <div className="sp-meta-value">
+                                    {(billingCycle || "").toUpperCase()}
+                                </div>
+                            </div>
+                            <div className="sp-meta-item">
+                                <div className="sp-meta-label">
+                                    <IndianRupee
+                                        size={10}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Currency
+                                </div>
+                                <div className="sp-meta-value">
+                                    {subscription.currency}
+                                </div>
+                            </div>
+                        </div>
+
+                        {isExpired && (
+                            <div className="sp-expired-alert">
+                                <AlertTriangle
+                                    size={16}
+                                    style={{ flexShrink: 0 }}
+                                />
+                                <span>
+                                    Your{" "}
+                                    <strong>{lastPlan.toUpperCase()}</strong>{" "}
+                                    plan has expired.{" "}
+                                    <a
+                                        href="#pricing"
+                                        className="sp-upgrade-link"
+                                    >
+                                        Upgrade now
+                                    </a>{" "}
+                                    to continue using all features.
+                                </span>
+                            </div>
                         )}
                     </div>
                 </div>
-            </div>
-            {totalPages > 1 && (
-                <div className="pagination-container">
-                    <button
-                        className="page-btn nav-btn"
-                        disabled={currentPage === 1}
-                        onClick={() => setCurrentPage((p) => p - 1)}
-                    >
-                        ←
-                    </button>
 
-                    {[...Array(totalPages)].map((_, i) => {
-                        const page = i + 1;
-
-                        if (
-                            page === 1 ||
-                            page === totalPages ||
-                            Math.abs(currentPage - page) <= 1
-                        ) {
-                            return (
-                                <button
-                                    key={i}
-                                    className={`page-btn ${
-                                        currentPage === page ? "active" : ""
-                                    }`}
-                                    onClick={() => setCurrentPage(page)}
-                                >
-                                    {page}
-                                </button>
-                            );
-                        }
-
-                        if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                        ) {
-                            return (
-                                <span key={i} className="dots">
-                                    ...
+                {/* ── Usage Card ── */}
+                <div className="sp-card">
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 0,
+                            left: "10%",
+                            right: "10%",
+                            height: 1,
+                            background:
+                                "linear-gradient(90deg, transparent, rgba(77,124,246,0.35), transparent)",
+                        }}
+                    />
+                    <div className="sp-card-header">
+                        <div
+                            className="sp-card-icon"
+                            style={{
+                                background: "rgba(77,124,246,0.1)",
+                                color: "#60a5fa",
+                            }}
+                        >
+                            <FileSpreadsheet size={15} />
+                        </div>
+                        <div className="sp-card-title">Plan Usage</div>
+                    </div>
+                    <div className="sp-card-body">
+                        <div className="sp-usage-item">
+                            <div className="sp-usage-row">
+                                <span className="sp-usage-label">
+                                    <FileSpreadsheet size={12} /> Excel Exports
                                 </span>
-                            );
-                        }
-
-                        return null;
-                    })}
-
-                    <button
-                        className="page-btn nav-btn"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage((p) => p + 1)}
-                    >
-                        →
-                    </button>
+                                <span className="sp-usage-val">
+                                    {safeUsage.excelExports} /{" "}
+                                    {excelLimit === -1 ? "∞" : excelLimit}
+                                </span>
+                            </div>
+                            <div className="sp-prog-track">
+                                <div
+                                    className="sp-prog-fill"
+                                    style={{
+                                        width: `${excelPercent}%`,
+                                        background:
+                                            "linear-gradient(90deg, #4d7cf6, #60a5fa)",
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <div className="sp-usage-item">
+                            <div className="sp-usage-row">
+                                <span className="sp-usage-label">
+                                    <FileText size={12} /> Invoice Downloads
+                                </span>
+                                <span className="sp-usage-val">
+                                    {safeUsage.invoiceDownloads} /{" "}
+                                    {invoiceLimit === -1 ? "∞" : invoiceLimit}
+                                </span>
+                            </div>
+                            <div className="sp-prog-track">
+                                <div
+                                    className="sp-prog-fill"
+                                    style={{
+                                        width: `${invoicePercent}%`,
+                                        background:
+                                            "linear-gradient(90deg, #4ade80, #86efac)",
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            )}
-            <div id="pricing">
-                <Pricing />
+
+                {/* ── Payment History ── */}
+                <div className="sp-card">
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: 0,
+                            left: "10%",
+                            right: "10%",
+                            height: 1,
+                            background:
+                                "linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent)",
+                        }}
+                    />
+                    <div className="sp-card-header">
+                        <div
+                            className="sp-card-icon"
+                            style={{
+                                background: "rgba(167,139,250,0.1)",
+                                color: "#a78bfa",
+                            }}
+                        >
+                            <Clock size={15} />
+                        </div>
+                        <div className="sp-card-title">Payment History</div>
+                    </div>
+                    <div className="sp-card-body" style={{ padding: 0 }}>
+                        {payments.length === 0 ? (
+                            <div className="sp-empty">No payments yet</div>
+                        ) : (
+                            <>
+                                {/* Desktop table */}
+                                <table className="sp-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Plan</th>
+                                            <th>Billing</th>
+                                            <th className="right">Amount</th>
+                                            <th className="right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paginatedPayments.map((p) => {
+                                            const pStyle = paymentStatusStyle(
+                                                p.status,
+                                            );
+                                            const pc =
+                                                PLAN_COLORS[
+                                                    p.plan?.toLowerCase()
+                                                ] || "#60a5fa";
+                                            return (
+                                                <tr key={p._id}>
+                                                    <td>
+                                                        {new Date(
+                                                            p.paidAt,
+                                                        ).toLocaleDateString(
+                                                            "en-IN",
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            className="sp-pill"
+                                                            style={{
+                                                                background: `${pc}12`,
+                                                                borderColor: `${pc}30`,
+                                                                color: pc,
+                                                            }}
+                                                        >
+                                                            {p.plan}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            className="sp-pill"
+                                                            style={{
+                                                                background:
+                                                                    "rgba(148,163,184,0.1)",
+                                                                borderColor:
+                                                                    "rgba(148,163,184,0.2)",
+                                                                color: "#94a3b8",
+                                                            }}
+                                                        >
+                                                            {(
+                                                                p.billingCycle ||
+                                                                ""
+                                                            ).toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="right">
+                                                        <span className="sp-amount">
+                                                            <IndianRupee
+                                                                size={12}
+                                                            />
+                                                            {p.amountPaid}
+                                                        </span>
+                                                    </td>
+                                                    <td className="right">
+                                                        <span
+                                                            className="sp-pill"
+                                                            style={{
+                                                                background:
+                                                                    pStyle.bg,
+                                                                borderColor:
+                                                                    pStyle.border,
+                                                                color: pStyle.color,
+                                                            }}
+                                                        >
+                                                            {(
+                                                                p.status ||
+                                                                "success"
+                                                            ).toLowerCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+
+                                {/* Mobile cards */}
+                                <div
+                                    className="sp-mob-table"
+                                    style={{ padding: "12px 16px" }}
+                                >
+                                    {paginatedPayments.map((p) => {
+                                        const pStyle = paymentStatusStyle(
+                                            p.status,
+                                        );
+                                        const pc =
+                                            PLAN_COLORS[
+                                                p.plan?.toLowerCase()
+                                            ] || "#60a5fa";
+                                        return (
+                                            <div
+                                                key={p._id}
+                                                className="sp-pay-card"
+                                            >
+                                                <div className="sp-pay-top">
+                                                    <span
+                                                        className="sp-pill"
+                                                        style={{
+                                                            background: `${pc}12`,
+                                                            borderColor: `${pc}30`,
+                                                            color: pc,
+                                                        }}
+                                                    >
+                                                        {p.plan}
+                                                    </span>
+                                                    <span
+                                                        className="sp-pill"
+                                                        style={{
+                                                            background:
+                                                                pStyle.bg,
+                                                            borderColor:
+                                                                pStyle.border,
+                                                            color: pStyle.color,
+                                                        }}
+                                                    >
+                                                        {(
+                                                            p.status ||
+                                                            "success"
+                                                        ).toLowerCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="sp-pay-bottom">
+                                                    <div>
+                                                        <div className="sp-pay-date">
+                                                            {new Date(
+                                                                p.paidAt,
+                                                            ).toLocaleDateString(
+                                                                "en-IN",
+                                                            )}
+                                                        </div>
+                                                        <span
+                                                            className="sp-pill"
+                                                            style={{
+                                                                marginTop: 6,
+                                                                display:
+                                                                    "inline-block",
+                                                                background:
+                                                                    "rgba(148,163,184,0.1)",
+                                                                borderColor:
+                                                                    "rgba(148,163,184,0.2)",
+                                                                color: "#94a3b8",
+                                                            }}
+                                                        >
+                                                            {(
+                                                                p.billingCycle ||
+                                                                ""
+                                                            ).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="sp-pay-amount">
+                                                        <IndianRupee
+                                                            size={14}
+                                                        />
+                                                        {p.amountPaid}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="sp-pagination">
+                        <button
+                            className="sp-page-btn"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage((p) => p - 1)}
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
+                        {[...Array(totalPages)].map((_, i) => {
+                            const pg = i + 1;
+                            if (
+                                pg === 1 ||
+                                pg === totalPages ||
+                                Math.abs(currentPage - pg) <= 1
+                            ) {
+                                return (
+                                    <button
+                                        key={i}
+                                        className={`sp-page-btn ${currentPage === pg ? "active" : ""}`}
+                                        onClick={() => setCurrentPage(pg)}
+                                    >
+                                        {pg}
+                                    </button>
+                                );
+                            }
+                            if (
+                                pg === currentPage - 2 ||
+                                pg === currentPage + 2
+                            ) {
+                                return (
+                                    <span key={i} className="sp-page-dots">
+                                        ···
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })}
+                        <button
+                            className="sp-page-btn"
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage((p) => p + 1)}
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Pricing */}
+                <div id="pricing">
+                    <Pricing />
+                </div>
             </div>
-        </div>
+        </>
     );
 }

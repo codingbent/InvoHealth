@@ -32,7 +32,7 @@ export default function Alert({ alert, clearAlert }) {
                         transition={{ duration: 0.3 }}
                         className={`modern-alert ${alert.type}`}
                     >
-                        <span className="alert-icon d-flex align-items-center">
+                        <span className="alert-icon">
                             {icons[alert.type] || <Info size={20} />}
                         </span>
                         <span className="alert-text">{alert.msg}</span>

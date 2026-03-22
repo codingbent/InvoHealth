@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import ServiceList from "./ServiceList";
 import { jwtDecode } from "jwt-decode";
 import { authFetch } from "./authfetch";
-import { IndianRupee } from "lucide-react";
+import { IndianRupee, UserPlus, X, Check } from "lucide-react";
 import SlotPicker from "./Slotpicker";
-import {
-    generateSlots,
-    // getNextAvailableSlot,
-} from "../components/utils/Slotsutils";
-import Flatpickr from "react-flatpickr";
+import { generateSlots } from "../components/utils/Slotsutils";
 import "flatpickr/dist/themes/dark.css";
+// eslint-disable-next-line
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const API_BASE_URL = useMemo(
@@ -20,6 +19,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 : "http://localhost:5001",
         [],
     );
+
     const [patient, setPatient] = useState({
         name: "",
         service: [],
@@ -28,22 +28,18 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
         age: "",
         gender: "Male",
     });
-
     const navigate = useNavigate();
-    const formatTime = (time) => {
-        return time;
-    };
+    const formatTime = (time) => time;
     const [availableServices, setAvailableServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const getTodayIST = () => {
         const now = new Date();
-        const offset = now.getTimezoneOffset(); // in minutes
+        const offset = now.getTimezoneOffset();
         const istTime = new Date(now.getTime() - offset * 60000);
         return istTime.toISOString().slice(0, 10);
     };
-
     const [appointmentDate, setAppointmentDate] = useState(getTodayIST());
     const [payment_type, setPaymentType] = useState("Cash");
     const [collectFull, setCollectFull] = useState(true);
@@ -51,17 +47,14 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const token = localStorage.getItem("token");
     const decoded = jwtDecode(token);
     const doctorId = decoded.user?.doctorId;
-    //es
     const [availability, setAvailability] = useState([]);
     const [timeSlots, setTimeSlots] = useState([]);
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
     const [bookedSlots, setBookedSlots] = useState([]);
-    // const isBooked = bookedSlots.includes(slot);
 
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat("en-IN").format(value);
-    };
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -73,7 +66,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                     Array.isArray(data) ? data : data.services || [],
                 );
             } catch (err) {
-                console.error("Error fetching services:", err);
+                console.error(err);
             }
         };
         fetchServices();
@@ -85,31 +78,23 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 `${API_BASE_URL}/api/doctor/timing/get_availability`,
             );
             const data = await res.json();
-
-            if (data.success) {
-                setAvailability(data.availability || []);
-            }
+            if (data.success) setAvailability(data.availability || []);
         };
-
         fetchAvailability();
     }, [API_BASE_URL]);
 
     useEffect(() => {
         if (!availability.length) return;
-
         const fetchSlots = async () => {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
             );
             const data = await res.json();
-
             const booked = data.slots || [];
             setBookedSlots(booked);
-
             const selectedDay = new Date(appointmentDate)
                 .toLocaleDateString("en-US", { weekday: "short" })
                 .slice(0, 3);
-
             const dayData = availability.find((d) =>
                 d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
             );
@@ -117,9 +102,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 setTimeSlots([]);
                 return;
             }
-
             let allSlots = [];
-
             dayData.slots.forEach((slot) => {
                 const generated = generateSlots(
                     slot.startTime,
@@ -128,133 +111,138 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 );
                 allSlots = [...allSlots, ...generated];
             });
-
             setTimeSlots(allSlots);
         };
-
         fetchSlots();
     }, [appointmentDate, availability, API_BASE_URL]);
 
-    // ✅ FIRST: groupedSlots
     const groupedSlots = useMemo(() => {
-        const groups = {
-            Morning: [],
-            Afternoon: [],
-            Evening: [],
-        };
-
+        const groups = { Morning: [], Afternoon: [], Evening: [] };
         timeSlots.forEach((slot) => {
             const hour = parseInt(slot.split(":")[0]);
-
             if (hour < 12) groups.Morning.push(slot);
             else if (hour < 16) groups.Afternoon.push(slot);
             else groups.Evening.push(slot);
         });
-
         return groups;
     }, [timeSlots]);
 
-    // ✅ SECOND: allSlots
-    const allSlots = useMemo(() => {
-        let slots = [];
+    // const allSlots = useMemo(() => {
+    //     let slots = [];
+    //     Object.values(groupedSlots).forEach((g) => {
+    //         slots = [...slots, ...g];
+    //     });
+    //     return slots.sort((a, b) => {
+    //         const [h1, m1] = a.split(":").map(Number);
+    //         const [h2, m2] = b.split(":").map(Number);
+    //         return h1 * 60 + m1 - (h2 * 60 + m2);
+    //     });
+    // }, [groupedSlots]);
 
-        Object.values(groupedSlots).forEach((group) => {
-            slots = [...slots, ...group];
-        });
-
-        return slots.sort((a, b) => {
-            const [h1, m1] = a.split(":").map(Number);
-            const [h2, m2] = b.split(":").map(Number);
-            return h1 * 60 + m1 - (h2 * 60 + m2);
-        });
-    }, [groupedSlots]);
-
-    // ✅ CURRENT SLOT
+    const isToday = useMemo(() => {
+        const today = new Date().toISOString().slice(0, 10);
+        return appointmentDate === today;
+    }, [appointmentDate]);
     const currentSlot = useMemo(() => {
+        if (!timeSlots.length) return null;
+
+        // 🔥 if future date → return first available
+        if (!isToday) {
+            return (
+                timeSlots.find((slot) => !bookedSlots.includes(slot)) || null
+            );
+        }
+
+        // ✅ today logic
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        let current = null;
+        let index = -1;
 
-        for (let slot of allSlots) {
-            const [h, m] = slot.split(":").map(Number);
+        for (let i = 0; i < timeSlots.length; i++) {
+            const [h, m] = timeSlots[i].split(":").map(Number);
             const minutes = h * 60 + m;
 
             if (minutes <= currentMinutes) {
-                current = slot;
-            } else {
-                break;
+                index = i;
+            } else break;
+        }
+
+        if (index === -1) index = 0;
+
+        for (let i = index; i < timeSlots.length; i++) {
+            if (!bookedSlots.includes(timeSlots[i])) {
+                return timeSlots[i];
             }
         }
 
-        return current;
-    }, [allSlots]);
-
-    // ✅ NEXT SLOT (AFTER CURRENT)
-    const nextSlot = useMemo(() => {
-        if (!currentSlot) {
-            return allSlots.find((s) => !bookedSlots.includes(s)) || null;
-        }
-
-        const index = allSlots.indexOf(currentSlot);
-
-        for (let i = index + 1; i < allSlots.length; i++) {
-            if (!bookedSlots.includes(allSlots[i])) {
-                return allSlots[i];
+        for (let i = index - 1; i >= 0; i--) {
+            if (!bookedSlots.includes(timeSlots[i])) {
+                return timeSlots[i];
             }
         }
 
         return null;
-    }, [allSlots, currentSlot, bookedSlots]);
+    }, [timeSlots, bookedSlots, isToday]);
+
+    const nextSlot = useMemo(() => {
+        if (!currentSlot || !timeSlots.length) return null;
+
+        let index = timeSlots.indexOf(currentSlot);
+
+        // 🔥 FIX: if not found, find closest slot
+        if (index === -1) {
+            const [h, m] = currentSlot.split(":").map(Number);
+            const currentMinutes = h * 60 + m;
+
+            index =
+                timeSlots.findIndex((slot) => {
+                    const [sh, sm] = slot.split(":").map(Number);
+                    return sh * 60 + sm > currentMinutes;
+                }) - 1;
+
+            if (index < 0) index = 0;
+        }
+
+        // ✅ forward search only
+        for (let i = index + 1; i < timeSlots.length; i++) {
+            if (!bookedSlots.includes(timeSlots[i])) {
+                return timeSlots[i];
+            }
+        }
+
+        return null;
+    }, [timeSlots, currentSlot, bookedSlots]);
 
     useEffect(() => {
-        if (!nextSlot) return;
+        if (currentSlot) setSelectedSlot(currentSlot);
+    }, [currentSlot]);
 
-        setSelectedSlot(nextSlot);
-    }, [nextSlot]);
-    // CALCULATE TOTAL
-    const serviceTotal = useMemo(() => {
-        return service.reduce(
-            (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
-            0,
-        );
-    }, [service, serviceAmounts]);
-
+    const serviceTotal = useMemo(
+        () =>
+            service.reduce(
+                (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
+                0,
+            ),
+        [service, serviceAmounts],
+    );
     const finalAmount = serviceTotal;
-
-    // AUTO SET COLLECTED = FINAL WHEN SERVICES CHANGE
-
     useEffect(() => {
-        setPatient((prev) => ({
-            ...prev,
-            amount: finalAmount,
-        }));
+        setPatient((prev) => ({ ...prev, amount: finalAmount }));
     }, [finalAmount]);
-
-    // INPUT HANDLER
-
-    const onChange = (e) => {
-        setPatient({ ...patient, [e.target.name]: e.target.value });
-    };
     const calculatedDiscount = useMemo(() => {
         if (!discount || discount <= 0) return 0;
-
-        let value = isPercent ? (finalAmount * discount) / 100 : discount;
-
-        return Math.round(value);
+        return Math.round(
+            isPercent ? (finalAmount * discount) / 100 : discount,
+        );
     }, [discount, isPercent, finalAmount]);
-
     useEffect(() => {
         if (collectFull) {
-            const autoCollected = Math.max(
+            const auto = Math.max(
                 Math.round(finalAmount - calculatedDiscount),
                 0,
             );
-
-            setPatient((prev) => ({
-                ...prev,
-                amount: autoCollected,
-            }));
+            setPatient((prev) => ({ ...prev, amount: auto }));
         }
     }, [calculatedDiscount, finalAmount, collectFull]);
 
@@ -274,12 +262,11 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
         setAppointmentDate(new Date().toISOString().slice(0, 10));
         setPaymentType("Cash");
     };
+    const onChange = (e) =>
+        setPatient({ ...patient, [e.target.name]: e.target.value });
 
-    // SUBMIT
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // 🚨 SERVICE REQUIRED
         if (!service || service.length === 0) {
             showAlert("Please select at least one service", "warning");
             return;
@@ -288,7 +275,6 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             showAlert("Mobile number must be exactly 10 digits", "warning");
             return;
         }
-
         let finalNumber = number.trim();
         if (!isPercent && discount > serviceTotal) {
             showAlert("Discount cannot exceed total amount", "warning");
@@ -305,16 +291,11 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             showAlert("Percentage cannot exceed 100%", "warning");
             return;
         }
-        // extract doctorId once
-        if (isPercent) {
-            setDiscount((finalAmount * discount) / 100);
-        }
+        if (isPercent) setDiscount((finalAmount * discount) / 100);
         const collectedAmount = Number(patient.amount) || 0;
         const totalAmount = finalAmount;
-
-        let computedStatus = "Unpaid";
-        let computedRemaining = totalAmount;
-
+        let computedStatus = "Unpaid",
+            computedRemaining = totalAmount;
         if (collectedAmount >= totalAmount) {
             computedStatus = "Paid";
             computedRemaining = 0;
@@ -323,7 +304,6 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             computedRemaining = totalAmount - collectedAmount;
         }
         try {
-            // 1️⃣ CREATE PATIENT
             const patientRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/patient/add_patient`,
                 {
@@ -336,9 +316,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                     }),
                 },
             );
-
             const patientJson = await patientRes.json();
-
             if (!patientJson.success) {
                 showAlert(
                     patientJson.error || "Failed to add patient",
@@ -346,10 +324,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 );
                 return;
             }
-
             const newPatientId = patientJson.patient._id;
-
-            // 2️⃣ CREATE APPOINTMENT (billing happens here)
             const appointmentRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/add_appointment/${newPatientId}`,
                 {
@@ -372,145 +347,146 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                     }),
                 },
             );
-
             const appointmentJson = await appointmentRes.json();
-
             if (appointmentJson.success) {
                 showAlert("Patient and appointment added!", "success");
                 resetForm();
                 setShowModal(false);
                 navigate("/");
-            } else {
-                showAlert("Patient added but appointment failed", "warning");
-            }
+            } else showAlert("Patient added but appointment failed", "warning");
         } catch (err) {
             console.log(err);
             showAlert("Server error", "danger");
         }
     };
 
+    const statusColor =
+        patient.amount >= finalAmount - calculatedDiscount
+            ? "#4ade80"
+            : patient.amount > 0
+              ? "#fb923c"
+              : "#f87171";
+    const statusLabel =
+        patient.amount >= finalAmount - calculatedDiscount
+            ? "Paid"
+            : patient.amount > 0
+              ? "Partial"
+              : "Unpaid";
+
     return (
         showModal && (
-            <form onSubmit={handleSubmit}>
-                <div className="modal-content border-0 shadow-lg rounded-4">
-                    {/* HEADER */}
-                    <div className="modal-header border-0 pb-2">
-                        <div>
-                            <h5 className="modal-title fw-semibold mb-0">
-                                Add Patient
-                            </h5>
-                            <small className="text-theme-secondary">
-                                Create patient & initial appointment
-                            </small>
+            <>
+                <div className="modal-content">
+                    <div className="ap-header">
+                        <div className="ap-header-left">
+                            <div className="ap-header-icon">
+                                <UserPlus size={15} />
+                            </div>
+                            <div>
+                                <div className="ap-title">
+                                    Add <em>Patient</em>
+                                </div>
+                                <div className="ap-subtitle">
+                                    Create patient & initial appointment
+                                </div>
+                            </div>
                         </div>
                         <button
-                            type="button"
-                            className="btn-close"
+                            className="ap-close"
                             onClick={() => setShowModal(false)}
-                        />
+                        >
+                            <X size={13} />
+                        </button>
                     </div>
 
-                    {/* BODY */}
-                    <div className="modal-body pt-3">
-                        {/* BASIC INFO */}
-                        <h6 className="text-uppercase text-theme-secondary small mb-3">
-                            Patient Details
-                        </h6>
-                        <div className="row g-3 mb-4">
-                            <div className="col-md-6">
-                                <label className="form-label small">
-                                    Full Name
-                                </label>
-                                <input
-                                    type="text"
-                                    className="form-control rounded-3"
-                                    name="name"
-                                    value={name}
-                                    onChange={onChange}
-                                    placeholder="Enter patient name"
-                                    required
-                                />
-                            </div>
-
-                            <div className="col-md-3">
-                                <label className="form-label small">
-                                    Gender
-                                </label>
-                                <select
-                                    className="form-select rounded-3"
-                                    name="gender"
-                                    value={gender}
-                                    onChange={onChange}
+                    <form onSubmit={handleSubmit}>
+                        <div className="ap-body">
+                            {/* Patient Details */}
+                            <div className="ap-section">Patient Details</div>
+                            <div className="ap-grid3">
+                                <div
+                                    className="ap-field"
+                                    style={{ gridColumn: "span 1" }}
                                 >
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                </select>
+                                    <label className="ap-label">
+                                        Full Name *
+                                    </label>
+                                    <input
+                                        className="ap-input"
+                                        name="name"
+                                        value={name}
+                                        onChange={onChange}
+                                        placeholder="Patient name"
+                                        required
+                                    />
+                                </div>
+                                <div className="ap-field">
+                                    <label className="ap-label">Gender</label>
+                                    <select
+                                        className="ap-select"
+                                        name="gender"
+                                        value={gender}
+                                        onChange={onChange}
+                                    >
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div className="ap-field">
+                                    <label className="ap-label">Age</label>
+                                    <input
+                                        className="ap-input"
+                                        type="number"
+                                        name="age"
+                                        value={age}
+                                        onChange={onChange}
+                                        placeholder="Age"
+                                    />
+                                </div>
                             </div>
-
-                            <div className="col-md-3">
-                                <label className="form-label small">Age</label>
+                            <div className="ap-field">
+                                <label className="ap-label">
+                                    Mobile Number
+                                </label>
                                 <input
-                                    type="number"
-                                    className="form-control rounded-3"
-                                    name="age"
-                                    value={age}
-                                    onChange={onChange}
-                                    placeholder="Age"
+                                    className="ap-input"
+                                    type="tel"
+                                    name="number"
+                                    value={number}
+                                    placeholder="10-digit number"
+                                    onChange={(e) => {
+                                        const d = e.target.value.replace(
+                                            /\D/g,
+                                            "",
+                                        );
+                                        if (d.length <= 10)
+                                            setPatient({
+                                                ...patient,
+                                                number: d,
+                                            });
+                                    }}
                                 />
                             </div>
-                        </div>
-                        {/* CONTACT */}
-                        <div className="mb-4">
-                            <label className="form-label small">
-                                Mobile Number
-                            </label>
-                            <input
-                                type="tel"
-                                className="form-control rounded-3"
-                                name="number"
-                                value={number}
-                                placeholder="10-digit mobile number"
-                                onChange={(e) => {
-                                    const onlyDigits = e.target.value.replace(
-                                        /\D/g,
-                                        "",
-                                    );
-                                    if (onlyDigits.length <= 10) {
-                                        setPatient({
-                                            ...patient,
-                                            number: onlyDigits,
-                                        });
-                                    }
-                                }}
-                            />
-                        </div>
-                        {/* SERVICES */}
-                        <h6 className="text-uppercase text-theme-secondary small mb-2">
-                            Services & Billing
-                        </h6>
-                        <div className="mb-3">
+
+                            {/* Services */}
+                            <div className="ap-section">Services & Billing</div>
                             <ServiceList
                                 services={availableServices}
                                 selectedServices={service}
-                                onAdd={(serviceObj) => {
+                                onAdd={(s) => {
                                     setPatient((prev) =>
                                         prev.service.some(
-                                            (s) => s._id === serviceObj._id,
+                                            (x) => x._id === s._id,
                                         )
                                             ? prev
                                             : {
                                                   ...prev,
-                                                  service: [
-                                                      ...prev.service,
-                                                      serviceObj,
-                                                  ],
+                                                  service: [...prev.service, s],
                                               },
                                     );
-
                                     setServiceAmounts((prev) => ({
                                         ...prev,
-                                        [serviceObj._id]:
-                                            serviceObj.amount ?? 0,
+                                        [s._id]: s.amount ?? 0,
                                     }));
                                 }}
                                 onRemove={(id) => {
@@ -520,271 +496,310 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                             (s) => s._id !== id,
                                         ),
                                     }));
-
                                     setServiceAmounts((prev) => {
-                                        const copy = { ...prev };
-                                        delete copy[id];
-                                        return copy;
+                                        const c = { ...prev };
+                                        delete c[id];
+                                        return c;
                                     });
                                 }}
                             />
-                        </div>
-                        {/* BILLING */}
-                        {service.length > 0 && (
-                            <div className="mb-4">
-                                {/* SERVICES TABLE */}
-                                <table className="table table-sm align-middle mb-3">
-                                    <thead className="table-theme">
-                                        <tr>
-                                            <th>Service</th>
-                                            <th className="text-end">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+
+                            {service.length > 0 && (
+                                <>
+                                    <div style={{ marginTop: 12 }}>
                                         {service.map((s) => (
-                                            <tr
+                                            <div
                                                 key={s._id}
-                                                className="service-row"
+                                                className="ap-service-row"
                                             >
-                                                <td className="service-name">
+                                                <span className="ap-service-name">
                                                     {s.name}
-                                                </td>
-
-                                                <td className="text-end">
-                                                    <div className="amount-input-wrapper">
-                                                        <IndianRupee
-                                                            size={14}
-                                                            className="me-1 text-theme-secondary"
-                                                        />
-                                                        <input
-                                                            type="number"
-                                                            className="amount-input"
-                                                            value={
-                                                                serviceAmounts[
-                                                                    s._id
-                                                                ] ?? s.amount
-                                                            }
-                                                            onChange={(e) =>
-                                                                setServiceAmounts(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        [s._id]:
-                                                                            Number(
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                            ),
-                                                                    }),
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                </span>
+                                                <div className="ap-amount-wrap">
+                                                    <IndianRupee size={12} />
+                                                    <input
+                                                        type="number"
+                                                        className="ap-amount-input"
+                                                        value={
+                                                            serviceAmounts[
+                                                                s._id
+                                                            ] ?? s.amount
+                                                        }
+                                                        onChange={(e) =>
+                                                            setServiceAmounts(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    [s._id]:
+                                                                        Number(
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                }),
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </div>
 
-                                {/* TOTAL */}
-                                <div className="d-flex justify-content-between fw-semibold mt-3">
-                                    <span>Final Amount</span>
-                                    <span className="text-primary">
-                                        <IndianRupee size={18} />{" "}
-                                        {formatCurrency(finalAmount)}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                        {/* DISCOUNT SECTION */}
-                        <div className="mb-4">
-                            <div className="d-flex justify-content-between align-items-center mb-2">
-                                <label className="form-label fw-semibold mb-0">
-                                    Discount
-                                </label>
-                                <div className="form-check form-switch">
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        checked={isPercent}
-                                        onChange={(e) =>
-                                            setIsPercent(e.target.checked)
-                                        }
-                                    />
-                                    <label className="form-check-label small">
-                                        {isPercent ? (
-                                            "Percentage (%)"
-                                        ) : (
-                                            <>
-                                                Flat Amount{" "}
-                                                <IndianRupee size={18} />
-                                            </>
+                                    {/* Discount */}
+                                    <div
+                                        className="ap-discount-row"
+                                        style={{ marginTop: 10 }}
+                                    >
+                                        <label
+                                            className="ap-label"
+                                            style={{
+                                                margin: 0,
+                                                whiteSpace: "nowrap",
+                                            }}
+                                        >
+                                            Discount
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="ap-input"
+                                            placeholder="0"
+                                            value={discount}
+                                            min={0}
+                                            max={isPercent ? 100 : finalAmount}
+                                            onChange={(e) => {
+                                                let v = Number(e.target.value);
+                                                if (v < 0) v = 0;
+                                                if (isPercent && v > 100)
+                                                    v = 100;
+                                                if (
+                                                    !isPercent &&
+                                                    v > finalAmount
+                                                )
+                                                    v = finalAmount;
+                                                setDiscount(v);
+                                            }}
+                                            style={{ flex: 1 }}
+                                        />
+                                        <label
+                                            className={`ap-percent-toggle ${isPercent ? "on" : ""}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isPercent}
+                                                onChange={(e) =>
+                                                    setIsPercent(
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                            />
+                                            % Percent
+                                        </label>
+                                    </div>
+
+                                    {/* Summary */}
+                                    <div className="ap-summary">
+                                        <div className="ap-summary-row">
+                                            <span>Subtotal</span>
+                                            <span className="ap-summary-val">
+                                                <IndianRupee size={11} />
+                                                {fmt(finalAmount)}
+                                            </span>
+                                        </div>
+                                        {calculatedDiscount > 0 && (
+                                            <div className="ap-summary-row">
+                                                <span>Discount</span>
+                                                <span
+                                                    className="ap-summary-val"
+                                                    style={{
+                                                        color: "#fb923c",
+                                                    }}
+                                                >
+                                                    − <IndianRupee size={11} />
+                                                    {fmt(calculatedDiscount)}
+                                                </span>
+                                            </div>
                                         )}
+                                        <div className="ap-summary-row final">
+                                            <span>Payable Amount</span>
+                                            <span className="ap-summary-val">
+                                                <IndianRupee size={12} />
+                                                {fmt(
+                                                    Math.max(
+                                                        finalAmount -
+                                                            calculatedDiscount,
+                                                        0,
+                                                    ),
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Collected */}
+                                    <div className="ap-collected-row">
+                                        <span className="ap-collect-label">
+                                            Amount Collected{" "}
+                                            {collectFull && (
+                                                <span
+                                                    style={{
+                                                        color: "#2e3d5c",
+                                                        fontSize: 10,
+                                                    }}
+                                                >
+                                                    (Auto)
+                                                </span>
+                                            )}
+                                        </span>
+                                        <div className="ap-amount-wrap">
+                                            <IndianRupee size={12} />
+                                            <input
+                                                type="number"
+                                                className="ap-amount-input"
+                                                value={patient.amount.toFixed(
+                                                    2,
+                                                )}
+                                                disabled={collectFull}
+                                                onChange={(e) =>
+                                                    setPatient((prev) => ({
+                                                        ...prev,
+                                                        amount: Number(
+                                                            e.target.value,
+                                                        ),
+                                                    }))
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                    <label className="ap-checkbox-row">
+                                        <input
+                                            type="checkbox"
+                                            className="ap-checkbox"
+                                            checked={collectFull}
+                                            onChange={(e) =>
+                                                setCollectFull(e.target.checked)
+                                            }
+                                        />
+                                        Collect full payable amount
+                                        automatically
                                     </label>
-                                </div>
+
+                                    {/* Status */}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            marginBottom: 8,
+                                            fontSize: 11,
+                                        }}
+                                    >
+                                        <span style={{ color: "#4a5a7a" }}>
+                                            Remaining:{" "}
+                                            <IndianRupee
+                                                size={11}
+                                                style={{
+                                                    display: "inline",
+                                                }}
+                                            />
+                                            {fmt(
+                                                Math.max(
+                                                    finalAmount -
+                                                        patient.amount -
+                                                        calculatedDiscount,
+                                                    0,
+                                                ),
+                                            )}
+                                        </span>
+                                        <span
+                                            className="ap-status-badge"
+                                            style={{
+                                                background: `${statusColor}12`,
+                                                borderColor: `${statusColor}30`,
+                                                color: statusColor,
+                                            }}
+                                        >
+                                            {statusLabel}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Appointment */}
+                            <div className="ap-section">
+                                Appointment & Payment
                             </div>
-                            <input
-                                type="number"
-                                className="form-control rounded-3"
-                                placeholder={
-                                    isPercent ? "Enter %" : "Enter amount"
-                                }
-                                value={discount}
-                                min={0}
-                                max={isPercent ? 100 : finalAmount}
-                                onChange={(e) => {
-                                    let value = Number(e.target.value);
-                                    if (value < 0) value = 0;
-                                    if (isPercent && value > 100) value = 100;
-                                    if (!isPercent && value > finalAmount)
-                                        value = finalAmount;
-                                    setDiscount(value);
-                                }}
-                            />
-                        </div>
-                        {/* AMOUNT COLLECTED */}
-                        <div className="amount-collect-wrapper mb-3">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="fw-semibold">
-                                    Amount Collected {collectFull && "(Auto)"}
-                                </span>
-
-                                <div className="amount-input-wrapper">
-                                    <IndianRupee
-                                        size={14}
-                                        className="me-1 text-theme-secondary"
-                                    />
-
-                                    <input
-                                        type="number"
-                                        className="amount-input"
-                                        value={patient.amount.toFixed(2)}
-                                        disabled={collectFull}
-                                        onChange={(e) =>
-                                            setPatient((prev) => ({
-                                                ...prev,
-                                                amount: Number(e.target.value),
-                                            }))
+                            <div className="ap-grid2">
+                                <div className="ap-field">
+                                    <label className="ap-label">Date</label>
+                                    <DatePicker
+                                        selected={
+                                            appointmentDate
+                                                ? new Date(appointmentDate)
+                                                : null
                                         }
+                                        onChange={(date) =>
+                                            setAppointmentDate(
+                                                date.toLocaleDateString(
+                                                    "en-CA",
+                                                ),
+                                            )
+                                        }
+                                        dateFormat="yyyy-MM-dd"
+                                        className="ap-input"
+                                        placeholderText="Select date"
+                                        calendarClassName="dp-dark-calendar"
                                     />
                                 </div>
+                                <div className="ap-field">
+                                    <label className="ap-label">
+                                        Payment Type
+                                    </label>
+                                    <select
+                                        className="ap-select"
+                                        value={payment_type}
+                                        onChange={(e) =>
+                                            setPaymentType(e.target.value)
+                                        }
+                                    >
+                                        <option>Cash</option>
+                                        <option>Card</option>
+                                        <option>SBI</option>
+                                        <option>ICICI</option>
+                                        <option>HDFC</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div className="form-check mb-2">
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={collectFull}
-                                onChange={(e) =>
-                                    setCollectFull(e.target.checked)
-                                }
+                            <SlotPicker
+                                groupedSlots={groupedSlots}
+                                selectedSlot={selectedSlot}
+                                setSelectedSlot={setSelectedSlot}
+                                bookedSlots={bookedSlots}
+                                openSection={openSection}
+                                setOpenSection={setOpenSection}
+                                formatTime={formatTime}
+                                currentSlot={currentSlot}
+                                nextSlot={nextSlot}
                             />
-                            <label className="form-check-label small">
-                                Collect full payable amount automatically
-                            </label>
                         </div>
-                        {/* DISCOUNT GIVEN */}
-                        <div className="d-flex justify-content-between">
-                            <span className="text-theme-secondary">
-                                Discount Given
-                            </span>
-                            <span className="text-danger">
-                                <IndianRupee size={18} />{" "}
-                                {formatCurrency(calculatedDiscount)}
-                            </span>
+
+                        <div className="ap-footer">
+                            <button
+                                type="button"
+                                className="ap-btn ap-btn-outline"
+                                onClick={() => setShowModal(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="ap-btn ap-btn-primary"
+                                disabled={service.length === 0}
+                            >
+                                <Check size={13} /> Save & Create
+                            </button>
                         </div>
-                        {/* PAYABLE AMOUNT */}
-                        <div className="d-flex justify-content-between fw-semibold mt-2">
-                            <span>Payable Amount</span>
-                            <span className="text-success">
-                                <IndianRupee size={18} />
-                                {formatCurrency(
-                                    Math.max(
-                                        finalAmount -
-                                            patient.amount -
-                                            calculatedDiscount,
-                                        0,
-                                    ),
-                                )}
-                            </span>
-                        </div>
-                        {/* APPOINTMENT */}
-                        <h6 className="text-uppercase text-theme-secondary mt-4 mb-2">
-                            Appointment & Payment
-                        </h6>
-                        <div className="row g-3">
-                            <div className="col-md-6">
-                                <label className="form-label small">
-                                    Appointment Date
-                                </label>
-
-                                <Flatpickr
-                                    value={appointmentDate}
-                                    options={{
-                                        dateFormat: "Y-m-d",
-                                    }}
-                                    onChange={([date]) => {
-                                        setAppointmentDate(
-                                            date.toLocaleDateString("en-CA"),
-                                        );
-                                    }}
-                                    className="form-control rounded-3"
-                                    placeholder="Select date"
-                                />
-                            </div>
-
-                            <div className="col-md-6">
-                                <label className="form-label small">
-                                    Payment Type
-                                </label>
-                                <select
-                                    className="form-select rounded-3"
-                                    value={payment_type}
-                                    onChange={(e) =>
-                                        setPaymentType(e.target.value)
-                                    }
-                                >
-                                    <option>Cash</option>
-                                    <option>Card</option>
-                                    <option>SBI</option>
-                                    <option>ICICI</option>
-                                    <option>HDFC</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <SlotPicker
-                            groupedSlots={groupedSlots}
-                            selectedSlot={selectedSlot}
-                            setSelectedSlot={setSelectedSlot}
-                            bookedSlots={bookedSlots}
-                            openSection={openSection}
-                            setOpenSection={setOpenSection}
-                            formatTime={formatTime}
-                            currentSlot={currentSlot}
-                            nextSlot={nextSlot}
-                        />
-                    </div>
-
-                    {/* FOOTER */}
-                    <div className="modal-footer border-0">
-                        <button
-                            type="button"
-                            className="btn btn-outline-secondary rounded-3"
-                            onClick={() => setShowModal(false)}
-                        >
-                            Cancel
-                        </button>
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary rounded-3 px-4"
-                            disabled={service.length === 0}
-                        >
-                            Save & Create
-                        </button>
-                    </div>
+                    </form>
                 </div>
-            </form>
+            </>
         )
     );
 };

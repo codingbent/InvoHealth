@@ -10,38 +10,59 @@ import EditService from "./EditService";
 import {
     Plus,
     UserPlus,
-    LogIn,
     FileText,
     CalendarPlus,
     Pencil,
-    Calendar,
-    BarChart3,
-    Receipt,
+    X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Pricing from "./Pricing";
 
 const Patient = ({ showAlert }) => {
     const [role, setRole] = useState(null);
+    //eslint-disable-next-line
     const [subscriptionStatus, setSubscriptionStatus] = useState("active");
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [fabOpen, setFabOpen] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+
+    // ✅ Modal states (React controlled)
+    const [showPatientModal, setShowPatientModal] = useState(false);
+    const [showServiceModal, setShowServiceModal] = useState(false);
+    const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
+
+    // ✅ Custom Modal
+    const Modal = ({ isOpen, onClose, children }) => {
+        if (!isOpen) return null;
+
+        return (
+            <div className="modal-backdrop" onClick={onClose}>
+                <div
+                    className="modal-container"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button className="modal-close" onClick={onClose}>
+                        ✕
+                    </button>
+                    {children}
+                </div>
+            </div>
+        );
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
-
         try {
             const decoded = jwtDecode(token);
             setRole(decoded.user.role);
-        } catch (err) {
-            console.error("Invalid token");
+        } catch {
             setRole(null);
         }
     }, []);
@@ -49,21 +70,17 @@ const Patient = ({ showAlert }) => {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
-
         fetch(`${API_BASE_URL}/api/doctor/subscription`, {
-            headers: {
-                "auth-token": token,
-            },
+            headers: { "auth-token": token },
         })
             .then((res) => res.json())
             .then((data) => {
-                if (data.success) {
+                if (data.success)
                     setSubscriptionStatus(data.subscription.status);
-                }
             })
             .catch(() => {});
     }, [API_BASE_URL]);
-    // Navigation Handlers
+
     const closeAppointment = () => {
         setShowAppointment(false);
         localStorage.removeItem("patient");
@@ -79,151 +96,34 @@ const Patient = ({ showAlert }) => {
         setSelectedPatientId(null);
     };
 
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 30);
-
-    const nextBillingDate = trialEnd.toLocaleDateString("en-IN");
-
-    const handleRestrictedAction = (e, modalId) => {
-        if (subscriptionStatus === "expired") {
-            e.preventDefault();
-            e.stopPropagation();
-            setSubscriptionStatus("Expired");
-            showAlert("Plan expired. Please upgrade.", "danger");
-            return;
-        }
-
-        // manually open modal
-        const modal = new window.bootstrap.Modal(
-            document.getElementById(modalId),
-        );
-        modal.show();
-    };
+    // ── Landing ──
     if (!localStorage.getItem("token")) {
         return (
             <motion.div
-                className="container py-5"
-                initial={{ opacity: 0, y: 40 }}
+                className="lp-root"
+                initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
             >
-                {/* HERO */}
-
-                <div className="text-center mb-5">
-                    <h1 className="fw-bold mb-3">
-                        Smart Clinic Management for Modern Doctors
-                    </h1>
-
-                    <p className="text-theme-secondary mb-4">
-                        InvoHealth helps clinics manage{" "}
-                        <strong>
-                            patients, appointments, billing, and reports
-                        </strong>{" "}
-                        in one simple system.
-                    </p>
-
-                    <div className="d-flex justify-content-center gap-3">
-                        <a href="#pricing" className="btn btn-primary px-4">
-                            <UserPlus size={18} />
-                            <span className="ms-2">Start Free Trial</span>
-                        </a>
-
-                        <Link
-                            to="/login"
-                            className="btn btn-outline-primary px-4"
-                        >
-                            <LogIn size={18} />
-                            <span className="ms-2">Login</span>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* FEATURES */}
-
-                <div className="row justify-content-center g-4 mb-5">
-                    {/* PATIENT RECORDS */}
-
-                    <div className="col-lg-3 col-md-6">
-                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
-                            <FileText size={28} className="text-primary" />
-                            <h5 className="mt-3">Patient Records</h5>
-                            <p className="text-theme-secondary small">
-                                Securely store patient details, visit history,
-                                and prescriptions in one place.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* APPOINTMENTS */}
-
-                    <div className="col-lg-3 col-md-6">
-                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
-                            <Calendar size={28} className="text-primary" />
-                            <h5 className="mt-3">Appointments</h5>
-                            <p className="text-theme-secondary small">
-                                Manage appointments and track doctor schedules
-                                and patient visits easily.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* ANALYTICS */}
-
-                    <div className="col-lg-3 col-md-6">
-                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
-                            <BarChart3 size={28} className="text-primary" />
-                            <h5 className="mt-3">Analytics Dashboard</h5>
-                            <p className="text-theme-secondary small">
-                                Monitor revenue, payment distribution, visits,
-                                and top-performing services with visual charts.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* BILLING */}
-
-                    <div className="col-lg-3 col-md-6">
-                        <div className="card feature-card border-0 shadow-sm h-100 text-center p-4">
-                            <Receipt size={28} className="text-primary" />
-                            <h5 className="mt-3">Billing & Invoices</h5>
-                            <p className="text-theme-secondary small">
-                                Generate professional invoices and track clinic
-                                payments and collections easily.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* FREE TRIAL NOTICE */}
-
-                <div id="pricing">
-                    <div className="alert alert-success text-center shadow-sm my-2">
-                        <strong>30-Day Free Trial</strong> - No payment required
-                        today.
-                        <br />
-                        Billing starts only after your trial period ends i.e.{" "}
-                        <strong>{nextBillingDate}</strong>
-                    </div>
-                    <Pricing />
-                </div>
+                <h1>InvoHealth</h1>
+                <Link to="/login">Login</Link>
+                <Pricing />
             </motion.div>
         );
     }
 
-    // Logged In Layout
+    // ── Logged in ──
     return (
         <>
+            {/* FAB BACKDROP */}
             {fabOpen && (
                 <div
                     className="fab-backdrop"
                     onClick={() => setFabOpen(false)}
                 />
             )}
-            {/* FLOATING CREATE ACTION FAB */}
-            <div
-                className={`fab-container ${fabOpen ? "open" : ""}`}
-                onClick={() => setFabOpen(false)}
-            >
+
+            {/* FAB */}
+            <div className={`fab-container ${fabOpen ? "open" : ""}`}>
                 <button
                     className={`fab-main ${fabOpen ? "open" : ""}`}
                     onClick={(e) => {
@@ -231,103 +131,101 @@ const Patient = ({ showAlert }) => {
                         setFabOpen(!fabOpen);
                     }}
                 >
-                    {fabOpen ? <Plus size={37} /> : <Plus size={37} />}
+                    <Plus size={22} />
                 </button>
 
-                {role && (
-                    <button
-                        className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 1 }}
-                        onClick={(e) => {
-                            if (subscriptionStatus === "expired") {
-                                showAlert(
-                                    "Plan expired. Please upgrade.",
-                                    "danger",
-                                );
-                                return;
-                            }
-                            setFabOpen(false);
-                            setShowModal(true);
-                        }}
-                        data-bs-toggle="modal"
-                        data-bs-target="#patientModal"
-                    >
-                        <UserPlus size={18} />
-                        <span className="fab-text">Add Patient</span>
-                    </button>
-                )}
+                {/* Add Patient */}
+                <button
+                    className={`fab-item ${fabOpen ? "show" : ""}`}
+                    style={{ "--i": 1 }}
+                    onClick={() => {
+                        setFabOpen(false);
+                        setShowPatientModal(true);
+                    }}
+                >
+                    <UserPlus size={16} />
+                    <span>Add Patient</span>
+                </button>
 
-                {role && (
-                    <button
-                        className={`fab-item ${fabOpen ? "show" : ""}`}
-                        style={{ "--i": 2 }}
-                        onClick={(e) => {
-                            setFabOpen(false);
+                {/* Add Appointment */}
+                <button
+                    className={`fab-item ${fabOpen ? "show" : ""}`}
+                    style={{ "--i": 2 }}
+                    onClick={() => {
+                        setFabOpen(false);
+                        setShowAppointment(true);
+                    }}
+                >
+                    <CalendarPlus size={16} />
+                    <span>Add Appointment</span>
+                </button>
 
-                            if (subscriptionStatus === "expired") {
-                                showAlert(
-                                    "Plan expired. Please upgrade.",
-                                    "danger",
-                                );
-                                return;
-                            }
-
-                            setShowAppointment(true);
-                        }}
-                    >
-                        <CalendarPlus size={18} />
-                        <span className="fab-text">Add Appointment</span>
-                    </button>
-                )}
-
+                {/* Add Service */}
                 {role === "doctor" && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
                         style={{ "--i": 3 }}
-                        data-bs-toggle="modal"
-                        data-bs-target="#serviceModal"
-                        onClick={(e) => {
+                        onClick={() => {
                             setFabOpen(false);
-                            handleRestrictedAction(e, "serviceModal");
+                            setShowServiceModal(true);
                         }}
                     >
-                        <FileText size={18} />
-                        <span className="fab-text">Add Service</span>
+                        <FileText size={16} />
+                        <span>Add Service</span>
                     </button>
                 )}
 
+                {/* Edit Service */}
                 {role === "doctor" && (
                     <button
                         className={`fab-item ${fabOpen ? "show" : ""}`}
                         style={{ "--i": 4 }}
-                        data-bs-toggle="modal"
-                        data-bs-target="#editServiceModal"
-                        onClick={(e) => {
+                        onClick={() => {
                             setFabOpen(false);
-                            handleRestrictedAction(e, "editServiceModal");
+                            setShowEditServiceModal(true);
                         }}
                     >
-                        <Pencil size={18} />
-                        <span className="fab-text">Edit Service</span>
+                        <Pencil size={16} />
+                        <span>Edit Service</span>
                     </button>
                 )}
             </div>
 
-            {/* MODALS */}
-            <div className="modal fade" id="patientModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-centered">
-                    {subscriptionStatus === "active" && (
-                        <AddPatient
-                            showAlert={showAlert}
-                            showModal={showModal}
-                            setShowModal={setShowModal}
-                        />
-                    )}
-                </div>
-            </div>
+            {/* ✅ MODALS (React only) */}
 
-            {/* MAIN CONTENT AREA */}
-            <div className="page-container px-2 px-md-4">
+            <Modal
+                isOpen={showPatientModal}
+                onClose={() => setShowPatientModal(false)}
+            >
+                <AddPatient
+                    showAlert={showAlert}
+                    showModal={showPatientModal}
+                    setShowModal={setShowPatientModal}
+                />
+            </Modal>
+
+            <Modal
+                isOpen={showServiceModal}
+                onClose={() => setShowServiceModal(false)}
+            >
+                <AddServices
+                    showAlert={showAlert}
+                    onClose={() => setShowServiceModal(false)}
+                />
+            </Modal>
+
+            <Modal
+                isOpen={showEditServiceModal}
+                onClose={() => setShowEditServiceModal(false)}
+            >
+                <EditService
+                    showAlert={showAlert}
+                    onClose={() => setShowEditServiceModal(false)}
+                />
+            </Modal>
+
+            {/* MAIN CONTENT */}
+            <div className="app-page">
                 {!showAppointment && !showPatientDetails && (
                     <PatientList
                         showAlert={showAlert}
@@ -336,21 +234,19 @@ const Patient = ({ showAlert }) => {
                 )}
 
                 {showAppointment && (
-                    <div className="appointment container mt-3">
-                        {subscriptionStatus === "active" && (
-                            <AddAppointment showAlert={showAlert} />
-                        )}
+                    <div className="app-section">
+                        <AddAppointment showAlert={showAlert} />
                         <button
-                            className="btn btn-secondary mt-3"
+                            className="app-close-btn"
                             onClick={closeAppointment}
                         >
-                            Close
+                            <X size={14} /> Close
                         </button>
                     </div>
                 )}
 
                 {showPatientDetails && selectedPatientId && (
-                    <div className="patient-details container mt-3">
+                    <div className="app-section">
                         <PatientDetails
                             patientId={selectedPatientId}
                             showAlert={showAlert}
@@ -358,22 +254,6 @@ const Patient = ({ showAlert }) => {
                         />
                     </div>
                 )}
-            </div>
-
-            <div className="modal fade" id="serviceModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-centered">
-                    {subscriptionStatus === "active" && (
-                        <AddServices showAlert={showAlert} />
-                    )}
-                </div>
-            </div>
-
-            <div className="modal fade" id="editServiceModal" tabIndex="-1">
-                <div className="modal-dialog modal-lg modal-dialog-centered">
-                    <div className="modal-content">
-                        <EditService showAlert={showAlert} />
-                    </div>
-                </div>
             </div>
         </>
     );

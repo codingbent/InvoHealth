@@ -1,21 +1,30 @@
 import { useEffect, useState, useMemo } from "react";
 import ServiceList from "./ServiceList";
 import { authFetch } from "./authfetch";
-import { IndianRupee, Plus } from "lucide-react";
+import {
+    IndianRupee,
+    Plus,
+    Search,
+    User,
+    CalendarDays,
+    CreditCard,
+    CheckCircle,
+} from "lucide-react";
 import SlotPicker from "./Slotpicker";
 import {
     generateSlots,
-    getNextAvailableSlot,
+    // getNextAvailableSlot,
 } from "../components/utils/Slotsutils";
-import Flatpickr from "react-flatpickr";
-import "flatpickr/dist/themes/dark.css";
+// eslint-disable-next-line
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function AddAppointment({ showAlert }) {
-    /* ===================== STATES ===================== */
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
+
     const [searchText, setSearchText] = useState("");
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
@@ -26,7 +35,7 @@ export default function AddAppointment({ showAlert }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const getTodayIST = () => {
         const now = new Date();
-        const offset = now.getTimezoneOffset(); // in minutes
+        const offset = now.getTimezoneOffset();
         const istTime = new Date(now.getTime() - offset * 60000);
         return istTime.toISOString().slice(0, 10);
     };
@@ -41,81 +50,77 @@ export default function AddAppointment({ showAlert }) {
     const [openSection, setOpenSection] = useState("Morning");
     // eslint-disable-next-line
     const [bookedSlots, setBookedSlots] = useState([]);
-
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
 
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat("en-IN").format(value);
-    };
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
     const discountValue = Math.min(
         isPercent ? (total * discount) / 100 : discount,
         total,
     );
 
-    // ✅ FIRST: groupedSlots
-    const groupedSlots = useMemo(() => {
-        const groups = {
-            Morning: [],
-            Afternoon: [],
-            Evening: [],
-        };
+    const isToday = useMemo(() => {
+        const today = new Date().toISOString().slice(0, 10);
+        return appointmentDate === today;
+    }, [appointmentDate]);
 
+    const groupedSlots = useMemo(() => {
+        const groups = { Morning: [], Afternoon: [], Evening: [] };
         timeSlots.forEach((slot) => {
             const hour = parseInt(slot.split(":")[0]);
-
             if (hour < 12) groups.Morning.push(slot);
             else if (hour < 16) groups.Afternoon.push(slot);
             else groups.Evening.push(slot);
         });
-
         return groups;
     }, [timeSlots]);
 
     const currentSlot = useMemo(() => {
+        if (!timeSlots.length) return null;
+
+        // 🔥 if future date → return first available
+        if (!isToday) {
+            return (
+                timeSlots.find((slot) => !bookedSlots.includes(slot)) || null
+            );
+        }
+
+        // ✅ today logic
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        let current = null;
+        let index = -1;
 
-        timeSlots.forEach((slot) => {
-            const [h, m] = slot.split(":").map(Number);
+        for (let i = 0; i < timeSlots.length; i++) {
+            const [h, m] = timeSlots[i].split(":").map(Number);
             const minutes = h * 60 + m;
 
             if (minutes <= currentMinutes) {
-                current = slot;
-            }
-        });
-
-        return current;
-    }, [timeSlots]);
-
-    const nextSlot = useMemo(() => {
-        if (!currentSlot) {
-            return timeSlots.find((s) => !bookedSlots.includes(s)) || null;
+                index = i;
+            } else break;
         }
 
-        const index = timeSlots.indexOf(currentSlot);
+        if (index === -1) index = 0;
 
-        for (let i = index + 1; i < timeSlots.length; i++) {
+        for (let i = index; i < timeSlots.length; i++) {
+            if (!bookedSlots.includes(timeSlots[i])) {
+                return timeSlots[i];
+            }
+        }
+
+        for (let i = index - 1; i >= 0; i--) {
             if (!bookedSlots.includes(timeSlots[i])) {
                 return timeSlots[i];
             }
         }
 
         return null;
-    }, [timeSlots, currentSlot, bookedSlots]);
-    const remaining = Math.max(finalAmount - collected, 0);
+    }, [timeSlots, bookedSlots, isToday]);
 
+    const remaining = Math.max(finalAmount - collected, 0);
     const status =
         remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 
-    const normalizeTime = (time) => {
-        if (!time) return "";
-
-        const [h, m] = time.split(":");
-        return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
-    };
     useEffect(() => {
         const fetchAvailability = async () => {
             try {
@@ -123,73 +128,88 @@ export default function AddAppointment({ showAlert }) {
                     `${API_BASE_URL}/api/doctor/timing/get_availability`,
                 );
                 const data = await res.json();
-
-                if (data.success) {
-                    setAvailability(data.availability || []);
-                }
+                if (data.success) setAvailability(data.availability || []);
             } catch (err) {
                 console.error(err);
             }
         };
-
         fetchAvailability();
     }, [API_BASE_URL]);
+const nextSlot = useMemo(() => {
+    if (!currentSlot || !timeSlots.length) return null;
 
-    useEffect(() => {
-        if (!timeSlots.length) return;
+    let index = timeSlots.indexOf(currentSlot);
 
-        const next = getNextAvailableSlot(timeSlots, bookedSlots);
+    // 🔥 FIX: if not found, find closest slot
+    if (index === -1) {
+        const [h, m] = currentSlot.split(":").map(Number);
+        const currentMinutes = h * 60 + m;
 
-        if (next) {
-            setSelectedSlot(next);
+        index = timeSlots.findIndex((slot) => {
+            const [sh, sm] = slot.split(":").map(Number);
+            return sh * 60 + sm > currentMinutes;
+        }) - 1;
+
+        if (index < 0) index = 0;
+    }
+
+    // ✅ forward search only
+    for (let i = index + 1; i < timeSlots.length; i++) {
+        if (!bookedSlots.includes(timeSlots[i])) {
+            return timeSlots[i];
         }
-    }, [timeSlots, bookedSlots]);
+    }
+
+    return null;
+}, [timeSlots, currentSlot, bookedSlots]);
+    useEffect(() => {
+        if (currentSlot) setSelectedSlot(currentSlot);
+    }, [currentSlot]);
 
     useEffect(() => {
         if (!availability.length) return;
 
-        const selectedDay = new Date(appointmentDate)
-            .toLocaleDateString("en-US", { weekday: "short" })
-            .slice(0, 3);
+        const fetchData = async () => {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
+            );
+            const data = await res.json();
 
-        const today = new Date();
-        const isToday =
-            new Date(appointmentDate).toDateString() === today.toDateString();
+            const booked = data.slots || [];
+            setBookedSlots(booked);
 
-        const dayData = availability.find((d) =>
-            d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
-        );
-        if (!dayData) {
-            setTimeSlots([]);
-            return;
-        }
+            const selectedDay = new Date(appointmentDate)
+                .toLocaleDateString("en-US", { weekday: "short" })
+                .slice(0, 3);
 
-        let allSlots = [];
+            const dayData = availability.find((d) =>
+                d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
+            );
 
-        dayData.slots.forEach((slot) => {
-            const generated = generateSlots(
-                slot.startTime,
-                slot.endTime,
-                slot.duration || slot.slotduration,
-            ).map(normalizeTime);
-            allSlots = [...allSlots, ...generated];
-        });
+            if (!dayData) {
+                setTimeSlots([]);
+                return;
+            }
 
-        if (isToday) {
-            const currentTime = today.getHours() * 60 + today.getMinutes();
+            let allSlots = [];
 
-            allSlots = allSlots.filter((time) => {
-                const [h, m] = time.split(":").map(Number);
-                return h * 60 + m > currentTime;
+            dayData.slots.forEach((slot) => {
+                const generated = generateSlots(
+                    slot.startTime,
+                    slot.endTime,
+                    slot.slotDuration,
+                );
+                allSlots = [...allSlots, ...generated];
             });
-        }
 
-        setTimeSlots(allSlots);
-    }, [appointmentDate, availability]);
-    const formatTime = (time) => {
-        return time;
-    };
-    /* ===================== FETCH SERVICES ===================== */
+            setTimeSlots(allSlots);
+        };
+
+        fetchData();
+    }, [appointmentDate, availability, API_BASE_URL]);
+
+    const formatTime = (time) => time;
+
     useEffect(() => {
         const fetchServices = async () => {
             try {
@@ -205,14 +225,12 @@ export default function AddAppointment({ showAlert }) {
         fetchServices();
     }, [API_BASE_URL]);
 
-    /* ===================== PATIENT SEARCH (DEBOUNCED) ===================== */
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (!searchText.trim()) {
                 setPatients([]);
                 return;
             }
-
             try {
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/patient/search_patient?q=${searchText}`,
@@ -223,38 +241,30 @@ export default function AddAppointment({ showAlert }) {
                 console.error(err);
             }
         }, 300);
-
         return () => clearTimeout(delay);
     }, [searchText, API_BASE_URL]);
 
-    /* ===================== CALCULATE TOTAL ===================== */
     useEffect(() => {
         const t = services.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
             0,
         );
         setTotal(t);
-
-        let discountValue = 0;
+        let dv = 0;
         if (discount > 0) {
-            discountValue = isPercent ? (t * discount) / 100 : discount;
+            dv = isPercent ? (t * discount) / 100 : discount;
         }
-
-        if (discountValue > t) discountValue = t;
-        setFinalAmount(t - discountValue);
+        if (dv > t) dv = t;
+        setFinalAmount(t - dv);
     }, [services, serviceAmounts, discount, isPercent]);
 
-    /* ===================== HANDLERS ===================== */
     const selectPatient = (p) => {
         setSelectedPatient(p);
         setSearchText("");
         setPatients([]);
     };
-
-    const changeServiceAmount = (id, value) => {
+    const changeServiceAmount = (id, value) =>
         setServiceAmounts((prev) => ({ ...prev, [id]: Number(value) }));
-    };
-
     const resetForm = () => {
         setSelectedPatient(null);
         setServices([]);
@@ -264,78 +274,60 @@ export default function AddAppointment({ showAlert }) {
         setPaymentType("Cash");
         setAppointmentDate(new Date().toISOString().slice(0, 10));
     };
+
     useEffect(() => {
         if (!availability.length) return;
-
         const fetchData = async () => {
             try {
-                // 1. Fetch booked slots
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
                 );
                 const data = await res.json();
                 const booked = data.slots || [];
                 setBookedSlots(booked);
-
-                // 2. Get day
                 const selectedDay = new Date(appointmentDate)
                     .toLocaleDateString("en-US", { weekday: "short" })
                     .slice(0, 3);
-
                 const dayData = availability.find((d) =>
                     d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
                 );
-
                 if (!dayData) {
                     setTimeSlots([]);
                     return;
                 }
-
-                // 3. Generate slots (ONLY ONCE)
                 let allSlots = [];
-
                 dayData.slots.forEach((slot) => {
                     const generated = generateSlots(
                         slot.startTime,
                         slot.endTime,
-                        slot.slotDuration, // ✅ ONLY THIS
+                        slot.slotDuration,
                     );
-
                     allSlots = [...allSlots, ...generated];
                 });
-
                 setTimeSlots(allSlots);
             } catch (err) {
                 console.error(err);
             }
         };
-
         fetchData();
     }, [appointmentDate, availability, API_BASE_URL]);
 
     useEffect(() => {
-        if (!manualOverride) {
-            setCollected(finalAmount);
-        }
+        if (!manualOverride) setCollected(finalAmount);
     }, [manualOverride, finalAmount]);
-    /* ===================== SUBMIT ===================== */
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (isSubmitting) return;
-
         if (!selectedPatient) {
             showAlert("Please select a patient", "warning");
             return;
         }
-
         if (services.length === 0) {
             showAlert("Select at least one service", "warning");
             return;
         }
-
         setIsSubmitting(true);
-
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/add_appointment/${selectedPatient._id}`,
@@ -359,272 +351,379 @@ export default function AddAppointment({ showAlert }) {
                     }),
                 },
             );
-
             const data = await res.json();
-
             if (!res.ok) {
                 showAlert(data.error || "Failed to add appointment", "danger");
                 return;
             }
-
             showAlert("Appointment added successfully", "success");
             resetForm();
-
-            setTimeout(() => {
-                setIsSubmitting(false);
-            }, 1500);
+            setTimeout(() => setIsSubmitting(false), 1500);
         } catch (err) {
             showAlert("Server error", "danger");
             setIsSubmitting(false);
         }
     };
 
-    /* ===================== UI ===================== */
+    const statusColor =
+        status === "Paid"
+            ? "#4ade80"
+            : status === "Partial"
+              ? "#fb923c"
+              : "#f87171";
+
     return (
-        <div className="card modify-modal shadow-sm border-0 rounded-4">
-            <div className="card-body">
-                <h5 className="fw-bold mb-3 text-theme-primary">
-                    <Plus size={18} /> Add Appointment
-                </h5>
-
-                {/* PATIENT SEARCH */}
-                <label className="form-label fw-semibold">Patient</label>
-                <input
-                    className="form-control mb-2"
-                    placeholder="Search by name or phone"
-                    value={searchText}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        setSearchText(value);
-
-                        // if (selectedPatient) {
-                        //     setSelectedPatient(null);
-                        // }
-                    }}
-                />
-
-                {patients.length > 0 && (
-                    <ul className="list-group mb-3">
-                        {patients.map((p) => (
-                            <li
-                                key={p._id}
-                                className="list-group-item list-group-item-action"
-                                style={{ cursor: "pointer" }}
-                                onClick={() => selectPatient(p)}
-                            >
-                                {p.name} — {p.number}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-
-                {selectedPatient && (
-                    <div className="alert alert-success py-2">
-                        Selected: <strong>{selectedPatient.name}</strong>
+        <>
+            <div className="aa-root">
+                {/* Header */}
+                <div className="aa-header">
+                    <div className="aa-header-icon">
+                        <Plus size={16} />
                     </div>
-                )}
+                    <div className="aa-title">
+                        Add <em>Appointment</em>
+                    </div>
+                </div>
 
-                {selectedPatient && (
-                    <form onSubmit={handleSubmit}>
-                        {/* DATE */}
-                        <div className="col-md-6">
-                            <label className="form-label small">
-                                Appointment Date
-                            </label>
+                <div className="aa-body">
+                    {/* Patient search */}
+                    <div className="aa-section">
+                        <div className="aa-section-line" />
+                        <span className="aa-section-title">Patient</span>
+                        <div className="aa-section-line" />
+                    </div>
 
-                            <Flatpickr
-                                value={appointmentDate}
-                                options={{
-                                    dateFormat: "Y-m-d",
-                                }}
-                                onChange={([date]) => {
-                                    setAppointmentDate(
-                                        date.toLocaleDateString("en-CA"),
-                                    );
-                                }}
-                                className="form-control rounded-3"
-                                placeholder="Select date"
+                    <div className="aa-mb">
+                        <label className="aa-label">Search Patient</label>
+                        <div className="aa-search-wrap">
+                            <span className="aa-search-icon">
+                                <Search size={14} />
+                            </span>
+                            <input
+                                className="aa-input aa-search-input"
+                                placeholder="Name or phone number"
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
                             />
                         </div>
-                        <SlotPicker
-                            groupedSlots={groupedSlots}
-                            selectedSlot={selectedSlot}
-                            setSelectedSlot={setSelectedSlot}
-                            bookedSlots={bookedSlots}
-                            openSection={openSection}
-                            setOpenSection={setOpenSection}
-                            formatTime={formatTime}
-                            currentSlot={currentSlot}
-                            nextSlot={nextSlot}
-                        />
+                        {patients.length > 0 && (
+                            <div className="aa-results">
+                                {patients.map((p) => (
+                                    <div
+                                        key={p._id}
+                                        className="aa-result-item"
+                                        onClick={() => selectPatient(p)}
+                                    >
+                                        <User size={13} />
+                                        <span className="aa-result-name">
+                                            {p.name}
+                                        </span>
+                                        <span className="aa-result-sep">—</span>
+                                        <span>{p.number}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {selectedPatient && (
+                            <div className="aa-selected-patient">
+                                <div className="aa-selected-avatar">
+                                    {selectedPatient.name
+                                        ?.charAt(0)
+                                        ?.toUpperCase()}
+                                </div>
+                                <span>{selectedPatient.name}</span>
+                                <CheckCircle
+                                    size={14}
+                                    style={{
+                                        marginLeft: "auto",
+                                        color: "#4ade80",
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
 
-                        {/* SERVICES */}
-                        <label className="form-label fw-semibold">
-                            Services
-                        </label>
-                        <ServiceList
-                            services={allServices}
-                            selectedServices={services}
-                            onAdd={(s) =>
-                                setServices((prev) =>
-                                    prev.some((x) => x._id === s._id)
-                                        ? prev
-                                        : [...prev, s],
-                                )
-                            }
-                            onRemove={(id) => {
-                                setServices((prev) =>
-                                    prev.filter((s) => s._id !== id),
-                                );
-                                setServiceAmounts((prev) => {
-                                    const c = { ...prev };
-                                    delete c[id];
-                                    return c;
-                                });
-                            }}
-                        />
+                    {selectedPatient && (
+                        <form onSubmit={handleSubmit}>
+                            {/* Date & Slot */}
+                            <div className="aa-section">
+                                <div className="aa-section-line" />
+                                <span className="aa-section-title">
+                                    Schedule
+                                </span>
+                                <div className="aa-section-line" />
+                            </div>
 
-                        {/* BILL */}
-                        {services.length > 0 && (
-                            <>
-                                <ul className="list-group my-3">
-                                    {services.map((s) => (
-                                        <li
-                                            key={s._id}
-                                            className="list-group-item d-flex justify-content-between align-items-center"
+                            <div className="aa-mb">
+                                <label className="aa-label">
+                                    <CalendarDays
+                                        size={11}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Appointment Date
+                                </label>
+                                <DatePicker
+                                    selected={
+                                        appointmentDate
+                                            ? new Date(appointmentDate)
+                                            : null
+                                    }
+                                    onChange={(date) =>
+                                        setAppointmentDate(
+                                            date.toLocaleDateString("en-CA"),
+                                        )
+                                    }
+                                    dateFormat="yyyy-MM-dd"
+                                    className="ap-input"
+                                    placeholderText="Select date"
+                                    calendarClassName="dp-dark-calendar"
+                                />
+                            </div>
+
+                            <SlotPicker
+                                groupedSlots={groupedSlots}
+                                selectedSlot={selectedSlot}
+                                setSelectedSlot={setSelectedSlot}
+                                bookedSlots={bookedSlots}
+                                openSection={openSection}
+                                setOpenSection={setOpenSection}
+                                formatTime={formatTime}
+                                currentSlot={currentSlot}
+                                nextSlot={nextSlot}
+                            />
+
+                            {/* Services */}
+                            <div className="aa-section">
+                                <div className="aa-section-line" />
+                                <span className="aa-section-title">
+                                    Services
+                                </span>
+                                <div className="aa-section-line" />
+                            </div>
+
+                            <div className="aa-mb">
+                                <ServiceList
+                                    services={allServices}
+                                    selectedServices={services}
+                                    onAdd={(s) =>
+                                        setServices((prev) =>
+                                            prev.some((x) => x._id === s._id)
+                                                ? prev
+                                                : [...prev, s],
+                                        )
+                                    }
+                                    onRemove={(id) => {
+                                        setServices((prev) =>
+                                            prev.filter((s) => s._id !== id),
+                                        );
+                                        setServiceAmounts((prev) => {
+                                            const c = { ...prev };
+                                            delete c[id];
+                                            return c;
+                                        });
+                                    }}
+                                />
+                            </div>
+
+                            {/* Billing */}
+                            {services.length > 0 && (
+                                <>
+                                    <div className="aa-section">
+                                        <div className="aa-section-line" />
+                                        <span className="aa-section-title">
+                                            Billing
+                                        </span>
+                                        <div className="aa-section-line" />
+                                    </div>
+
+                                    {/* Service amounts */}
+                                    <div className="aa-mb">
+                                        {services.map((s) => (
+                                            <div
+                                                key={s._id}
+                                                className="aa-service-row"
+                                            >
+                                                <span className="aa-service-row-name">
+                                                    {s.name}
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    className="aa-amount-input"
+                                                    value={
+                                                        serviceAmounts[s._id] ??
+                                                        s.amount
+                                                    }
+                                                    onChange={(e) =>
+                                                        changeServiceAmount(
+                                                            s._id,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Discount */}
+                                    <div className="aa-discount-row aa-mb">
+                                        <label className="aa-label">
+                                            Discount
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="aa-input"
+                                            placeholder="0"
+                                            value={discount}
+                                            onChange={(e) =>
+                                                setDiscount(
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            style={{ flex: 1 }}
+                                        />
+                                        <label
+                                            className={`aa-percent-toggle ${isPercent ? "on" : ""}`}
                                         >
-                                            {s.name}
                                             <input
-                                                type="number"
-                                                className="form-control w-25"
-                                                value={
-                                                    serviceAmounts[s._id] ??
-                                                    s.amount
-                                                }
+                                                type="checkbox"
+                                                checked={isPercent}
                                                 onChange={(e) =>
-                                                    changeServiceAmount(
-                                                        s._id,
-                                                        e.target.value,
+                                                    setIsPercent(
+                                                        e.target.checked,
                                                     )
                                                 }
                                             />
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                {/* DISCOUNT */}
-                                <div className="mb-3 d-flex justify-content-around align-items-center">
-                                    <label className="form-label fw-semibold mb-0">
-                                        Discount
-                                    </label>{" "}
-                                    <input
-                                        type="number"
-                                        className="form-control w-50"
-                                        placeholder="Discount"
-                                        value={discount}
-                                        onChange={(e) =>
-                                            setDiscount(Number(e.target.value))
-                                        }
-                                    />
-                                    <div className="form-check">
-                                        <input
-                                            className="form-check-input"
-                                            type="checkbox"
-                                            checked={isPercent}
-                                            onChange={(e) =>
-                                                setIsPercent(e.target.checked)
-                                            }
-                                        />
-                                        <label className="form-check-label">
-                                            %
+                                            % Percent
                                         </label>
                                     </div>
-                                </div>
 
-                                {/* SUMMARY */}
-                                <div className="summary-box">
-                                    <div className="my-1">
-                                        Total: <IndianRupee size={15} />{" "}
-                                        {formatCurrency(total)}
+                                    {/* Summary */}
+                                    <div className="aa-summary">
+                                        <div className="aa-summary-row">
+                                            <span>Total</span>
+                                            <span className="aa-summary-val">
+                                                <IndianRupee size={12} />
+                                                {fmt(total)}
+                                            </span>
+                                        </div>
+                                        {discountValue > 0 && (
+                                            <div className="aa-summary-row">
+                                                <span>Discount</span>
+                                                <span
+                                                    className="aa-summary-val"
+                                                    style={{ color: "#fb923c" }}
+                                                >
+                                                    − <IndianRupee size={12} />
+                                                    {fmt(discountValue)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="aa-summary-row final">
+                                            <span>Final Amount</span>
+                                            <span className="aa-summary-val">
+                                                <IndianRupee size={13} />
+                                                {fmt(finalAmount)}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="my-1">
-                                        Discount: <IndianRupee size={15} />{" "}
-                                        {formatCurrency(discountValue)}
-                                    </div>
-                                    <div className="fw-bold my-1">
-                                        Final: <IndianRupee size={15} />{" "}
-                                        {formatCurrency(finalAmount)}
-                                    </div>
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">
-                                        Amount Collected
-                                    </label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        value={collected}
-                                        min={0}
-                                        max={finalAmount}
-                                        onChange={(e) => {
-                                            setManualOverride(true);
-                                            setCollected(
-                                                Number(e.target.value),
-                                            );
-                                        }}
-                                    />
-                                </div>
 
-                                <div className="summary-box">
-                                    <div>
-                                        Remaining: <IndianRupee size={18} />{" "}
-                                        {remaining}
+                                    {/* Collected */}
+                                    <div className="aa-mb">
+                                        <label className="aa-label">
+                                            Amount Collected
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="aa-input"
+                                            value={collected}
+                                            min={0}
+                                            max={finalAmount}
+                                            onChange={(e) => {
+                                                setManualOverride(true);
+                                                setCollected(
+                                                    Number(e.target.value),
+                                                );
+                                            }}
+                                        />
                                     </div>
-                                    <div className="fw-semibold">
-                                        Status:{" "}
+
+                                    {/* Status */}
+                                    <div className="aa-status-row">
+                                        <span>
+                                            Remaining{" "}
+                                            <IndianRupee
+                                                size={12}
+                                                style={{ display: "inline" }}
+                                            />
+                                            {fmt(remaining)}
+                                        </span>
                                         <span
-                                            className={
-                                                status === "Paid"
-                                                    ? "text-success"
-                                                    : status === "Partial"
-                                                      ? "text-warning"
-                                                      : "text-danger"
-                                            }
+                                            className="aa-status-badge"
+                                            style={{
+                                                background: `${statusColor}18`,
+                                                border: `1px solid ${statusColor}40`,
+                                                color: statusColor,
+                                            }}
                                         >
                                             {status}
                                         </span>
                                     </div>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
 
-                        {/* PAYMENT */}
-                        <div className="mb-3">
-                            <label className="form-label">Payment Type</label>
-                            <select
-                                className="form-select"
-                                value={paymentType}
-                                onChange={(e) => setPaymentType(e.target.value)}
+                            {/* Payment type */}
+                            <div className="aa-section">
+                                <div className="aa-section-line" />
+                                <span className="aa-section-title">
+                                    Payment
+                                </span>
+                                <div className="aa-section-line" />
+                            </div>
+
+                            <div className="aa-mb">
+                                <label className="aa-label">
+                                    <CreditCard
+                                        size={11}
+                                        style={{
+                                            display: "inline",
+                                            marginRight: 5,
+                                        }}
+                                    />
+                                    Payment Type
+                                </label>
+                                <select
+                                    className="aa-select"
+                                    value={paymentType}
+                                    onChange={(e) =>
+                                        setPaymentType(e.target.value)
+                                    }
+                                >
+                                    <option>Cash</option>
+                                    <option>Card</option>
+                                    <option>SBI</option>
+                                    <option>ICICI</option>
+                                    <option>HDFC</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="aa-submit"
+                                disabled={isSubmitting || services.length === 0}
                             >
-                                <option>Cash</option>
-                                <option>Card</option>
-                                <option>SBI</option>
-                                <option>ICICI</option>
-                                <option>HDFC</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
-
-                        <button
-                            className="btn btn-primary w-100"
-                            type="submit"
-                            disabled={isSubmitting || services.length === 0}
-                        >
-                            {isSubmitting ? "Saving..." : "Save Appointment"}
-                        </button>
-                    </form>
-                )}
+                                <CheckCircle size={14} />
+                                {isSubmitting
+                                    ? "Saving..."
+                                    : "Save Appointment"}
+                            </button>
+                        </form>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
 }

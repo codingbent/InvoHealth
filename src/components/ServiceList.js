@@ -1,4 +1,4 @@
-import { IndianRupee, X } from "lucide-react";
+import { IndianRupee, X, Plus } from "lucide-react";
 
 export default function ServiceList({
     services = [],
@@ -7,52 +7,51 @@ export default function ServiceList({
     onRemove,
 }) {
     const selectedIds = new Set(selectedServices.map((s) => s._id));
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat("en-IN").format(value);
-    };
+    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+
     return (
         <>
-            <div className="mb-2 d-flex flex-wrap gap-2">
+            {/* Available services */}
+            <div className="sl-available">
                 {services
                     .filter((s) => !selectedIds.has(s._id))
                     .map((service) => (
                         <button
                             key={service._id}
                             type="button"
-                            className="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center gap-1"
+                            className="sl-avail-chip"
                             onClick={() => onAdd(service)}
                         >
-                            <span className="text-theme-secondary">
+                            <Plus size={11} className="sl-avail-plus" />
+                            <span className="sl-avail-name">
                                 {service.name}
                             </span>
-                            <span className="d-flex align-items-center gap-1 text-theme-secondary small">
-                                <IndianRupee size={14} />
-                                {formatCurrency(service.amount ?? 0)}
+                            <span className="sl-avail-amount">
+                                <IndianRupee size={11} />
+                                {fmt(service.amount ?? 0)}
                             </span>
                         </button>
                     ))}
             </div>
 
+            {/* Selected services */}
             {selectedServices.length > 0 && (
-                <div className="d-flex flex-wrap gap-2 mt-2">
+                <div className="sl-selected">
                     {selectedServices.map((service) => (
-                        <div
-                            key={service._id}
-                            className="service-pill selected d-flex align-items-center gap-2"
-                        >
-                            <span>{service.name}</span>
-
-                            <span className="d-flex align-items-center gap-1 small opacity-75">
-                                <IndianRupee size={13} />
-                                {formatCurrency(service.amount ?? 0)}
+                        <div key={service._id} className="sl-selected-pill">
+                            <span className="sl-selected-name">
+                                {service.name}
                             </span>
-
+                            <span className="sl-selected-amount">
+                                <IndianRupee size={11} />
+                                {fmt(service.amount ?? 0)}
+                            </span>
                             <button
                                 type="button"
-                                className="remove-btn d-flex align-items-center justify-content-center"
+                                className="sl-remove-btn"
                                 onClick={() => onRemove(service._id)}
                             >
-                                <X size={14} />
+                                <X size={10} />
                             </button>
                         </div>
                     ))}

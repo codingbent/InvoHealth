@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { authFetch } from "./authfetch";
 import { Link } from "react-router-dom";
-import { IndianRupee } from "lucide-react";
+import { IndianRupee, Check, X, AlertTriangle, Zap } from "lucide-react";
 
 export default function Pricing() {
     const token = localStorage.getItem("token");
@@ -16,28 +16,19 @@ export default function Pricing() {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    const planOrder = {
-        FREE: 0,
-        STARTER: 1,
-        PRO: 2,
-        ENTERPRISE: 3,
-    };
+    const planOrder = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3 };
 
-    // Fetch user subscription
     useEffect(() => {
         if (!token) {
             setPlan("FREE");
             return;
         }
-
         const fetchSubscription = async () => {
             try {
                 const res = await authFetch(
                     `${API_BASE_URL}/api/doctor/subscription`,
                 );
-
                 const data = await res.json();
-
                 if (data.success) {
                     setPlan(data.subscription.plan.toUpperCase());
                     setBillingCycle(data.subscription.billingCycle);
@@ -49,66 +40,49 @@ export default function Pricing() {
                 setPlan("FREE");
             }
         };
-
         fetchSubscription();
     }, [API_BASE_URL, token]);
 
-    // Fetch pricing
     useEffect(() => {
         const fetchPricing = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
                 const data = await res.json();
-
-                if (data.success) {
-                    setPrices(data.pricing);
-                }
+                if (data.success) setPrices(data.pricing);
             } catch (err) {
                 console.error("Pricing fetch error", err);
             }
         };
-
         fetchPricing();
     }, [API_BASE_URL]);
 
-    const savings = (plan) => {
-        if (!prices || !prices[plan]) return 0;
-
-        const monthly = prices[plan].monthly;
+    const savings = (planKey) => {
+        if (!prices || !prices[planKey]) return 0;
+        const monthly = prices[planKey].monthly;
         const yearly = Math.round(monthly * 12 * (1 - prices.discount / 100));
-
         return monthly * 12 - yearly;
     };
 
-    // Upgrade / Payment
     const handleUpgrade = async (selectedPlan) => {
         if (!token) return;
-
         const res = await authFetch(
             `${API_BASE_URL}/api/payment/create-order`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    plan: selectedPlan,
-                    billing,
-                }),
+                body: JSON.stringify({ plan: selectedPlan, billing }),
             },
         );
-
         if (!res.ok) {
             console.error("Order API failed");
             return;
         }
-
         const data = await res.json();
-
         const options = {
             key: process.env.Razor_Pay_Key_ID,
             amount: data.order.amount,
             currency: "INR",
             order_id: data.order.id,
-
             handler: async function (response) {
                 const verifyRes = await authFetch(
                     `${API_BASE_URL}/api/payment/verify-payment`,
@@ -118,44 +92,37 @@ export default function Pricing() {
                         body: JSON.stringify({
                             ...response,
                             plan: selectedPlan,
-                            billing: billing,
+                            billing,
                         }),
                     },
                 );
-
                 const verifyData = await verifyRes.json();
-
-                if (verifyData.success) {
-                    window.location.reload();
-                } else {
-                    alert("Payment verification failed");
-                }
+                if (verifyData.success) window.location.reload();
+                else alert("Payment verification failed");
             },
         };
-
         const rzp = new window.Razorpay(options);
         rzp.open();
     };
 
     if (!prices || !plan) {
         return (
-            <div className="container text-center mt-5">
-                <div className="spinner-border text-primary"></div>
-                <p className="mt-3">Loading pricing...</p>
+            <div className="pr-loading">
+                <span className="pr-dot" />
+                <span className="pr-dot" />
+                <span className="pr-dot" />
             </div>
         );
     }
 
     const renderLimits = (planKey) => {
         const p = prices[planKey];
-
         const excelLimit =
             p.excelLimit === -1
                 ? "Unlimited"
                 : billing === "monthly"
                   ? p.excelLimit
                   : p.excelLimit * 12;
-
         const invoiceLimit =
             p.invoiceLimit === -1
                 ? "Unlimited"
@@ -163,202 +130,263 @@ export default function Pricing() {
                   ? p.invoiceLimit
                   : p.invoiceLimit * 12;
 
-        return (
-            <>
-                <li className="feature-check">✔ Unlimited Patients</li>
-                {p.staffLimit === -1 ? (
-                    <li className="feature-check">✔ Unlimited Staff</li>
-                ) : (
-                    <li className="feature-limit">
-                        ⚠ {p.staffLimit} Staff Accounts
-                    </li>
-                )}
-                <li className="feature-check">✔ Appointments</li>
-                <li className="feature-check">✔ Billing</li>
-                <li className={p.analytics ? "feature-check" : "feature-cross"}>
-                    {p.analytics
-                        ? "✔ Analytics Dashboard"
-                        : "✖ Analytics Dashboard"}
-                </li>
-                <li className={p.analytics ? "feature-check" : "feature-cross"}>
-                    {p.analytics ? "✔ Revenue Insights" : "✖ Revenue Insights"}
-                </li>
+        const features = [
+            { label: "Unlimited Patients", ok: true },
+            {
+                label:
+                    p.staffLimit === -1
+                        ? "Unlimited Staff"
+                        : `${p.staffLimit} Staff Accounts`,
+                ok: p.staffLimit === -1,
+                warn: p.staffLimit !== -1,
+            },
+            { label: "Appointments", ok: true },
+            { label: "Billing", ok: true },
+            { label: "Analytics Dashboard", ok: p.analytics },
+            { label: "Revenue Insights", ok: p.analytics },
+            { label: "Payment Analytics", ok: p.analytics },
+            {
+                label:
+                    p.excelLimit === -1
+                        ? "Unlimited Excel Downloads"
+                        : `${excelLimit} Excel Downloads ${billing === "monthly" ? "/ month" : "/ yr"}`,
+                ok: p.excelLimit === -1,
+                warn: p.excelLimit !== -1,
+            },
+            {
+                label:
+                    p.invoiceLimit === -1
+                        ? "Unlimited Invoice Downloads"
+                        : `${invoiceLimit} Invoice Downloads ${billing === "monthly" ? "/ month" : "/ yr"}`,
+                ok: p.invoiceLimit === -1,
+                warn: p.invoiceLimit !== -1,
+            },
+        ];
 
-                <li className={p.analytics ? "feature-check" : "feature-cross"}>
-                    {p.analytics
-                        ? "✔ Payment Analytics"
-                        : "✖ Payment Analytics"}
-                </li>
+        return features.map((f, i) => (
+            <li
+                key={i}
+                className={`pr-feature ${f.ok ? "ok" : f.warn ? "warn" : "off"}`}
+            >
+                <span className="pr-feature-icon">
+                    {f.ok ? (
+                        <Check size={12} />
+                    ) : f.warn ? (
+                        <AlertTriangle size={12} />
+                    ) : (
+                        <X size={12} />
+                    )}
+                </span>
+                {f.label}
+            </li>
+        ));
+    };
 
-                {p.excelLimit === -1 ? (
-                    <li className="feature-check">
-                        {" "}
-                        ✔ Unlimited Excel Downloads
-                    </li>
-                ) : (
-                    <li className="feature-limit">
-                        ⚠ {excelLimit} Excel Downloads{" "}
-                        {billing === "monthly" ? "/ month" : "/ year"}
-                    </li>
-                )}
-
-                {p.invoiceLimit === -1 ? (
-                    <li className="feature-check">
-                        {" "}
-                        ✔ Unlimited Excel Downloads
-                    </li>
-                ) : (
-                    <li className="feature-limit">
-                        ⚠ {invoiceLimit} Invoice Downloads{" "}
-                        {billing === "monthly" ? "/ month" : "/ year"}
-                    </li>
-                )}
-            </>
-        );
+    const PLAN_META = {
+        starter: { accent: "#60a5fa", glow: "rgba(96,165,250,0.08)" },
+        pro: {
+            accent: "#a78bfa",
+            glow: "rgba(167,139,250,0.1)",
+            badge: "Most Popular",
+        },
+        enterprise: { accent: "#fb923c", glow: "rgba(251,146,60,0.08)" },
     };
 
     return (
-        <div className="container">
-            <div className="text-center mb-4">
-                <h2 className="fw-bold">Subscription & Pricing</h2>
-                <p className="text-theme-primary">
-                    Choose the best plan for your clinic.
-                </p>
-            </div>
-
-            {/* Billing toggle */}
-
-            <div className="d-flex justify-content-center mb-5">
-                <div className="btn-group">
-                    <button
-                        className={`btn ${
-                            billing === "monthly"
-                                ? "btn-primary"
-                                : "btn-outline-primary"
-                        }`}
-                        onClick={() => setBilling("monthly")}
-                    >
-                        Monthly
-                    </button>
-
-                    <button
-                        className={`btn ${
-                            billing === "yearly"
-                                ? "btn-primary"
-                                : "btn-outline-primary"
-                        }`}
-                        onClick={() => setBilling("yearly")}
-                    >
-                        Yearly (Save ~17%)
-                    </button>
-                </div>
-            </div>
-
-            {/* Current Plan */}
-
-            {token && role === "doctor" && (
-                <div className="card border-0 shadow-sm mb-5 text-center">
-                    <div className="card-body">
-                        <h5 className="mb-2">Current Plan</h5>
-
-                        <span className="badge bg-primary fs-6 px-3 py-2 text-uppercase">
-                            {plan}
-                        </span>
+        <>
+            <div className="pr-root">
+                <div className="pr-inner">
+                    {/* Header */}
+                    <div className="pr-header">
+                        <div className="pr-eyebrow"></div>
+                        <h1 className="pr-title">
+                            Simple, <em>transparent</em> pricing
+                        </h1>
+                        <div className="pr-subtitle">
+                            Choose the best plan for your clinic
+                        </div>
                     </div>
 
-                    <p className="text-center text-theme-secondary small mt-3">
-                        Cancel anytime • Secure payments • No hidden charges
-                    </p>
-                </div>
-            )}
+                    {/* Billing toggle */}
+                    <div className="pr-toggle-wrap">
+                        <div className="pr-toggle">
+                            <button
+                                className={`pr-toggle-btn ${billing === "monthly" ? "active" : ""}`}
+                                onClick={() => setBilling("monthly")}
+                            >
+                                Monthly
+                            </button>
+                            <button
+                                className={`pr-toggle-btn ${billing === "yearly" ? "active" : ""}`}
+                                onClick={() => setBilling("yearly")}
+                            >
+                                Yearly
+                                <span className="pr-save-badge">Save ~17%</span>
+                            </button>
+                        </div>
+                    </div>
 
-            {/* Pricing cards */}
-
-            <div className="row g-4 justify-content-center">
-                {["starter", "pro", "enterprise"].map((p) => {
-                    const planUpper = p.toUpperCase();
-
-                    return (
-                        <div className="col-lg-3 col-md-6" key={p}>
-                            <div className="card h-100 shadow-sm text-center p-4">
-                                <h5 className="fw-bold text-capitalize">{p}</h5>
-
-                                <h2 className="fw-bold mt-2">
-                                    <IndianRupee size={28} />
-                                    {billing === "monthly"
-                                        ? prices[p].monthly
-                                        : Math.round(
-                                              prices[p].monthly *
-                                                  12 *
-                                                  (1 - prices.discount / 100),
-                                          )}
-                                </h2>
-
-                                {billing === "yearly" && (
-                                    <>
-                                        <p className="small text-theme-secondary">
-                                            <s>
-                                                <IndianRupee size={16} />
-                                                {prices[p].monthly * 12}
-                                            </s>
-                                        </p>
-
-                                        <p className="text-theme-primary small">
-                                            Save <IndianRupee size={14} />
-                                            {savings(p)}
-                                            {"/"}per{" "}
-                                            {billing === "monthly"
-                                                ? "month"
-                                                : "year"}
-                                        </p>
-                                    </>
-                                )}
-
-                                <ul className="list-unstyled small mt-3">
-                                    {renderLimits(p)}
-                                </ul>
-
-                                {/* Button logic */}
-
-                                {!token ? (
-                                    <Link
-                                        to={`/signup?plan=${p}&billing=${billing}`}
-                                        className="btn btn-primary mt-3"
-                                    >
-                                        Start Free Trial
-                                    </Link>
-                                ) : plan === planUpper &&
-                                  billingCycle === billing ? (
-                                    <button
-                                        className="btn btn-secondary mt-3"
-                                        disabled
-                                    >
-                                        Current Plan
-                                    </button>
-                                ) : planOrder[plan] > planOrder[planUpper] ? (
-                                    <button className="btn btn-outline-secondary mt-3">
-                                        Downgrade
-                                    </button>
-                                ) : (
-                                    <button
-                                        className="btn btn-primary mt-3"
-                                        onClick={() => handleUpgrade(p)}
-                                    >
-                                        Upgrade
-                                    </button>
-                                )}
+                    {/* Current plan banner */}
+                    {token && role === "doctor" && (
+                        <div className="pr-current-banner">
+                            <div>
+                                <div className="pr-current-left">
+                                    Your current plan
+                                </div>
+                                <div className="pr-current-badge">
+                                    {plan.charAt(0) +
+                                        plan.slice(1).toLowerCase()}{" "}
+                                    <em>plan</em>
+                                </div>
+                            </div>
+                            <div className="pr-trust">
+                                <span className="pr-trust-item">
+                                    <Check size={10} /> Cancel anytime
+                                </span>
+                                <span className="pr-trust-item">
+                                    <Check size={10} /> Secure payments
+                                </span>
+                                <span className="pr-trust-item">
+                                    <Check size={10} /> No hidden charges
+                                </span>
                             </div>
                         </div>
-                    );
-                })}
-            </div>
+                    )}
 
-            {!token && (
-                <p className="text-theme-primary text-center mt-5 small">
-                    Billing begins after your 30-day free trial. Cancel anytime
-                    before trial ends to avoid charges.
-                </p>
-            )}
-        </div>
+                    {/* Cards */}
+                    <div className="pr-grid">
+                        {["starter", "pro", "enterprise"].map((p) => {
+                            const planUpper = p.toUpperCase();
+                            const meta = PLAN_META[p];
+                            const isFeatured = p === "pro";
+                            const yearlyPrice = Math.round(
+                                prices[p].monthly *
+                                    12 *
+                                    (1 - prices.discount / 100),
+                            );
+
+                            return (
+                                <div
+                                    key={p}
+                                    className={`pr-card ${isFeatured ? "featured" : ""}`}
+                                    style={{
+                                        "--accent": meta.accent,
+                                        borderColor: isFeatured
+                                            ? `rgba(167,139,250,0.3)`
+                                            : undefined,
+                                    }}
+                                >
+                                    {/* top accent line */}
+                                    <style>{`.pr-card:nth-child(${["starter", "pro", "enterprise"].indexOf(p) + 1})::before { background: linear-gradient(90deg, transparent, ${meta.accent}66, transparent); }`}</style>
+
+                                    {meta.badge && (
+                                        <span className="pr-popular-badge">
+                                            {meta.badge}
+                                        </span>
+                                    )}
+
+                                    <div className="pr-plan-name">{p}</div>
+
+                                    <div className="pr-price">
+                                        <span className="pr-price-symbol">
+                                            <IndianRupee size={16} />
+                                        </span>
+                                        <span
+                                            className="pr-price-amount"
+                                            style={{ color: meta.accent }}
+                                        >
+                                            {billing === "monthly"
+                                                ? prices[p].monthly
+                                                : yearlyPrice}
+                                        </span>
+                                        <span className="pr-price-period">
+                                            /
+                                            {billing === "monthly"
+                                                ? "mo"
+                                                : "yr"}
+                                        </span>
+                                    </div>
+
+                                    {billing === "yearly" && (
+                                        <>
+                                            <div className="pr-original">
+                                                <IndianRupee size={12} />
+                                                {prices[p].monthly * 12}
+                                            </div>
+                                            <div className="pr-savings">
+                                                ↓ Save{" "}
+                                                <IndianRupee
+                                                    size={11}
+                                                    style={{
+                                                        display: "inline",
+                                                    }}
+                                                />
+                                                {savings(p)} per year
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div className="pr-card-divider" />
+
+                                    <ul className="pr-features">
+                                        {renderLimits(p)}
+                                    </ul>
+
+                                    {/* CTA */}
+                                    {!token ? (
+                                        <Link
+                                            to={`/signup?plan=${p}&billing=${billing}`}
+                                            className="pr-btn pr-btn-primary"
+                                        >
+                                            <Zap size={13} /> Start Free Trial
+                                        </Link>
+                                    ) : plan === planUpper &&
+                                      billingCycle === billing ? (
+                                        <button
+                                            className="pr-btn pr-btn-disabled"
+                                            disabled
+                                        >
+                                            Current Plan
+                                        </button>
+                                    ) : planOrder[plan] >
+                                      planOrder[planUpper] ? (
+                                        <button className="pr-btn pr-btn-outline">
+                                            Downgrade
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="pr-btn pr-btn-primary"
+                                            style={{
+                                                background: meta.accent,
+                                                boxShadow: `0 4px 16px ${meta.glow}`,
+                                            }}
+                                            onClick={() => handleUpgrade(p)}
+                                        >
+                                            Upgrade to{" "}
+                                            {p.charAt(0).toUpperCase() +
+                                                p.slice(1)}
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Trial note */}
+                    {!token && (
+                        <div className="pr-trial-note">
+                            <span>30-day free trial</span>
+                            <span className="pr-trial-dot" />
+                            <span>No credit card required</span>
+                            <span className="pr-trial-dot" />
+                            <span>
+                                Cancel before trial ends to avoid charges
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
     );
 }
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>;

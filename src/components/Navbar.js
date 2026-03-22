@@ -1,306 +1,313 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, NavLink } from "react-router-dom";
-import { Stethoscope, LogOut, IndianRupee } from "lucide-react";
+import {
+    Stethoscope,
+    LogOut,
+    IndianRupee,
+    ChevronDown,
+    LayoutDashboard,
+    BookOpen,
+    Info,
+    Home,
+    ShieldCheck,
+    FileText,
+} from "lucide-react";
 
 export default function Navbar(props) {
     const navigate = useNavigate();
-
     const token = localStorage.getItem("token");
     const name = localStorage.getItem("name");
     const role = localStorage.getItem("role");
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-    // Apply theme globally
     React.useEffect(() => {
-        document.body.classList.add(`dark-theme`);
+        document.body.classList.add("dark-theme");
+    }, []);
+
+    useEffect(() => {
+        const handleClick = (e) => {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(e.target)
+            ) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
     }, []);
 
     const handleLogout = async () => {
         localStorage.clear();
         document.body.classList.add("dark-theme");
-
         props.showAlert("Logged out successfully", "success");
         navigate("/");
     };
 
+    const NavItem = ({ to, icon: Icon, children }) => (
+        <NavLink
+            to={to}
+            className={({ isActive }) => `nb-link ${isActive ? "active" : ""}`}
+            onClick={() => setMobileOpen(false)}
+        >
+            {Icon && <Icon size={13} />}
+            {children}
+        </NavLink>
+    );
+
+    const DropItem = ({ icon: Icon, children, onClick, danger }) => (
+        <button
+            className={`nb-drop-item ${danger ? "danger" : ""}`}
+            onClick={() => {
+                setDropdownOpen(false);
+                onClick();
+            }}
+        >
+            {Icon && <Icon size={14} />}
+            {children}
+        </button>
+    );
+
+    // ── Superadmin navbar ──
     if (role === "superadmin") {
         return (
             <>
-                <nav className="navbar navbar-expand-lg shadow-sm app-navbar">
-                    <div className="container-fluid">
-                        {/* Brand */}
-                        {role === "superadmin" ? (
-                            <>
-                                <NavLink
-                                    className="navbar-brand fw-bold"
-                                    to="/admin/fetchall_doctors"
-                                >
-                                    InvoHealth
-                                </NavLink>
-                            </>
-                        ) : (
-                            <>
-                                <NavLink
-                                    className="navbar-brand fw-bold"
-                                    to="/"
-                                >
-                                    InvoHealth
-                                </NavLink>
-                            </>
-                        )}
-
-                        {/* Mobile Toggle */}
-                        <button
-                            className="navbar-toggler"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#navbarSupportedContent"
+                <nav className="nb-root">
+                    <div className="nb-inner">
+                        <NavLink
+                            className="nb-brand"
+                            to="/admin/fetchall_doctors"
                         >
-                            <span className="navbar-toggler-icon" />
-                        </button>
+                            <span className="nb-brand-icon">⚕</span>
+                            <span className="nb-brand-text">
+                                Invo<em>Health</em>
+                            </span>
+                        </NavLink>
 
-                        <div
-                            className="collapse navbar-collapse"
-                            id="navbarSupportedContent"
-                        >
-                            {/* Left Links */}
-                            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-                                <li className="nav-item">
-                                    <NavLink
-                                        className="nav-link"
-                                        to="/admin/fetchall_doctors"
-                                    >
-                                        Home
-                                    </NavLink>
-                                </li>
-
-                                <li className="nav-item">
-                                    <NavLink className="nav-link" to="/about">
-                                        About
-                                    </NavLink>
-                                </li>
-                            </ul>
-
-                            {/* Right Side */}
-                            {role ? (
-                                <div className="dropdown user-dropdown">
-                                    <button
-                                        className="btn dropdown-toggle d-flex align-items-center gap-2 p-0"
-                                        data-bs-toggle="dropdown"
-                                        data-bs-display="static"
-                                    >
-                                        <span
-                                            className="avatar"
-                                            style={{
-                                                width: "32px",
-                                                height: "32px",
-                                            }}
-                                        >
-                                            <span className="avatar">
-                                                {name?.charAt(0)?.toUpperCase()}
-                                            </span>
-                                        </span>
-                                        <span className="d-sm-inline text-theme-secondary">
-                                            {}
-                                        </span>
-                                    </button>
-
-                                    <ul className="dropdown-menu dropdown-menu-end shadow-sm theme-dropdown">
-                                        {!role === "superadmin" && (
-                                            <li>
-                                                <button
-                                                    className="dropdown-item text-theme-muted d-flex align-items-center gap-2"
-                                                    onClick={() =>
-                                                        navigate("/profile")
-                                                    }
-                                                >
-                                                    <Stethoscope size={16} />
-                                                    My Profile
-                                                </button>
-                                            </li>
-                                        )}
-                                        <li>
-                                            <button
-                                                className="dropdown-item text-theme-muted d-flex align-items-center gap-2"
-                                                onClick={() =>
-                                                    navigate("/admin/pricing")
-                                                }
-                                            >
-                                                <IndianRupee size={16} /> Set
-                                                Pricing
-                                            </button>
-                                        </li>
-                                        <li>
-                                            <button
-                                                className="dropdown-item text-danger d-flex align-items-center gap-2"
-                                                onClick={handleLogout}
-                                            >
-                                                <LogOut size={18} />
-                                                Logout
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-                            ) : (
-                                <div className="d-flex gap-2">
-                                    <NavLink
-                                        to="/login"
-                                        className="btn btn-primary btn-sm rounded-pill"
-                                    >
-                                        Login
-                                    </NavLink>
-
-                                    <NavLink
-                                        to="/signup"
-                                        className="btn btn-outline-primary btn-sm rounded-pill"
-                                    >
-                                        Sign Up
-                                    </NavLink>
-                                </div>
-                            )}
+                        <div className="nb-links">
+                            <NavItem to="/admin/fetchall_doctors" icon={Home}>
+                                Home
+                            </NavItem>
+                            <NavItem to="/about" icon={Info}>
+                                About
+                            </NavItem>
                         </div>
+
+                        {role && (
+                            <div className="nb-user" ref={dropdownRef}>
+                                <button
+                                    className="nb-avatar-btn"
+                                    onClick={() => setDropdownOpen((p) => !p)}
+                                >
+                                    <span className="nb-avatar">
+                                        {name?.charAt(0)?.toUpperCase()}
+                                    </span>
+                                    <ChevronDown
+                                        size={13}
+                                        className={`nb-chevron ${dropdownOpen ? "open" : ""}`}
+                                    />
+                                </button>
+                                {dropdownOpen && (
+                                    <div className="nb-dropdown">
+                                        <DropItem
+                                            icon={IndianRupee}
+                                            onClick={() =>
+                                                navigate("/admin/pricing")
+                                            }
+                                        >
+                                            Set Pricing
+                                        </DropItem>
+                                        <div className="nb-drop-divider" />
+                                        <DropItem
+                                            icon={LogOut}
+                                            onClick={handleLogout}
+                                            danger
+                                        >
+                                            Logout
+                                        </DropItem>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </nav>
             </>
         );
     }
 
+    // ── Main navbar ──
     return (
-        <nav className="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
-            {" "}
-            <div className="container-fluid">
-                {/* Brand */}
-                <NavLink className="navbar-brand fw-bold" to="/">
-                    <span className="brand-text">InvoHealth</span>
-                </NavLink>
+        <>
+            <nav className="nb-root">
+                <div className="nb-inner">
+                    {/* Brand */}
+                    <NavLink className="nb-brand" to="/">
+                        <span className="nb-brand-icon">⚕</span>
+                        <span className="nb-brand-text">
+                            Invo<em>Health</em>
+                        </span>
+                    </NavLink>
 
-                {/* Mobile Toggle */}
-                <button
-                    className="navbar-toggler"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#navbarSupportedContent"
-                >
-                    <span className="navbar-toggler-icon" />
-                </button>
-
-                <div
-                    className="collapse navbar-collapse"
-                    id="navbarSupportedContent"
-                >
-                    {/* Left Links */}
-                    <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li className="nav-item">
-                            <NavLink className="nav-link" to="/">
-                                Home
-                            </NavLink>
-                        </li>
-
+                    {/* Desktop links */}
+                    <div className="nb-links">
+                        <NavItem to="/" icon={Home}>
+                            Home
+                        </NavItem>
                         {role === "doctor" && (
-                            <li className="nav-item">
-                                <NavLink className="nav-link" to="/dashboard">
-                                    Dashboard
-                                </NavLink>
-                            </li>
+                            <NavItem to="/dashboard" icon={LayoutDashboard}>
+                                Dashboard
+                            </NavItem>
                         )}
-                        <li className="nav-item">
-                            <NavLink className="nav-link" to="/tutorials">
-                                Tutorials
-                            </NavLink>
-                        </li>
-                        <li className="nav-item">
-                            <NavLink className="nav-link" to="/about">
-                                About
-                            </NavLink>
-                        </li>
-                    </ul>
+                        <NavItem to="/tutorials" icon={BookOpen}>
+                            Tutorials
+                        </NavItem>
+                        <NavItem to="/about" icon={Info}>
+                            About
+                        </NavItem>
+                    </div>
 
-                    {/* Right Side */}
-                    {token ? (
-                        <div className="dropdown user-dropdown">
-                            <button
-                                className="btn dropdown-toggle d-flex align-items-center gap-2 p-0"
-                                data-bs-toggle="dropdown"
-                                data-bs-display="static"
-                            >
-                                <span
-                                    className="avatar"
-                                    style={{ width: "32px", height: "32px" }}
+                    {/* Right side */}
+                    <div className="nb-right">
+                        {token ? (
+                            <div className="nb-user" ref={dropdownRef}>
+                                <button
+                                    className="nb-avatar-btn"
+                                    onClick={() => setDropdownOpen((p) => !p)}
                                 >
-                                    <span className="avatar">
+                                    <span className="nb-avatar">
                                         {name?.charAt(0)?.toUpperCase()}
                                     </span>
-                                </span>
-                                <span className="d-sm-inline text-theme-secondary">
-                                    {name}
-                                </span>
-                            </button>
+                                    <span className="nb-name">{name}</span>
+                                    <ChevronDown
+                                        size={13}
+                                        className={`nb-chevron ${dropdownOpen ? "open" : ""}`}
+                                    />
+                                </button>
 
-                            <ul className="dropdown-menu dropdown-menu-end shadow-sm theme-dropdown">
-                                <li>
-                                    <button
-                                        className="dropdown-item text-theme-muted d-flex align-items-center gap-2"
-                                        onClick={() => navigate("/profile")}
-                                    >
-                                        <Stethoscope size={16} />
-                                        My Profile
-                                    </button>
-                                </li>
-
-                                {role === "doctor" && (
-                                    <li>
-                                        <button
-                                            className="dropdown-item text-theme-muted d-flex align-items-center gap-2"
-                                            onClick={() =>
-                                                navigate("/subscriptionpage")
-                                            }
+                                {dropdownOpen && (
+                                    <div className="nb-dropdown">
+                                        <div className="nb-drop-header">
+                                            <div className="nb-drop-name">
+                                                {name}
+                                            </div>
+                                            <div className="nb-drop-role">
+                                                {role}
+                                            </div>
+                                        </div>
+                                        <div className="nb-drop-divider" />
+                                        <DropItem
+                                            icon={Stethoscope}
+                                            onClick={() => navigate("/profile")}
                                         >
-                                            <IndianRupee size={16} />
-                                            Billing & Subscription
-                                        </button>
-                                    </li>
+                                            My Profile
+                                        </DropItem>
+                                        {role === "doctor" && (
+                                            <DropItem
+                                                icon={IndianRupee}
+                                                onClick={() =>
+                                                    navigate(
+                                                        "/subscriptionpage",
+                                                    )
+                                                }
+                                            >
+                                                Billing & Subscription
+                                            </DropItem>
+                                        )}
+                                        <div className="nb-drop-divider" />
+                                        <DropItem
+                                            icon={ShieldCheck}
+                                            onClick={() => navigate("/privacy")}
+                                        >
+                                            Privacy Policy
+                                        </DropItem>
+                                        <DropItem
+                                            icon={FileText}
+                                            onClick={() => navigate("/terms")}
+                                        >
+                                            Terms & Conditions
+                                        </DropItem>
+                                        <div className="nb-drop-divider" />
+                                        <DropItem
+                                            icon={LogOut}
+                                            onClick={handleLogout}
+                                            danger
+                                        >
+                                            Logout
+                                        </DropItem>
+                                    </div>
                                 )}
+                            </div>
+                        ) : null}
 
-                                <li>
-                                    <hr className="dropdown-divider" />
-                                </li>
-
-                                <li>
-                                    <button
-                                        className="dropdown-item text-theme-muted"
-                                        onClick={() => navigate("/privacy")}
-                                    >
-                                        Privacy Policy
-                                    </button>
-                                </li>
-
-                                <li>
-                                    <button
-                                        className="dropdown-item text-theme-muted"
-                                        onClick={() => navigate("/terms")}
-                                    >
-                                        Terms & Conditions
-                                    </button>
-                                </li>
-
-                                <li>
-                                    <hr className="dropdown-divider" />
-                                </li>
-                                <li>
-                                    <button
-                                        className="dropdown-item text-danger d-flex align-items-center gap-2"
-                                        onClick={handleLogout}
-                                    >
-                                        <LogOut size={18} />
-                                        Logout
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    ) : (
-                        <></>
-                    )}
+                        {/* Mobile hamburger */}
+                        <button
+                            className="nb-hamburger"
+                            onClick={() => setMobileOpen((p) => !p)}
+                        >
+                            <span
+                                className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
+                            />
+                            <span
+                                className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
+                            />
+                            <span
+                                className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
+                            />
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </nav>
+
+                {/* Mobile menu */}
+                {mobileOpen && (
+                    <div className="nb-mobile">
+                        <NavItem to="/" icon={Home}>
+                            Home
+                        </NavItem>
+                        {role === "doctor" && (
+                            <NavItem to="/dashboard" icon={LayoutDashboard}>
+                                Dashboard
+                            </NavItem>
+                        )}
+                        <NavItem to="/tutorials" icon={BookOpen}>
+                            Tutorials
+                        </NavItem>
+                        <NavItem to="/about" icon={Info}>
+                            About
+                        </NavItem>
+                        {token && (
+                            <>
+                                <div className="nb-mobile-divider" />
+                                <NavItem to="/profile" icon={Stethoscope}>
+                                    My Profile
+                                </NavItem>
+                                {role === "doctor" && (
+                                    <NavItem
+                                        to="/subscriptionpage"
+                                        icon={IndianRupee}
+                                    >
+                                        Billing & Subscription
+                                    </NavItem>
+                                )}
+                                <NavItem to="/privacy" icon={ShieldCheck}>
+                                    Privacy Policy
+                                </NavItem>
+                                <NavItem to="/terms" icon={FileText}>
+                                    Terms & Conditions
+                                </NavItem>
+                                <div className="nb-mobile-divider" />
+                                <button
+                                    className="nb-mobile-logout"
+                                    onClick={handleLogout}
+                                >
+                                    <LogOut size={14} /> Logout
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+            </nav>
+        </>
     );
 }

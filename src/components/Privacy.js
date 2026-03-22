@@ -1,105 +1,171 @@
+import { useEffect, useRef } from "react";
+
+const sections = [
+    {
+        num: "01",
+        title: "Introduction",
+        body: "InvoHealth respects your privacy and is committed to protecting your personal and clinic information. This Privacy Policy explains how we collect and use information when you use our platform.",
+    },
+    {
+        num: "02",
+        title: "Information We Collect",
+        body: "We may collect the following information when you register and use the platform:",
+        list: [
+            "Name and contact information",
+            "Email address",
+            "Clinic information",
+            "Professional details",
+            "Patient and appointment records entered by users",
+        ],
+    },
+    {
+        num: "03",
+        title: "How We Use Information",
+        body: "Information collected is used to:",
+        list: [
+            "Provide clinic management features",
+            "Maintain and improve the platform",
+            "Communicate service updates",
+            "Ensure security and prevent misuse",
+        ],
+    },
+    {
+        num: "04",
+        title: "Data Ownership",
+        body: "Users retain ownership of the data they store on InvoHealth. We do not claim ownership of patient or clinic records entered by users.",
+    },
+    {
+        num: "05",
+        title: "Data Security",
+        body: "We implement reasonable security measures to protect user data. Account passwords are securely hashed before storage — never stored in plain text and not accessible to administrators. While we take appropriate precautions, no system can guarantee absolute security. Users should use strong passwords and protect their account access.",
+    },
+    {
+        num: "06",
+        title: "Third-Party Services",
+        body: "Payments and certain services may be processed through third-party providers such as Razorpay. These services operate under their own privacy policies.",
+    },
+    {
+        num: "07",
+        title: "Data Loss Disclaimer",
+        body: "Although we aim to maintain reliable data storage, InvoHealth does not guarantee permanent availability of stored data. Users are encouraged to keep backups of important information.",
+    },
+    {
+        num: "08",
+        title: "Changes to Privacy Policy",
+        body: "This Privacy Policy may be updated periodically to reflect changes in our services or legal requirements.",
+    },
+    {
+        num: "09",
+        title: "Contact",
+        body: "For privacy-related inquiries, please contact:",
+        isContact: true,
+    },
+];
+
 export default function Privacy() {
+    const itemsRef = useRef([]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting)
+                        entry.target.classList.add("pp-visible");
+                });
+            },
+            { threshold: 0.08 },
+        );
+        itemsRef.current.forEach((el) => el && observer.observe(el));
+        return () => observer.disconnect();
+    }, []);
+
     return (
-        <div className="container py-5" style={{ maxWidth: "900px" }}>
-            <div className="card shadow-sm border-0 rounded-4">
-                <div className="card-body p-4 p-md-5">
-                    <h2 className="fw-bold text-center mb-3">Privacy Policy</h2>
+        <>
+            <style>{`
+ ${sections.map((_, i) => `.pp-item:nth-child(${i + 1}) { transition-delay: ${0.04 + i * 0.03}s; }`).join("\n")} `}</style>
 
-                    <p className="text-theme-secondary text-center mb-4">
-                        Last updated: {new Date().getFullYear()}
-                    </p>
+            <div className="pp-root">
+                <div className="pp-inner">
+                    <div className="pp-header">
+                        <div className="pp-eyebrow">
+                            <span className="pp-eyebrow-line" />
+                            InvoHealth · Legal
+                            <span className="pp-eyebrow-line" />
+                        </div>
+                        <h1 className="pp-title">
+                            Privacy <em>Policy</em>
+                        </h1>
+                        <div className="pp-date">
+                            Last updated · {new Date().getFullYear()}
+                        </div>
+                    </div>
 
-                    <hr />
+                    <div className="pp-divider">
+                        <div className="pp-divider-line" />
+                        <div className="pp-divider-dot" />
+                        <div className="pp-divider-line" />
+                    </div>
 
-                    <h5 className="mt-4">1. Introduction</h5>
-                    <p className="text-theme-secondary">
-                        InvoHealth respects your privacy and is committed to
-                        protecting your personal and clinic information. This
-                        Privacy Policy explains how we collect and use
-                        information when you use our platform.
-                    </p>
+                    <div>
+                        {sections.map((s, i) => (
+                            <div
+                                key={s.num}
+                                className="pp-item"
+                                ref={(el) => (itemsRef.current[i] = el)}
+                            >
+                                <div className="pp-num">{s.num}</div>
+                                <div>
+                                    <div className="pp-section-title">
+                                        {s.title}
+                                    </div>
+                                    {s.body && (
+                                        <p className="pp-body">
+                                            {s.isContact ? (
+                                                <>
+                                                    For privacy-related
+                                                    inquiries, please contact:{" "}
+                                                    <a
+                                                        href="mailto:invohealth.app@gmail.com"
+                                                        className="pp-contact-link"
+                                                    >
+                                                        invohealth.app@gmail.com
+                                                    </a>
+                                                </>
+                                            ) : (
+                                                s.body
+                                            )}
+                                        </p>
+                                    )}
+                                    {s.list && (
+                                        <ul className="pp-list">
+                                            {s.list.map((item, j) => (
+                                                <li key={j}>
+                                                    <span className="pp-list-bullet" />
+                                                    {item}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
 
-                    <h5 className="mt-4">2. Information We Collect</h5>
-                    <p className="text-theme-secondary">
-                        We may collect the following information when you
-                        register and use the platform:
-                    </p>
-
-                    <ul className="text-theme-secondary">
-                        <li>Name and contact information</li>
-                        <li>Email address</li>
-                        <li>Clinic information</li>
-                        <li>Professional details</li>
-                        <li>
-                            Patient and appointment records entered by users
-                        </li>
-                    </ul>
-
-                    <h5 className="mt-4">3. How We Use Information</h5>
-                    <p className="text-theme-secondary">
-                        Information collected is used to:
-                    </p>
-
-                    <ul className="text-theme-secondary">
-                        <li>Provide clinic management features</li>
-                        <li>Maintain and improve the platform</li>
-                        <li>Communicate service updates</li>
-                        <li>Ensure security and prevent misuse</li>
-                    </ul>
-
-                    <h5 className="mt-4">4. Data Ownership</h5>
-                    <p className="text-theme-secondary">
-                        Users retain ownership of the data they store on
-                        InvoHealth. We do not claim ownership of patient or
-                        clinic records entered by users.
-                    </p>
-
-                    <h5 className="mt-4">5. Data Security</h5>
-                    <p className="text-theme-secondary">
-                        We implement reasonable security measures to protect
-                        user data stored within the platform. User account
-                        passwords are securely hashed before being stored in our
-                        database.
-                        <br></br>
-                        This means that passwords are not stored in plain text
-                        and cannot be directly viewed by our system
-                        administrators.
-                        <br></br>
-                        While we take appropriate steps to protect stored
-                        information, no system can guarantee absolute security.
-                        Users should take appropriate precautions such as using
-                        strong passwords and protecting access to their
-                        accounts.
-                    </p>
-
-                    <h5 className="mt-4">6. Third-Party Services</h5>
-                    <p className="text-theme-secondary">
-                        Payments and certain services may be processed through
-                        third-party providers such as Razorpay. These services
-                        may have their own privacy policies.
-                    </p>
-
-                    <h5 className="mt-4">7. Data Loss Disclaimer</h5>
-                    <p className="text-theme-secondary">
-                        Although we aim to maintain reliable data storage,
-                        InvoHealth does not guarantee permanent availability of
-                        stored data. Users are encouraged to keep backups of
-                        important information.
-                    </p>
-
-                    <h5 className="mt-4">8. Changes to Privacy Policy</h5>
-                    <p className="text-theme-secondary">
-                        This Privacy Policy may be updated periodically to
-                        reflect changes in our services or legal requirements.
-                    </p>
-
-                    <h5 className="mt-4">9. Contact</h5>
-                    <p className="text-theme-secondary">
-                        For privacy-related inquiries, please contact:
-                        invohealth.app@gmail.com
-                    </p>
+                    <div
+                        className="pp-footer"
+                        ref={(el) => (itemsRef.current[sections.length] = el)}
+                    >
+                        <div className="pp-footer-icon">🔒</div>
+                        <div className="pp-footer-text">
+                            <strong>Your data stays yours.</strong> InvoHealth
+                            does not sell or share your personal or clinic data
+                            with third parties for marketing purposes. This
+                            policy may be updated — continued use implies
+                            acceptance.
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

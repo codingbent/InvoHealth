@@ -1,3 +1,4 @@
+// ─── PatientList.jsx ────────────────────────────────────────────────────────
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
@@ -5,15 +6,10 @@ import { saveAs } from "file-saver";
 import { authFetch } from "./authfetch";
 import FilterPanel from "./FilterPanel";
 import AppointmentList from "./AppointmentList";
-import { SlidersHorizontal } from "lucide-react";
-import { FileSpreadsheet } from "lucide-react";
+import { SlidersHorizontal, FileSpreadsheet } from "lucide-react";
 
 export default function PatientList(props) {
     const navigate = useNavigate();
-
-    // =============================
-    // STATE
-    // =============================
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -29,7 +25,6 @@ export default function PatientList(props) {
     const [page, setPage] = useState(0);
     const [filterOpen, setFilterOpen] = useState(false);
     const [total, setTotal] = useState(0);
-
     const limit = 20;
 
     const API_BASE_URL =
@@ -37,9 +32,6 @@ export default function PatientList(props) {
             ? "https://gmsc-backend.onrender.com"
             : "http://localhost:5001";
 
-    // =============================
-    // FILTER COUNT (for badge)
-    // =============================
     const activeFiltersCount =
         selectedPayments.length +
         selectedStatus.length +
@@ -56,35 +48,26 @@ export default function PatientList(props) {
         bold = false,
     ) => {
         const row = sheet.addRow([label, value]);
-
         if (bold) row.font = { bold: true };
-
-        if (isCurrency) {
-            row.getCell(2).numFmt = "₹#,##0";
-        }
-
+        if (isCurrency) row.getCell(2).numFmt = "₹#,##0";
         return row;
     };
-    // DEBOUNCED SEARCH
+
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
     }, []);
     useEffect(() => {
-        const t = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-        }, 1000);
+        const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    // FETCH SERVICES
     const fetchServices = useCallback(async () => {
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/services/fetchall_services`,
             );
             const data = await res.json();
-
             setAllServices(
                 Array.isArray(data.services)
                     ? data.services.map((s) => s.name).sort()
@@ -94,16 +77,13 @@ export default function PatientList(props) {
             console.error("Error fetching services", err);
         }
     }, [API_BASE_URL]);
-
     useEffect(() => {
         fetchServices();
     }, [fetchServices]);
 
-    // FETCH APPOINTMENTS
     const fetchAppointments = useCallback(async () => {
         try {
             setLoading(true);
-
             const query = new URLSearchParams({
                 limit,
                 skip: page * limit,
@@ -115,27 +95,17 @@ export default function PatientList(props) {
                 startDate,
                 endDate,
             }).toString();
-
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/fetchall_appointments?${query}`,
             );
-
             const data = await res.json();
-
-            const sortAppointments = (arr) => {
-                return [...arr].sort((a, b) => {
-                    const dateTimeA = new Date(
-                        `${a.date}T${a.time || "00:00"}`,
-                    );
-                    const dateTimeB = new Date(
-                        `${b.date}T${b.time || "00:00"}`,
-                    );
-                    return dateTimeB - dateTimeA;
-                });
-            };
-
+            const sortAppointments = (arr) =>
+                [...arr].sort(
+                    (a, b) =>
+                        new Date(`${b.date}T${b.time || "00:00"}`) -
+                        new Date(`${a.date}T${a.time || "00:00"}`),
+                );
             const flatData = data.data;
-
             setAppointments((prev) => {
                 const merged = page === 0 ? flatData : [...prev, ...flatData];
                 return sortAppointments(merged);
@@ -157,12 +127,9 @@ export default function PatientList(props) {
         endDate,
         API_BASE_URL,
     ]);
-
     useEffect(() => {
         fetchAppointments();
     }, [fetchAppointments]);
-
-    // Reset page when filters change
     useEffect(() => {
         setPage(0);
     }, [
@@ -176,57 +143,43 @@ export default function PatientList(props) {
         selectedFY,
     ]);
 
-    // =============================
-    // GROUP BY MONTH
-    // =============================
     const appointmentsByMonth = useMemo(() => {
         const grouped = {};
-
         appointments.forEach((a) => {
             const monthKey = new Date(a.date).toLocaleString("default", {
                 month: "long",
                 year: "numeric",
             });
-
             const dayKey = new Date(a.date).toISOString().split("T")[0];
-
             if (!grouped[monthKey]) grouped[monthKey] = {};
             if (!grouped[monthKey][dayKey]) grouped[monthKey][dayKey] = [];
-
             grouped[monthKey][dayKey].push(a);
         });
-
-        // ✅ SORT EACH DAY BY TIME (DESC)
-        Object.keys(grouped).forEach((month) => {
+        Object.keys(grouped).forEach((month) =>
             Object.keys(grouped[month]).forEach((day) => {
-                grouped[month][day].sort((a, b) => {
-                    return new Date(b.date) - new Date(a.date);
-                });
-            });
-        });
-
+                grouped[month][day].sort(
+                    (a, b) => new Date(b.date) - new Date(a.date),
+                );
+            }),
+        );
         return grouped;
     }, [appointments]);
-    const applyFilters = (data) => {
-        return data.filter((a) => {
+
+    const applyFilters = (data) =>
+        data.filter((a) => {
             const searchMatch =
                 a.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
                 a.number?.includes(debouncedSearch);
-
             const paymentMatch =
                 selectedPayments.length === 0 ||
                 selectedPayments.includes(a.payment_type);
-
             const statusMatch =
                 selectedStatus.length === 0 ||
                 selectedStatus.includes(a.status);
-
             const genderMatch = !selectedGender || a.gender === selectedGender;
-
             const dateMatch =
                 (!startDate || new Date(a.date) >= new Date(startDate)) &&
                 (!endDate || new Date(a.date) <= new Date(endDate));
-
             const serviceMatch =
                 selectedServices.length === 0 ||
                 (a.services || []).some((s) =>
@@ -234,7 +187,6 @@ export default function PatientList(props) {
                         typeof s === "object" ? s.name : s,
                     ),
                 );
-
             return (
                 searchMatch &&
                 paymentMatch &&
@@ -244,42 +196,32 @@ export default function PatientList(props) {
                 serviceMatch
             );
         });
-    };
 
     const downloadExcel = async () => {
         try {
             const checkRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/check_export_limit`,
             );
-
             const check = await checkRes.json();
-
             if (!check.success) {
                 props.showAlert(check.error, "danger");
                 return;
             }
-
             if (check.remaining === 1) {
                 const confirmExport = window.confirm(
                     "⚠ This is your LAST Excel export for this plan.\n\nDo you want to continue?",
                 );
-
                 if (!confirmExport) return;
             }
-
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/export_appointments`,
             );
-
             const result = await res.json();
-
             const filteredForExport = applyFilters(result.data);
-
             if (!filteredForExport.length) {
                 props.showAlert("No data to export", "warning");
                 return;
             }
-
             exportToExcel(filteredForExport);
         } catch (err) {
             console.error(err);
@@ -289,88 +231,62 @@ export default function PatientList(props) {
 
     const exportToExcel = async (data) => {
         if (!data.length) return;
-
         const sorted = [...data].sort(
             (a, b) => new Date(b.date) - new Date(a.date),
         );
-
         const fromDate = new Date(
             sorted[sorted.length - 1].date,
         ).toLocaleDateString("en-IN");
-
         const toDate = new Date(sorted[0].date).toLocaleDateString("en-IN");
-
-        // ================= FINANCIAL SUMMARY =================
-        let totalRevenue = 0;
-        let totalCollected = 0;
-        let totalPending = 0;
-        let paidCount = 0;
-        let partialCount = 0;
-        let unpaidCount = 0;
-
+        let totalRevenue = 0,
+            totalCollected = 0,
+            totalPending = 0,
+            paidCount = 0,
+            partialCount = 0,
+            unpaidCount = 0;
         const paymentSummary = {};
-
         sorted.forEach((a) => {
-            const billed = Number(a.amount ?? 0);
-            const collected = Number(a.collected ?? 0);
-            const remaining = Number(a.remaining ?? billed - collected);
-
+            const billed = Number(a.amount ?? 0),
+                collected = Number(a.collected ?? 0),
+                remaining = Number(a.remaining ?? billed - collected);
             totalRevenue += billed;
             totalCollected += collected;
             totalPending += remaining > 0 ? remaining : 0;
-
             if (remaining <= 0) paidCount++;
             else if (collected > 0) partialCount++;
             else unpaidCount++;
-
             const key = a.payment_type || "Other";
             paymentSummary[key] = (paymentSummary[key] || 0) + collected;
         });
-
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Visit Records");
-
-        // ================= HEADER =================
         sheet.addRow([`Doctor:`, `${doctor || ""}`]).font = { bold: true };
         sheet.addRow(["From", fromDate]);
         sheet.addRow(["To", toDate]);
         sheet.addRow([]);
-
         addRowWithFormat(sheet, "TOTAL REVENUE", totalRevenue, true, true);
         addRowWithFormat(sheet, "TOTAL COLLECTED", totalCollected, true, true);
         addRowWithFormat(sheet, "TOTAL PENDING", totalPending, true, true);
-
         sheet.addRow([]);
-
         addRowWithFormat(sheet, "Paid Visits", paidCount);
         addRowWithFormat(sheet, "Partial Visits", partialCount);
         addRowWithFormat(sheet, "Unpaid Visits", unpaidCount);
-
         sheet.addRow([]);
-
         sheet.addRow(["COLLECTION SUMMARY"]).font = { bold: true };
-
         Object.entries(paymentSummary).forEach(([type, amount]) => {
             const row = sheet.addRow([type, amount]);
             row.getCell(2).numFmt = "₹#,##0";
         });
-
         sheet.addRow([]);
-
-        // ================= DAILY TABLE =================
-        let currentDay = null;
-        let dayCollectedTotal = 0;
-
+        let currentDay = null,
+            dayCollectedTotal = 0;
         sorted.forEach((a, index) => {
             const day = new Date(a.date).toISOString().split("T")[0];
-
-            const billed = Number(a.amount ?? 0);
-            const collected = Number(a.collected ?? billed);
-            const remaining = billed - collected;
-
+            const billed = Number(a.amount ?? 0),
+                collected = Number(a.collected ?? billed),
+                remaining = billed - collected;
             const status =
                 remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
-
             if (day !== currentDay) {
                 if (currentDay !== null) {
                     const totalRow = sheet.addRow([
@@ -381,20 +297,14 @@ export default function PatientList(props) {
                         "DAY TOTAL (Collected)",
                         dayCollectedTotal,
                     ]);
-
                     totalRow.font = { bold: true };
                     totalRow.getCell(6).numFmt = "₹#,##0";
                     sheet.addRow([]);
                 }
-
                 currentDay = day;
                 dayCollectedTotal = 0;
-
                 sheet.addRow([new Date(day).toLocaleDateString("en-IN")]).font =
-                    {
-                        bold: true,
-                    };
-
+                    { bold: true };
                 sheet.addRow([
                     "Patient",
                     "Number",
@@ -408,9 +318,7 @@ export default function PatientList(props) {
                     "Services",
                 ]).font = { bold: true };
             }
-
             dayCollectedTotal += collected;
-
             const row = sheet.addRow([
                 a.name,
                 a.number || "",
@@ -437,21 +345,17 @@ export default function PatientList(props) {
                     "DAY TOTAL (Collected)",
                     dayCollectedTotal,
                 ]);
-
                 lastTotalRow.font = { bold: true };
                 lastTotalRow.getCell(6).numFmt = "₹#,##0";
             }
         });
-
         sheet.columns.forEach((col) => (col.width = 18));
-
         const buffer = await workbook.xlsx.writeBuffer();
         saveAs(new Blob([buffer]), "clinic-records.xlsx");
     };
 
     const monthTotal = useMemo(() => {
         const totals = {};
-
         Object.keys(appointmentsByMonth).forEach((month) => {
             totals[month] = Object.values(appointmentsByMonth[month]).reduce(
                 (sum, dayApps) =>
@@ -464,89 +368,86 @@ export default function PatientList(props) {
                 0,
             );
         });
-
         return totals;
     }, [appointmentsByMonth]);
 
-    // LOAD MORE
-    const IncreaseLimit = () => {
-        setPage((prev) => prev + 1);
-    };
+    const IncreaseLimit = () => setPage((prev) => prev + 1);
+
     const paymentColor = {
-        Cash: "payment-tag payment-cash",
-        SBI: "payment-tag payment-SBI",
-        Card: "payment-tag payment-card",
-        ICICI: "payment-tag payment-bank",
-        HDFC: "payment-tag payment-bank",
-        Other: "payment-tag payment-other",
+        Cash: "pl-tag pl-cash",
+        SBI: "pl-tag pl-sbi",
+        Card: "pl-tag pl-card",
+        ICICI: "pl-tag pl-bank",
+        HDFC: "pl-tag pl-bank",
+        Other: "pl-tag pl-other",
     };
 
     return (
-        <div className="records-container">
-            {/* HEADER */}
-            <div className="records-header">
-                <h5 className="mb-0">Appointments</h5>
-
-                <div className="records-actions">
-                    <button
-                        className="btn btn-outline-theme btn-sm d-flex align-items-center gap-2"
-                        onClick={() => setFilterOpen((prev) => !prev)}
-                    >
-                        <SlidersHorizontal size={16} />
-                        Filters
-                        {activeFiltersCount > 0 && (
-                            <span className="filter-badge">
-                                {activeFiltersCount}
-                            </span>
-                        )}
-                    </button>
-
-                    {localStorage.getItem("role") === "doctor" && (
+        <>
+            <div className="pl-root">
+                {/* Header */}
+                <div className="pl-header">
+                    <div className="pl-header-left">
+                        <h1 className="pl-title">Appointments</h1>
+                    </div>
+                    <div className="pl-header-actions">
                         <button
-                            className="btn btn-success btn-sm d-flex align-items-center gap-2 px-3"
-                            onClick={downloadExcel}
+                            className="pl-btn pl-btn-outline"
+                            onClick={() => setFilterOpen((p) => !p)}
                         >
-                            <FileSpreadsheet size={16} />
-                            <span>Export Excel</span>
+                            <SlidersHorizontal size={14} />
+                            Filters
+                            {activeFiltersCount > 0 && (
+                                <span className="pl-filter-badge">
+                                    {activeFiltersCount}
+                                </span>
+                            )}
                         </button>
-                    )}
+                        {localStorage.getItem("role") === "doctor" && (
+                            <button
+                                className="pl-btn pl-btn-excel"
+                                onClick={downloadExcel}
+                            >
+                                <FileSpreadsheet size={14} />
+                                Export Excel
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                <FilterPanel
+                    open={filterOpen}
+                    setOpen={setFilterOpen}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    selectedPayments={selectedPayments}
+                    setSelectedPayments={setSelectedPayments}
+                    selectedStatus={selectedStatus}
+                    setSelectedStatus={setSelectedStatus}
+                    selectedGender={selectedGender}
+                    setSelectedGender={setSelectedGender}
+                    allServices={allServices}
+                    selectedServices={selectedServices}
+                    setSelectedServices={setSelectedServices}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    selectedFY={selectedFY}
+                    setSelectedFY={setSelectedFY}
+                />
+
+                <AppointmentList
+                    appointmentsByMonth={appointmentsByMonth}
+                    navigate={navigate}
+                    monthTotal={monthTotal}
+                    appointments={appointments}
+                    total={total}
+                    IncreaseLimit={IncreaseLimit}
+                    loading={loading}
+                    paymentColor={paymentColor}
+                />
             </div>
-
-            {/* FILTER PANEL */}
-            <FilterPanel
-                open={filterOpen}
-                setOpen={setFilterOpen}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                selectedPayments={selectedPayments}
-                setSelectedPayments={setSelectedPayments}
-                selectedStatus={selectedStatus}
-                setSelectedStatus={setSelectedStatus}
-                selectedGender={selectedGender}
-                setSelectedGender={setSelectedGender}
-                allServices={allServices}
-                selectedServices={selectedServices}
-                setSelectedServices={setSelectedServices}
-                startDate={startDate}
-                setStartDate={setStartDate}
-                endDate={endDate}
-                setEndDate={setEndDate}
-                selectedFY={selectedFY}
-                setSelectedFY={setSelectedFY}
-            />
-
-            {/* LIST */}
-            <AppointmentList
-                appointmentsByMonth={appointmentsByMonth}
-                navigate={navigate}
-                monthTotal={monthTotal}
-                appointments={appointments}
-                total={total}
-                IncreaseLimit={IncreaseLimit}
-                loading={loading}
-                paymentColor={paymentColor}
-            />
-        </div>
+        </>
     );
 }
