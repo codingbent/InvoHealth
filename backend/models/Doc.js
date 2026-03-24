@@ -5,8 +5,8 @@ const SubscriptionSchema = new Schema(
     {
         plan: {
             type: String,
-            enum: ["FREE", "STARTER", "PRO", "ENTERPRISE"],
-            default: "FREE",
+            enum: ["STARTER", "PRO", "ENTERPRISE"],
+            default: "STARTER",
         },
 
         billingCycle: {
@@ -17,7 +17,7 @@ const SubscriptionSchema = new Schema(
 
         status: {
             type: String,
-            enum: ["active", "expired", "cancelled"],
+            enum: ["active", "expired", "cancelled","trial"],
             default: "active",
         },
 

@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Appointment = require("../../../models/Appointment");
-var fetchuser = require("../../../middleware/fetchuser");
+const fetchuser = require("../../../middleware/fetchuser");
+const { decrypt } = require("../../../utils/crypto");
 
 router.get("/fetchall_appointments", fetchuser, async (req, res) => {
     try {
@@ -29,8 +30,25 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
 
         let allVisits = [];
 
+        // ================= PREPARE DATA =================
         appointments.forEach((appt) => {
             if (!appt.patient) return;
+
+            // 🔐 decrypt once per patient
+            let fullNumber = "";
+
+            if (appt.patient.numberEncrypted) {
+                try {
+                    fullNumber = decrypt(appt.patient.numberEncrypted)
+                        .toString()
+                        .replace(/\D/g, "");
+                } catch (err) {
+                    console.log("Decrypt error:", err.message);
+                    fullNumber = "";
+                }
+            } else if (appt.patient.number) {
+                fullNumber = appt.patient.number.toString().replace(/\D/g, "");
+            }
 
             appt.visits.forEach((visit) => {
                 const amount = Number(visit.amount) || 0;
@@ -55,7 +73,8 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
                 allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name || "",
-                    number: appt.patient.number || "",
+                    number: fullNumber, // ✅ decrypted number
+                    numberLast4: appt.patient.numberLast4 || "",
                     gender: appt.patient.gender || "",
                     date: visit.date,
                     time: visit.time,
@@ -71,12 +90,14 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
         });
 
         // ================= FILTERS =================
+        const cleanSearch = search.replace(/\D/g, "").trim();
 
         allVisits = allVisits.filter((v) => {
             const searchMatch =
                 !search ||
                 v.name.toLowerCase().includes(search.toLowerCase()) ||
-                v.number.includes(search);
+                (cleanSearch && v.number.includes(cleanSearch)) ||
+                (cleanSearch && v.numberLast4.includes(cleanSearch));
 
             const genderMatch = !gender || v.gender === gender;
 
@@ -114,7 +135,6 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
         });
 
         // ================= SORT =================
-
         allVisits.sort((a, b) => {
             const d1 = new Date(a.date);
             const d2 = new Date(b.date);
@@ -129,7 +149,7 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
                 d2.setHours(h, m, 0, 0);
             }
 
-            return d2 - d1; 
+            return d2 - d1;
         });
 
         const total = allVisits.length;

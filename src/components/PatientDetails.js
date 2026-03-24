@@ -20,7 +20,9 @@ import {
     ChevronLeft,
     FileText,
     CalendarDays,
-    ReceiptIndianRupee
+    ReceiptIndianRupee,
+    Eye,
+    EyeOff,
 } from "lucide-react";
 
 export default function PatientDetails(props) {
@@ -67,7 +69,13 @@ export default function PatientDetails(props) {
     const [editPatientOpen, setEditPatientOpen] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [lightboxImg, setLightboxImg] = useState(null);
+    const [fullNumber, setFullNumber] = useState(null);
+    const [askedOnce, setAskedOnce] = useState(false);
     const [recordView, setRecordView] = useState("history"); // "history" | "images"
+    const displayNumber =
+        fullNumber ||
+        details?.numberMasked ||
+        `******${details?.numberLast4 || ""}`;
 
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
     const dateLabel = (d) =>
@@ -116,6 +124,25 @@ export default function PatientDetails(props) {
         }
         return slots;
     }, []);
+
+    const fetchFullNumber = async () => {
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/patient/get_full_number/${id}`,
+                {
+                    method: "GET",
+                },
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                setFullNumber(data.number);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     const fetchSlotsForDate = useCallback(
         async (date, isEdit = false) => {
@@ -186,6 +213,7 @@ export default function PatientDetails(props) {
         if (!apptData.date || !availability.length) return;
         fetchSlotsForDate(apptData.date, !!editingAppt);
     }, [apptData.date, availability, editingAppt, fetchSlotsForDate]);
+
     useEffect(() => {
         if (editingAppt) return;
         if (
@@ -275,7 +303,7 @@ export default function PatientDetails(props) {
             setPatient({
                 name: patientData.name || "",
                 service: patientData.service || [],
-                number: patientData.number || "",
+                number: "",
                 age: patientData.age || "",
                 gender: patientData.gender || "",
                 amount: patientData.amount || 0,
@@ -290,6 +318,49 @@ export default function PatientDetails(props) {
             setLoading(false);
         }
     }, [id, API_BASE_URL, fetchServices]);
+
+    const updatePatientNumber = useCallback(
+        async (number) => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/patient/update_patient/${id}`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ number }),
+                    },
+                );
+
+                const data = await res.json();
+
+                if (data.success) {
+                    props.showAlert("Number updated successfully", "success");
+                    fetchData();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        },
+        [API_BASE_URL, fetchData, id, props],
+    );
+
+    useEffect(() => {
+        if (details?.needsNumberUpdate && !askedOnce) {
+            setAskedOnce(true);
+
+            let message = "⚠ Please enter patient's mobile number:";
+
+            if (details?.plainNumber) {
+                message = `⚠ Please re-enter patient's mobile number for security:\n\nOld number: ${details.plainNumber}\n\n(Sorry for inconvenience 🙏)`;
+            }
+
+            const number = prompt(message, details?.plainNumber || "");
+
+            if (number && /^\d{10}$/.test(number)) {
+                updatePatientNumber(number);
+            }
+        }
+    }, [details, askedOnce, updatePatientNumber]);
 
     useEffect(() => {
         fetchData();
@@ -336,26 +407,48 @@ export default function PatientDetails(props) {
         setPatient({ ...patient, [e.target.name]: e.target.value });
 
     const handleSave = async () => {
-        const num = patient.number;
-        if (!/^\d{10}$/.test(num)) {
+        if (patient.number && !/^\d{10}$/.test(patient.number)) {
             alert("Enter a valid 10-digit number");
             return;
         }
+
         try {
+            const payload = {
+                name: patient.name,
+                age: patient.age,
+                gender: patient.gender,
+            };
+
+            // ✅ only send number if user typed it
+            if (patient.number && patient.number.trim() !== "") {
+                payload.number = patient.number.trim();
+            }
+
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/patient/update_patient/${id}`,
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(patient),
+                    body: JSON.stringify(payload),
                 },
             );
+
             const result = await response.json();
+
             if (response.ok) {
                 props.showAlert("Patient updated successfully", "success");
-                setDetails((prev) => ({ ...prev, ...patient }));
+
+                // ✅ clear number input after save
+                setPatient((prev) => ({
+                    ...prev,
+                    number: "",
+                }));
+
+                fetchData(); // 🔥 refresh correct encrypted data
                 setEditPatientOpen(false);
-            } else alert(result.message || "Update failed");
+            } else {
+                alert(result.message || "Update failed");
+            }
         } catch (err) {
             console.error(err);
             alert("Server error");
@@ -786,7 +879,7 @@ export default function PatientDetails(props) {
                         <div className="pd-info-item">
                             <div className="pd-info-label">Contact</div>
                             <a
-                                href={`tel:${details?.number}`}
+                                href={fullNumber ? `tel:${fullNumber}` : "#"}
                                 style={{
                                     color: "#60a5fa",
                                     textDecoration: "none",
@@ -796,8 +889,38 @@ export default function PatientDetails(props) {
                                     fontSize: 12,
                                 }}
                             >
-                                {details?.number} <Phone size={11} />
+                                {fullNumber || displayNumber}{" "}
+                                <Phone size={11} />
                             </a>
+                            {fullNumber === null ? (
+                                <button
+                                    onClick={fetchFullNumber}
+                                    style={{
+                                        fontSize: 10,
+                                        marginLeft: 6,
+                                        color: "#4d7cf6",
+                                        cursor: "pointer",
+                                        border: "none",
+                                        background: "none",
+                                    }}
+                                >
+                                    <Eye size={18} />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setFullNumber(null)}
+                                    style={{
+                                        fontSize: 10,
+                                        marginLeft: 6,
+                                        color: "#ef4444",
+                                        cursor: "pointer",
+                                        border: "none",
+                                        background: "none",
+                                    }}
+                                >
+                                    <EyeOff size={18} />
+                                </button>
+                            )}
                         </div>
                     </div>
                     <div className="pd-actions">

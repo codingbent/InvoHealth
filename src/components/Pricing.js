@@ -220,6 +220,18 @@ export default function Pricing() {
                         <div className="pr-subtitle">
                             Choose the best plan for your clinic
                         </div>
+
+                        {!token && (
+                            <div className="pr-trial-note">
+                                <span>30-day free trial</span>
+                                <span className="pr-trial-dot" />
+                                <span>No credit card required</span>
+                                <span className="pr-trial-dot" />
+                                <span>
+                                    Cancel before trial ends to avoid charges
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Billing toggle */}
@@ -386,19 +398,6 @@ export default function Pricing() {
                             );
                         })}
                     </div>
-
-                    {/* Trial note */}
-                    {!token && (
-                        <div className="pr-trial-note">
-                            <span>30-day free trial</span>
-                            <span className="pr-trial-dot" />
-                            <span>No credit card required</span>
-                            <span className="pr-trial-dot" />
-                            <span>
-                                Cancel before trial ends to avoid charges
-                            </span>
-                        </div>
-                    )}
                 </div>
             </div>
         </>

@@ -80,7 +80,7 @@ router.post("/send-otp", async (req, res) => {
             `https://2factor.in/API/V1/${TWO_FACTOR_API_KEY}/SMS/${phone}/AUTOGEN`,
         );
 
-        console.log("2Factor Response:", response.data);
+        // console.log("2Factor Response:", response.data);
 
         if (response.data.Status === "Success") {
             return res.json({

@@ -21,7 +21,6 @@ const AddServices = (props) => {
                     body: JSON.stringify({ name, amount }),
                 },
             );
-            if (!response.ok) throw new Error("Request failed");
             const json = await response.json();
             if (json.success) {
                 setService({ name: "", amount: "" });

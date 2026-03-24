@@ -4,6 +4,7 @@ const Appointment = require("../../../models/Appointment");
 const Doc = require("../../../models/Doc");
 const Pricing = require("../../../models/Pricing");
 const fetchuser = require("../../../middleware/fetchuser");
+const { decrypt } = require("../../../utils/crypto");
 
 router.get("/check_export_limit", fetchuser, async (req, res) => {
     try {
@@ -95,6 +96,26 @@ router.get("/export_appointments", fetchuser, async (req, res) => {
                 const billed = Number(visit.amount ?? 0);
                 const collected = Number(visit.collected ?? billed);
                 const remaining = billed - collected;
+                let fullNumber = "";
+
+                // ✅ Case 1: encrypted
+                if (appt.patient.numberEncrypted) {
+                    try {
+                        fullNumber = decrypt(appt.patient.numberEncrypted);
+                    } catch (err) {
+                        console.error("Decrypt error:", err);
+                    }
+                }
+
+                // ✅ Case 2: old plain number
+                if (!fullNumber && appt.patient.number) {
+                    fullNumber = appt.patient.number;
+                }
+
+                // ✅ Case 3: last fallback (at least show something)
+                if (!fullNumber && appt.patient.numberLast4) {
+                    fullNumber = "******" + appt.patient.numberLast4;
+                }
 
                 const status =
                     remaining <= 0
@@ -106,7 +127,7 @@ router.get("/export_appointments", fetchuser, async (req, res) => {
                 allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name,
-                    number: appt.patient.number || "",
+                    number: fullNumber,
                     gender: appt.patient.gender || "",
                     date: visit.date,
                     payment_type: visit.payment_type || "Other",

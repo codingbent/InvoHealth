@@ -7,5 +7,6 @@ router.use("/", require("./delete_patient"));
 router.use("/", require("./patient_details"));
 router.use("/", require("./search_patient"));
 router.use("/", require("./patient_record"));
+router.use("/", require("./get_full_number"));
 
 module.exports = router;

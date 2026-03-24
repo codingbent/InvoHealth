@@ -4899,7 +4899,7 @@ ____________________ */
     font-size: 9px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #93a1bb;
+    color: var(--text-primary);
 }
 
 .sg-required {
@@ -4923,7 +4923,7 @@ ____________________ */
 }
 
 .sg-input::placeholder {
-    color: #394563;
+    color: #525252
 }
 
 .sg-input:focus,
@@ -5063,7 +5063,7 @@ ____________________ */
     font-size: 10px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #3a4a6b;
+    color: var(--text-primary);
 }
 
 .sg-days {
@@ -5078,7 +5078,7 @@ ____________________ */
     border-radius: 20px;
     border: 1px solid #1a2540;
     background: transparent;
-    color: #3a4a6b;
+    color: var(--text-secondary);
     font-size: 10px;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -5157,7 +5157,7 @@ ____________________ */
 .sg-btn-outline {
     background: transparent;
     border: 1px solid #1a2540;
-    color: #3a4a6b;
+    color: var(--text-primary);
 }
 
 .sg-btn-outline:hover {
@@ -9359,6 +9359,8 @@ _______________________________________ */
 .pd-icon-btn {
     width: 30px;
     height: 30px;
+    min-width: 30px;
+    min-height: 30px;
     border-radius: 7px;
     display: flex;
     align-items: center;
@@ -9366,27 +9368,30 @@ _______________________________________ */
     cursor: pointer;
     border: 1px solid;
     transition: all 0.15s;
+    /* -webkit-appearance: none;    
+    appearance: none;*/
+    flex-shrink: 0;
 }
 .pd-icon-inv {
-    background: rgba(77, 124, 246, 0.08);
-    border-color: rgba(77, 124, 246, 0.2);
-    color: #60a5fa;
+    background: rgba(77, 124, 246, 0.08) !important; 
+    border-color: rgba(77, 124, 246, 0.2) !important; 
+    color: #60a5fa !important; 
 }
 .pd-icon-inv:hover {
     background: rgba(77, 124, 246, 0.16);
 }
 .pd-icon-edit {
-    background: rgba(167, 139, 250, 0.08);
-    border-color: rgba(167, 139, 250, 0.2);
-    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.08) !important; 
+    border-color: rgba(167, 139, 250, 0.2) !important; 
+    color: #a78bfa !important; 
 }
 .pd-icon-edit:hover {
     background: rgba(167, 139, 250, 0.16);
 }
 .pd-icon-del {
-    background: rgba(248, 113, 113, 0.08);
-    border-color: rgba(248, 113, 113, 0.2);
-    color: #f87171;
+    background: rgba(248, 113, 113, 0.08) !important; 
+    border-color: rgba(248, 113, 113, 0.2) !important; 
+    color: #f87171 !important; 
 }
 .pd-icon-del:hover {
     background: rgba(248, 113, 113, 0.16);
@@ -9440,7 +9445,7 @@ _______________________________________ */
     align-items: center;
     padding-top: 10px;
     border-top: 1px solid #131929;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
 }
 .pd-visit-actions {

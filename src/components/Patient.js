@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { useLocation } from "react-router-dom";
 import AddServices from "./AddServices";
 import AddPatient from "./AddPatient";
 import PatientList from "./PatientList";
@@ -114,6 +115,19 @@ const Patient = ({ showAlert }) => {
             </div>
         );
     };
+
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.hash === "#pricing") {
+            const el = document.getElementById("pricing");
+            if (el) {
+                setTimeout(() => {
+                    el.scrollIntoView({ behavior: "smooth" });
+                }, 1000); // small delay for render
+            }
+        }
+    }, [location]);
 
     useEffect(() => {
         const token = localStorage.getItem("token");

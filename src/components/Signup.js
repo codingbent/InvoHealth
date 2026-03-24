@@ -10,6 +10,8 @@ import {
     Trash2,
     Clock,
     Calendar,
+    EyeOff,
+    Eye,
 } from "lucide-react";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
@@ -22,6 +24,7 @@ const Signup = (props) => {
     const selectedPlan = params.get("plan");
     const selectedBilling = params.get("billing");
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const [showPassword, setShowPassword] = useState(false);
 
     const [availability, setAvailability] = useState([
         { days: [], slots: [{ startTime: "", endTime: "", slotDuration: 15 }] },
@@ -70,6 +73,9 @@ const Signup = (props) => {
         () => normalizePhone(credentials.phone),
         [credentials.phone],
     );
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         setSessionId("");
@@ -409,8 +415,8 @@ const Signup = (props) => {
         const json = await response.json();
         if (json.success) {
             const token = json.authtoken;
-            localStorage.setItem("token", token);
-            localStorage.setItem("name", credentials.name);
+            // localStorage.setItem("token", token);
+            // localStorage.setItem("name", credentials.name);
             const formattedAvailability = formatAvailability();
             const availabilityRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/timing/set_availability`,
@@ -426,13 +432,17 @@ const Signup = (props) => {
                 },
             );
             const availabilityJson = await availabilityRes.json();
-            if (!availabilityJson.success)
+            if (!availabilityJson.success) {
                 props.showAlert(
-                    "Account created but failed to save timings",
+                    "Account created, but failed to save timings",
                     "warning",
                 );
-            navigate("/");
-            props.showAlert("Successfully Signed up", "success");
+            } else {
+                props.showAlert("Account created successfully", "success");
+            }
+            setTimeout(() => {
+                navigate("/login");
+            }, 1500);
         } else props.showAlert(json.error || "Invalid input", "danger");
     };
 
@@ -528,6 +538,19 @@ const Signup = (props) => {
                                         onChange={onChange}
                                         placeholder="Create a strong password"
                                     />
+                                    <button
+                                        type="button"
+                                        className="lg-eye-btn"
+                                        onClick={() =>
+                                            setShowPassword((p) => !p)
+                                        }
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff size={16} />
+                                        ) : (
+                                            <Eye size={16} />
+                                        )}
+                                    </button>
                                     <div className="sg-pw-checks">
                                         {[
                                             {
@@ -580,6 +603,19 @@ const Signup = (props) => {
                                         onChange={onChange}
                                         placeholder="Repeat password"
                                     />
+                                    <button
+                                        type="button"
+                                        className="lg-eye-btn"
+                                        onClick={() =>
+                                            setShowPassword((p) => !p)
+                                        }
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff size={16} />
+                                        ) : (
+                                            <Eye size={16} />
+                                        )}
+                                    </button>
                                 </div>
                             </div>
 

@@ -13,21 +13,20 @@ const PatientSchema = new Schema({
             amount: Number,
         },
     ],
-    number: {
+    numberEncrypted: {
         type: String,
-        default: "0000000000",
         required: false,
-        minlength: 10,
-        maxlength: 10,
-        validate: {
-            validator: function (v) {
-                // Allow empty string, but if not empty, must be 10 digits
-                return !v || /^\d{10}$/.test(v);
-            },
-            message: (props) =>
-                `${props.value} is not a valid 10-digit number!`,
-        },
     },
+    numberHash: {
+        type: String,
+        required: true,
+    },
+    numberLast4: {
+        type: String,
+    },
+    // number: {
+    //     type: String,
+    // },
     amount: {
         type: Number,
         default: 0,
@@ -63,6 +62,6 @@ const PatientSchema = new Schema({
         default: [],
     },
 });
-PatientSchema.index({ doctor: 1, name: 1, number: 1 }, { unique: true });
+PatientSchema.index({ doctor: 1, name: 1 });
 const Patient = mongoose.model("Patient", PatientSchema);
 module.exports = Patient;

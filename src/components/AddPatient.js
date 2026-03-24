@@ -354,6 +354,13 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                 );
                 return;
             }
+
+            if (patientJson.alreadyExists) {
+                showAlert(
+                    "Patient already exists, using existing record",
+                    "warning",
+                );
+            }
             const newPatientId = patientJson.patient._id;
             const appointmentRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/add_appointment/${newPatientId}`,

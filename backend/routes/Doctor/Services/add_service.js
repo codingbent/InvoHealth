@@ -18,7 +18,7 @@ router.post(
             if (existingService) {
                 return res.status(400).json({
                     success: false,
-                    error: "Service already exists for this doctor",
+                    error: "Service already exists",
                 });
             }
 

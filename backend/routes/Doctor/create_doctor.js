@@ -44,6 +44,19 @@ router.post(
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
+            const allowedPlans = ["STARTER", "PRO", "ENTERPRISE"];
+
+            const selectedPlan = allowedPlans.includes(
+                req.body.subscription?.plan,
+            )
+                ? req.body.subscription.plan
+                : "STARTER";
+
+            const selectedBilling =
+                req.body.subscription?.billing === "yearly"
+                    ? "yearly"
+                    : "monthly";
+
             let degrees = Array.isArray(req.body.degree)
                 ? [...new Set(req.body.degree)]
                 : [req.body.degree];
@@ -62,9 +75,9 @@ router.post(
                 role: "doctor",
 
                 subscription: {
-                    plan: "STARTER",
-                    billingCycle: "monthly",
-                    status: "active",
+                    plan: selectedPlan,
+                    billingCycle: selectedBilling,
+                    status: "trial",
                     startDate: new Date(),
                     expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 },

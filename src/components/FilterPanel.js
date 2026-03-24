@@ -83,7 +83,7 @@ export default function FilterPanel({
                             <label className="fp-label">Search Patient</label>
                             <input
                                 className="fp-input"
-                                placeholder="Name or phone number"
+                                placeholder="Enter Name"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -130,32 +130,38 @@ export default function FilterPanel({
                     </div>
 
                     {/* Payment Status */}
-                    <div className="fp-section">
-                        <label className="fp-label">Payment Status</label>
-                        <div className="fp-chips">
-                            {["Unpaid", "Paid", "Partial"].map((type) => {
-                                const isActive = selectedStatus.includes(type);
-                                return (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        className={`fp-chip ${isActive ? "active" : ""}`}
-                                        onClick={() =>
-                                            setSelectedStatus(
-                                                isActive
-                                                    ? selectedStatus.filter(
-                                                          (p) => p !== type,
-                                                      )
-                                                    : [...selectedStatus, type],
-                                            )
-                                        }
-                                    >
-                                        {type}
-                                    </button>
-                                );
-                            })}
+                    {!isdashboard && (
+                        <div className="fp-section">
+                            <label className="fp-label">Payment Status</label>
+                            <div className="fp-chips">
+                                {["Unpaid", "Paid", "Partial"].map((type) => {
+                                    const isActive =
+                                        selectedStatus.includes(type);
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            className={`fp-chip ${isActive ? "active" : ""}`}
+                                            onClick={() =>
+                                                setSelectedStatus(
+                                                    isActive
+                                                        ? selectedStatus.filter(
+                                                              (p) => p !== type,
+                                                          )
+                                                        : [
+                                                              ...selectedStatus,
+                                                              type,
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            {type}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Gender */}
                     <div className="fp-section">

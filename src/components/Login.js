@@ -240,7 +240,7 @@ export default function Login(props) {
 
                     <div className="lg-footer">
                         <span>New to InvoHealth?</span>
-                        <Link to="/signup" className="lg-footer-link">
+                        <Link to="/#pricing" className="lg-footer-link">
                             <UserPlus size={13} /> Create account
                         </Link>
                     </div>

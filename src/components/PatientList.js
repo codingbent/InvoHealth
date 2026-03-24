@@ -1,4 +1,3 @@
-// ─── PatientList.jsx ────────────────────────────────────────────────────────
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
@@ -57,6 +56,7 @@ export default function PatientList(props) {
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
     }, []);
+    
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
         return () => clearTimeout(t);
