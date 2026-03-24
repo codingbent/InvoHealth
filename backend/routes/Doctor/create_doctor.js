@@ -5,6 +5,7 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
+const { encrypt } = require("../../utils/crypto");
 
 router.post(
     "/create_doctor",
@@ -30,8 +31,32 @@ router.post(
         }
 
         try {
+            // normalize
+            const normalizePhone = (phone) =>
+                phone ? phone.replace(/\D/g, "").slice(-10) : "";
+
+            const cleanPhone = normalizePhone(req.body.phone);
+            const cleanAppointmentPhone = normalizePhone(
+                req.body.appointmentPhone,
+            );
+
+            // validate
+            if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid phone number",
+                });
+            }
+
+            // 🔍 duplicate check (using last4 + email fallback)
             let doc = await Doc.findOne({
-                $or: [{ email: req.body.email }, { phone: req.body.phone }],
+                $or: [
+                    { email: req.body.email },
+                    {
+                        phoneLast4: cleanPhone.slice(-4),
+                        name: req.body.name,
+                    },
+                ],
             });
 
             if (doc) {
@@ -40,6 +65,10 @@ router.post(
                     error: "Email or phone already registered",
                 });
             }
+
+            // 🔐 secure storage
+            const phoneHash = await bcrypt.hash(cleanPhone, 10);
+            const phoneEncrypted = encrypt(cleanPhone);
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(req.body.password, salt);
@@ -66,8 +95,13 @@ router.post(
                 email: req.body.email,
                 password: hashedPassword,
                 clinicName: req.body.clinicName,
-                phone: req.body.phone,
-                appointmentPhone: req.body.appointmentPhone || "",
+
+                phoneEncrypted: phoneEncrypted,
+                phoneHash: phoneHash,
+                phoneLast4: cleanPhone.slice(-4),
+
+                appointmentPhone: cleanAppointmentPhone || "",
+
                 address: req.body.address,
                 regNumber: req.body.regNumber || "",
                 experience: Number(req.body.experience),

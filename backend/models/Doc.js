@@ -17,7 +17,7 @@ const SubscriptionSchema = new Schema(
 
         status: {
             type: String,
-            enum: ["active", "expired", "cancelled","trial"],
+            enum: ["active", "expired", "cancelled", "trial"],
             default: "active",
         },
 
@@ -88,13 +88,29 @@ const DocSchema = new Schema(
             required: true,
         },
 
-        phone: {
+        phoneEncrypted: {
             type: String,
-            required: true,
-            unique: true,
         },
 
-        appointmentPhone: String,
+        phoneHash: {
+            type: String,
+        },
+
+        phoneLast4: {
+            type: String,
+        },
+        phone: {
+            type: String,
+            default: "",
+        },
+
+        appointmentPhone: {
+            type: String,
+            default: "",
+        },
+        appointmentPhoneEncrypted: { type: String },
+        appointmentPhoneHash: { type: String },
+        appointmentPhoneLast4: { type: String },
 
         address: {
             line1: { type: String, required: true },

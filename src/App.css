@@ -4923,7 +4923,7 @@ ____________________ */
 }
 
 .sg-input::placeholder {
-    color: #525252
+    color: #525252;
 }
 
 .sg-input:focus,
@@ -7072,7 +7072,6 @@ ____________________________ */
     border: 1px dashed #1a2540;
     border-radius: 8px;
     color: #3a4a6b;
-    font-family: "DM Mono", monospace;
     font-size: 11px;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -8014,7 +8013,7 @@ ______________________________ */
 }
 .dp-doc-clinic {
     font-size: 11px;
-    color: #2e3d5c;
+    color: var(--text-secondary);
     letter-spacing: 0.05em;
     margin-top: 2px;
 }
@@ -8043,22 +8042,91 @@ ______________________________ */
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: #131929;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
 }
+
 .dp-info-item {
-    padding: 14px 20px;
+    padding: 18px 20px;
     background: #0d1117;
 }
+
 .dp-info-label {
     font-size: 9px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 4px;
+    margin-bottom: 12px;
 }
+
 .dp-info-value {
     font-size: 12px;
     color: #8ba0c4;
     line-height: 1.5;
+}
+
+.dp-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.dp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid #0d111a;
+}
+
+.dp-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.dp-row:first-child {
+    padding-top: 0;
+}
+
+.dp-key {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    width: 80px; /* fixed width so all values align */
+}
+
+.dp-row-value {
+    font-size: 11px;
+    color: var(--text-primary);
+    flex: 1;
+    word-break: break-all;
+}
+
+.dp-row button {
+    background: rgba(77, 124, 246, 0.08);
+    border: 1px solid rgba(77, 124, 246, 0.2);
+    color: #3a4a6b;
+    cursor: pointer;
+    padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    margin-left: auto;
+    /* -webkit-appearance: none; */
+}
+
+.dp-row button:hover {
+    color: #60a5fa;
+    border-color: rgba(77, 124, 246, 0.4);
+}
+
+@media (max-width: 768px) {
+    .dp-info-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Section collapsible */
@@ -9373,25 +9441,25 @@ _______________________________________ */
     flex-shrink: 0;
 }
 .pd-icon-inv {
-    background: rgba(77, 124, 246, 0.08) !important; 
-    border-color: rgba(77, 124, 246, 0.2) !important; 
-    color: #60a5fa !important; 
+    background: rgba(77, 124, 246, 0.08) !important;
+    border-color: rgba(77, 124, 246, 0.2) !important;
+    color: #60a5fa !important;
 }
 .pd-icon-inv:hover {
     background: rgba(77, 124, 246, 0.16);
 }
 .pd-icon-edit {
-    background: rgba(167, 139, 250, 0.08) !important; 
-    border-color: rgba(167, 139, 250, 0.2) !important; 
-    color: #a78bfa !important; 
+    background: rgba(167, 139, 250, 0.08) !important;
+    border-color: rgba(167, 139, 250, 0.2) !important;
+    color: #a78bfa !important;
 }
 .pd-icon-edit:hover {
     background: rgba(167, 139, 250, 0.16);
 }
 .pd-icon-del {
-    background: rgba(248, 113, 113, 0.08) !important; 
-    border-color: rgba(248, 113, 113, 0.2) !important; 
-    color: #f87171 !important; 
+    background: rgba(248, 113, 113, 0.08) !important;
+    border-color: rgba(248, 113, 113, 0.2) !important;
+    color: #f87171 !important;
 }
 .pd-icon-del:hover {
     background: rgba(248, 113, 113, 0.16);

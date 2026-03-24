@@ -6,6 +6,9 @@ const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const normalizePhone = (phone) =>
+    phone ? phone.replace(/\D/g, "").slice(-10) : "";
+
 router.post("/login_doctor", async (req, res) => {
     const { identifier, password, identifierType } = req.body;
 
@@ -14,8 +17,28 @@ router.post("/login_doctor", async (req, res) => {
 
         if (identifierType === "email") {
             user = await Doc.findOne({ email: identifier });
-        } else if (identifierType === "phone") {
-            user = await Doc.findOne({ phone: identifier });
+        }
+
+        // ================= PHONE LOGIN =================
+        else if (identifierType === "phone") {
+            const cleanPhone = normalizePhone(identifier);
+
+            // 🔍 Step 1: narrow down using last4
+            const candidates = await Doc.find({
+                phoneLast4: cleanPhone.slice(-4),
+            });
+
+            // 🔐 Step 2: compare hash
+            for (let doc of candidates) {
+                if (!doc.phoneHash) continue;
+
+                const isMatch = await bcrypt.compare(cleanPhone, doc.phoneHash);
+
+                if (isMatch) {
+                    user = doc;
+                    break;
+                }
+            }
         } else {
             return res.status(400).json({
                 success: false,
@@ -23,14 +46,8 @@ router.post("/login_doctor", async (req, res) => {
             });
         }
 
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid credentials",
-            });
-        }
-
-        if (!user.password) {
+        // ================= VALIDATION =================
+        if (!user || !user.password) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid credentials",

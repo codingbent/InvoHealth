@@ -132,6 +132,10 @@ export default function DoctorProfile(props) {
     const [editProfileOpen, setEditProfileOpen] = useState(false);
     const [editStaffOpen, setEditStaffOpen] = useState(false);
     const [editAvailOpen, setEditAvailOpen] = useState(false);
+    const [askedPhoneOnce, setAskedPhoneOnce] = useState(false);
+    const [askedApptOnce, setAskedApptOnce] = useState(false);
+    const [showPhone, setShowPhone] = useState(false);
+    const [showApptPhone, setShowApptPhone] = useState(false);
 
     const API_BASE_URL = useMemo(
         () =>
@@ -224,18 +228,22 @@ export default function DoctorProfile(props) {
 
     const handleEditChange = (e) =>
         setEditData({ ...editData, [e.target.name]: e.target.value });
+
     const handleAddressChange = (e) =>
         setEditData({
             ...editData,
             address: { ...editData.address, [e.target.name]: e.target.value },
         });
+
     const handleDegreeChange = (index, value) => {
         const u = [...editData.degree];
         u[index] = value;
         setEditData({ ...editData, degree: u });
     };
+
     const addDegreeField = () =>
         setEditData({ ...editData, degree: [...editData.degree, ""] });
+
     const removeDegreeField = (index) => {
         const u = [...editData.degree];
         u.splice(index, 1);
@@ -243,8 +251,23 @@ export default function DoctorProfile(props) {
     };
 
     const handleSaveProfile = async () => {
+        const cleanPhone = editData.phone?.replace(/\D/g, "");
+        const cleanAppt = editData.appointmentPhone?.replace(/\D/g, "");
+
+        if (cleanPhone && cleanPhone.length !== 10) {
+            props.showAlert("Phone must be 10 digits", "warning");
+            return;
+        }
+
+        if (cleanAppt && cleanAppt.length !== 10) {
+            props.showAlert("Appointment phone must be 10 digits", "warning");
+            return;
+        }
+
         const payload = {
             ...editData,
+            phone: cleanPhone,
+            appointmentPhone: cleanAppt,
             degree: editData.degree.filter((d) => d.trim() !== ""),
         };
         const res = await authFetch(
@@ -257,7 +280,7 @@ export default function DoctorProfile(props) {
         );
         const data = await res.json();
         if (data.success) {
-            setDoctor(data.doctor);
+            await fetchDoctor();
             setEditProfileOpen(false);
             props.showAlert("Profile updated successfully", "success");
         } else props.showAlert("Profile update failed", "danger");
@@ -309,6 +332,103 @@ export default function DoctorProfile(props) {
             setStaffRole("");
         } else alert(data.error);
     };
+
+    const updateDoctorPhone = useCallback(
+        async (phone) => {
+            try {
+                // 🔥 normalize (remove spaces, symbols)
+                const clean = phone.replace(/\D/g, "");
+
+                // ❌ reject invalid
+                if (clean.length !== 10) {
+                    props.showAlert("Enter valid 10 digit number", "warning");
+                    return;
+                }
+
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/update_profile`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone: clean }),
+                    },
+                );
+
+                const data = await res.json();
+
+                if (data.success) {
+                    props.showAlert("Phone updated securely", "success");
+
+                    // 🔥 IMPORTANT FIX (your previous bug)
+                    await fetchDoctor(); // ✅ refresh decrypted data
+                } else {
+                    props.showAlert(data.error || "Update failed", "danger");
+                }
+            } catch (err) {
+                console.error(err);
+                props.showAlert("Server error", "danger");
+            }
+        },
+        [API_BASE_URL, fetchDoctor, props],
+    );
+
+    useEffect(() => {
+        if (doctor?.needsPhoneUpdate && !askedPhoneOnce) {
+            setAskedPhoneOnce(true);
+
+            let message = "⚠ Please enter your phone number:";
+
+            if (doctor?.plainPhone) {
+                message = `⚠ Please re-enter your phone number for security:\n\nOld number: ${doctor.plainPhone}\n\n(Sorry for inconvenience 🙏)`;
+            }
+
+            const phone = prompt(message, doctor?.plainPhone || "");
+
+            if (phone && /^\d{10}$/.test(phone)) {
+                updateDoctorPhone(phone);
+            }
+        }
+    }, [doctor, askedPhoneOnce, updateDoctorPhone]);
+
+    const updateDoctorAppointmentPhone = useCallback(
+        async (appointmentPhone) => {
+            try {
+                const res = await authFetch(
+                    `${API_BASE_URL}/api/doctor/update_profile`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ appointmentPhone }),
+                    },
+                );
+
+                const data = await res.json();
+
+                if (data.success) {
+                    props.showAlert("Appointment number secured", "success");
+                    fetchDoctor();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        },
+        [API_BASE_URL, fetchDoctor, props],
+    );
+
+    useEffect(() => {
+        if (doctor?.needsAppointmentPhoneUpdate && !askedApptOnce) {
+            setAskedApptOnce(true);
+
+            const phone = prompt(
+                `⚠ Please re-enter appointment number:\n\nOld: ${doctor.plainAppointmentPhone}`,
+                doctor?.plainAppointmentPhone || "",
+            );
+
+            if (phone && /^\d{10}$/.test(phone)) {
+                updateDoctorAppointmentPhone(phone);
+            }
+        }
+    }, [doctor, askedApptOnce, updateDoctorAppointmentPhone]);
 
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
@@ -491,30 +611,152 @@ export default function DoctorProfile(props) {
 
                     <div className="dp-info-grid">
                         {[
-                            { label: "Email", value: doctor.email },
-                            { label: "Phone", value: doctor.phone },
                             {
-                                label: "Reg No",
-                                value: doctor.regNumber || "N/A",
+                                label: "Contact",
+                                value: (
+                                    <>
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Email
+                                            </span>
+                                            <span className="dp-row-value">
+                                                {doctor.email}
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Phone
+                                            </span>
+                                            <span className="dp-row-value">
+                                                {showPhone
+                                                    ? doctor.phone || "N/A"
+                                                    : doctor.phoneMasked ||
+                                                      "N/A"}
+                                            </span>
+                                            {doctor.phone && (
+                                                <button
+                                                    onClick={() =>
+                                                        setShowPhone((p) => !p)
+                                                    }
+                                                >
+                                                    {showPhone ? (
+                                                        <EyeOff size={13} />
+                                                    ) : (
+                                                        <Eye size={13} />
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">Appt</span>
+                                            <span className="dp-row-value">
+                                                <span className="dp-row-value">
+                                                    {showApptPhone
+                                                        ? doctor.appointmentPhone ||
+                                                          "N/A"
+                                                        : doctor.appointmentPhoneMasked ||
+                                                          "N/A"}
+                                                </span>
+                                                {doctor.appointmentPhone && (
+                                                    <button
+                                                        onClick={() =>
+                                                            setShowApptPhone(
+                                                                (p) => !p,
+                                                            )
+                                                        }
+                                                    >
+                                                        {showApptPhone ? (
+                                                            <EyeOff size={13} />
+                                                        ) : (
+                                                            <Eye size={13} />
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </span>
+                                        </div>
+                                    </>
+                                ),
                             },
                             {
-                                label: "Experience",
-                                value: doctor.experience || "N/A",
-                            },
-                            {
-                                label: "Degree",
-                                value: doctor.degree?.join(", ") || "N/A",
+                                label: "Professional",
+                                value: (
+                                    <div className="dp-group">
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Experience
+                                            </span>
+                                            <span>
+                                                {doctor.experience || "N/A"} yrs
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Degree
+                                            </span>
+                                            <span>
+                                                {doctor.degree?.join(", ") ||
+                                                    "N/A"}
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Reg No
+                                            </span>
+                                            <span>
+                                                {doctor.regNumber || "N/A"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ),
                             },
                             {
                                 label: "Address",
-                                value: [
-                                    doctor.address?.line1,
-                                    doctor.address?.city,
-                                    doctor.address?.state,
-                                    doctor.address?.pincode,
-                                ]
-                                    .filter(Boolean)
-                                    .join(", "),
+                                value: (
+                                    <div className="dp-group">
+                                        <div className="dp-row">
+                                            <span className="dp-key">Line</span>
+                                            <span>
+                                                {[
+                                                    doctor.address?.line1,
+                                                    doctor.address?.line2,
+                                                    doctor.address?.line3,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(", ") || "N/A"}
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">City</span>
+                                            <span>
+                                                {doctor.address?.city || "N/A"}
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                State
+                                            </span>
+                                            <span>
+                                                {doctor.address?.state || "N/A"}
+                                            </span>
+                                        </div>
+
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Pincode
+                                            </span>
+                                            <span>
+                                                {doctor.address?.pincode ||
+                                                    "N/A"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ),
                             },
                         ].map((item) => (
                             <div key={item.label} className="dp-info-item">
@@ -836,6 +1078,19 @@ export default function DoctorProfile(props) {
                                             className="dp-input"
                                             name="phone"
                                             value={editData.phone}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Appointment Phone
+                                        </label>
+                                        <input
+                                            className="dp-input"
+                                            name="appointmentPhone"
+                                            value={
+                                                editData.appointmentPhone || ""
+                                            }
                                             onChange={handleEditChange}
                                         />
                                     </div>

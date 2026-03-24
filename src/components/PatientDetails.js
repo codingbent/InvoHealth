@@ -585,13 +585,16 @@ export default function PatientDetails(props) {
                 );
                 rightY += 5;
             }
-            if (doctor.phone) {
-                docPdf.text(
-                    `Phone: ${doctor.phone}`,
-                    pageWidth - margin,
-                    rightY,
-                    { align: "right" },
-                );
+            const docPhone =
+                doctor.phone ||
+                doctor.phoneDecrypted ||
+                (doctor.phoneMasked ? doctor.phoneMasked : "");
+
+            // show only if exists
+            if (docPhone) {
+                docPdf.text(`Phone: ${docPhone}`, pageWidth - margin, rightY, {
+                    align: "right",
+                });
                 rightY += 5;
             }
             docPdf.text(
