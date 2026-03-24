@@ -419,7 +419,6 @@ export default function PatientDetails(props) {
                 gender: patient.gender,
             };
 
-            // ✅ only send number if user typed it
             if (patient.number && patient.number.trim() !== "") {
                 payload.number = patient.number.trim();
             }
@@ -438,13 +437,13 @@ export default function PatientDetails(props) {
             if (response.ok) {
                 props.showAlert("Patient updated successfully", "success");
 
-                // ✅ clear number input after save
                 setPatient((prev) => ({
                     ...prev,
                     number: "",
                 }));
 
-                fetchData(); // 🔥 refresh correct encrypted data
+                fetchData();
+                setFullNumber(false);
                 setEditPatientOpen(false);
             } else {
                 alert(result.message || "Update failed");
@@ -491,6 +490,15 @@ export default function PatientDetails(props) {
     useEffect(() => {
         if (isFullPaid) setCollected(finalAmount);
     }, [isFullPaid, finalAmount]);
+
+    useEffect(() => {
+        if (fullNumber) {
+            setPatient((prev) => ({
+                ...prev,
+                number: fullNumber,
+            }));
+        }
+    }, [fullNumber]);
 
     const handleInvoiceClick = async (appointmentId, visit, details) => {
         try {
@@ -929,7 +937,12 @@ export default function PatientDetails(props) {
                     <div className="pd-actions">
                         <button
                             className="pd-btn pd-btn-primary"
-                            onClick={() => setEditPatientOpen(true)}
+                            onClick={() => {
+                                setEditPatientOpen(true);
+                                setTimeout(() => {
+                                    fetchFullNumber();
+                                }, 0);
+                            }}
                         >
                             <Pencil size={13} /> Edit Patient
                         </button>
@@ -1314,7 +1327,12 @@ export default function PatientDetails(props) {
                         <div className="pd-modal-body">
                             {/* Date toggle */}
                             <div className="pd-field">
-                                <label className="pd-label">Date *</label>
+                                <label className="pd-label">
+                                    Date & Time
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
                                 <button
                                     type="button"
                                     className={`pd-date-btn ${showCalendar ? "open" : ""}`}
@@ -1448,7 +1466,10 @@ export default function PatientDetails(props) {
                             )}
 
                             <div className="pd-section-sep">
-                                Services & Billing *
+                                Services & Billing
+                                <span className="sg-required">
+                                    <sup>*</sup>
+                                </span>
                             </div>
                             <ServiceList
                                 services={availableServices}
@@ -1726,7 +1747,10 @@ export default function PatientDetails(props) {
 
                             <div className="pd-field">
                                 <label className="pd-label">
-                                    Payment Type *
+                                    Payment Type
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </label>
                                 <select
                                     className="pd-select"
@@ -1799,7 +1823,12 @@ export default function PatientDetails(props) {
                         </div>
                         <div className="pd-modal-body">
                             <div className="pd-field">
-                                <label className="pd-label">Name</label>
+                                <label className="pd-label">
+                                    Name
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
                                 <input
                                     className="pd-input"
                                     type="text"
@@ -1811,19 +1840,32 @@ export default function PatientDetails(props) {
                             <div className="pd-field">
                                 <label className="pd-label">
                                     Mobile Number
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </label>
+
                                 <input
                                     className="pd-input"
                                     type="text"
                                     name="number"
                                     value={patient.number}
-                                    onChange={handleChange}
+                                    onChange={(e) =>
+                                        setPatient((prev) => ({
+                                            ...prev,
+                                            number: e.target.value,
+                                        }))
+                                    }
                                     maxLength={10}
-                                    minLength={10}
                                 />
                             </div>
                             <div className="pd-field">
-                                <label className="pd-label">Age</label>
+                                <label className="pd-label">
+                                    Age
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
                                 <input
                                     className="pd-input"
                                     type="number"
@@ -1833,7 +1875,12 @@ export default function PatientDetails(props) {
                                 />
                             </div>
                             <div className="pd-field">
-                                <label className="pd-label">Gender</label>
+                                <label className="pd-label">
+                                    Gender
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
                                 <select
                                     className="pd-select"
                                     name="gender"
@@ -1852,6 +1899,7 @@ export default function PatientDetails(props) {
                                 onClick={() => {
                                     setEditPatientOpen(false);
                                     setPatient(details);
+                                    setFullNumber(false);
                                 }}
                             >
                                 Cancel

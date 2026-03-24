@@ -67,7 +67,7 @@ router.post(
                 });
             }
 
-            // 🔍 duplicate check (using last4 + email fallback)
+            // duplicate check (using last4 + email fallback)
             let doc = await Doc.findOne({
                 $or: [
                     { email: req.body.email },
@@ -85,7 +85,7 @@ router.post(
                 });
             }
 
-            // 🔐 secure storage
+            // secure storage
             const phoneHash = await bcrypt.hash(cleanPhone, 10);
             const phoneEncrypted = encrypt(cleanPhone);
 

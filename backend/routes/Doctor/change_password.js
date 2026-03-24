@@ -24,7 +24,7 @@ router.put("/change_password", fetchuser, async (req, res) => {
             });
         }
 
-        // ✅ compare old password
+        // compare old password
         const isMatch = await bcrypt.compare(currentPassword, doc.password);
 
         if (!isMatch) {
@@ -34,7 +34,7 @@ router.put("/change_password", fetchuser, async (req, res) => {
             });
         }
 
-        // ✅ hash new password
+        // hash new password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 

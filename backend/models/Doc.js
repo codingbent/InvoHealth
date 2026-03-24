@@ -112,7 +112,10 @@ const DocSchema = new Schema(
             pincode: { type: String, required: true },
         },
 
-        regNumber: String,
+        regNumber: {
+            type: String,
+            required: true,
+        },
 
         experience: {
             type: Number,

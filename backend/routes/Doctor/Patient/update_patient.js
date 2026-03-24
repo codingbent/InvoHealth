@@ -3,14 +3,14 @@ const router = express.Router();
 const Patient = require("../../../models/Patient");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
-const { encrypt } = require("../../../utils/crypto"); // 🔥 add this
+const { encrypt } = require("../../../utils/crypto"); //  add this
 var fetchuser = require("../../../middleware/fetchuser");
 
 const saltRounds = 10;
 
 router.put(
     "/update_patient/:id",
-    fetchuser, // 🔐 add auth
+    fetchuser, //  add auth
     [
         body("name", "Enter Name").optional().notEmpty(),
         body("service").optional(),
@@ -35,14 +35,13 @@ router.put(
             const doctorId = req.user.doctorId;
             const { name, service, number, amount, age, gender } = req.body;
 
-            // 🔍 fetch existing patient (for security + fallback name)
+            //  fetch existing patient (for security + fallback name)
             const existingPatient = await Patient.findById(req.params.id);
 
             if (!existingPatient) {
                 return res.status(404).json({ message: "Patient not found" });
             }
 
-            // 🔐 ensure ownership
             if (existingPatient.doctor.toString() !== doctorId) {
                 return res.status(403).json({ message: "Unauthorized" });
             }
@@ -57,7 +56,6 @@ router.put(
             if (age) updateFields.age = age;
             if (gender) updateFields.gender = gender;
 
-            // 🔐 HANDLE NUMBER UPDATE
             if (number) {
                 const cleanNumber = number.trim();
 

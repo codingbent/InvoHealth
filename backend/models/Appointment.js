@@ -75,7 +75,7 @@ AppointmentSchema.statics.addVisit = async function (
     date,
     collectedInput,
 ) {
-    // 1️⃣ Safe date parsing
+    // Safe date parsing
     let visitDate = new Date();
     if (date && !isNaN(Date.parse(date))) {
         visitDate = new Date(date);
@@ -83,7 +83,7 @@ AppointmentSchema.statics.addVisit = async function (
 
     const finalAmount = Number(amount) || 0;
 
-    // 2️⃣ Safe collected calculation
+    // Safe collected calculation
     let collected = Number(collectedInput);
 
     if (isNaN(collected)) {
@@ -93,10 +93,10 @@ AppointmentSchema.statics.addVisit = async function (
     if (collected < 0) collected = 0;
     if (collected > finalAmount) collected = finalAmount;
 
-    // 3️⃣ Remaining
+    // Remaining
     const remaining = Math.max(finalAmount - collected, 0);
 
-    // 4️⃣ Status logic
+    // Status logic
     const status =
         remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 

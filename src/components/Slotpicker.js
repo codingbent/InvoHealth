@@ -29,7 +29,12 @@ export default function Slotpicker({
         <>
             <div className="sp-wrap">
                 <div className="sp-header-row">
-                    <span className="sp-time-label">Time Slot</span>
+                    <span className="sp-time-label">
+                        Time Slot
+                        <span className="sg-required">
+                            <sup>*</sup>
+                        </span>
+                    </span>
                     <div className="sp-badges">
                         {currentSlot && (
                             <span className="sp-now-badge">

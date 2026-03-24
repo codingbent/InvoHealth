@@ -24,7 +24,7 @@ const sections = [
     {
         num: "05",
         title: "User Responsibilities",
-        body: "Users agree to provide accurate information, maintain confidentiality of login credentials, and use the platform in accordance with applicable laws and medical regulations.",
+        body: "Users must ensure accuracy of data entered and understand that sensitive data is securely processed using encryption.",
     },
     {
         num: "06",
@@ -137,7 +137,7 @@ export default function Terms() {
                         className="tc-footer"
                         ref={(el) => (itemsRef.current[sections.length] = el)}
                     >
-                        <div className="tc-footer-icon">⚖</div>
+                        <div className="tc-footer-icon"></div>
                         <div className="tc-footer-text">
                             <strong>These terms are subject to change.</strong>{" "}
                             Continued use of InvoHealth after updates

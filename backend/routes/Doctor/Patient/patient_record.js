@@ -19,19 +19,19 @@ router.get("/patient_record/:patientId", fetchuser, async (req, res) => {
             return res.status(404).json({ message: "Patient not found" });
         }
 
-        // 🔐 SECURITY: ensure doctor owns patient
+        //  SECURITY: ensure doctor owns patient
         if (patient.doctor.toString() !== doctorId) {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
-        // 🔐 Mask number (clean + future-proof)
+        //  Mask number (clean + future-proof)
         const maskedNumber = patient.numberLast4
             ? `******${patient.numberLast4}`
             : patient.number
               ? `******${patient.number.slice(-4)}`
               : "";
 
-        // ❌ Remove sensitive fields (VERY IMPORTANT)
+        //  Remove sensitive fields (VERY IMPORTANT)
         delete patient.number;
         delete patient.numberHash;
         delete patient.numberEncrypted;
@@ -49,7 +49,7 @@ router.get("/patient_record/:patientId", fetchuser, async (req, res) => {
             });
         }
 
-        // 🔄 Normalize visits
+        // Normalize visits
         appointment.visits = appointment.visits
             .map((visit) => {
                 const collected = Number(visit.collected);

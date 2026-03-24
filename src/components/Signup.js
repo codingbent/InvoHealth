@@ -674,7 +674,7 @@ const Signup = (props) => {
                                 />
                                 {phoneVerified && (
                                     <div className="sg-phone-locked">
-                                        🔒 Number locked after verification
+                                        Number locked after verification
                                     </div>
                                 )}
 
@@ -1080,6 +1080,21 @@ const Signup = (props) => {
                                 <div className="sg-section-line" />
                             </div>
 
+                            <div
+                                className="sg-field"
+                                style={{ marginBottom: 14 }}
+                            >
+                                <label className="sg-label">
+                                    Regestration Number{" "}
+                                    <span className="sg-required">*</span>
+                                </label>
+                                <input
+                                    className="sg-input"
+                                    name="regnumber"
+                                    onChange={onChange}
+                                    placeholder=""
+                                />
+                            </div>
                             <div
                                 className="sg-field"
                                 style={{ marginBottom: 14 }}

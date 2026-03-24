@@ -10,14 +10,14 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
         const { payments, services, gender, startDate, endDate } = req.query;
 
         const pipeline = [
-            // 🔒 Doctor scope
+            // Doctor scope
             {
                 $match: {
                     doctor: new mongoose.Types.ObjectId(doctorId),
                 },
             },
 
-            // 🔗 Join Patient (for gender)
+            // Join Patient (for gender)
             {
                 $lookup: {
                     from: "patients",
@@ -28,13 +28,13 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
             },
             { $unwind: "$patientInfo" },
 
-            // 🔹 Gender filter
+            // Gender filter
             ...(gender ? [{ $match: { "patientInfo.gender": gender } }] : []),
 
-            // 🔹 Unwind visits
+            // Unwind visits
             { $unwind: "$visits" },
 
-            // 🔹 Date filter
+            // Date filter
             ...(startDate || endDate
                 ? [
                       {
@@ -52,7 +52,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                   ]
                 : []),
 
-            // 🔹 Payment filter
+            // Payment filter
             ...(payments
                 ? [
                       {
@@ -65,7 +65,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                   ]
                 : []),
 
-            // 🔹 SERVICE FILTER (🔥 MOVED HERE 🔥)
+            // SERVICE FILTER ( MOVED HERE )
             ...(services
                 ? [
                       { $unwind: "$visits.service" },

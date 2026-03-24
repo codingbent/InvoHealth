@@ -19,7 +19,7 @@ router.put(
                 collected,
             } = req.body;
 
-            // 1️⃣ Validation
+            // Validation
             if (!date || !Array.isArray(service) || service.length === 0) {
                 return res.status(400).json({
                     success: false,
@@ -27,14 +27,14 @@ router.put(
                 });
             }
 
-            // ✅ TIME VALIDATION
+            //  TIME VALIDATION
             if (time && !/^\d{2}:\d{2}$/.test(time)) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid time format",
                 });
             }
-            // 2️⃣ Find appointment
+            // Find appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
                 return res.status(404).json({
@@ -42,7 +42,7 @@ router.put(
                     message: "Appointment not found",
                 });
             }
-            // 3️⃣ Find visit
+            // Find visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
                 return res.status(404).json({
@@ -83,20 +83,20 @@ router.put(
                 visit.date = new Date(date);
             }
 
-            // 5️⃣ Normalize services
+            // Normalize services
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
                 amount: Number(s.amount) || 0,
             }));
 
-            // 6️⃣ Compute service total
+            // Compute service total
             const serviceTotal = visit.service.reduce(
                 (sum, s) => sum + s.amount,
                 0,
             );
 
-            // 7️⃣ Discount calculation
+            // Discount calculation
             const disc = Number(discount) || 0;
             const percentFlag = Boolean(isPercent);
 
@@ -110,10 +110,10 @@ router.put(
             if (discountValue > serviceTotal) discountValue = serviceTotal;
             if (discountValue < 0) discountValue = 0;
 
-            // 8️⃣ Final amount
+            // Final amount
             const finalAmount = serviceTotal - discountValue;
 
-            // 9️⃣ Recalculate payment logic (USE FRONTEND VALUE)
+            // Recalculate payment logic (USE FRONTEND VALUE)
             let collectedAmount;
 
             if (collected !== undefined) {
@@ -139,7 +139,7 @@ router.put(
                       ? "Partial"
                       : "Unpaid";
 
-            // 🔟 Update visit fields
+            // Update visit fields
             visit.amount = finalAmount;
             visit.discount = disc;
             visit.isPercent = percentFlag;
@@ -156,7 +156,7 @@ router.put(
                 visit.payment_type = payment_type;
             }
 
-            // 1️⃣1️⃣ Save
+            // Save
             await appointment.save();
 
             return res.json({

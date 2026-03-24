@@ -14,14 +14,14 @@ router.get("/get_full_number/:id", fetchuser, async (req, res) => {
             return res.status(404).json({ error: "Patient not found" });
         }
 
-        // 🔐 SECURITY CHECK
+        //  SECURITY CHECK
         if (patient.doctor.toString() !== doctorId) {
             return res.status(403).json({ error: "Unauthorized" });
         }
 
         let fullNumber = null;
 
-        // ✅ New encrypted data
+        //  New encrypted data
         if (patient.numberEncrypted) {
             try {
                 fullNumber = decrypt(patient.numberEncrypted);
@@ -30,7 +30,7 @@ router.get("/get_full_number/:id", fetchuser, async (req, res) => {
             }
         }
 
-        // ⚠️ Old data fallback
+        // Old data fallback
         else if (patient.number) {
             fullNumber = patient.number;
         }

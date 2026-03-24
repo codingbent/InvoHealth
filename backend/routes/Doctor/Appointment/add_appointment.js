@@ -20,7 +20,7 @@ router.post("/add_appointment/:id", async (req, res) => {
 
         const patientId = req.params.id;
 
-        // 1️⃣ VALIDATION
+        // VALIDATION
         if (!Array.isArray(service) || service.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -28,7 +28,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             });
         }
 
-        // 2️⃣ FIND PATIENT
+        // FIND PATIENT
         const patient = await Patient.findById(patientId);
         if (!patient) {
             return res.status(404).json({
@@ -37,7 +37,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             });
         }
 
-        // 3️⃣ DETERMINE DOCTOR
+        // DETERMINE DOCTOR
         const finalDoctorId = doctorId || patient.doctor;
         if (!finalDoctorId) {
             return res.status(400).json({
@@ -46,13 +46,13 @@ router.post("/add_appointment/:id", async (req, res) => {
             });
         }
 
-        // 4️⃣ SERVICE TOTAL
+        // SERVICE TOTAL
         const serviceTotal = service.reduce(
             (sum, s) => sum + (Number(s.amount) || 0),
             0,
         );
 
-        // 5️⃣ DISCOUNT
+        // DISCOUNT
         const rawDiscount = Number(discount) || 0;
         const percentFlag = Boolean(isPercent);
 
@@ -63,10 +63,10 @@ router.post("/add_appointment/:id", async (req, res) => {
         discountValue = Math.min(Math.max(discountValue, 0), serviceTotal);
         discountValue = Number(discountValue.toFixed(0));
 
-        // 6️⃣ FINAL AMOUNT
+        // FINAL AMOUNT
         const finalAmount = Number((serviceTotal - discountValue).toFixed(0));
 
-        // 7️⃣ PARTIAL PAYMENT
+        // PARTIAL PAYMENT
         let collectedAmount = Math.max(Number(collected) || 0, 0);
 
         if (collectedAmount > finalAmount) {
@@ -87,7 +87,7 @@ router.post("/add_appointment/:id", async (req, res) => {
                   ? "Partial"
                   : "Unpaid";
 
-        // 8️⃣ INVOICE COUNTER
+        // INVOICE COUNTER
         const counterId = `invoice_${finalDoctorId}`;
 
         const counter = await Counter.findByIdAndUpdate(
@@ -98,7 +98,7 @@ router.post("/add_appointment/:id", async (req, res) => {
 
         const invoiceNumber = counter.seq;
 
-        // 9️⃣ CREATE VISIT OBJECT
+        // CREATE VISIT OBJECT
         const visitDate = date ? new Date(date) : new Date();
 
         const visitData = {
@@ -120,7 +120,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             image: image || "",
         };
 
-        // 🔟 SAVE
+        // SAVE
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
             {
@@ -130,7 +130,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             { new: true, upsert: true },
         );
 
-        // 1️⃣1️⃣ UPDATE PATIENT
+        // UPDATE PATIENT
         const currentLast = patient.lastAppointment
             ? new Date(patient.lastAppointment)
             : null;

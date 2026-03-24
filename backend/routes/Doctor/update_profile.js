@@ -27,11 +27,11 @@ router.put("/update_profile", fetchuser, async (req, res) => {
             updateFields[key] = rest[key];
         });
 
-        // 🔐 PHONE
+        //  PHONE
         if (phone) {
             const clean = phone.trim();
 
-            // ❌ ignore masked values
+            //  ignore masked values
             if (!/^\d{10}$/.test(clean)) {
                 console.log("Skipping invalid phone:", clean);
             } else {

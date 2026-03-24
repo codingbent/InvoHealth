@@ -32,19 +32,19 @@ export const getNextAvailableSlot = (
 
     const bookedSet = new Set(bookedSlots || []);
 
-    // 🔥 FUTURE DATE → always return first available
+    //  FUTURE DATE → always return first available
     if (!isToday) {
         return slots.find((s) => !bookedSet.has(s)) || null;
     }
 
-    // 👉 If no currentSlot → return first available
+    // If no currentSlot → return first available
     if (!currentSlot) {
         return slots.find((s) => !bookedSet.has(s)) || null;
     }
 
     let currentIndex = slots.indexOf(currentSlot);
 
-    // 🔥 FIX: if not found, find closest past slot
+    //  FIX: if not found, find closest past slot
     if (currentIndex === -1) {
         const [h, m] = currentSlot.split(":").map(Number);
         const nowMinutes = h * 60 + m;
@@ -55,12 +55,12 @@ export const getNextAvailableSlot = (
         });
     }
 
-    // ✅ forward search
+    //  forward search
     for (let i = currentIndex + 1; i < slots.length; i++) {
         if (!bookedSet.has(slots[i])) return slots[i];
     }
 
-    // ✅ backward fallback
+    //  backward fallback
     for (let i = currentIndex - 1; i >= 0; i--) {
         if (!bookedSet.has(slots[i])) return slots[i];
     }

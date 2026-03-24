@@ -25,7 +25,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
-        // 🔍 Verify user
+        //  Verify user
         const doc = await Doc.findOne({ phone });
 
         if (!doc) {
@@ -35,7 +35,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
-        // 🔐 Hash new password
+        //  Hash new password
         const salt = await bcrypt.genSalt(10);
         doc.password = await bcrypt.hash(newPassword, salt);
         await doc.save();

@@ -56,7 +56,7 @@ export default function PatientList(props) {
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
     }, []);
-    
+
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
         return () => clearTimeout(t);

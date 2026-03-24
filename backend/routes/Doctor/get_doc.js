@@ -61,7 +61,7 @@ router.get("/get_doc", fetchuser, async (req, res) => {
                 phone: phoneToSend,
                 phoneMasked: doc.phoneLast4 ? `******${doc.phoneLast4}` : "",
 
-                // 🔥 ADD THIS
+                //  ADD THIS
                 needsPhoneUpdate,
                 plainPhone,
 

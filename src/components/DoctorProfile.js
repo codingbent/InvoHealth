@@ -336,10 +336,10 @@ export default function DoctorProfile(props) {
     const updateDoctorPhone = useCallback(
         async (phone) => {
             try {
-                // 🔥 normalize (remove spaces, symbols)
+                //  normalize (remove spaces, symbols)
                 const clean = phone.replace(/\D/g, "");
 
-                // ❌ reject invalid
+                //  reject invalid
                 if (clean.length !== 10) {
                     props.showAlert("Enter valid 10 digit number", "warning");
                     return;
@@ -359,8 +359,8 @@ export default function DoctorProfile(props) {
                 if (data.success) {
                     props.showAlert("Phone updated securely", "success");
 
-                    // 🔥 IMPORTANT FIX (your previous bug)
-                    await fetchDoctor(); // ✅ refresh decrypted data
+                    //  IMPORTANT FIX (your previous bug)
+                    await fetchDoctor(); //  refresh decrypted data
                 } else {
                     props.showAlert(data.error || "Update failed", "danger");
                 }

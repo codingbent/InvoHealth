@@ -21,7 +21,7 @@ router.put("/update_availability", fetchuser, async (req, res) => {
             { $set: { availability } },
             {
                 new: true,
-                upsert: true, // 🔥 creates if not exists
+                upsert: true, //  creates if not exists
             },
         );
 

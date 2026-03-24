@@ -14,7 +14,7 @@ var fetchuser = require("../middleware/fetchuser");
 const JWT_SECRET = process.env.JWT_SECRET;
 const authMiddleware = require("../middleware/fetchuser"); // if using auth
 const axios = require("axios");
-const Pricing =require("../../models/Pricing");
+const Pricing = require("../../models/Pricing");
 const TWO_FACTOR_API_KEY = process.env.TWO_FACTOR_API_KEY;
 
 //CREATE A Doctor USING : POST "/API/AUTH" Doesn't require auth
@@ -108,7 +108,7 @@ router.post("/login", async (req, res) => {
         let userRole = null;
 
         // ======================
-        // 1️⃣ DOCTOR FIRST
+        //  DOCTOR FIRST
         // ======================
         if (identifierType === "email") {
             user = await Doc.findOne({ email: identifier });
@@ -121,7 +121,7 @@ router.post("/login", async (req, res) => {
         }
 
         // ======================
-        // 2️⃣ IF NOT DOCTOR then STAFF
+        //  IF NOT DOCTOR then STAFF
         // ======================
         if (!user && identifierType === "phone") {
             user = await Staff.findOne({ phone: identifier, isActive: true });
@@ -139,7 +139,7 @@ router.post("/login", async (req, res) => {
         }
 
         // ======================
-        // 3️⃣ JWT
+        //  JWT
         // ======================
         const payload = {
             user: {
@@ -189,7 +189,7 @@ router.post(
             const doctorId = req.user.doctorId;
             const { name, number, age, gender } = req.body;
 
-            // 🔍 CHECK EXISTING PATIENT (NAME + NUMBER)
+            // CHECK EXISTING PATIENT (NAME + NUMBER)
             const existingPatient = await Patient.findOne({
                 doctor: doctorId,
                 name: { $regex: `^${name.trim()}$`, $options: "i" },
@@ -204,7 +204,7 @@ router.post(
                 });
             }
 
-            // ✅ CREATE NEW PATIENT
+            // CREATE NEW PATIENT
             const patient = await Patient.create({
                 name: name.trim(),
                 number: number.trim(),
@@ -219,7 +219,7 @@ router.post(
                 alreadyExists: false,
             });
         } catch (err) {
-            // 🔥 DUPLICATE PATIENT
+            // DUPLICATE PATIENT
             if (err.code === 11000) {
                 return res.status(409).json({
                     success: false,
@@ -243,7 +243,7 @@ router.post(
     [body("name").notEmpty(), body("amount").isNumeric()],
     async (req, res) => {
         try {
-            // 🔑 Use req.doc.id (from fetchuser), not req.doc
+            // Use req.doc.id (from fetchuser), not req.doc
             const existingService = await Service.findOne({
                 name: req.body.name,
                 doctor: req.user.doctorId, // consistent with schema
@@ -280,7 +280,7 @@ router.post(
 // Fetch all services for the logged-in doctor
 router.get("/fetchallservice", fetchuser, async (req, res) => {
     try {
-        // 🔑 Resolve doctorId from token
+        // Resolve doctorId from token
         const doctorId =
             req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
@@ -334,7 +334,7 @@ router.put(
             .isNumeric()
             .withMessage("Age must be a number"),
 
-        // 👉 Gender field validation
+        // Gender field validation
         body("gender")
             .optional()
             .isIn(["Male", "Female"])
@@ -359,7 +359,7 @@ router.put(
             if (amount) updateFields.amount = amount;
             if (age) updateFields.age = age;
 
-            // 👉 Add gender
+            // Add gender
             if (gender) updateFields.gender = gender;
 
             // Update patient
@@ -441,7 +441,7 @@ router.post("/addappointment/:id", async (req, res) => {
 
         const patientId = req.params.id;
 
-        // 1️⃣ VALIDATION
+        //  VALIDATION
         if (!Array.isArray(service) || service.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -449,7 +449,7 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // 2️⃣ FIND PATIENT
+        //  FIND PATIENT
         const patient = await Patient.findById(patientId);
         if (!patient) {
             return res.status(404).json({
@@ -458,7 +458,7 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // 3️⃣ DETERMINE DOCTOR
+        //  DETERMINE DOCTOR
         const finalDoctorId = doctorId || patient.doctor;
         if (!finalDoctorId) {
             return res.status(400).json({
@@ -467,13 +467,13 @@ router.post("/addappointment/:id", async (req, res) => {
             });
         }
 
-        // 4️⃣ SERVICE TOTAL
+        // SERVICE TOTAL
         const serviceTotal = service.reduce(
             (sum, s) => sum + (Number(s.amount) || 0),
             0,
         );
 
-        // 5️⃣ DISCOUNT
+        // DISCOUNT
         const rawDiscount = Number(discount) || 0;
         const percentFlag = Boolean(isPercent);
 
@@ -484,10 +484,10 @@ router.post("/addappointment/:id", async (req, res) => {
         discountValue = Math.min(Math.max(discountValue, 0), serviceTotal);
         discountValue = Number(discountValue.toFixed(0));
 
-        // 6️⃣ FINAL AMOUNT
+        // FINAL AMOUNT
         const finalAmount = Number((serviceTotal - discountValue).toFixed(0));
 
-        // 7️⃣ PARTIAL PAYMENT
+        // PARTIAL PAYMENT
         let collectedAmount = Math.max(Number(collected) || 0, 0);
 
         if (collectedAmount > finalAmount) {
@@ -508,7 +508,7 @@ router.post("/addappointment/:id", async (req, res) => {
                   ? "Partial"
                   : "Unpaid";
 
-        // 8️⃣ INVOICE COUNTER
+        // INVOICE COUNTER
         const counterId = `invoice_${finalDoctorId}`;
 
         const counter = await Counter.findByIdAndUpdate(
@@ -519,7 +519,7 @@ router.post("/addappointment/:id", async (req, res) => {
 
         const invoiceNumber = counter.seq;
 
-        // 9️⃣ CREATE VISIT OBJECT
+        // CREATE VISIT OBJECT
         const visitDate = date ? new Date(date) : new Date();
 
         const visitData = {
@@ -539,7 +539,7 @@ router.post("/addappointment/:id", async (req, res) => {
             isPercent: percentFlag,
         };
 
-        // 🔟 SAVE
+        // SAVE
         const appointment = await Appointment.findOneAndUpdate(
             { patient: patientId },
             {
@@ -549,7 +549,7 @@ router.post("/addappointment/:id", async (req, res) => {
             { new: true, upsert: true },
         );
 
-        // 1️⃣1️⃣ UPDATE PATIENT
+        //  UPDATE PATIENT
         const currentLast = patient.lastAppointment
             ? new Date(patient.lastAppointment)
             : null;
@@ -630,23 +630,23 @@ router.put(
                 });
             }
 
-            // ✅ Update date
+            // Update date
             visit.date = new Date(date);
 
-            // ✅ Normalize services
+            // Normalize services
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
                 amount: Number(s.amount) || 0,
             }));
 
-            // ✅ Service total
+            // Service total
             const serviceTotal = visit.service.reduce(
                 (sum, s) => sum + s.amount,
                 0,
             );
 
-            // ✅ Discount
+            // Discount
             const disc = Number(discount) || 0;
             const percentFlag = Boolean(isPercent);
 
@@ -659,7 +659,7 @@ router.put(
 
             const finalAmount = serviceTotal - discountValue;
 
-            // ✅ Partial payment logic
+            // Partial payment logic
             let collectedAmount = Number(collected) || 0;
 
             if (collectedAmount < 0) collectedAmount = 0;
@@ -757,7 +757,7 @@ router.get("/appointments/:patientId", fetchuser, async (req, res) => {
 
 router.get("/getdoc", fetchuser, async (req, res) => {
     try {
-        // 🔑 doctorId works for BOTH doctor & staff
+        // doctorId works for BOTH doctor & staff
         const doctorId =
             req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
@@ -808,7 +808,7 @@ router.put(
                 collected,
             } = req.body;
 
-            // 1️⃣ Validation
+            //  Validation
             if (!date || !Array.isArray(service) || service.length === 0) {
                 return res.status(400).json({
                     success: false,
@@ -816,7 +816,7 @@ router.put(
                 });
             }
 
-            // 2️⃣ Find appointment
+            //  Find appointment
             const appointment = await Appointment.findById(appointmentId);
             if (!appointment) {
                 return res.status(404).json({
@@ -825,7 +825,7 @@ router.put(
                 });
             }
 
-            // 3️⃣ Find visit
+            //  Find visit
             const visit = appointment.visits.id(visitId);
             if (!visit) {
                 return res.status(404).json({
@@ -834,23 +834,23 @@ router.put(
                 });
             }
 
-            // 4️⃣ Update date
+            // Update date
             visit.date = new Date(date);
 
-            // 5️⃣ Normalize services
+            // Normalize services
             visit.service = service.map((s) => ({
                 id: s.id || null,
                 name: s.name,
                 amount: Number(s.amount) || 0,
             }));
 
-            // 6️⃣ Compute service total
+            // Compute service total
             const serviceTotal = visit.service.reduce(
                 (sum, s) => sum + s.amount,
                 0,
             );
 
-            // 7️⃣ Discount calculation
+            // Discount calculation
             const disc = Number(discount) || 0;
             const percentFlag = Boolean(isPercent);
 
@@ -864,10 +864,10 @@ router.put(
             if (discountValue > serviceTotal) discountValue = serviceTotal;
             if (discountValue < 0) discountValue = 0;
 
-            // 8️⃣ Final amount
+            // Final amount
             const finalAmount = serviceTotal - discountValue;
 
-            // 9️⃣ Recalculate payment logic (USE FRONTEND VALUE)
+            // Recalculate payment logic (USE FRONTEND VALUE)
             let collectedAmount;
 
             if (collected !== undefined) {
@@ -893,7 +893,7 @@ router.put(
                       ? "Partial"
                       : "Unpaid";
 
-            // 🔟 Update visit fields
+            // Update visit fields
             visit.amount = finalAmount;
             visit.discount = disc;
             visit.isPercent = percentFlag;
@@ -910,7 +910,7 @@ router.put(
                 visit.payment_type = payment_type;
             }
 
-            // 1️⃣1️⃣ Save
+            //  Save
             await appointment.save();
 
             return res.json({
@@ -946,7 +946,7 @@ router.delete(
                 (v) => v._id.toString() !== visitId,
             );
 
-            // 🛑 NEW FIX: Also remove broken/empty visits
+            //  NEW FIX: Also remove broken/empty visits
             appointment.visits = appointment.visits.filter((v) => {
                 const isEmptyVisit =
                     (!v.service || v.service.length === 0) &&
@@ -1111,7 +1111,7 @@ router.get("/fetchallappointments", fetchuser, async (req, res) => {
 router.get("/exportappointments", fetchuser, async (req, res) => {
     try {
         const appointments = await Appointment.find({
-            doctor: req.user.id, // ✅ FIXED (you were using doctorId)
+            doctor: req.user.id, // FIXED (you were using doctorId)
         }).populate("patient");
 
         const allVisits = [];
@@ -1179,7 +1179,7 @@ router.get("/search-patients", fetchuser, async (req, res) => {
                 { number: { $regex: q } },
             ],
         })
-            .limit(10) // 🔥 IMPORTANT: limit results
+            .limit(10) // IMPORTANT: limit results
             .select("name number gender age");
 
         res.json(patients);
@@ -1258,7 +1258,7 @@ router.post("/check-phone", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
     let { sessionId, otp, phone } = req.body;
 
-    // ✅ normalize phone
+    // normalize phone
     phone = phone.replace(/\D/g, "").slice(-10);
 
     try {
@@ -1273,7 +1273,7 @@ router.post("/verify-otp", async (req, res) => {
             });
         }
 
-        // 🔍 Check user in DB
+        // Check user in DB
         const doc = await Doc.findOne({ phone });
 
         if (!doc) {
@@ -1327,7 +1327,7 @@ router.put("/change-password", fetchuser, async (req, res) => {
             });
         }
 
-        // ✅ compare old password
+        // compare old password
         const isMatch = await bcrypt.compare(currentPassword, doc.password);
 
         if (!isMatch) {
@@ -1337,7 +1337,7 @@ router.put("/change-password", fetchuser, async (req, res) => {
             });
         }
 
-        // ✅ hash new password
+        // hash new password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
@@ -1380,7 +1380,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
-        // 🔍 Verify user
+        // Verify user
         const doc = await Doc.findOne({ phone });
 
         if (!doc) {
@@ -1390,7 +1390,7 @@ router.post("/reset-password", async (req, res) => {
             });
         }
 
-        // 🔐 Hash new password
+        //  Hash new password
         const salt = await bcrypt.genSalt(10);
         doc.password = await bcrypt.hash(newPassword, salt);
         await doc.save();
@@ -1594,7 +1594,7 @@ router.post("/staff/login", async (req, res) => {
             });
         }
 
-        // 🔹 FIRST LOGIN (NO PASSWORD YET)
+        //  FIRST LOGIN (NO PASSWORD YET)
         if (!staff.password) {
             return res.json({
                 success: true,
@@ -1603,7 +1603,7 @@ router.post("/staff/login", async (req, res) => {
             });
         }
 
-        // 🔹 NORMAL LOGIN
+        //  NORMAL LOGIN
         const match = await bcrypt.compare(password, staff.password);
         if (!match) {
             return res.status(400).json({
@@ -1629,7 +1629,7 @@ router.post("/staff/login", async (req, res) => {
             success: true,
             token,
             role: staff.role, // receptionist | nurse | assistant
-            name: staff.name, // ✅ REQUIRED
+            name: staff.name, // REQUIRED
         });
     } catch (err) {
         res.status(500).json({ success: false, error: "Server error" });
@@ -1749,7 +1749,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
         const { payments, services, gender, startDate, endDate } = req.query;
 
         const pipeline = [
-            // 🔒 Doctor scope
+            //  Doctor scope
             {
                 $match: {
                     doctor: new mongoose.Types.ObjectId(doctorId),
@@ -1767,13 +1767,13 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
             },
             { $unwind: "$patientInfo" },
 
-            // 🔹 Gender filter
+            //  Gender filter
             ...(gender ? [{ $match: { "patientInfo.gender": gender } }] : []),
 
-            // 🔹 Unwind visits
+            //  Unwind visits
             { $unwind: "$visits" },
 
-            // 🔹 Date filter
+            //  Date filter
             ...(startDate || endDate
                 ? [
                       {
@@ -1791,7 +1791,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                   ]
                 : []),
 
-            // 🔹 Payment filter
+            //  Payment filter
             ...(payments
                 ? [
                       {
@@ -1804,7 +1804,7 @@ router.get("/dashboard/analytics", fetchuser, async (req, res) => {
                   ]
                 : []),
 
-            // 🔹 SERVICE FILTER (🔥 MOVED HERE 🔥)
+            //  SERVICE FILTER  MOVED HERE)
             ...(services
                 ? [
                       { $unwind: "$visits.service" },

@@ -23,12 +23,12 @@ router.post("/login_doctor", async (req, res) => {
         else if (identifierType === "phone") {
             const cleanPhone = normalizePhone(identifier);
 
-            // 🔍 Step 1: narrow down using last4
+            //  Step 1: narrow down using last4
             const candidates = await Doc.find({
                 phoneLast4: cleanPhone.slice(-4),
             });
 
-            // 🔐 Step 2: compare hash
+            //  Step 2: compare hash
             for (let doc of candidates) {
                 if (!doc.phoneHash) continue;
 

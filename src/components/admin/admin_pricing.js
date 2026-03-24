@@ -23,7 +23,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: false,
-            imageLimit:0,
+            imageLimit: 0,
         },
         pro: {
             monthly: 0,
@@ -31,7 +31,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: true,
-            imageLimit:0,
+            imageLimit: 0,
         },
         enterprise: {
             monthly: 0,
@@ -39,7 +39,7 @@ export default function AdminPricing() {
             excelLimit: 0,
             invoiceLimit: 0,
             analytics: true,
-            imageLimit:0,
+            imageLimit: 0,
         },
     });
     const [loading, setLoading] = useState(false);

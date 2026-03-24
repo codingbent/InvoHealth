@@ -98,7 +98,7 @@ router.get("/export_appointments", fetchuser, async (req, res) => {
                 const remaining = billed - collected;
                 let fullNumber = "";
 
-                // ✅ Case 1: encrypted
+                //  Case 1: encrypted
                 if (appt.patient.numberEncrypted) {
                     try {
                         fullNumber = decrypt(appt.patient.numberEncrypted);
@@ -107,12 +107,12 @@ router.get("/export_appointments", fetchuser, async (req, res) => {
                     }
                 }
 
-                // ✅ Case 2: old plain number
+                //  Case 2: old plain number
                 if (!fullNumber && appt.patient.number) {
                     fullNumber = appt.patient.number;
                 }
 
-                // ✅ Case 3: last fallback (at least show something)
+                //  Case 3: last fallback (at least show something)
                 if (!fullNumber && appt.patient.numberLast4) {
                     fullNumber = "******" + appt.patient.numberLast4;
                 }

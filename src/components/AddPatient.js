@@ -171,14 +171,14 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
     const currentSlot = useMemo(() => {
         if (!timeSlots.length) return null;
 
-        // 🔥 if future date → return first available
+        //  if future date → return first available
         if (!isToday) {
             return (
                 timeSlots.find((slot) => !bookedSlots.includes(slot)) || null
             );
         }
 
-        // ✅ today logic
+        //  today logic
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -215,7 +215,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
 
         let index = timeSlots.indexOf(currentSlot);
 
-        // 🔥 FIX: if not found, find closest slot
+        //  FIX: if not found, find closest slot
         if (index === -1) {
             const [h, m] = currentSlot.split(":").map(Number);
             const currentMinutes = h * 60 + m;
@@ -229,7 +229,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             if (index < 0) index = 0;
         }
 
-        // ✅ forward search only
+        //  forward search only
         for (let i = index + 1; i < timeSlots.length; i++) {
             if (!bookedSlots.includes(timeSlots[i])) {
                 return timeSlots[i];
@@ -447,7 +447,10 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                     style={{ gridColumn: "span 1" }}
                                 >
                                     <label className="ap-label">
-                                        Full Name *
+                                        Full Name
+                                        <span className="sg-required">
+                                            <sup>*</sup>
+                                        </span>
                                     </label>
                                     <input
                                         className="ap-input"
@@ -459,7 +462,12 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                     />
                                 </div>
                                 <div className="ap-field">
-                                    <label className="ap-label">Gender</label>
+                                    <label className="ap-label">
+                                        Gender
+                                        <span className="sg-required">
+                                            <sup>*</sup>
+                                        </span>
+                                    </label>
                                     <select
                                         className="ap-select"
                                         name="gender"
@@ -471,7 +479,12 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                     </select>
                                 </div>
                                 <div className="ap-field">
-                                    <label className="ap-label">Age</label>
+                                    <label className="ap-label">
+                                        Age
+                                        <span className="sg-required">
+                                            <sup>*</sup>
+                                        </span>
+                                    </label>
                                     <input
                                         className="ap-input"
                                         type="number"
@@ -485,6 +498,9 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                             <div className="ap-field">
                                 <label className="ap-label">
                                     Mobile Number
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </label>
                                 <input
                                     className="ap-input"
@@ -507,7 +523,12 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                             </div>
 
                             {/* Services */}
-                            <div className="ap-section">Services & Billing</div>
+                            <div className="ap-section">
+                                Services & Billing
+                                <span className="sg-required">
+                                    <sup>*</sup>
+                                </span>
+                            </div>
                             <ServiceList
                                 services={availableServices}
                                 selectedServices={service}
@@ -847,7 +868,12 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                             </div>
                             <div className="ap-grid2">
                                 <div className="ap-field">
-                                    <label className="ap-label">Date</label>
+                                    <label className="ap-label">
+                                        Date
+                                        <span className="sg-required">
+                                            <sup>*</sup>
+                                        </span>
+                                    </label>
 
                                     {/* Trigger button showing selected date */}
                                     <button
@@ -929,6 +955,9 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                 <div className="ap-field">
                                     <label className="ap-label">
                                         Payment Type
+                                        <span className="sg-required">
+                                            <sup>*</sup>
+                                        </span>
                                     </label>
                                     <select
                                         className="ap-select"

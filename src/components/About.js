@@ -33,6 +33,7 @@ export default function About() {
         { icon: <Building2 size={14} />, label: "Clinic-first design" },
         { icon: <Smartphone size={14} />, label: "Mobile & desktop" },
         { icon: <ShieldCheck size={14} />, label: "Secure access" },
+        { icon: <ShieldCheck size={14} />, label: "Encrypted data" },
     ];
 
     return (
@@ -145,10 +146,11 @@ export default function About() {
                         <div className="ab-card-eyebrow">Security</div>
                         <div className="ab-card-title">Access Control</div>
                         <p className="ab-card-body">
-                            Secure authentication with token-based access
-                            control. Role-based permissions ensure only
-                            authorized users can access sensitive patient and
-                            financial data.
+                            Advanced security with encrypted sensitive data,
+                            token-based authentication, and role-based access
+                            control. Phone numbers and critical data are
+                            securely stored using hashing and encryption to
+                            prevent unauthorized access.
                         </p>
                         <ul className="ab-list" style={{ marginTop: 12 }}>
                             <li>Token-based auth</li>
@@ -192,8 +194,8 @@ export default function About() {
                 {/* Footer */}
                 <div className="ab-footer">
                     <span className="ab-footer-left">
-                        <Copyright size={18}/> {new Date().getFullYear()} InvoHealth. All rights
-                        reserved.
+                        <Copyright size={18} /> {new Date().getFullYear()}{" "}
+                        InvoHealth. All rights reserved.
                     </span>
                     <span className="ab-version-badge">
                         v{process.env.REACT_APP_VERSION}

@@ -34,7 +34,7 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
         appointments.forEach((appt) => {
             if (!appt.patient) return;
 
-            // 🔐 decrypt once per patient
+            //  decrypt once per patient
             let fullNumber = "";
 
             if (appt.patient.numberEncrypted) {
@@ -73,7 +73,7 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
                 allVisits.push({
                     patientId: appt.patient._id,
                     name: appt.patient.name || "",
-                    number: fullNumber, // ✅ decrypted number
+                    number: fullNumber, //  decrypted number
                     numberLast4: appt.patient.numberLast4 || "",
                     gender: appt.patient.gender || "",
                     date: visit.date,

@@ -14,7 +14,7 @@ router.get("/search_patient", fetchuser, async (req, res) => {
 
         const cleanQ = q.replace(/\D/g, "");
 
-        // ✅ Step 1: DB filter (fast)
+        //  Step 1: DB filter (fast)
         const patients = await Patient.find({
             doctor: doctorId,
             $or: [
@@ -25,7 +25,7 @@ router.get("/search_patient", fetchuser, async (req, res) => {
             .limit(20)
             .select("name gender age numberEncrypted numberLast4 number");
 
-        // ✅ Step 2: JS filter (for full number)
+        //  Step 2: JS filter (for full number)
         const filtered = patients.filter((p) => {
             // name match
             if (p.name?.toLowerCase().includes(q.toLowerCase())) return true;
@@ -33,7 +33,7 @@ router.get("/search_patient", fetchuser, async (req, res) => {
             // last4 match
             if (p.numberLast4?.includes(cleanQ)) return true;
 
-            // 🔐 encrypted number match
+            //  encrypted number match
             if (p.numberEncrypted) {
                 try {
                     const num = decrypt(p.numberEncrypted)
@@ -52,7 +52,7 @@ router.get("/search_patient", fetchuser, async (req, res) => {
             return false;
         });
 
-        // ✅ Step 3: return clean data
+        //  Step 3: return clean data
         const result = filtered.slice(0, 10).map((p) => ({
             _id: p._id,
             name: p.name,

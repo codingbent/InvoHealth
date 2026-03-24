@@ -3,7 +3,7 @@ const router = express.Router();
 const Patient = require("../../../models/Patient");
 var fetchuser = require("../../../middleware/fetchuser");
 const { body } = require("express-validator");
-const bcrypt = require("bcryptjs"); // ✅ add this
+const bcrypt = require("bcryptjs"); //  add this
 const { encrypt } = require("../../../utils/crypto");
 
 const saltRounds = 10;
@@ -31,7 +31,7 @@ router.post(
             const cleanName = name.trim();
             const cleanNumber = number.trim();
 
-            // 🔍 Find same-name patients
+            //  Find same-name patients
             const candidates = await Patient.find({
                 doctor: doctorId,
                 name: { $regex: `^${cleanName}$`, $options: "i" },
@@ -39,7 +39,7 @@ router.post(
 
             let existingPatient = null;
 
-            // 🔐 Compare using bcrypt
+            //  Compare using bcrypt
             for (let p of candidates) {
                 if (!p.numberHash) continue;
 
@@ -59,11 +59,11 @@ router.post(
                 });
             }
 
-            // 🔐 Encrypt + Hash
+            //  Encrypt + Hash
             const encryptedNumber = encrypt(cleanNumber);
             const hashedNumber = await bcrypt.hash(cleanNumber, saltRounds);
 
-            // ✅ Create patient
+            //  Create patient
             const patient = await Patient.create({
                 name: cleanName,
                 numberEncrypted: encryptedNumber,

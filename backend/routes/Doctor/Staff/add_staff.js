@@ -34,7 +34,7 @@ router.post("/add_staff", fetchuser, async (req, res) => {
             });
         }
 
-        // ================= 🔥 GET DOCTOR =================
+        // =================  GET DOCTOR =================
         const doctor = await Doctor.findById(doctorId);
 
         if (!doctor) {
@@ -46,7 +46,7 @@ router.post("/add_staff", fetchuser, async (req, res) => {
 
         const plan = doctor.subscription?.plan?.toLowerCase() || "free";
 
-        // ================= 🔥 GET STAFF LIMIT =================
+        // =================  GET STAFF LIMIT =================
         let staffLimit = 1; // default FREE plan
 
         if (plan !== "free") {
@@ -62,13 +62,13 @@ router.post("/add_staff", fetchuser, async (req, res) => {
             staffLimit = pricing[plan].staffLimit;
         }
 
-        // ================= 🔥 COUNT STAFF =================
+        // =================  COUNT STAFF =================
         const currentStaffCount = await Staff.countDocuments({
             doctorId,
             isActive: true,
         });
 
-        // ================= 🚫 LIMIT CHECK =================
+        // ================= LIMIT CHECK =================
         if (staffLimit !== -1 && currentStaffCount >= staffLimit) {
             return res.status(403).json({
                 success: false,

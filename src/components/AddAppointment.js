@@ -438,6 +438,9 @@ export default function AddAppointment({ showAlert }) {
                                         }}
                                     />
                                     Appointment Date
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </label>
                                 <button
                                     type="button"
@@ -505,6 +508,9 @@ export default function AddAppointment({ showAlert }) {
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
                                     Services
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </span>
                                 <div className="aa-section-line" />
                             </div>
@@ -685,6 +691,9 @@ export default function AddAppointment({ showAlert }) {
                                         }}
                                     />
                                     Payment Type
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
                                 </label>
                                 <select
                                     className="aa-select"

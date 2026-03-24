@@ -16,16 +16,16 @@ router.get("/subscription", fetchuser, async (req, res) => {
 
         let subscription = doctor.subscription || {};
 
-        // ✅ CHECK EXPIRY
+        //  CHECK EXPIRY
         if (
             subscription.expiryDate &&
             new Date(subscription.expiryDate) < new Date() &&
             subscription.status === "active"
         ) {
-            // ✅ KEEP SAME PLAN
+            //  KEEP SAME PLAN
             doctor.subscription.status = "expired";
 
-            // ✅ RESET USAGE
+            //  RESET USAGE
             doctor.usage = {
                 excelExports: 0,
                 invoiceDownloads: 0,

@@ -1,3 +1,4 @@
+import { LockIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const sections = [
@@ -11,11 +12,11 @@ const sections = [
         title: "Information We Collect",
         body: "We may collect the following information when you register and use the platform:",
         list: [
-            "Name and contact information",
+            "Name and contact information (securely processed)",
             "Email address",
-            "Clinic information",
-            "Professional details",
+            "Clinic and professional details",
             "Patient and appointment records entered by users",
+            "Encrypted contact numbers for security purposes",
         ],
     },
     {
@@ -37,25 +38,30 @@ const sections = [
     {
         num: "05",
         title: "Data Security",
-        body: "We implement reasonable security measures to protect user data. Account passwords are securely hashed before storage — never stored in plain text and not accessible to administrators. While we take appropriate precautions, no system can guarantee absolute security. Users should use strong passwords and protect their account access.",
+        body: "We implement strong security measures to protect user data. Sensitive information such as passwords and phone numbers are securely stored using hashing and encryption techniques. Phone numbers are never stored in plain text and are masked within the platform. Access to sensitive data is restricted and controlled through authentication and role-based permissions. While we take appropriate precautions, no system can guarantee absolute security.",
     },
     {
         num: "06",
+        title: "Data Protection Practices",
+        body: "InvoHealth follows a privacy-first approach. Sensitive data such as phone numbers are encrypted and masked to prevent unauthorized access. We do not store sensitive information in plain text and continuously improve our security practices.",
+    },
+    {
+        num: "07",
         title: "Third-Party Services",
         body: "Payments and certain services may be processed through third-party providers such as Razorpay. These services operate under their own privacy policies.",
     },
     {
-        num: "07",
+        num: "08",
         title: "Data Loss Disclaimer",
         body: "Although we aim to maintain reliable data storage, InvoHealth does not guarantee permanent availability of stored data. Users are encouraged to keep backups of important information.",
     },
     {
-        num: "08",
+        num: "09",
         title: "Changes to Privacy Policy",
         body: "This Privacy Policy may be updated periodically to reflect changes in our services or legal requirements.",
     },
     {
-        num: "09",
+        num: "10",
         title: "Contact",
         body: "For privacy-related inquiries, please contact:",
         isContact: true,
@@ -155,13 +161,14 @@ export default function Privacy() {
                         className="pp-footer"
                         ref={(el) => (itemsRef.current[sections.length] = el)}
                     >
-                        <div className="pp-footer-icon">🔒</div>
+                        <div className="pp-footer-icon">
+                            <LockIcon size={18} />
+                        </div>
                         <div className="pp-footer-text">
-                            <strong>Your data stays yours.</strong> InvoHealth
+                            <strong>Your data stays yours.</strong> Sensitive
+                            information is encrypted and protected. InvoHealth
                             does not sell or share your personal or clinic data
-                            with third parties for marketing purposes. This
-                            policy may be updated — continued use implies
-                            acceptance.
+                            with third parties.
                         </div>
                     </div>
                 </div>
