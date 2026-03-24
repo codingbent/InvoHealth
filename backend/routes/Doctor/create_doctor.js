@@ -40,6 +40,25 @@ router.post(
                 req.body.appointmentPhone,
             );
 
+            let appointmentPhoneHash = "";
+            let appointmentPhoneEncrypted = "";
+            let appointmentPhoneLast4 = "";
+
+            if (cleanAppointmentPhone) {
+                if (!/^[6-9]\d{9}$/.test(cleanAppointmentPhone)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Invalid appointment phone number",
+                    });
+                }
+
+                appointmentPhoneHash = await bcrypt.hash(
+                    cleanAppointmentPhone,
+                    10,
+                );
+                appointmentPhoneEncrypted = encrypt(cleanAppointmentPhone);
+                appointmentPhoneLast4 = cleanAppointmentPhone.slice(-4);
+            }
             // validate
             if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
                 return res.status(400).json({
@@ -100,7 +119,9 @@ router.post(
                 phoneHash: phoneHash,
                 phoneLast4: cleanPhone.slice(-4),
 
-                appointmentPhone: cleanAppointmentPhone || "",
+                appointmentPhoneEncrypted: appointmentPhoneEncrypted,
+                appointmentPhoneHash: appointmentPhoneHash,
+                appointmentPhoneLast4: appointmentPhoneLast4,
 
                 address: req.body.address,
                 regNumber: req.body.regNumber || "",

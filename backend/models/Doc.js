@@ -99,15 +99,6 @@ const DocSchema = new Schema(
         phoneLast4: {
             type: String,
         },
-        phone: {
-            type: String,
-            default: "",
-        },
-
-        appointmentPhone: {
-            type: String,
-            default: "",
-        },
         appointmentPhoneEncrypted: { type: String },
         appointmentPhoneHash: { type: String },
         appointmentPhoneLast4: { type: String },
