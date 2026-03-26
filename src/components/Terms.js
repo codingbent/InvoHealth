@@ -24,7 +24,7 @@ const sections = [
     {
         num: "05",
         title: "User Responsibilities",
-        body: "Users must ensure accuracy of data entered and understand that sensitive data is securely processed using encryption.",
+        body: "Users are responsible for the accuracy of data entered into the platform. While certain sensitive data such as passwords and contact numbers are encrypted, users acknowledge that uploaded images (including prescriptions, reports, or documents) are stored as file resources and may not be encrypted. Users should avoid uploading highly confidential or sensitive information.",
     },
     {
         num: "06",
@@ -32,22 +32,27 @@ const sections = [
         body: "Some features may require a paid subscription. Payments are processed securely through third-party payment providers such as Razorpay.",
     },
     {
-        num: "07",
-        title: "Limitation of Liability",
-        body: "InvoHealth shall not be liable for any data loss, financial loss, business interruption, or medical decisions made using information stored on the platform.",
+        num: "08",
+        title: "Image Upload & Data Exposure",
+        body: "Images uploaded to InvoHealth (such as prescriptions, reports, or medical documents) are stored as file resources and are not encrypted or hashed. While access controls are implemented, InvoHealth does not guarantee absolute protection against unauthorized access. Users are advised not to upload highly sensitive or confidential images.",
     },
     {
         num: "08",
+        title: "Limitation of Liability",
+        body: "InvoHealth shall not be liable for any data loss, unauthorized access, financial loss, business interruption, or medical decisions made using the platform. This includes any exposure of uploaded images, documents, or records due to system vulnerabilities, misuse, or external breaches.",
+    },
+    {
+        num: "09",
         title: "Service Availability",
         body: "We aim to maintain high uptime but cannot guarantee uninterrupted service. Maintenance, updates, or technical issues may occasionally cause downtime.",
     },
     {
-        num: "09",
+        num: "10",
         title: "Changes to Terms",
         body: "These terms may be updated periodically to reflect improvements or changes in the platform.",
     },
     {
-        num: "10",
+        num: "11",
         title: "Contact",
         body: "For any questions regarding these Terms & Conditions, please contact: invohealth.app@gmail.com",
         isContact: true,

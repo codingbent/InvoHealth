@@ -38,7 +38,7 @@ const sections = [
     {
         num: "05",
         title: "Data Security",
-        body: "We implement strong security measures to protect user data. Sensitive information such as passwords and phone numbers are securely stored using hashing and encryption techniques. Phone numbers are never stored in plain text and are masked within the platform. Access to sensitive data is restricted and controlled through authentication and role-based permissions. While we take appropriate precautions, no system can guarantee absolute security.",
+        body: "We implement strong security measures to protect user data. Sensitive information such as passwords and phone numbers are securely stored using hashing and encryption techniques. Phone numbers are never stored in plain text and are masked within the platform.Uploaded images (such as prescriptions, reports, or documents) are stored as files and are not encrypted or hashed. While access is restricted, users are advised not to upload highly sensitive or confidential images.Access to sensitive data is restricted and controlled through authentication and role-based permissions. While we take appropriate precautions, no system can guarantee absolute security.",
     },
     {
         num: "06",
@@ -57,11 +57,16 @@ const sections = [
     },
     {
         num: "09",
+        title: "Image Upload Disclaimer",
+        body: "Images uploaded to the platform (such as prescriptions or medical reports) are stored as file resources and are not encrypted or hashed. Users should avoid uploading highly sensitive or confidential images. InvoHealth is not responsible for unauthorized access caused by external breaches or misuse.",
+    },
+    {
+        num: "10",
         title: "Changes to Privacy Policy",
         body: "This Privacy Policy may be updated periodically to reflect changes in our services or legal requirements.",
     },
     {
-        num: "10",
+        num: "11",
         title: "Contact",
         body: "For privacy-related inquiries, please contact:",
         isContact: true,
