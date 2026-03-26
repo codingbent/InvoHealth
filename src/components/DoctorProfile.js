@@ -99,8 +99,8 @@ export default function DoctorProfile(props) {
     const [staffName, setStaffName] = useState("");
     const [staffPhone, setStaffPhone] = useState("");
     const [staffRole, setStaffRole] = useState("");
-    // eslint-disable-next-line
     const [subscription, setSubscription] = useState(null);
+    const isExpired = subscription?.status === "expired";
     // eslint-disable-next-line
     const [usage, setUsage] = useState(null);
     // eslint-disable-next-line
@@ -157,7 +157,9 @@ export default function DoctorProfile(props) {
             setDoctor(doc);
             setSubscription(doc.subscription || {});
             setUsage(doc.usage || {});
-            setStaffCount(doc.staffCount || 0);
+            setStaffCount(
+                data.staff.filter((s) => s.isActive && !s.isDeleted).length,
+            );
             setEditData({
                 name: doc.name || "",
                 email: doc.email || "",
@@ -200,7 +202,9 @@ export default function DoctorProfile(props) {
                 `${API_BASE_URL}/api/doctor/staff/fetch_staff`,
             );
             const data = await res.json();
-            setStaffCount(data.staff.length);
+            setStaffCount(
+                data.staff.filter((s) => s.isActive && !s.isDeleted).length,
+            );
             if (data.success) setStaffList(data.staff);
         } catch (err) {
             console.error(err);
@@ -308,10 +312,26 @@ export default function DoctorProfile(props) {
     };
 
     const handleAddStaff = async () => {
+        // BLOCK IF EXPIRED
+        if (subscription?.status === "expired") {
+            props.showAlert("Subscription expired. Please upgrade.", "danger");
+            return;
+        }
+
+        // BLOCK IF LIMIT REACHED
+        if (isLimitReached) {
+            props.showAlert(
+                `Staff limit reached (${staffLimit}). Upgrade required.`,
+                "warning",
+            );
+            return;
+        }
+
         if (!staffName || !staffPhone || !staffRole) {
             props.showAlert("All fields required", "danger");
             return;
         }
+
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/add_staff`,
             {
@@ -324,13 +344,33 @@ export default function DoctorProfile(props) {
                 }),
             },
         );
+
         const data = await res.json();
+
         if (data.success) {
             fetchStaff();
             setStaffName("");
             setStaffPhone("");
             setStaffRole("");
-        } else alert(data.error);
+        } else {
+            props.showAlert(data.error || "Failed", "danger");
+        }
+    };
+
+    const toggleStaff = async (id) => {
+        const res = await authFetch(
+            `${API_BASE_URL}/api/doctor/staff/toggle_staff/${id}`,
+            { method: "PUT" },
+        );
+
+        const data = await res.json();
+
+        if (data.success) {
+            fetchStaff();
+            props.showAlert(data.message, "success");
+        } else {
+            props.showAlert(data.error, "danger");
+        }
     };
 
     const updateDoctorPhone = useCallback(
@@ -809,18 +849,23 @@ export default function DoctorProfile(props) {
                         </div>
                     </div>
 
-                    {isLimitReached && (
+                    {isExpired ? (
+                        <div className="dp-warn-banner dp-mb">
+                            <AlertTriangle size={14} />
+                            Your subscription has expired. Upgrade to add staff.
+                        </div>
+                    ) : isLimitReached ? (
                         <div className="dp-warn-banner dp-mb">
                             <AlertTriangle size={14} />
                             Staff limit reached ({staffLimit}). Upgrade your
                             plan to add more staff.
                         </div>
-                    )}
+                    ) : null}
 
                     <button
                         className="dp-btn dp-btn-primary dp-mb"
                         onClick={handleAddStaff}
-                        disabled={isLimitReached}
+                        disabled={isLimitReached || isExpired}
                     >
                         <UserPlus size={14} /> Add Staff
                     </button>
@@ -836,7 +881,35 @@ export default function DoctorProfile(props) {
                                     ROLE_COLORS[s.role] ||
                                     ROLE_COLORS.assistant;
                                 return (
-                                    <div key={s._id} className="dp-staff-card">
+                                    <div
+                                        key={s._id}
+                                        className="dp-staff-card"
+                                        style={{
+                                            position: "relative",
+                                            opacity: s.isActive ? 1 : 0.5,
+                                            filter: s.isActive
+                                                ? "none"
+                                                : "grayscale(80%)",
+                                        }}
+                                    >
+                                        {!s.isActive && (
+                                            <span
+                                                style={{
+                                                    position: "absolute",
+                                                    top: 8,
+                                                    right: 8,
+                                                    fontSize: 10,
+                                                    padding: "2px 6px",
+                                                    borderRadius: 6,
+                                                    background:
+                                                        "rgba(248,113,113,0.1)",
+                                                    color: "#f87171",
+                                                    border: "1px solid rgba(248,113,113,0.3)",
+                                                }}
+                                            >
+                                                Inactive
+                                            </span>
+                                        )}
                                         <div className="dp-staff-avatar">
                                             {s.name?.charAt(0)?.toUpperCase()}
                                         </div>
@@ -874,6 +947,23 @@ export default function DoctorProfile(props) {
                                                 }
                                             >
                                                 <Trash2 size={13} />
+                                            </button>
+                                            <button
+                                                className="dp-icon-btn"
+                                                onClick={() =>
+                                                    toggleStaff(s._id)
+                                                }
+                                                title={
+                                                    s.isActive
+                                                        ? "Deactivate"
+                                                        : "Activate"
+                                                }
+                                            >
+                                                {s.isActive ? (
+                                                    <EyeOff size={13} />
+                                                ) : (
+                                                    <Eye size={13} />
+                                                )}
                                             </button>
                                         </div>
                                     </div>

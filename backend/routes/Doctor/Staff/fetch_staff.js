@@ -9,7 +9,8 @@ router.get("/fetch_staff", fetchuser, async (req, res) => {
 
         const staff = await Staff.find({
             doctorId: doctorId,
-            isActive: true,
+            // isActive: true,
+            isDeleted: false,
         }).sort({ createdAt: -1 });
 
         res.json({

@@ -1,15 +1,39 @@
 const express = require("express");
 const router = express.Router();
+
 const Patient = require("../../../models/Patient");
 const Appointment = require("../../../models/Appointment");
 const Counter = require("../../../models/Counter");
+const Doc = require("../../../models/Doc");
+const checkSubscription = require("../../../utils/subscription_check");
+var fetchuser = require("../../../middleware/fetchuser");
 
-router.post("/add_appointment/:id", async (req, res) => {
+router.post("/add_appointment/:id", fetchuser, async (req, res) => {
     try {
+        const doctorId = req.user.doctorId; // ALWAYS TRUST THIS
+
+        // GET DOCTOR
+        const doctor = await Doc.findById(doctorId);
+
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor not found",
+            });
+        }
+
+        await checkSubscription(doctor);
+
+        if (doctor.subscription?.status === "expired") {
+            return res.status(403).json({
+                success: false,
+                message: "Subscription expired. Upgrade required.",
+            });
+        }
+
         const {
             service,
             payment_type,
-            doctorId,
             date,
             discount,
             isPercent,
@@ -20,7 +44,7 @@ router.post("/add_appointment/:id", async (req, res) => {
 
         const patientId = req.params.id;
 
-        // VALIDATION
+        //ALIDATION
         if (!Array.isArray(service) || service.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -30,6 +54,7 @@ router.post("/add_appointment/:id", async (req, res) => {
 
         // FIND PATIENT
         const patient = await Patient.findById(patientId);
+
         if (!patient) {
             return res.status(404).json({
                 success: false,
@@ -37,14 +62,15 @@ router.post("/add_appointment/:id", async (req, res) => {
             });
         }
 
-        // DETERMINE DOCTOR
-        const finalDoctorId = doctorId || patient.doctor;
-        if (!finalDoctorId) {
-            return res.status(400).json({
+        // ENSURE PATIENT BELONGS TO DOCTOR
+        if (patient.doctor.toString() !== doctorId) {
+            return res.status(403).json({
                 success: false,
-                message: "Doctor ID missing",
+                message: "Unauthorized access",
             });
         }
+
+        const finalDoctorId = doctorId;
 
         // SERVICE TOTAL
         const serviceTotal = service.reduce(
@@ -98,7 +124,22 @@ router.post("/add_appointment/:id", async (req, res) => {
 
         const invoiceNumber = counter.seq;
 
-        // CREATE VISIT OBJECT
+        // IMAGE LIMIT CHECK
+        const planLimits = {
+            STARTER: 1800,
+            PRO: 4200,
+            ENTERPRISE: -1,
+        };
+
+        const limit = planLimits[doctor.subscription.plan];
+
+        if (image && limit !== -1 && doctor.usage.imageUploads >= limit) {
+            return res.status(403).json({
+                success: false,
+                message: "Image upload limit reached. Upgrade required.",
+            });
+        }
+        // VISIT DATA
         const visitDate = date ? new Date(date) : new Date();
 
         const visitData = {
@@ -114,7 +155,7 @@ router.post("/add_appointment/:id", async (req, res) => {
             payment_type,
             invoiceNumber,
             date: visitDate,
-            discount: rawDiscount, // store original input
+            discount: rawDiscount,
             isPercent: percentFlag,
             time: time || null,
             image: image || "",
@@ -130,6 +171,11 @@ router.post("/add_appointment/:id", async (req, res) => {
             { new: true, upsert: true },
         );
 
+        if (image) {
+            doctor.usage.imageUploads = (doctor.usage.imageUploads || 0) + 1;
+
+            await doctor.save();
+        }
         // UPDATE PATIENT
         const currentLast = patient.lastAppointment
             ? new Date(patient.lastAppointment)

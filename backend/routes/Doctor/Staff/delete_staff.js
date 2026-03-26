@@ -9,7 +9,7 @@ router.delete("/delete_staff/:id", fetchuser, async (req, res) => {
 
         const staff = await Staff.findOneAndUpdate(
             { _id: req.params.id, doctorId },
-            { isActive: false },
+            { isDeleted: true },
             { new: true },
         );
 

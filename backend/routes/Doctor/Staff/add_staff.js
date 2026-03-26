@@ -66,8 +66,32 @@ router.post("/add_staff", fetchuser, async (req, res) => {
         const currentStaffCount = await Staff.countDocuments({
             doctorId,
             isActive: true,
+            isDeleted: false,
         });
 
+        // ================= AUTO FIX STAFF OVERFLOW =================
+        if (staffLimit !== -1) {
+            const activeStaff = await Staff.find({
+                doctorId,
+                isActive: true,
+                isDeleted: false,
+            }).sort({ createdAt: 1 });
+
+            if (activeStaff.length >= staffLimit) {
+                // keep only allowed number
+                const allowedStaff = activeStaff.slice(0, staffLimit);
+                const extraStaff = activeStaff.slice(staffLimit);
+
+                const extraIds = extraStaff.map((s) => s._id);
+
+                if (extraIds.length > 0) {
+                    await Staff.updateMany(
+                        { _id: { $in: extraIds } },
+                        { isActive: false },
+                    );
+                }
+            }
+        }
         // ================= LIMIT CHECK =================
         if (staffLimit !== -1 && currentStaffCount >= staffLimit) {
             return res.status(403).json({
@@ -77,7 +101,10 @@ router.post("/add_staff", fetchuser, async (req, res) => {
         }
 
         // ================= EXISTING STAFF =================
-        const existingStaff = await Staff.findOne({ phone });
+        const existingStaff = await Staff.findOne({
+            phone,
+            isDeleted: false,
+        });
 
         if (existingStaff) {
             // SAME DOCTOR

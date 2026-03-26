@@ -13,6 +13,7 @@ import {
     FileText,
     ChevronLeft,
     ChevronRight,
+    Image,
 } from "lucide-react";
 
 export default function SubscriptionPage(props) {
@@ -109,36 +110,70 @@ export default function SubscriptionPage(props) {
     }
 
     const { subscription, usage } = data;
-    const isExpired = subscription.status === "expired";
+
+    const normalizedStatus = (() => {
+        if (!subscription.expiryDate) return subscription.status || "active";
+
+        const today = new Date();
+        const exp = new Date(subscription.expiryDate);
+
+        today.setHours(0, 0, 0, 0);
+        exp.setHours(0, 0, 0, 0);
+
+        if (exp <= today) return "expired";
+
+        return "active";
+    })();
+
+    const isExpired = normalizedStatus === "expired";
+
     const safeUsage = isExpired
-        ? { excelExports: 0, invoiceDownloads: 0 }
+        ? { excelExports: 0, invoiceDownloads: 0, imageUploads: 0 }
         : usage;
     const planKey = subscription.plan.toLowerCase();
     const planLimits =
         planKey === "free"
-            ? { excelLimit: 2, invoiceLimit: 2 }
-            : (pricing?.[planKey] ?? { excelLimit: 0, invoiceLimit: 0 });
+            ? { excelLimit: 2, invoiceLimit: 2, imageLimit: 50 }
+            : (pricing?.[planKey] ?? {
+                  excelLimit: 0,
+                  invoiceLimit: 0,
+                  imageLimit: 0,
+              });
     const baseExcelLimit = planLimits.excelLimit ?? -1;
     const baseInvoiceLimit = planLimits.invoiceLimit ?? -1;
+    const baseImageLimit = planLimits.imageLimit ?? -1;
+
     const billingCycle = subscription.billingCycle || "monthly";
+
+    const imageLimit =
+        baseImageLimit === -1
+            ? -1
+            : billingCycle === "yearly"
+              ? baseImageLimit * 12
+              : baseImageLimit;
+
     const excelLimit =
         baseExcelLimit === -1
             ? -1
             : billingCycle === "yearly"
               ? baseExcelLimit * 12
               : baseExcelLimit;
+
     const invoiceLimit =
         baseInvoiceLimit === -1
             ? -1
             : billingCycle === "yearly"
               ? baseInvoiceLimit * 12
               : baseInvoiceLimit;
+
     const startDate = subscription.startDate
         ? new Date(subscription.startDate).toLocaleDateString("en-IN")
         : "-";
+
     const expiryDate = subscription.expiryDate
         ? new Date(subscription.expiryDate).toLocaleDateString("en-IN")
         : "No Expiry";
+
     const excelPercent =
         isExpired || excelLimit <= 0
             ? 0
@@ -147,6 +182,7 @@ export default function SubscriptionPage(props) {
                   ? 10
                   : 0
               : Math.min(100, (safeUsage.excelExports / excelLimit) * 100);
+
     const invoicePercent =
         isExpired || invoiceLimit === 0
             ? 0
@@ -158,6 +194,16 @@ export default function SubscriptionPage(props) {
                     100,
                     (safeUsage.invoiceDownloads / invoiceLimit) * 100,
                 );
+
+    const imagePercent =
+        isExpired || imageLimit === 0
+            ? 0
+            : imageLimit === -1
+              ? safeUsage.imageUploads > 0
+                  ? 10
+                  : 0
+              : Math.min(100, (safeUsage.imageUploads / imageLimit) * 100);
+
     const lastPayment = sortedPayments[0] || null;
     const lastPlan = lastPayment?.plan || subscription.plan;
     const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
@@ -170,16 +216,17 @@ export default function SubscriptionPage(props) {
         isExpired && lastPayment
             ? lastPlan.toUpperCase()
             : subscription.plan.toUpperCase();
+
     const statusColor =
-        subscription.status === "active"
+        normalizedStatus === "active"
             ? "#4ade80"
-            : subscription.status === "expired"
+            : normalizedStatus === "expired"
               ? "#fb923c"
               : "#f87171";
     const statusLabel =
-        subscription.status === "expired"
+        normalizedStatus === "expired"
             ? "EXPIRED"
-            : subscription.status.toUpperCase();
+            : normalizedStatus.toUpperCase();
 
     const PLAN_COLORS = {
         free: "#94a3b8",
@@ -267,7 +314,7 @@ export default function SubscriptionPage(props) {
                                         color: statusColor,
                                     }}
                                 >
-                                    {subscription.status === "active" ? (
+                                    {normalizedStatus === "active" ? (
                                         <CheckCircle size={10} />
                                     ) : (
                                         <AlertTriangle size={10} />
@@ -437,6 +484,27 @@ export default function SubscriptionPage(props) {
                                         width: `${invoicePercent}%`,
                                         background:
                                             "linear-gradient(90deg, #4ade80, #86efac)",
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <div className="sp-usage-item">
+                            <div className="sp-usage-row">
+                                <span className="sp-usage-label">
+                                    <Image size={12} /> Image Uploads
+                                </span>
+                                <span className="sp-usage-val">
+                                    {safeUsage.imageUploads || 0} /{" "}
+                                    {imageLimit === -1 ? "∞" : imageLimit}
+                                </span>
+                            </div>
+                            <div className="sp-prog-track">
+                                <div
+                                    className="sp-prog-fill"
+                                    style={{
+                                        width: `${imagePercent}%`,
+                                        background:
+                                            "linear-gradient(90deg, #fb923c, #f97316)",
                                     }}
                                 />
                             </div>

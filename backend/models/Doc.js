@@ -61,6 +61,11 @@ const UsageSchema = new Schema(
             type: Number,
             default: 0,
         },
+
+        imageUploads: {
+            type: Number,
+            default: 0,
+        },
     },
     { _id: false },
 );

@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 const StaffSchema = new Schema(
     {
         name: { type: String, required: true },
-        phone: { type: String, required: true, },
+        phone: { type: String, required: true },
 
         role: {
             type: String,
@@ -26,8 +26,12 @@ const StaffSchema = new Schema(
             type: Boolean,
             default: true,
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 module.exports = mongoose.model("Staff", StaffSchema);

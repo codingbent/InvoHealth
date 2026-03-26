@@ -10,6 +10,8 @@ export default function Pricing() {
     const [billing, setBilling] = useState("monthly");
     const [plan, setPlan] = useState(null);
     const [prices, setPrices] = useState(null);
+    const [status, setStatus] = useState("active");
+    const [expiryDate, setExpiryDate] = useState(null);
 
     const API_BASE_URL =
         process.env.NODE_ENV === "production"
@@ -30,8 +32,32 @@ export default function Pricing() {
                 );
                 const data = await res.json();
                 if (data.success) {
-                    setPlan(data.subscription.plan.toUpperCase());
-                    setBillingCycle(data.subscription.billingCycle);
+                    const sub = data.subscription;
+
+                    setPlan(sub.plan.toUpperCase());
+                    setBillingCycle(sub.billingCycle);
+                    setExpiryDate(sub.expiryDate);
+
+                    let currentStatus = sub.status;
+
+                    // DATE-ONLY EXPIRY CHECK
+                    if (sub.expiryDate) {
+                        const today = new Date();
+                        const exp = new Date(sub.expiryDate);
+
+                        today.setHours(0, 0, 0, 0);
+                        exp.setHours(0, 0, 0, 0);
+
+                        if (
+                            (currentStatus === "trial" ||
+                                currentStatus === "active") &&
+                            exp <= today
+                        ) {
+                            currentStatus = "expired";
+                        }
+                    }
+
+                    setStatus(currentStatus);
                 } else {
                     setPlan("FREE");
                 }
@@ -367,32 +393,117 @@ export default function Pricing() {
                                         >
                                             <Zap size={13} /> Start Free Trial
                                         </Link>
-                                    ) : plan === planUpper &&
-                                      billingCycle === billing ? (
-                                        <button
-                                            className="pr-btn pr-btn-disabled"
-                                            disabled
-                                        >
-                                            Current Plan
-                                        </button>
-                                    ) : planOrder[plan] >
-                                      planOrder[planUpper] ? (
-                                        <button className="pr-btn pr-btn-outline">
-                                            Downgrade
-                                        </button>
                                     ) : (
-                                        <button
-                                            className="pr-btn pr-btn-primary"
-                                            style={{
-                                                background: meta.accent,
-                                                boxShadow: `0 4px 16px ${meta.glow}`,
-                                            }}
-                                            onClick={() => handleUpgrade(p)}
-                                        >
-                                            Upgrade to{" "}
-                                            {p.charAt(0).toUpperCase() +
-                                                p.slice(1)}
-                                        </button>
+                                        (() => {
+                                            const isSamePlan =
+                                                plan === planUpper;
+                                            const isSameBilling =
+                                                billingCycle === billing;
+
+                                            // EXPIRY CHECK
+                                            let isExpired =
+                                                status === "expired";
+
+                                            if (!isExpired && expiryDate) {
+                                                const today = new Date();
+                                                const exp = new Date(
+                                                    expiryDate,
+                                                );
+
+                                                today.setHours(0, 0, 0, 0);
+                                                exp.setHours(0, 0, 0, 0);
+
+                                                if (
+                                                    (status === "trial" ||
+                                                        status === "active") &&
+                                                    exp <= today
+                                                ) {
+                                                    isExpired = true;
+                                                }
+                                            }
+
+                                            // 1. EXPIRED
+                                            if (isExpired) {
+                                                return (
+                                                    <button
+                                                        className="pr-btn pr-btn-primary"
+                                                        style={{
+                                                            background:
+                                                                meta.accent,
+                                                            boxShadow: `0 4px 16px ${meta.glow}`,
+                                                        }}
+                                                        onClick={() =>
+                                                            handleUpgrade(p)
+                                                        }
+                                                    >
+                                                        Renew{" "}
+                                                        {p
+                                                            .charAt(0)
+                                                            .toUpperCase() +
+                                                            p.slice(1)}
+                                                    </button>
+                                                );
+                                            }
+
+                                            // 2. SAME PLAN + SAME BILLING
+                                            if (isSamePlan && isSameBilling) {
+                                                return (
+                                                    <button
+                                                        className="pr-btn pr-btn-disabled"
+                                                        disabled
+                                                    >
+                                                        Current Plan
+                                                    </button>
+                                                );
+                                            }
+
+                                            // 3. SAME PLAN + DIFFERENT BILLING
+                                            if (isSamePlan && !isSameBilling) {
+                                                return (
+                                                    <button
+                                                        className="pr-btn pr-btn-outline"
+                                                        onClick={() =>
+                                                            handleUpgrade(p)
+                                                        }
+                                                    >
+                                                        Switch to{" "}
+                                                        {billing === "monthly"
+                                                            ? "Monthly"
+                                                            : "Yearly"}
+                                                    </button>
+                                                );
+                                            }
+
+                                            // 4. DOWNGRADE
+                                            if (
+                                                planOrder[plan] >
+                                                planOrder[planUpper]
+                                            ) {
+                                                return (
+                                                    <button className="pr-btn pr-btn-outline">
+                                                        Downgrade
+                                                    </button>
+                                                );
+                                            }
+
+                                            // 5. UPGRADE
+                                            return (
+                                                <button
+                                                    className="pr-btn pr-btn-primary"
+                                                    style={{
+                                                        background: meta.accent,
+                                                        boxShadow: `0 4px 16px ${meta.glow}`,
+                                                    }}
+                                                    onClick={() =>
+                                                        handleUpgrade(p)
+                                                    }
+                                                >
+                                                    Upgrade to{" "}
+                                                    {p.charAt(0).toUpperCase() +
+                                                        p.slice(1)}
+                                                </button>
+                                            );
+                                        })()
                                     )}
                                 </div>
                             );

@@ -143,13 +143,34 @@ const Patient = ({ showAlert }) => {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
+
         fetch(`${API_BASE_URL}/api/doctor/subscription`, {
             headers: { "auth-token": token },
         })
             .then((res) => res.json())
             .then((data) => {
-                if (data.success)
-                    setSubscriptionStatus(data.subscription.status);
+                if (!data.success) return;
+
+                const sub = data.subscription;
+                let status = sub.status;
+
+                // 🔥 DATE-ONLY EXPIRY CHECK
+                if (sub.expiryDate) {
+                    const today = new Date();
+                    const exp = new Date(sub.expiryDate);
+
+                    today.setHours(0, 0, 0, 0);
+                    exp.setHours(0, 0, 0, 0);
+
+                    if (
+                        (status === "trial" || status === "active") &&
+                        exp <= today
+                    ) {
+                        status = "expired";
+                    }
+                }
+
+                setSubscriptionStatus(status);
             })
             .catch(() => {});
     }, [API_BASE_URL]);
@@ -277,6 +298,13 @@ const Patient = ({ showAlert }) => {
                             className={`fab-item ${fabOpen ? "show" : ""}`}
                             style={{ "--i": 1 }}
                             onClick={() => {
+                                if (subscriptionStatus === "expired") {
+                                    showAlert(
+                                        "Subscription expired. Please upgrade.",
+                                        "danger",
+                                    );
+                                    return;
+                                }
                                 setFabOpen(false);
                                 setShowPatientModal(true);
                             }}
@@ -289,6 +317,13 @@ const Patient = ({ showAlert }) => {
                             className={`fab-item ${fabOpen ? "show" : ""}`}
                             style={{ "--i": 2 }}
                             onClick={() => {
+                                if (subscriptionStatus === "expired") {
+                                    showAlert(
+                                        "Subscription expired. Please upgrade.",
+                                        "danger",
+                                    );
+                                    return;
+                                }
                                 setFabOpen(false);
                                 setShowAppointment(true);
                             }}
@@ -302,6 +337,13 @@ const Patient = ({ showAlert }) => {
                                 className={`fab-item ${fabOpen ? "show" : ""}`}
                                 style={{ "--i": 3 }}
                                 onClick={() => {
+                                    if (subscriptionStatus === "expired") {
+                                        showAlert(
+                                            "Subscription expired. Please upgrade.",
+                                            "danger",
+                                        );
+                                        return;
+                                    }
                                     setFabOpen(false);
                                     setShowServiceModal(true);
                                 }}
@@ -316,6 +358,13 @@ const Patient = ({ showAlert }) => {
                                 className={`fab-item ${fabOpen ? "show" : ""}`}
                                 style={{ "--i": 4 }}
                                 onClick={() => {
+                                    if (subscriptionStatus === "expired") {
+                                        showAlert(
+                                            "Subscription expired. Please upgrade.",
+                                            "danger",
+                                        );
+                                        return;
+                                    }
                                     setFabOpen(false);
                                     setShowEditServiceModal(true);
                                 }}

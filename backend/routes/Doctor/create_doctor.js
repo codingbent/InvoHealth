@@ -140,6 +140,7 @@ router.post(
                 usage: {
                     excelExports: 0,
                     invoiceDownloads: 0,
+                    imageUploads:0,
                 },
             });
 
