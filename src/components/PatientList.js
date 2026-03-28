@@ -238,120 +238,235 @@ export default function PatientList(props) {
             sorted[sorted.length - 1].date,
         ).toLocaleDateString("en-IN");
         const toDate = new Date(sorted[0].date).toLocaleDateString("en-IN");
+
         let totalRevenue = 0,
             totalCollected = 0,
             totalPending = 0,
+            totalDiscount = 0,
             paidCount = 0,
             partialCount = 0,
             unpaidCount = 0;
         const paymentSummary = {};
+
         sorted.forEach((a) => {
-            const billed = Number(a.amount ?? 0),
-                collected = Number(a.collected ?? 0),
-                remaining = Number(a.remaining ?? billed - collected);
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? 0);
+            const remaining = Number(a.remaining ?? billed - collected);
+            const discount = Number(a.discount ?? 0);
             totalRevenue += billed;
             totalCollected += collected;
             totalPending += remaining > 0 ? remaining : 0;
+            totalDiscount += discount;
             if (remaining <= 0) paidCount++;
             else if (collected > 0) partialCount++;
             else unpaidCount++;
             const key = a.payment_type || "Other";
             paymentSummary[key] = (paymentSummary[key] || 0) + collected;
         });
+
         const workbook = new ExcelJS.Workbook();
+        workbook.creator = "InvoHealth";
+        workbook.created = new Date();
         const sheet = workbook.addWorksheet("Visit Records");
-        sheet.addRow([`Doctor:`, `${doctor || ""}`]).font = { bold: true };
-        sheet.addRow(["From", fromDate]);
-        sheet.addRow(["To", toDate]);
+
+        // ── Header info ──
+        const titleRow = sheet.addRow(["INVOHEALTH — CLINIC RECORDS"]);
+        titleRow.font = { bold: true, size: 13 };
+        sheet.addRow([`Doctor:`, doctor || ""]).font = { bold: true };
+        sheet.addRow(["Period:", `${fromDate} → ${toDate}`]);
+        sheet.addRow(["Generated:", new Date().toLocaleDateString("en-IN")]);
         sheet.addRow([]);
-        addRowWithFormat(sheet, "TOTAL REVENUE", totalRevenue, true, true);
-        addRowWithFormat(sheet, "TOTAL COLLECTED", totalCollected, true, true);
-        addRowWithFormat(sheet, "TOTAL PENDING", totalPending, true, true);
+
+        // ── Financial summary ──
+        sheet.addRow(["FINANCIAL SUMMARY"]).font = { bold: true, size: 11 };
+        addRowWithFormat(sheet, "Total Billed", totalRevenue, true, true);
+        addRowWithFormat(sheet, "Total Collected", totalCollected, true, true);
+        addRowWithFormat(sheet, "Total Pending", totalPending, true, true);
+        addRowWithFormat(
+            sheet,
+            "Total Discounts Given",
+            totalDiscount,
+            true,
+            true,
+        );
         sheet.addRow([]);
-        addRowWithFormat(sheet, "Paid Visits", paidCount);
-        addRowWithFormat(sheet, "Partial Visits", partialCount);
-        addRowWithFormat(sheet, "Unpaid Visits", unpaidCount);
+
+        // ── Visit counts ──
+        sheet.addRow(["VISIT SUMMARY"]).font = { bold: true, size: 11 };
+        sheet.addRow(["Total Visits", sorted.length]);
+        addRowWithFormat(sheet, "Paid", paidCount);
+        addRowWithFormat(sheet, "Partial", partialCount);
+        addRowWithFormat(sheet, "Unpaid", unpaidCount);
         sheet.addRow([]);
-        sheet.addRow(["COLLECTION SUMMARY"]).font = { bold: true };
-        Object.entries(paymentSummary).forEach(([type, amount]) => {
-            const row = sheet.addRow([type, amount]);
-            row.getCell(2).numFmt = "₹#,##0";
-        });
+
+        // ── Payment mode breakdown ──
+        sheet.addRow(["COLLECTION BY PAYMENT MODE"]).font = {
+            bold: true,
+            size: 11,
+        };
+        Object.entries(paymentSummary)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([type, amount]) => {
+                const pct =
+                    totalCollected > 0
+                        ? ((amount / totalCollected) * 100).toFixed(1)
+                        : "0.0";
+                const row = sheet.addRow([type, amount, `${pct}%`]);
+                row.getCell(2).numFmt = "₹#,##0";
+            });
         sheet.addRow([]);
+
+        // ── Day-wise records ──
+        sheet.addRow(["DETAILED RECORDS"]).font = { bold: true, size: 11 };
+        sheet.addRow([]);
+
         let currentDay = null,
-            dayCollectedTotal = 0;
+            dayCollectedTotal = 0,
+            dayBilledTotal = 0;
+
         sorted.forEach((a, index) => {
             const day = new Date(a.date).toISOString().split("T")[0];
-            const billed = Number(a.amount ?? 0),
-                collected = Number(a.collected ?? billed),
-                remaining = billed - collected;
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? billed);
+            const remaining = billed - collected;
+            const discount = Number(a.discount ?? 0);
             const status =
                 remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
+
             if (day !== currentDay) {
+                // Close previous day
                 if (currentDay !== null) {
                     const totalRow = sheet.addRow([
                         "",
                         "",
                         "",
                         "",
-                        "DAY TOTAL (Collected)",
+                        "",
+                        "DAY TOTAL →",
+                        dayBilledTotal,
                         dayCollectedTotal,
+                        dayBilledTotal - dayCollectedTotal,
                     ]);
                     totalRow.font = { bold: true };
-                    totalRow.getCell(6).numFmt = "₹#,##0";
+                    totalRow.getCell(7).numFmt = "₹#,##0";
+                    totalRow.getCell(8).numFmt = "₹#,##0";
+                    totalRow.getCell(9).numFmt = "₹#,##0";
                     sheet.addRow([]);
                 }
+
                 currentDay = day;
                 dayCollectedTotal = 0;
-                sheet.addRow([new Date(day).toLocaleDateString("en-IN")]).font =
-                    { bold: true };
+                dayBilledTotal = 0;
+
+                // Day header
                 sheet.addRow([
+                    new Date(day).toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                    }),
+                ]).font = { bold: true, size: 11 };
+
+                // Column headers
+                const headerRow = sheet.addRow([
                     "Patient",
-                    "Number",
-                    "Date",
-                    "Payment",
+                    "Age",
+                    "Gender",
+                    "Services",
+                    "Payment Mode",
                     "Billed",
                     "Collected",
-                    "Remaining",
+                    "Pending",
+                    "Discount",
                     "Status",
-                    "Invoice",
-                    "Services",
-                ]).font = { bold: true };
+                    "Invoice No",
+                ]);
+                headerRow.font = { bold: true };
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: "pattern",
+                        pattern: "solid",
+                        fgColor: { argb: "FF1E293B" },
+                    };
+                    cell.font = { bold: true, color: { argb: "FFE2E8F0" } };
+                });
             }
+
             dayCollectedTotal += collected;
+            dayBilledTotal += billed;
+
             const row = sheet.addRow([
                 a.name,
-                a.number || "",
-                new Date(a.date).toLocaleDateString("en-IN"),
-                a.payment_type,
-                billed,
-                collected,
-                remaining,
-                status,
-                a.invoiceNumber || "",
+                a.age || "",
+                a.gender || "",
                 (a.services || [])
                     .map((s) => (typeof s === "object" ? s.name : s))
                     .join(", "),
+                a.payment_type || "",
+                billed,
+                collected,
+                remaining > 0 ? remaining : 0,
+                discount > 0 ? discount : "",
+                status,
+                a.invoiceNumber || "",
             ]);
-            row.getCell(5).numFmt = "₹#,##0";
-            row.getCell(6).numFmt = "₹#,##0";
+
             row.getCell(7).numFmt = "₹#,##0";
+            row.getCell(8).numFmt = "₹#,##0";
+            row.getCell(9).numFmt = "₹#,##0";
+            if (discount > 0) row.getCell(10).numFmt = "₹#,##0";
+
+            // Color status cell
+            const statusColors = {
+                Paid: "FF22C55E",
+                Partial: "FFF59E0B",
+                Unpaid: "FFEF4444",
+            };
+            row.getCell(11).font = {
+                color: { argb: statusColors[status] || "FFCCCCCC" },
+                bold: true,
+            };
+
+            // Last entry — close last day
             if (index === sorted.length - 1) {
                 const lastTotalRow = sheet.addRow([
                     "",
                     "",
                     "",
                     "",
-                    "DAY TOTAL (Collected)",
+                    "DAY TOTAL →",
+                    dayBilledTotal,
                     dayCollectedTotal,
+                    dayBilledTotal - dayCollectedTotal,
                 ]);
                 lastTotalRow.font = { bold: true };
-                lastTotalRow.getCell(6).numFmt = "₹#,##0";
+                lastTotalRow.getCell(7).numFmt = "₹#,##0";
+                lastTotalRow.getCell(8).numFmt = "₹#,##0";
+                lastTotalRow.getCell(9).numFmt = "₹#,##0";
             }
         });
-        sheet.columns.forEach((col) => (col.width = 18));
+
+        // ── Column widths ──
+        sheet.columns = [
+            { width: 22 }, // Patient
+            { width: 8 }, // Age
+            { width: 10 }, // Gender
+            { width: 35 }, // Services
+            { width: 16 }, // Payment Mode
+            { width: 14 }, // Billed
+            { width: 14 }, // Collected
+            { width: 14 }, // Pending
+            { width: 14 }, // Discount
+            { width: 12 }, // Status
+            { width: 14 }, // Invoice No
+        ];
+
         const buffer = await workbook.xlsx.writeBuffer();
-        saveAs(new Blob([buffer]), "clinic-records.xlsx");
+        saveAs(
+            new Blob([buffer]),
+            `invohealth-records-${toDate.replace(/\//g, "-")}.xlsx`,
+        );
     };
 
     const monthTotal = useMemo(() => {
