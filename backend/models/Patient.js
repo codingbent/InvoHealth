@@ -6,13 +6,7 @@ const PatientSchema = new Schema({
         type: String,
         required: true,
     },
-    service: [
-        {
-            id: { type: Schema.Types.ObjectId, ref: "service" },
-            name: String,
-            amount: Number,
-        },
-    ],
+
     numberEncrypted: {
         type: String,
         required: false,
@@ -53,10 +47,6 @@ const PatientSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "doc",
         required: true,
-    },
-    payment_types: {
-        type: [String],
-        default: [],
     },
 });
 PatientSchema.index({ doctor: 1, name: 1 });

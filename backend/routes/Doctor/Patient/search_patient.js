@@ -21,9 +21,7 @@ router.get("/search_patient", fetchuser, async (req, res) => {
                 { name: { $regex: q, $options: "i" } },
                 { numberLast4: { $regex: cleanQ.slice(-4) } },
             ],
-        })
-            .limit(20)
-            .select("name gender age numberEncrypted numberLast4 number");
+        }).select("name gender age numberEncrypted numberLast4 number");
 
         //  Step 2: JS filter (for full number)
         const filtered = patients.filter((p) => {
@@ -53,6 +51,28 @@ router.get("/search_patient", fetchuser, async (req, res) => {
         });
 
         //  Step 3: return clean data
+        const qLower = q.toLowerCase();
+
+        filtered.sort((a, b) => {
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+
+            const aStarts = aName.startsWith(qLower);
+            const bStarts = bName.startsWith(qLower);
+
+            // 1. startsWith comes first
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+
+            // 2. shorter match first (Neeraj before Neeraj Kumar)
+            if (aName.length !== bName.length) {
+                return aName.length - bName.length;
+            }
+
+            // 3. fallback alphabetical
+            return aName.localeCompare(bName);
+        });
+
         const result = filtered.slice(0, 10).map((p) => ({
             _id: p._id,
             name: p.name,
