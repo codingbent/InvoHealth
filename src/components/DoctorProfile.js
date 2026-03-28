@@ -123,7 +123,22 @@ export default function DoctorProfile(props) {
         phone: "",
         role: "",
     });
-    const [editData, setEditData] = useState({});
+    const [editData, setEditData] = useState({
+        name: "",
+        clinicName: "",
+        phone: "",
+        appointmentPhone: "",
+        regNumber: "",
+        degree: [""],
+        address: {
+            line1: "",
+            line2: "",
+            line3: "",
+            city: "",
+            state: "",
+            pincode: "",
+        },
+    });
     const [showPasswords, setShowPasswords] = useState({
         current: false,
         new: false,
@@ -158,16 +173,15 @@ export default function DoctorProfile(props) {
             setSubscription(doc.subscription || {});
             setUsage(doc.usage || {});
             setStaffCount(
-                data.staff.filter((s) => s.isActive && !s.isDeleted).length,
+                (data.staff || []).filter((s) => s.isActive && !s.isDeleted)
+                    .length,
             );
             setEditData({
                 name: doc.name || "",
-                email: doc.email || "",
                 clinicName: doc.clinicName || "",
                 phone: doc.phone || "",
                 appointmentPhone: doc.appointmentPhone || "",
                 regNumber: doc.regNumber || "",
-                experience: doc.experience || "",
                 degree: doc.degree?.length ? doc.degree : [""],
                 address: {
                     line1: doc.address?.line1 || "",
