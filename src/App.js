@@ -73,7 +73,7 @@ function App() {
                         path="/admin/fetchall_doctors"
                         element={<AdminDoctors />}
                     />
-                    <Route path="/pricing" element={<Pricing />} />
+                    <Route path="/pricing" element={<Pricing showAlert={showAlert}/>} />
                     <Route
                         path="/subscriptionpage"
                         element={<SubscriptionPage showAlert={showAlert} />}

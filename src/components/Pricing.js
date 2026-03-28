@@ -3,7 +3,7 @@ import { authFetch } from "./authfetch";
 import { Link } from "react-router-dom";
 import { IndianRupee, Check, X, AlertTriangle, Zap } from "lucide-react";
 
-export default function Pricing() {
+export default function Pricing(props) {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
     const [billingCycle, setBillingCycle] = useState(null);
@@ -90,45 +90,118 @@ export default function Pricing() {
     };
 
     const handleUpgrade = async (selectedPlan) => {
-        if (!token) return;
-        const res = await authFetch(
-            `${API_BASE_URL}/api/payment/create-order`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan: selectedPlan, billing }),
-            },
-        );
-        if (!res.ok) {
-            console.error("Order API failed");
+        // 🔹 Load Razorpay SDK
+        const loadRazorpay = () => {
+            return new Promise((resolve) => {
+                if (window.Razorpay) return resolve(true);
+
+                const script = document.createElement("script");
+                script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                script.onload = () => resolve(true);
+                script.onerror = () => resolve(false);
+                document.body.appendChild(script);
+            });
+        };
+
+        const resScript = await loadRazorpay();
+
+        if (!resScript || !window.Razorpay) {
+            alert("Razorpay SDK failed to load");
             return;
         }
-        const data = await res.json();
-        const options = {
-            key: process.env.Razor_Pay_Key_ID,
-            amount: data.order.amount,
-            currency: "INR",
-            order_id: data.order.id,
-            handler: async function (response) {
-                const verifyRes = await authFetch(
-                    `${API_BASE_URL}/api/payment/verify-payment`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            ...response,
-                            plan: selectedPlan,
-                            billing,
-                        }),
+
+        if (!token) return;
+
+        try {
+            // 🔹 Call backend to create subscription
+            const res = await authFetch(
+                `${API_BASE_URL}/api/payment/create-subscription`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ plan: selectedPlan, billing }),
+                },
+            );
+
+            if (!res.ok) {
+                console.error("Subscription API failed");
+                return;
+            }
+
+            const data = await res.json();
+
+            const options = {
+                key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+                subscription_id: data.subscription.id,
+
+                name: "InvoHealth",
+                description: `${selectedPlan} Plan Subscription`,
+
+                // 🔥 prefill improves UX
+                prefill: {
+                    name: "Doctor",
+                    email: "doctor@example.com", // replace with real user email if available
+                },
+
+                // 🔥 important for debugging
+                modal: {
+                    ondismiss: function () {
+                        console.log("Payment popup closed");
                     },
-                );
-                const verifyData = await verifyRes.json();
-                if (verifyData.success) window.location.reload();
-                else alert("Payment verification failed");
-            },
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+                },
+
+                handler: async function (response) {
+                    try {
+                        console.log("Razorpay response:", response); // 🔍 debug
+
+                        const verifyRes = await authFetch(
+                            `${API_BASE_URL}/api/payment/verify-payment`,
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    razorpay_payment_id:
+                                        response.razorpay_payment_id,
+                                    razorpay_subscription_id:
+                                        response.razorpay_subscription_id,
+                                    razorpay_signature:
+                                        response.razorpay_signature,
+                                    plan: selectedPlan,
+                                    billing,
+                                }),
+                            },
+                        );
+
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyData.success) {
+                            props.showAlert(
+                                "Subscription activated 🎉",
+                                "success",
+                            );
+
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 3000);
+                        } else {
+                            alert("Payment verification failed");
+                        }
+                    } catch (err) {
+                        console.error("Verification error:", err);
+                        alert("Verification error");
+                    }
+                },
+
+                theme: {
+                    color: "#6366f1",
+                },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+        } catch (err) {
+            console.error("Upgrade error:", err);
+        }
     };
 
     if (!prices || !plan) {
@@ -514,4 +587,3 @@ export default function Pricing() {
         </>
     );
 }
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>;

@@ -10,8 +10,8 @@ const Payment = require("../../models/Payment");
 router.post("/verify-payment", fetchuser, async (req, res) => {
     try {
         let {
-            razorpay_order_id,
             razorpay_payment_id,
+            razorpay_subscription_id,
             razorpay_signature,
             plan,
             billing,
@@ -25,12 +25,10 @@ router.post("/verify-payment", fetchuser, async (req, res) => {
         }
 
         plan = plan.toLowerCase();
+        if (!billing) billing = "monthly";
 
-        if (!billing) {
-            billing = "monthly";
-        }
-
-        const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+        // FIXED SIGNATURE (subscription based)
+        const body = `${razorpay_payment_id}|${razorpay_subscription_id}`;
 
         const expectedSignature = crypto
             .createHmac("sha256", process.env.Razor_Pay_Key_Secret)
@@ -58,25 +56,27 @@ router.post("/verify-payment", fetchuser, async (req, res) => {
         const amount =
             billing === "monthly" ? planData.monthly : planData.yearly;
 
-        let expiryDate;
+        // TEMP expiry (later webhook will handle real renewal)
+        let expiryDate =
+            billing === "monthly"
+                ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
-        if (billing === "monthly") {
-            expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        } else {
-            expiryDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-        }
-
-        // Update subscription
+        // Update subscription (IMPORTANT CHANGE)
         await Doc.findByIdAndUpdate(req.user.doctorId, {
             "subscription.plan": plan.toUpperCase(),
             "subscription.billingCycle": billing,
             "subscription.status": "active",
             "subscription.startDate": new Date(),
             "subscription.expiryDate": expiryDate,
+
+            // NEW FIELDS
+            "subscription.subscriptionId": razorpay_subscription_id,
             "subscription.paymentId": razorpay_payment_id,
-            "subscription.orderId": razorpay_order_id,
+
             "subscription.amountPaid": amount,
             "subscription.currency": "INR",
+
             "usage.excelExports": 0,
             "usage.invoiceDownloads": 0,
         });
@@ -86,15 +86,15 @@ router.post("/verify-payment", fetchuser, async (req, res) => {
             plan: plan.toUpperCase(),
             billingCycle: billing,
             amountPaid: amount,
+
             paymentId: razorpay_payment_id,
-            orderId: razorpay_order_id,
+            subscriptionId: razorpay_subscription_id, // updated
+
             currency: "INR",
             paidAt: new Date(),
         });
 
-        return res.json({
-            success: true,
-        });
+        return res.json({ success: true });
     } catch (error) {
         console.error("Verify payment error:", error);
 
@@ -104,5 +104,4 @@ router.post("/verify-payment", fetchuser, async (req, res) => {
         });
     }
 });
-
 module.exports = router;
