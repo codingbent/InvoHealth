@@ -4,5 +4,15 @@
   <url>
     <loc>https://invohealth.vercel.app/</loc>
   </url>
+<url>
+  <loc>https://invohealth.vercel.app/</loc>
+</url>
 
+<url>
+  <loc>https://invohealth.vercel.app/login</loc>
+</url>
+
+<url>
+  <loc>https://invohealth.vercel.app/about</loc>
+</url>
 </urlset>
