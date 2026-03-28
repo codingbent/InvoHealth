@@ -347,7 +347,7 @@ export default function Pricing(props) {
                                 onClick={() => setBilling("yearly")}
                             >
                                 Yearly
-                                <span className="pr-save-badge">Save ~17%</span>
+                                <span className="pr-save-badge">Save 10%</span>
                             </button>
                         </div>
                     </div>
