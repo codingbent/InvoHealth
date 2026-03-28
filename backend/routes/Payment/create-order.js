@@ -6,9 +6,9 @@ const fetchuser = require("../../middleware/fetchuser");
 const Doc = require("../../models/Doc");
 
 const PLAN_IDS = {
-    starter: "plan_SWm3Dlw42Oohex",
-    pro: "plan_SWlzksnJF0zZ0L",
-    enterprise: "plan_SWm054TxXJdS0L",
+    starter: ["plan_SWm3Dlw42Oohex", "plan_SWnp5R920qpaJw"],
+    pro: ["plan_SWlzksnJF0zZ0L", "plan_SWnq7CBXdaoxEq"],
+    enterprise: ["plan_SWm054TxXJdS0L", "plan_SWnqOJA59g8gG0"],
 };
 
 // plan_SWlzTMtBybU2iK. 199rs   Starter plan
@@ -16,21 +16,23 @@ const PLAN_IDS = {
 
 router.post("/create-subscription", fetchuser, async (req, res) => {
     try {
-        const { plan } = req.body;
+        const { plan, billing } = req.body;
 
-        const planId = PLAN_IDS[plan.toLowerCase()];
-        if (!planId) {
+        const plans = PLAN_IDS[plan.toLowerCase()];
+
+        if (!plans) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid plan",
             });
         }
 
-        let doc = await Doc.findById(req.user.doctorId);
+        const planId = billing === "yearly" ? plans[1] : plans[0];
 
+        let doc = await Doc.findById(req.user.doctorId);
         let customerId = doc.subscription?.customerId;
 
-        // HANDLE CUSTOMER PROPERLY
+        // HANDLE CUSTOMER
         if (!customerId) {
             try {
                 const customer = await razorpay.customers.create({
@@ -40,7 +42,6 @@ router.post("/create-subscription", fetchuser, async (req, res) => {
 
                 customerId = customer.id;
             } catch (err) {
-                // If already exists → fetch it
                 if (
                     err.error &&
                     err.error.description ===
@@ -50,28 +51,23 @@ router.post("/create-subscription", fetchuser, async (req, res) => {
                         email: doc.email,
                     });
 
-                    if (customers.items.length > 0) {
-                        customerId = customers.items[0].id;
-                    } else {
-                        throw new Error("Customer exists but not found");
-                    }
+                    customerId = customers.items[0].id;
                 } else {
                     throw err;
                 }
             }
 
-            // Save customerId once
             await Doc.findByIdAndUpdate(req.user.doctorId, {
                 "subscription.customerId": customerId,
             });
         }
 
-        // CREATE SUBSCRIPTION (with await!)
+        // 🔥 CREATE SUBSCRIPTION
         const subscription = await razorpay.subscriptions.create({
             plan_id: planId,
             customer_id: customerId,
             customer_notify: 1,
-            total_count: 12, // months
+            total_count: billing === "yearly" ? 1 : 12,
         });
 
         res.json({
@@ -87,4 +83,5 @@ router.post("/create-subscription", fetchuser, async (req, res) => {
         });
     }
 });
+
 module.exports = router;

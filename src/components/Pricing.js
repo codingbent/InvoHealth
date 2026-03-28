@@ -89,6 +89,31 @@ export default function Pricing(props) {
         return monthly * 12 - yearly;
     };
 
+    const handleDowngrade = async (newPlan) => {
+        if (!window.confirm("Are you sure you want to downgrade?")) return;
+
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/payment/cancel-subscription`,
+                {
+                    method: "POST",
+                },
+            );
+
+            const data = await res.json();
+
+            if (!data.success) {
+                alert("Failed to cancel current subscription");
+                return;
+            }
+
+            handleUpgrade(newPlan);
+        } catch (err) {
+            console.error(err);
+            alert("Downgrade failed");
+        }
+    };
+
     const handleUpgrade = async (selectedPlan) => {
         // 🔹 Load Razorpay SDK
         const loadRazorpay = () => {
@@ -553,7 +578,12 @@ export default function Pricing(props) {
                                                 planOrder[planUpper]
                                             ) {
                                                 return (
-                                                    <button className="pr-btn pr-btn-outline">
+                                                    <button
+                                                        className="pr-btn pr-btn-outline"
+                                                        onClick={() =>
+                                                            handleDowngrade(p)
+                                                        }
+                                                    >
                                                         Downgrade
                                                     </button>
                                                 );
