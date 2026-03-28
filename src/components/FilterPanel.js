@@ -300,6 +300,7 @@ export default function FilterPanel({
                     <button
                         className="fp-reset"
                         onClick={() => {
+                            // window.location.reload();
                             setSelectedPayments([]);
                             setSelectedServices([]);
                             setSelectedGender("");
@@ -308,8 +309,8 @@ export default function FilterPanel({
                             setEndDate(null);
                             setSelectedFY("");
                             setTimeout(() => {
-                                setStartDate(undefined);
-                                setEndDate(undefined);
+                                setStartDate("");
+                                setEndDate("");
                             }, 0);
                         }}
                     >
