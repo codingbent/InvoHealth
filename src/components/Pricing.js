@@ -74,7 +74,6 @@ export default function Pricing(props) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
                 const data = await res.json();
-                console.log(data);
 
                 if (data.success) setPrices(data.pricing);
             } catch (err) {
