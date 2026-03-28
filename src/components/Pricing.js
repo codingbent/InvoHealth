@@ -172,13 +172,13 @@ export default function Pricing(props) {
                 // 🔥 important for debugging
                 modal: {
                     ondismiss: function () {
-                        console.log("Payment popup closed");
+                        // console.log("Payment popup closed");
                     },
                 },
 
                 handler: async function (response) {
                     try {
-                        console.log("Razorpay response:", response); // 🔍 debug
+                        // console.log("Razorpay response:", response); // 🔍 debug
 
                         const verifyRes = await authFetch(
                             `${API_BASE_URL}/api/payment/verify-payment`,
