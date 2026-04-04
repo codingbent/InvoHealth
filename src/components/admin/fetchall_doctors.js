@@ -55,7 +55,7 @@ const AdminDoctors = () => {
                 {
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": token,
+                        "admin-token": token,
                     },
                 },
             );
@@ -87,7 +87,7 @@ const AdminDoctors = () => {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
-                        "auth-token": token,
+                        "admin-token": token,
                     },
                     body: JSON.stringify({ plan: newPlan }),
                 },

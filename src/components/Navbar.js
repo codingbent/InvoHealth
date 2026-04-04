@@ -95,43 +95,84 @@ export default function Navbar(props) {
                             </NavItem>
                         </div>
 
-                        {role && (
-                            <div className="nb-user" ref={dropdownRef}>
+                        {role === "superadmin" && (
+                            <>
+                                <div className="nb-user" ref={dropdownRef}>
+                                    <button
+                                        className="nb-avatar-btn"
+                                        onClick={() =>
+                                            setDropdownOpen((p) => !p)
+                                        }
+                                    >
+                                        <span className="nb-avatar">
+                                            {"A".toUpperCase()}
+                                        </span>
+                                        <ChevronDown
+                                            size={13}
+                                            className={`nb-chevron ${dropdownOpen ? "open" : ""}`}
+                                        />
+                                    </button>
+                                    {dropdownOpen && (
+                                        <div className="nb-dropdown">
+                                            <DropItem
+                                                icon={IndianRupee}
+                                                onClick={() =>
+                                                    navigate("/admin/pricing")
+                                                }
+                                            >
+                                                Set Pricing
+                                            </DropItem>
+                                            <div className="nb-drop-divider" />
+                                            <DropItem
+                                                icon={LogOut}
+                                                onClick={handleLogout}
+                                                danger
+                                            >
+                                                Logout
+                                            </DropItem>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
-                                    className="nb-avatar-btn"
-                                    onClick={() => setDropdownOpen((p) => !p)}
+                                    className="nb-hamburger"
+                                    onClick={() => setMobileOpen((p) => !p)}
                                 >
-                                    <span className="nb-avatar">
-                                        {name?.charAt(0)?.toUpperCase()}
-                                    </span>
-                                    <ChevronDown
-                                        size={13}
-                                        className={`nb-chevron ${dropdownOpen ? "open" : ""}`}
+                                    <span
+                                        className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
+                                    />
+                                    <span
+                                        className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
+                                    />
+                                    <span
+                                        className={`nb-ham-line ${mobileOpen ? "open" : ""}`}
                                     />
                                 </button>
-                                {dropdownOpen && (
-                                    <div className="nb-dropdown">
-                                        <DropItem
-                                            icon={IndianRupee}
-                                            onClick={() =>
-                                                navigate("/admin/pricing")
-                                            }
-                                        >
-                                            Set Pricing
-                                        </DropItem>
-                                        <div className="nb-drop-divider" />
-                                        <DropItem
-                                            icon={LogOut}
-                                            onClick={handleLogout}
-                                            danger
-                                        >
-                                            Logout
-                                        </DropItem>
-                                    </div>
-                                )}
-                            </div>
+                            </>
                         )}
                     </div>
+                    {mobileOpen && (
+                        <div className="nb-mobile">
+                            <NavItem to="/admin/fetchall_doctors" icon={Home}>
+                                Home
+                            </NavItem>
+                            <NavItem to="/about" icon={Info}>
+                                About
+                            </NavItem>
+
+                            <div className="nb-mobile-divider" />
+
+                            <NavItem to="/admin/pricing" icon={IndianRupee}>
+                                Set Pricing
+                            </NavItem>
+
+                            <button
+                                className="nb-mobile-logout"
+                                onClick={handleLogout}
+                            >
+                                <LogOut size={14} /> Logout
+                            </button>
+                        </div>
+                    )}
                 </nav>
             </>
         );

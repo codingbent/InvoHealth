@@ -15,7 +15,7 @@ module.exports = function (req, res, next) {
 
         const data = jwt.verify(token, process.env.JWT_SECRET);
 
-        req.admin = data.admin;
+        req.admin = data.user;
 
         next();
 

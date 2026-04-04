@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import {
-    ShieldCheck,
+    // ShieldCheck,
     UserPlus,
     Check,
     X,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
-const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
+// const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
 
 const Signup = (props) => {
     const navigate = useNavigate();
@@ -47,11 +47,11 @@ const Signup = (props) => {
         experience: "",
         degrees: [""],
     });
-    const [otp, setOtp] = useState("");
-    const [sessionId, setSessionId] = useState("");
+    // const [otp, setOtp] = useState("");
+    // const [sessionId, setSessionId] = useState("");
     const [phoneVerified, setPhoneVerified] = useState(false);
-    const [sendingOtp, setSendingOtp] = useState(false);
-    const [otpCooldown, setOtpCooldown] = useState(0);
+    // const [sendingOtp, setSendingOtp] = useState(false);
+    // const [otpCooldown, setOtpCooldown] = useState(0);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     const passwordRules = {
@@ -78,10 +78,10 @@ const Signup = (props) => {
     }, []);
 
     useEffect(() => {
-        setSessionId("");
-        setOtp("");
+        // setSessionId("");
+        // setOtp("");
         setPhoneVerified(false);
-        setOtpCooldown(0);
+        // setOtpCooldown(0);
     }, [normalizedPhone]);
 
     const API_BASE_URL = useMemo(
@@ -229,91 +229,91 @@ const Signup = (props) => {
         }
     };
 
-    useEffect(() => {
-        if (otpCooldown <= 0) return;
-        const timer = setTimeout(
-            () => setOtpCooldown((prev) => prev - 1),
-            1000,
-        );
-        return () => clearTimeout(timer);
-    }, [otpCooldown]);
+    // useEffect(() => {
+    //     if (otpCooldown <= 0) return;
+    //     const timer = setTimeout(
+    //         () => setOtpCooldown((prev) => prev - 1),
+    //         1000,
+    //     );
+    //     return () => clearTimeout(timer);
+    // }, [otpCooldown]);
 
-    const sendOTP = async () => {
-        if (otpCooldown > 0) return;
-        const phone = normalizePhone(credentials.phone);
-        if (!isValidIndianMobile(phone)) {
-            props.showAlert("Enter a valid Indian mobile number", "danger");
-            return;
-        }
-        try {
-            setSendingOtp(true);
-            const checkRes = await authFetch(
-                `${API_BASE_URL}/api/authentication/check-phone`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ phone }),
-                },
-            );
-            const checkData = await checkRes.json();
-            if (!checkData.success) {
-                setSendingOtp(false);
-                alert(checkData.error);
-                return;
-            }
-            const res = await authFetch(
-                `${API_BASE_URL}/api/authentication/send-otp`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ phone }),
-                },
-            );
-            const data = await res.json();
-            setSendingOtp(false);
-            if (data.success) {
-                setSessionId(data.sessionId);
-                setOtpCooldown(60);
-                props.showAlert("OTP sent successfully", "success");
-            } else
-                props.showAlert(data.error || "Unable to send OTP", "danger");
-        } catch (err) {
-            setSendingOtp(false);
-            props.showAlert("Network error. Try again.", "danger");
-        }
-    };
+    // const sendOTP = async () => {
+    //     if (otpCooldown > 0) return;
+    //     const phone = normalizePhone(credentials.phone);
+    //     if (!isValidIndianMobile(phone)) {
+    //         props.showAlert("Enter a valid Indian mobile number", "danger");
+    //         return;
+    //     }
+    //     try {
+    //         setSendingOtp(true);
+    //         const checkRes = await authFetch(
+    //             `${API_BASE_URL}/api/authentication/check-phone`,
+    //             {
+    //                 method: "POST",
+    //                 headers: { "Content-Type": "application/json" },
+    //                 body: JSON.stringify({ phone }),
+    //             },
+    //         );
+    //         const checkData = await checkRes.json();
+    //         if (!checkData.success) {
+    //             setSendingOtp(false);
+    //             alert(checkData.error);
+    //             return;
+    //         }
+    //         const res = await authFetch(
+    //             `${API_BASE_URL}/api/authentication/send-otp`,
+    //             {
+    //                 method: "POST",
+    //                 headers: { "Content-Type": "application/json" },
+    //                 body: JSON.stringify({ phone }),
+    //             },
+    //         );
+    //         const data = await res.json();
+    //         setSendingOtp(false);
+    //         if (data.success) {
+    //             setSessionId(data.sessionId);
+    //             setOtpCooldown(60);
+    //             props.showAlert("OTP sent successfully", "success");
+    //         } else
+    //             props.showAlert(data.error || "Unable to send OTP", "danger");
+    //     } catch (err) {
+    //         setSendingOtp(false);
+    //         props.showAlert("Network error. Try again.", "danger");
+    //     }
+    // };
 
-    const verifyNumber = async () => {
-        if (otp.length !== 6) {
-            props.showAlert("Enter valid 6-digit OTP", "danger");
-            return;
-        }
-        try {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/authentication/verify-otp`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        phone: normalizePhone(credentials.phone),
-                        otp,
-                        sessionId,
-                    }),
-                },
-            );
-            if (!res) {
-                props.showAlert("Network error. Try again.", "danger");
-                return;
-            }
-            const data = await res.json();
-            if (data.success) {
-                setPhoneVerified(true);
-                props.showAlert("Phone number verified", "success");
-            } else props.showAlert(data.error || "Invalid OTP", "danger");
-        } catch (err) {
-            props.showAlert("OTP verification failed", "danger");
-        }
-    };
+    // const verifyNumber = async () => {
+    //     if (otp.length !== 6) {
+    //         props.showAlert("Enter valid 6-digit OTP", "danger");
+    //         return;
+    //     }
+    //     try {
+    //         const res = await authFetch(
+    //             `${API_BASE_URL}/api/authentication/verify-otp`,
+    //             {
+    //                 method: "POST",
+    //                 headers: { "Content-Type": "application/json" },
+    //                 body: JSON.stringify({
+    //                     phone: normalizePhone(credentials.phone),
+    //                     otp,
+    //                     sessionId,
+    //                 }),
+    //             },
+    //         );
+    //         if (!res) {
+    //             props.showAlert("Network error. Try again.", "danger");
+    //             return;
+    //         }
+    //         const data = await res.json();
+    //         if (data.success) {
+    //             setPhoneVerified(true);
+    //             props.showAlert("Phone number verified", "success");
+    //         } else props.showAlert(data.error || "Invalid OTP", "danger");
+    //     } catch (err) {
+    //         props.showAlert("OTP verification failed", "danger");
+    //     }
+    // };
 
     const handlesubmit = async (e) => {
         e.preventDefault();
@@ -415,7 +415,7 @@ const Signup = (props) => {
         const json = await response.json();
         if (json.success) {
             const token = json.authtoken;
-            // localStorage.setItem("token", token);
+            localStorage.setItem("token", token);
             // localStorage.setItem("name", credentials.name);
             const formattedAvailability = formatAvailability();
             const availabilityRes = await authFetch(
@@ -669,16 +669,16 @@ const Signup = (props) => {
                                     name="phone"
                                     value={credentials.phone}
                                     onChange={onChange}
-                                    disabled={phoneVerified}
+                                    // disabled={phoneVerified}
                                     placeholder="10-digit mobile number"
                                 />
-                                {phoneVerified && (
+                                {/* {phoneVerified && (
                                     <div className="sg-phone-locked">
                                         Number locked after verification
                                     </div>
-                                )}
+                                )} */}
 
-                                {!phoneVerified && (
+                                {/* {!phoneVerified && (
                                     <>
                                         {!sessionId ? (
                                             <button
@@ -794,14 +794,14 @@ const Signup = (props) => {
                                             </>
                                         )}
                                     </>
-                                )}
+                                )} */}
 
-                                {phoneVerified && (
+                                {/* {phoneVerified && (
                                     <div className="sg-verified-badge">
                                         <Check size={13} /> Phone number
                                         verified
                                     </div>
-                                )}
+                                )} */}
                             </div>
 
                             <div
@@ -1155,13 +1155,13 @@ const Signup = (props) => {
                             </div>
 
                             {/* ── Warn ── */}
-                            {!phoneVerified && (
+                            {/* {!phoneVerified && (
                                 <div className="sg-warn">
                                     <ShieldCheck size={16} />
                                     Verify your phone number before creating
                                     account
                                 </div>
-                            )}
+                            )} */}
 
                             {/* ── Terms ── */}
                             <div className="sg-terms">
@@ -1202,7 +1202,11 @@ const Signup = (props) => {
                                 type="submit"
                                 className="sg-btn sg-btn-primary sg-btn-full"
                                 style={{ marginTop: 20 }}
-                                disabled={!phoneVerified || !acceptedTerms}
+                                disabled={
+                                    // !phoneVerified
+                                    // ||
+                                    !acceptedTerms
+                                }
                             >
                                 <UserPlus size={15} /> Create Account
                             </button>

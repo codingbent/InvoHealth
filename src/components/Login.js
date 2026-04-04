@@ -191,6 +191,13 @@ export default function Login(props) {
                             )}
                         </div>
 
+                        {loginAs === "staff" && (
+                            <div className="lg-forgot">
+                                First time logging in? Just enter your number
+                                and password to continue.
+                            </div>
+                        )}
+
                         {/* Password */}
                         <div className="lg-field">
                             <label className="lg-label">Password</label>
@@ -203,7 +210,6 @@ export default function Login(props) {
                                     onChange={(e) =>
                                         setPassword(e.target.value)
                                     }
-                                    required
                                 />
                                 <button
                                     type="button"

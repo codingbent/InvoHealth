@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
-var fetchuser = require("../../middleware/fetchuser");
+var fetchadmin = require("../../middleware/fetchadmin");
 
-router.get("/fetchall_doctors", fetchuser, async (req, res) => {
+router.get("/fetchall_doctors", fetchadmin, async (req, res) => {
     try {
-        if (req.user.role !== "superadmin") {
+        if (req.admin.role !== "superadmin") {
             return res.status(403).json({ error: "Access denied" });
         }
 

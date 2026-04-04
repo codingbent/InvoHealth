@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
-import { ShieldCheck, KeyRound, ArrowLeft, Phone } from "lucide-react";
+import {
+    ShieldCheck,
+    KeyRound,
+    ArrowLeft,
+    // Phone
+} from "lucide-react";
 
 export default function ForgotPassword(props) {
     const navigate = useNavigate();
@@ -118,7 +123,7 @@ export default function ForgotPassword(props) {
 
                     {/* Header */}
                     <div className="fp-header">
-                        <div
+                        {/* <div
                             className={`fp-icon ${isVerified ? "verified" : ""}`}
                         >
                             {isVerified ? (
@@ -126,7 +131,7 @@ export default function ForgotPassword(props) {
                             ) : (
                                 <ShieldCheck size={22} />
                             )}
-                        </div>
+                        </div> */}
                         <h1 className="fp-title">
                             {isVerified ? (
                                 <>
@@ -151,9 +156,9 @@ export default function ForgotPassword(props) {
                             <div className="fp-field">
                                 <label className="fp-label">Phone Number</label>
                                 <div className="fp-input-wrap">
-                                    <span className="fp-input-icon">
+                                    {/* <span className="fp-input-icon">
                                         <Phone size={14} />
-                                    </span>
+                                    </span> */}
                                     <input
                                         type="tel"
                                         className="fp-input"

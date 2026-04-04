@@ -4051,9 +4051,9 @@ ____________________- */
 
 /* ── Header ── */
 .fp-header {
-    display: flex;
+    /* display: flex; */
     align-items: center;
-    justify-content: space-between;
+    /* justify-content: space-between; */
     padding: 22px 24px 18px;
     border-bottom: 1px solid #131929;
     flex-shrink: 0;

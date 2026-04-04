@@ -9,7 +9,7 @@ This project goes beyond a basic CRUD app and focuses on **real-world clinic wor
 ✨ Features
 
 -   👨‍⚕️ Doctor signup & login
--   📱 OTP-based phone verification (2Factor)
+;; -   📱 OTP-based phone verification (2Factor)
 -   🔐 Forgot password with OTP reset flow
 -   📋 Patient records management
 -   📅 Appointment scheduling
