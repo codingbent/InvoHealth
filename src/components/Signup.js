@@ -25,7 +25,6 @@ const Signup = (props) => {
     const selectedBilling = params.get("billing");
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const [showPassword, setShowPassword] = useState(false);
-
     const [availability, setAvailability] = useState([
         { days: [], slots: [{ startTime: "", endTime: "", slotDuration: 15 }] },
     ]);
@@ -47,12 +46,17 @@ const Signup = (props) => {
         experience: "",
         degrees: [""],
     });
+    const passwordsMatch =
+        credentials.password &&
+        credentials.cpassword &&
+        credentials.password === credentials.cpassword;
     // const [otp, setOtp] = useState("");
     // const [sessionId, setSessionId] = useState("");
-    const [phoneVerified, setPhoneVerified] = useState(false);
+    // const [phoneVerified, setPhoneVerified] = useState(false);
     // const [sendingOtp, setSendingOtp] = useState(false);
     // const [otpCooldown, setOtpCooldown] = useState(0);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [showCPassword, setShowCPassword] = useState(false);
 
     const passwordRules = {
         length: /.{8,}/,
@@ -69,20 +73,21 @@ const Signup = (props) => {
         special: false,
     });
 
-    const normalizedPhone = useMemo(
-        () => normalizePhone(credentials.phone),
-        [credentials.phone],
-    );
+    // const normalizedPhone = useMemo(
+    //     () => normalizePhone(credentials.phone),
+    //     [credentials.phone],
+    // );
+
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
 
-    useEffect(() => {
-        // setSessionId("");
-        // setOtp("");
-        setPhoneVerified(false);
-        // setOtpCooldown(0);
-    }, [normalizedPhone]);
+    // useEffect(() => {
+    //     setSessionId("");
+    //     setOtp("");
+    //     setPhoneVerified(false);
+    //     setOtpCooldown(0);
+    // }, [normalizedPhone]);
 
     const API_BASE_URL = useMemo(
         () =>
@@ -330,10 +335,10 @@ const Signup = (props) => {
             );
             return;
         }
-        if (!phoneVerified) {
-            props.showAlert("Please verify phone number first", "danger");
-            return;
-        }
+        // if (!phoneVerified) {
+        //     props.showAlert("Please verify phone number first", "danger");
+        //     return;
+        // }
         if (!acceptedTerms) {
             props.showAlert("Please accept Terms & Conditions", "danger");
             return;
@@ -525,97 +530,136 @@ const Signup = (props) => {
                             </div>
 
                             <div className="sg-row sg-row-2">
+                                {/* Password */}
                                 <div className="sg-field">
-                                    <label className="sg-label">
+                                    <label
+                                        className="sg-label"
+                                        htmlFor="password"
+                                    >
                                         Password{" "}
                                         <span className="sg-required">*</span>
                                     </label>
-                                    <input
-                                        className="sg-input"
-                                        type="password"
-                                        name="password"
-                                        required
-                                        onChange={onChange}
-                                        placeholder="Create a strong password"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="lg-eye-btn"
-                                        onClick={() =>
-                                            setShowPassword((p) => !p)
-                                        }
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff size={16} />
-                                        ) : (
-                                            <Eye size={16} />
-                                        )}
-                                    </button>
-                                    <div className="sg-pw-checks">
-                                        {[
-                                            {
-                                                key: "length",
-                                                label: "Minimum 8 characters",
-                                            },
-                                            {
-                                                key: "upper",
-                                                label: "One uppercase letter",
-                                            },
-                                            {
-                                                key: "lower",
-                                                label: "One lowercase letter",
-                                            },
-                                            {
-                                                key: "number",
-                                                label: "One number",
-                                            },
-                                            {
-                                                key: "special",
-                                                label: "One special character",
-                                            },
-                                        ].map((r) => (
-                                            <div
-                                                key={r.key}
-                                                className={`sg-pw-check ${passwordChecks[r.key] ? "pass" : "fail"}`}
-                                            >
-                                                <span className="sg-pw-icon">
-                                                    {passwordChecks[r.key] ? (
-                                                        <Check size={9} />
-                                                    ) : (
-                                                        <X size={9} />
-                                                    )}
-                                                </span>
-                                                {r.label}
-                                            </div>
-                                        ))}
+
+                                    <div className="sg-input-wrap">
+                                        <input
+                                            className="sg-input has-eye"
+                                            type={
+                                                showPassword
+                                                    ? "text"
+                                                    : "password"
+                                            }
+                                            name="password"
+                                            onChange={onChange}
+                                            placeholder="Create a strong password"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            className="sg-eye-btn"
+                                            onClick={() =>
+                                                setShowPassword((p) => !p)
+                                            }
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff size={15} />
+                                            ) : (
+                                                <Eye size={15} />
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
+
+                                {/* Confirm Password */}
                                 <div className="sg-field">
                                     <label className="sg-label">
                                         Confirm Password{" "}
                                         <span className="sg-required">*</span>
                                     </label>
-                                    <input
-                                        className="sg-input"
-                                        type="password"
-                                        name="cpassword"
-                                        required
-                                        onChange={onChange}
-                                        placeholder="Repeat password"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="lg-eye-btn"
-                                        onClick={() =>
-                                            setShowPassword((p) => !p)
-                                        }
+
+                                    <div className="sg-input-wrap">
+                                        <input
+                                            className="sg-input has-eye"
+                                            type={
+                                                showCPassword
+                                                    ? "text"
+                                                    : "password"
+                                            }
+                                            name="cpassword"
+                                            onChange={onChange}
+                                            placeholder="Repeat password"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            className="sg-eye-btn"
+                                            onClick={() =>
+                                                setShowCPassword((p) => !p)
+                                            }
+                                        >
+                                            {showCPassword ? (
+                                                <EyeOff size={15} />
+                                            ) : (
+                                                <Eye size={15} />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 🔥 Password Checks (moved below both fields) */}
+                            <div className="sg-pw-checks">
+                                {[
+                                    {
+                                        key: "length",
+                                        label: "Minimum 8 characters",
+                                    },
+                                    {
+                                        key: "upper",
+                                        label: "One uppercase letter",
+                                    },
+                                    {
+                                        key: "lower",
+                                        label: "One lowercase letter",
+                                    },
+                                    { key: "number", label: "One number" },
+                                    {
+                                        key: "special",
+                                        label: "One special character",
+                                    },
+                                ].map((r) => (
+                                    <div
+                                        key={r.key}
+                                        className={`sg-pw-check ${
+                                            passwordChecks[r.key]
+                                                ? "pass"
+                                                : "fail"
+                                        }`}
                                     >
-                                        {showPassword ? (
-                                            <EyeOff size={16} />
+                                        <span className="sg-pw-icon">
+                                            {passwordChecks[r.key] ? (
+                                                <Check size={9} />
+                                            ) : (
+                                                <X size={9} />
+                                            )}
+                                        </span>
+                                        {r.label}
+                                    </div>
+                                ))}
+
+                                {/* 🔥 Password Match Check */}
+                                <div
+                                    className={`sg-pw-check ${
+                                        passwordsMatch ? "pass" : "fail"
+                                    }`}
+                                >
+                                    <span className="sg-pw-icon">
+                                        {passwordsMatch ? (
+                                            <Check size={9} />
                                         ) : (
-                                            <Eye size={16} />
+                                            <X size={9} />
                                         )}
-                                    </button>
+                                    </span>
+                                    Passwords match
                                 </div>
                             </div>
 
@@ -1090,7 +1134,7 @@ const Signup = (props) => {
                                 </label>
                                 <input
                                     className="sg-input"
-                                    name="regnumber"
+                                    name="regNumber"
                                     onChange={onChange}
                                     placeholder=""
                                 />
