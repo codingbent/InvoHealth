@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
 var fetchadmin = require("../../middleware/fetchadmin");
+const { decrypt } = require("../../utils/crypto");
 
 router.get("/fetchall_doctors", fetchadmin, async (req, res) => {
     try {
@@ -19,6 +20,18 @@ router.get("/fetchall_doctors", fetchadmin, async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });
 
+        const doctorsWithPhone = doctors.map((doc) => {
+            const d = doc.toObject();
+
+            return {
+                ...d,
+                phone: d.phoneEncrypted ? decrypt(d.phoneEncrypted) : null,
+                appointmentPhone: d.appointmentPhoneEncrypted
+                    ? decrypt(d.appointmentPhoneEncrypted)
+                    : null,
+            };
+        });
+
         const total = await Doc.countDocuments();
 
         res.status(200).json({
@@ -26,11 +39,12 @@ router.get("/fetchall_doctors", fetchadmin, async (req, res) => {
             page,
             totalPages: Math.ceil(total / limit),
             totalDoctors: total,
-            doctors,
+            doctors: doctorsWithPhone,
         });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
 module.exports = router;

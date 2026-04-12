@@ -44,15 +44,12 @@ app.use(
     }),
 );
 
-// Handle preflight
 app.options("*", cors());
 
 app.use(express.json());
 
-// Routes
-// app.use("/api/auth", require("./routes/auth"));
-app.get("/health", (req, res) => {
-    res.status(200).send("OK");
+app.get("/api/health", (req, res) => {
+    res.json({ status: "OK" });
 });
 app.use("/api/doctor", require("./routes/Doctor/index_doctor"));
 app.use("/api/staff", require("./routes/Staff/index_staff"));

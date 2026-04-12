@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -32,6 +33,7 @@ const AdminDoctors = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [updating, setUpdating] = useState(null);
+    const [visiblePhones, setVisiblePhones] = useState({});
 
     useEffect(() => {
         document.body.classList.remove("light-theme", "dark-theme");
@@ -117,6 +119,51 @@ const AdminDoctors = () => {
         }
     };
 
+    const handleTogglePhone = async (docId) => {
+        const token = localStorage.getItem("admintoken");
+
+        // already visible → hide again
+        if (visiblePhones[docId]?.visible) {
+            setVisiblePhones((prev) => ({
+                ...prev,
+                [docId]: {
+                    ...prev[docId],
+                    visible: false,
+                },
+            }));
+            return;
+        }
+
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/admin/get_doctor_phone/${docId}`,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "admin-token": token,
+                    },
+                },
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Unauthorized");
+                return;
+            }
+
+            setVisiblePhones((prev) => ({
+                ...prev,
+                [docId]: {
+                    phone: data.phone,
+                    visible: true,
+                },
+            }));
+        } catch {
+            alert("Failed to fetch phone");
+        }
+    };
+
     if (localStorage.getItem("role") !== "superadmin") {
         navigate("/");
         return null;
@@ -195,7 +242,49 @@ const AdminDoctors = () => {
                                             </td>
                                             <td>{doc.email}</td>
                                             <td>{doc.clinicName}</td>
-                                            <td>{doc.phone}</td>
+                                            <td>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                    }}
+                                                >
+                                                    <span>
+                                                        {visiblePhones[doc._id]
+                                                            ?.visible
+                                                            ? visiblePhones[
+                                                                  doc._id
+                                                              ]?.phone
+                                                            : "XXXXXX" +
+                                                              (doc.phoneLast4 ||
+                                                                  "")}
+                                                    </span>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleTogglePhone(
+                                                                doc._id,
+                                                            )
+                                                        }
+                                                        style={{
+                                                            background:
+                                                                "transparent",
+                                                            border: "none",
+                                                            cursor: "pointer",
+                                                            fontSize: 14,
+                                                            color: "#60a5fa",
+                                                        }}
+                                                    >
+                                                        {visiblePhones[doc._id]
+                                                            ?.visible ? (
+                                                            <EyeOff size={16} />
+                                                        ) : (
+                                                            <Eye size={16} />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </td>
                                             <td>
                                                 <select
                                                     value={
@@ -253,7 +342,23 @@ const AdminDoctors = () => {
                                             {doc.email}
                                         </div>
                                         <div className="ad-mob-meta">
-                                            {doc.clinicName} · {doc.phone}
+                                            {doc.clinicName} ·
+                                            {visiblePhones[doc._id]?.visible
+                                                ? visiblePhones[doc._id]?.phone
+                                                : "XXXXXX" +
+                                                  (doc.phoneLast4 || "")}
+                                            <button
+                                                onClick={() =>
+                                                    handleTogglePhone(doc._id)
+                                                }
+                                            >
+                                                {visiblePhones[doc._id]
+                                                    ?.visible ? (
+                                                    <EyeOff size={16} />
+                                                ) : (
+                                                    <Eye size={16} />
+                                                )}
+                                            </button>
                                         </div>
                                         <div className="ad-mob-footer">
                                             <select

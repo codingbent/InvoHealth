@@ -304,14 +304,6 @@ export default function DoctorProfile(props) {
         } else props.showAlert("Profile update failed", "danger");
     };
 
-    const getPasswordStrength = (pw) => {
-        if (pw.length < 6) return { label: "Weak", color: "#f87171" };
-        if (pw.match(/[A-Z]/) && pw.match(/[0-9]/))
-            return { label: "Strong", color: "#4ade80" };
-        return { label: "Medium", color: "#fb923c" };
-    };
-    const strength = getPasswordStrength(passwordData.newPassword);
-
     const planKey = subscription?.plan?.toLowerCase();
     const staffLimit =
         planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
@@ -484,16 +476,45 @@ export default function DoctorProfile(props) {
         }
     }, [doctor, askedApptOnce, updateDoctorAppointmentPhone]);
 
+    const validatePassword = (password) => {
+        return {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[^A-Za-z0-9]/.test(password),
+        };
+    };
+    const passwordRules = validatePassword(passwordData.newPassword);
+
+    const isPasswordValid =
+        passwordRules.length &&
+        passwordRules.uppercase &&
+        passwordRules.lowercase &&
+        passwordRules.number &&
+        passwordRules.special;
+
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
+
         if (!currentPassword || !newPassword || !confirmPassword) {
             props.showAlert("All fields required", "danger");
             return;
         }
+
         if (newPassword !== confirmPassword) {
             props.showAlert("Passwords do not match", "danger");
             return;
         }
+
+        if (!isPasswordValid) {
+            props.showAlert(
+                "Password must include uppercase, lowercase, number, and special character",
+                "danger",
+            );
+            return;
+        }
+
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/change_password`,
             {
@@ -502,7 +523,9 @@ export default function DoctorProfile(props) {
                 body: JSON.stringify({ currentPassword, newPassword }),
             },
         );
+
         const data = await res.json();
+
         if (data.success) {
             props.showAlert("Password updated", "success");
             setPasswordData({
@@ -512,13 +535,13 @@ export default function DoctorProfile(props) {
             });
             setShowPasswords({ current: false, new: false, confirm: false });
             fetchAvailability();
-        } else
+        } else {
             props.showAlert(
                 data.error || "Server Error try again later",
                 "danger",
             );
+        }
     };
-
     const deletestaff = async (staffId) => {
         const confirmDelete = window.confirm(
             "Do you want to delete this staff member?",
@@ -1063,18 +1086,57 @@ export default function DoctorProfile(props) {
                                 showPasswords={showPasswords}
                                 setShowPasswords={setShowPasswords}
                             />
-                            {passwordData.newPassword && (
+                            <div style={{ fontSize: 10, marginTop: 6 }}>
                                 <div
                                     style={{
-                                        fontSize: 10,
-                                        color: strength.color,
-                                        marginTop: 5,
-                                        letterSpacing: "0.04em",
+                                        color: passwordRules.length
+                                            ? "#4ade80"
+                                            : "#f87171",
                                     }}
                                 >
-                                    Strength: {strength.label}
+                                    {passwordRules.length ? "✓" : "✗"} Min 8
+                                    characters
                                 </div>
-                            )}
+                                <div
+                                    style={{
+                                        color: passwordRules.uppercase
+                                            ? "#4ade80"
+                                            : "#f87171",
+                                    }}
+                                >
+                                    {passwordRules.uppercase ? "✓" : "✗"}{" "}
+                                    Uppercase letter
+                                </div>
+                                <div
+                                    style={{
+                                        color: passwordRules.lowercase
+                                            ? "#4ade80"
+                                            : "#f87171",
+                                    }}
+                                >
+                                    {passwordRules.lowercase ? "✓" : "✗"}{" "}
+                                    Lowercase letter
+                                </div>
+                                <div
+                                    style={{
+                                        color: passwordRules.number
+                                            ? "#4ade80"
+                                            : "#f87171",
+                                    }}
+                                >
+                                    {passwordRules.number ? "✓" : "✗"} Number
+                                </div>
+                                <div
+                                    style={{
+                                        color: passwordRules.special
+                                            ? "#4ade80"
+                                            : "#f87171",
+                                    }}
+                                >
+                                    {passwordRules.special ? "✓" : "✗"} Special
+                                    character
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <PasswordInput
@@ -1118,7 +1180,8 @@ export default function DoctorProfile(props) {
                                 !passwordData.currentPassword ||
                                 !passwordData.newPassword ||
                                 !passwordData.confirmPassword ||
-                                !passwordsMatch
+                                !passwordsMatch ||
+                                !isPasswordValid
                             }
                         >
                             <RefreshCcw size={13} /> Update Password

@@ -257,4 +257,13 @@ router.post("/verify-reset-otp", async (req, res) => {
     }
 });
 
+router.get("/wake-n8n", async (req, res) => {
+    try {
+        await axios.get("https://n8n-2ud0.onrender.com");
+        res.json({ success: true });
+    } catch (err) {
+        res.json({ success: false });
+    }
+});
+
 module.exports = router;
