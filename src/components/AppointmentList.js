@@ -43,6 +43,54 @@ export default function AppointmentList({
     const role = localStorage.getItem("role");
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
 
+    if (loading && appointments.length === 0) {
+        return (
+            <div>
+                {[1, 2, 3].map((i) => (
+                    <div key={i} style={{ marginBottom: 24 }}>
+                        <div
+                            className="pl-skeleton"
+                            style={{
+                                height: 36,
+                                borderRadius: 8,
+                                marginBottom: 10,
+                            }}
+                        />
+                        <div className="pl-table-card">
+                            {[1, 2, 3, 4].map((j) => (
+                                <div className="pl-skeleton-row" key={j}>
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "22%", height: 12 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "10%", height: 12 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "12%", height: 18 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{
+                                            width: "10%",
+                                            height: 12,
+                                            marginLeft: "auto",
+                                        }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "12%", height: 18 }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
     return (
         <>
             {!loading && appointments.length === 0 && (

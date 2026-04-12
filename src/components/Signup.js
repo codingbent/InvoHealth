@@ -127,6 +127,7 @@ function Step1({ data, onChange, onNext }) {
     const [alert, setAlert] = useState(null);
     const [errors, setErrors] = useState({});
     const otpRefs = useRef([]);
+    const [sendingOtp, setSendingOtp] = useState(false);
 
     const showAlert = (msg, type) => {
         setAlert({ msg, type });
@@ -155,6 +156,7 @@ function Step1({ data, onChange, onNext }) {
         }
 
         try {
+            setSendingOtp(true);
             setOtpError("");
 
             const res = await fetch(
@@ -181,6 +183,8 @@ function Step1({ data, onChange, onNext }) {
             showAlert("OTP sent to " + data.email, "success");
         } catch (err) {
             setOtpError("Failed to send OTP. Try again.");
+        } finally {
+            setSendingOtp(false); // 🔥 stop animation
         }
     };
 
@@ -298,10 +302,20 @@ function Step1({ data, onChange, onNext }) {
                     {!otpSent ? (
                         <button
                             type="button"
-                            className="sg-btn sg-btn-outline sg-btn-sm"
+                            className="sg-btn sg-btn-outline sg-btn-sm flex items-center gap-2"
                             onClick={sendOtp}
+                            disabled={sendingOtp}
                         >
-                            <Mail size={12} /> Send Verification Code
+                            {sendingOtp ? (
+                                <>
+                                    <span className="spinner"></span>
+                                    Sending...
+                                </>
+                            ) : (
+                                <>
+                                    <Mail size={12} /> Send Verification Code
+                                </>
+                            )}
                         </button>
                     ) : (
                         <>
