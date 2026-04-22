@@ -3,7 +3,7 @@ const router = express.Router();
 const Appointment = require("../../../models/Appointment");
 var fetchuser = require("../../../middleware/fetchuser");
 const mongoose = require("mongoose");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 router.put(
     "/edit_appointment/:appointmentId/:visitId",

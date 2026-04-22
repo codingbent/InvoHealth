@@ -3,7 +3,7 @@ const router = express.Router();
 const Timing = require("../../../models/Timing");
 const fetchuser = require("../../../middleware/fetchuser");
 const requireDoctor = require("../../../middleware/requireDoctor");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 router.post(
     "/set_availability",

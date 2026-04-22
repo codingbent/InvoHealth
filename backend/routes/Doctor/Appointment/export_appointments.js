@@ -10,7 +10,7 @@ const {
 } = require("../../../utils/pricingcache");
 const getDoctor = require("../../../utils/getDoctor");
 const requireDoctor = require("../../../middleware/requireDoctor");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 router.get(
     "/check_export_limit",

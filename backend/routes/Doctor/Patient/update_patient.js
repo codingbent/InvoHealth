@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 const { encrypt } = require("../../../utils/crypto"); //  add this
 var fetchuser = require("../../../middleware/fetchuser");
 const requireDoctor = require("../../../middleware/requireDoctor");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 const saltRounds = 10;
 

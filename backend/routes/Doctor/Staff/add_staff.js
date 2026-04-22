@@ -6,7 +6,7 @@ const fetchuser = require("../../../middleware/fetchuser");
 const requireDoctor = require("../../../middleware/requireDoctor");
 const { getPricing } = require("../../../utils/pricingcache");
 const { getSubscriptionStatus } = require("../../../utils/subscription_check");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 router.post(
     "/add_staff",

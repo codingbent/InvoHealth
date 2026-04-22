@@ -3,7 +3,7 @@ const router = express.Router();
 const Service = require("../../../models/Service");
 var fetchuser = require("../../../middleware/fetchuser");
 var requireDoctor = require("../../../middleware/requireDoctor");
-var requireSubscription = require("../../../middleware/requireSubscription");
+var requireSubscription = require("../../../middleware/requiresubscription");
 const { body, validationResult } = require("express-validator");
 
 router.post(

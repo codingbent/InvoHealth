@@ -9,7 +9,7 @@ const { getPricing } = require("../../../utils/pricingcache");
 const { getSubscriptionStatus } = require("../../../utils/subscription_check");
 const upload = require("../../../middleware/upload");
 const uploadToCloudinary = require("../../../utils/uploadToCloudinary");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_FILE_SIZE_MB = 2;

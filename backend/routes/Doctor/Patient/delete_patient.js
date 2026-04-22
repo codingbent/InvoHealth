@@ -5,7 +5,7 @@ const Patient = require("../../../models/Patient");
 const Appointment = require("../../../models/Appointment");
 const fetchuser = require("../../../middleware/fetchuser");
 const requireDoctor = require("../../../middleware/requireDoctor");
-const requireSubscription = require("../../../middleware/requireSubscription");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
 router.delete(
     "/delete_patient/:id",
