@@ -18,6 +18,10 @@ const PatientSchema = new Schema({
     numberLast4: {
         type: String,
     },
+    email: {
+        type: String,
+        required: false,
+    },
     amount: {
         type: Number,
         default: 0,
@@ -45,7 +49,7 @@ const PatientSchema = new Schema({
     },
     doctor: {
         type: Schema.Types.ObjectId,
-        ref: "doc",
+        ref: "Doc",
         required: true,
     },
 });

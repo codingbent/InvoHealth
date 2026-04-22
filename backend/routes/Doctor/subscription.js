@@ -1,40 +1,45 @@
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
-const checkSubscription = require("../../utils/subscription_check");
-var fetchuser = require("../../middleware/fetchuser");
+const fetchuser = require("../../middleware/fetchuser");
+const {
+    getSubscriptionStatus,
+    normalizeDate,
+} = require("../../utils/subscription_check");
 
 router.get("/subscription", fetchuser, async (req, res) => {
     try {
-        const doctor = await Doc.findById(req.user.doctorId);
+        const doctorId = req.user.doctorId || req.user.id;
 
-        if (!doctor) {
-            return res.status(404).json({
-                success: false,
-                error: "Doctor not found",
-            });
-        }
+        const doctor = await Doc.findById(doctorId)
+            .populate("address.countryId")
+            .populate("subscription.currencyId")
+            .lean();
 
-        await checkSubscription(doctor);
+        if (!doctor)
+            return res
+                .status(404)
+                .json({ success: false, error: "Doctor not found" });
 
-        const updatedSub = doctor.subscription || {};
+        const sub = doctor.subscription || {};
 
-        // DAYS REMAINING
+        const computedStatus = getSubscriptionStatus(sub);
+
+        // Resolve currency: subscription record first, fall back to address country
+        const country = doctor.address?.countryId;
+        const subCurrency = sub.currencyId;
+        const currency =
+            sub.currency || subCurrency?.currency || country?.currency || "INR";
+        const currencySymbol = subCurrency?.symbol || country?.symbol || "₹";
+
+        // Days remaining
         let daysRemaining = 0;
-
-        const normalizeDate = (d) => {
-            const date = new Date(d);
-            date.setHours(0, 0, 0, 0);
-            return date;
-        };
-        if (updatedSub.expiryDate) {
+        if (sub.expiryDate && !isNaN(new Date(sub.expiryDate))) {
             const today = normalizeDate(new Date());
-            const expiry = normalizeDate(updatedSub.expiryDate);
-
+            const expiry = normalizeDate(sub.expiryDate);
             const diff = expiry - today;
-
             daysRemaining =
-                updatedSub.status === "expired"
+                computedStatus === "expired"
                     ? 0
                     : Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
         }
@@ -42,29 +47,32 @@ router.get("/subscription", fetchuser, async (req, res) => {
         return res.json({
             success: true,
             subscription: {
-                plan: updatedSub.plan || "FREE",
-                status:
-                    updatedSub.status === "trial"
-                        ? "active"
-                        : updatedSub.status,
-                billingCycle: updatedSub.billingCycle || "monthly",
-                startDate: updatedSub.startDate,
-                expiryDate: updatedSub.expiryDate,
+                plan: sub.plan || "",
+                // FIX: No longer translating "trial" → "active" here.
+                // update_subscription.js now stores "active" directly, and
+                // create_doctor.js is the only place "trial" is written (new signups).
+                // getSubscriptionStatus() already handles new signups correctly
+                // because it checks expiryDate, not the status string.
+                status: computedStatus,
+                billingCycle: sub.billingCycle || "monthly",
+                startDate: sub.startDate,
+                expiryDate: sub.expiryDate,
                 daysRemaining,
-                paymentId: updatedSub.paymentId || "-",
-                orderId: updatedSub.orderId || "-",
-                amountPaid: updatedSub.amountPaid || 0,
-                currency: updatedSub.currency || "INR",
+                paymentId: sub.paymentId || "-",
+                orderId: sub.orderId || "-",
+                amountPaid: sub.amountPaid || 0,
+                currency,
+                currencySymbol,
+                exchangeRate: sub.exchangeRate || null,
+                baseAmount: sub.baseAmount || null,
+                paymentMethod: sub.paymentMethod || null,
             },
             usage: doctor.usage,
             joinedAt: doctor.createdAt,
         });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            success: false,
-            error: "Server error",
-        });
+        console.error("subscription route error:", error);
+        return res.status(500).json({ success: false, error: "Server error" });
     }
 });
 

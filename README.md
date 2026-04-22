@@ -1,8 +1,8 @@
-🏥 Clinic Management System (MERN)
+🏥 Medical Center Management System (MERN)
 
-A full-stack **Clinic & Patient Management Web Application** built using the **MERN stack**, designed for doctors and small clinics to manage patients, appointments, billing, and reports efficiently.
+A full-stack **medical center & Patient Management Web Application** built using the **MERN stack**, designed for doctors and small medical centers to manage patients, appointments, billing, and reports efficiently.
 
-This project goes beyond a basic CRUD app and focuses on **real-world clinic workflows**, including OTP-based authentication, secure password recovery, role-based access, and Excel-friendly reporting.
+This project goes beyond a basic CRUD app and focuses on **real-world medical center workflows**, including OTP-based authentication, secure password recovery, role-based access, and Excel-friendly reporting.
 
 ---
 
@@ -95,7 +95,7 @@ Running the Project Locally
 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/codingbent/InvoHealth.git
-cd clinic-management-system
+cd medical-center-management-system
 ```
 2️⃣ Start Backend
 ```bash

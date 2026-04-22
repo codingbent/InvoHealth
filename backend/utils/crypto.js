@@ -3,6 +3,10 @@ const crypto = require("crypto");
 
 const algorithm = "aes-256-cbc";
 
+if (!process.env.CRYPTO_SECRET) {
+    throw new Error("CRYPTO_SECRET environment variable is required");
+}
+
 const secretKey = crypto
     .createHash("sha256")
     .update(process.env.CRYPTO_SECRET)

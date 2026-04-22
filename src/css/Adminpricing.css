@@ -1,0 +1,438 @@
+@import "./App.css";
+
+/* _____________________________________
+            Admin Pricing
+____________________________________ */
+
+.apr-root {
+    background: #0a0d14;
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    color: #c5d0e8;
+}
+
+.apr-title {
+    font-size: 26px;
+    font-weight: 400;
+    color: #e8edf8;
+    margin-bottom: 28px;
+}
+.apr-title em {
+    font-style: italic;
+    color: #fb923c;
+}
+
+/* ── Cards ── */
+.apr-discount-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    position: relative;
+}
+.apr-discount-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(251, 146, 60, 0.3),
+        transparent
+    );
+}
+
+.apr-card-label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+/* ── Discount row ── */
+.apr-discount-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.apr-discount-unit {
+    font-size: 11px;
+    color: #4a5a7a;
+}
+
+/* ── Inputs ── */
+.apr-input {
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #c5d0e8;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+.apr-input:focus {
+    border-color: rgba(251, 146, 60, 0.4);
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.08);
+}
+.apr-input-sm {
+    width: 100px;
+}
+
+.apr-hint {
+    font-size: 10px;
+    color: #2e3d5c;
+    margin-top: 8px;
+}
+
+/* ── Plan grid ── */
+.apr-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+}
+.apr-plan-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+}
+.apr-plan-accent {
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+}
+.apr-plan-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #131929;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.apr-plan-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.apr-plan-name {
+    font-size: 17px;
+    font-weight: 400;
+}
+.apr-plan-body {
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Fields ── */
+.apr-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.apr-label {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.apr-label-hint {
+    font-size: 8px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: none;
+}
+
+.apr-readonly {
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #4a5a7a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.apr-divider {
+    height: 1px;
+    background: #131929;
+    margin: 2px 0;
+}
+
+/* ── Toggle ── */
+.apr-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.apr-toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.apr-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.apr-toggle-slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: #161d2e;
+    border: 1px solid #1e2d4a;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.apr-toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    border-radius: 50%;
+    background: #2e3d5c;
+    transition: all 0.2s;
+}
+.apr-toggle input:checked + .apr-toggle-slider {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.3);
+}
+.apr-toggle input:checked + .apr-toggle-slider::before {
+    transform: translateX(16px);
+    background: #4ade80;
+}
+
+/* ── Add Country form ── */
+.apr-country-form {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+}
+.apr-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(77, 124, 246, 0.12);
+    border: 1px solid rgba(77, 124, 246, 0.25);
+    border-radius: 8px;
+    color: #60a5fa;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    height: 38px;
+}
+.apr-add-btn:hover {
+    background: rgba(77, 124, 246, 0.2);
+    border-color: rgba(77, 124, 246, 0.4);
+}
+
+/* ── Country table header row ── */
+.apr-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+/* ── INR toggle ── */
+.apr-inr-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+.apr-inr-toggle input {
+    display: none;
+}
+.apr-inr-track {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    background: #161d2e;
+    border: 1px solid #1e2d4a;
+    border-radius: 18px;
+    transition: all 0.2s;
+}
+.apr-inr-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2e3d5c;
+    transition: all 0.2s;
+}
+.apr-inr-toggle input:checked ~ .apr-inr-track {
+    background: rgba(96, 165, 250, 0.15);
+    border-color: rgba(96, 165, 250, 0.3);
+}
+.apr-inr-toggle input:checked ~ .apr-inr-track .apr-inr-thumb {
+    left: 16px;
+    background: #60a5fa;
+}
+.apr-inr-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #3a4a6b;
+}
+
+/* ── Country table ── */
+.apr-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #161d2e;
+}
+.apr-table {
+    width: stretch;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.apr-table thead tr {
+    background: #080c18;
+    border-bottom: 1px solid #161d2e;
+}
+.apr-table th {
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+}
+.apr-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #0f1520;
+    vertical-align: middle;
+}
+.apr-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.apr-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.apr-country-name {
+    display: block;
+    color: #c5d0e8;
+    font-size: 12px;
+}
+.apr-country-currency {
+    display: block;
+    color: #2e3d5c;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
+.apr-mult-input {
+    width: 72px;
+    padding: 6px 8px;
+    font-size: 11px;
+}
+
+.apr-price-cell {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Save row ── */
+.apr-save-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+.apr-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 40px;
+    border-radius: 9px;
+    border: none;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #4d7cf6;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(77, 124, 246, 0.25);
+}
+.apr-save-btn:hover:not(:disabled) {
+    background: #6090ff;
+    box-shadow: 0 6px 22px rgba(77, 124, 246, 0.35);
+    transform: translateY(-1px);
+}
+.apr-save-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+.apr-save-btn.saved {
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: #4ade80;
+    box-shadow: none;
+}
+.apr-toggle-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .apr-grid {
+        grid-template-columns: 1fr;
+    }
+    .apr-country-form {
+        grid-template-columns: 1fr 1fr;
+    }
+    .apr-country-form .apr-add-btn {
+        grid-column: span 2;
+        justify-content: center;
+    }
+}
+@media (max-width: 500px) {
+    .apr-country-form {
+        grid-template-columns: 1fr;
+    }
+    .apr-country-form .apr-add-btn {
+        grid-column: span 1;
+    }
+}

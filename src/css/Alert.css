@@ -1,0 +1,122 @@
+@import "./App.css";
+
+/* ____________________
+        ALERT
+____________________ */
+
+.alert-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.modern-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    min-width: 260px;
+    max-width: 360px;
+    border: 1px solid transparent;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.modern-alert.success {
+    background: #0a1a10;
+    border-color: rgba(74, 222, 128, 0.2);
+    color: #86efac;
+}
+
+.modern-alert.success .alert-icon {
+    color: #4ade80;
+}
+
+.modern-alert.danger {
+    background: #1a0d0d;
+    border-color: rgba(248, 113, 113, 0.2);
+    color: #fca5a5;
+}
+
+.modern-alert.danger .alert-icon {
+    color: #f87171;
+}
+
+.modern-alert.warning {
+    background: #1a1208;
+    border-color: rgba(251, 146, 60, 0.2);
+    color: #fdba74;
+}
+
+.modern-alert.warning .alert-icon {
+    color: #fb923c;
+}
+
+.modern-alert.info {
+    background: #0a0f1e;
+    border-color: rgba(77, 124, 246, 0.2);
+    color: #93c5fd;
+}
+
+.modern-alert.info .alert-icon {
+    color: #4d7cf6;
+}
+
+.alert-icon {
+    flex-shrink: 0;
+}
+
+.alert-text {
+    flex: 1;
+    line-height: 1.5;
+}
+.modern-alert {
+    /* existing styles stay — add this */
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 16px; /* extra room for the bar */
+}
+
+.alert-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+}
+
+@keyframes progressShrink {
+    from {
+        width: stretch;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+.alert-progress-fill {
+    width: stretch;
+    height: 100%;
+    border-radius: 0 2px 2px 0;
+    animation: progressShrink 3.5s linear forwards;
+}
+
+.modern-alert.success .alert-progress-fill {
+    background: #4ade80;
+}
+
+.modern-alert.danger .alert-progress-fill {
+    background: #f87171;
+}
+
+.modern-alert.warning .alert-progress-fill {
+    background: #fb923c;
+}
+
+.modern-alert.info .alert-progress-fill {
+    background: #4d7cf6;
+}

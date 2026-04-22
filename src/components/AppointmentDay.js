@@ -1,5 +1,5 @@
 import { memo, useState, useEffect } from "react";
-import { IndianRupee, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 
 // Responsive hook — re-renders on window resize
 function useIsMobile(breakpoint = 992) {
@@ -17,9 +17,13 @@ function useIsMobile(breakpoint = 992) {
 const AppointmentDay = memo(function AppointmentDay({
     day,
     dayApps,
-    paymentColor,
+    categoryColor,
+    subCategoryColor,
     navigate,
     loading,
+    currency,
+    paymentOptions,
+    getPaymentLabel,
 }) {
     const isMobile = useIsMobile();
     const dayTotal = dayApps.reduce(
@@ -101,8 +105,7 @@ const AppointmentDay = memo(function AppointmentDay({
                 </div>
                 {localStorage.getItem("role") === "doctor" && (
                     <div className="pl-day-total">
-                        <IndianRupee size={13} />
-                        {fmt(dayTotal)}
+                        {currency?.symbol} {fmt(dayTotal)}
                     </div>
                 )}
             </div>
@@ -130,66 +133,90 @@ const AppointmentDay = memo(function AppointmentDay({
                             </tr>
                         </thead>
                         <tbody>
-                            {dayApps.map((a, i) => (
-                                <tr key={i}>
-                                    <td className="pl-patient-name">
-                                        {a.name}
-                                    </td>
-                                    <td className="pl-time">{getTime(a)}</td>
-                                    <td>
-                                        <span
-                                            className={
-                                                paymentColor[a.payment_type] ||
-                                                "pl-tag pl-other"
-                                            }
-                                        >
-                                            {a.payment_type}
-                                        </span>
-                                    </td>
-                                    <td className="right">
-                                        {a.status === "Paid" ? (
-                                            <div className="pl-amount-main">
-                                                <IndianRupee size={12} />{" "}
-                                                {fmt(Number(a.amount ?? 0))}
-                                            </div>
-                                        ) : (
-                                            <>
+                            {dayApps.map((a, i) => {
+                                const match = paymentOptions.find(
+                                    (p) =>
+                                        String(p.id) ===
+                                        String(a.paymentMethodId),
+                                );
+
+                                const label = match
+                                    ? match.subCategoryName ||
+                                      match.categoryName
+                                    : a.subCategoryName
+                                      ? `${a.subCategoryName}`
+                                      : a.categoryName
+                                        ? a.categoryName
+                                        : "Other";
+
+                                const base = match
+                                    ? match.categoryName
+                                    : "Other";
+                                return (
+                                    <tr key={i}>
+                                        <td className="pl-patient-name">
+                                            {a.name}
+                                        </td>
+                                        <td className="pl-time">
+                                            {getTime(a)}
+                                        </td>
+                                        <td>
+                                            <span
+                                                className={`pl-tag pl-${base.toLowerCase().replace(/\s+/g, "")}`}
+                                            >
+                                                {label.split(" ")[0]}
+                                            </span>
+                                        </td>
+                                        <td className="right">
+                                            {a.status === "Paid" ? (
                                                 <div className="pl-amount-main">
-                                                    <IndianRupee size={12} />{" "}
-                                                    {fmt(
-                                                        Number(
-                                                            a.collected ?? 0,
-                                                        ),
-                                                    )}
-                                                </div>
-                                                <div className="pl-amount-sub">
-                                                    of <IndianRupee size={11} />{" "}
+                                                    {currency?.symbol}{" "}
                                                     {fmt(Number(a.amount ?? 0))}
                                                 </div>
-                                            </>
-                                        )}
-                                    </td>
-                                    <td className="right">
-                                        <span
-                                            className={`pl-status ${statusClass(a.status)}`}
-                                        >
-                                            {a.status}
-                                        </span>
-                                    </td>
-                                    <td className="right">
-                                        <button
-                                            className="pl-view-btn"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/patient/${a.patientId}`,
-                                                )
-                                            }
-                                        >
-                                            <Eye size={14} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                            ) : (
+                                                <>
+                                                    <div className="pl-amount-main">
+                                                        {currency?.symbol}{" "}
+                                                        {fmt(
+                                                            Number(
+                                                                a.collected ??
+                                                                    0,
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                    <div className="pl-amount-sub">
+                                                        of {currency?.symbol}{" "}
+                                                        {fmt(
+                                                            Number(
+                                                                a.amount ?? 0,
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </td>
+                                        <td className="right">
+                                            <span
+                                                className={`pl-status ${statusClass(a.status)}`}
+                                            >
+                                                {a.status}
+                                            </span>
+                                        </td>
+                                        <td className="right">
+                                            <button
+                                                className="pl-view-btn"
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/patient/${a.patientId}`,
+                                                    )
+                                                }
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -198,95 +225,112 @@ const AppointmentDay = memo(function AppointmentDay({
             {/* ── Mobile cards ── */}
             {isMobile && (
                 <div>
-                    {dayApps.map((a, i) => (
-                        <div key={i} className="pl-mob-card">
-                            {/* Top row: name + amount */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "flex-start",
-                                    gap: 12,
-                                }}
-                            >
-                                {/* Left */}
-                                <div
-                                    style={{ flex: 1, minWidth: 0 }}
-                                    onClick={() =>
-                                        navigate(`/patient/${a.patientId}`)
-                                    }
-                                >
-                                    <div className="pl-mob-name">{a.name}</div>
-                                    {getTime(a) && (
-                                        <div className="pl-mob-time">
-                                            {getTime(a)}
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Right: amount */}
-                                <div
-                                    style={{
-                                        textAlign: "right",
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {a.status === "Paid" ? (
-                                        <div className="pl-mob-amount">
-                                            <IndianRupee size={13} />{" "}
-                                            {fmt(Number(a.amount ?? 0))}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="pl-mob-amount">
-                                                <IndianRupee size={13} />{" "}
-                                                {fmt(Number(a.collected ?? 0))}
-                                            </div>
-                                            <div className="pl-mob-sub">
-                                                of <IndianRupee size={11} />{" "}
-                                                {fmt(Number(a.amount ?? 0))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                    {dayApps.map((a, i) => {
+                        const match = paymentOptions.find(
+                            (p) => String(p.id) === String(a.paymentMethodId),
+                        );
 
-                            {/* Bottom row: payment tag + status + view */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    marginTop: 10,
-                                    paddingTop: 10,
-                                    borderTop: "1px solid #0d111a",
-                                    gap: 8,
-                                }}
-                            >
+                        const label = match
+                            ? match.subCategoryName
+                                ? `${match.subCategoryName.split(" ")[0]}`
+                                : match.categoryName
+                            : "Other";
+
+                        // const base = match ? match.categoryName : "Other";
+
+                        return (
+                            <div key={i} className="pl-mob-card">
+                                {/* Top row: name + amount */}
                                 <div
                                     style={{
                                         display: "flex",
-                                        alignItems: "space-between",
-                                        gap: 8,
-                                        flexWrap: "wrap",
+                                        justifyContent: "space-between",
+                                        alignItems: "flex-start",
+                                        gap: 12,
                                     }}
                                 >
-                                    <span
-                                        className={
-                                            paymentColor[a.payment_type] ||
-                                            "pl-tag pl-other"
+                                    {/* Left */}
+                                    <div
+                                        style={{ flex: 1, minWidth: 0 }}
+                                        onClick={() =>
+                                            navigate(`/patient/${a.patientId}`)
                                         }
                                     >
-                                        {a.payment_type}
-                                    </span>
-                                    <span
-                                        className={`pl-status ${statusClass(a.status)}`}
+                                        <div className="pl-mob-name">
+                                            {a.name}
+                                        </div>
+                                        {getTime(a) && (
+                                            <div className="pl-mob-time">
+                                                {getTime(a)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Right: amount */}
+                                    <div
+                                        style={{
+                                            textAlign: "right",
+                                            flexShrink: 0,
+                                        }}
                                     >
-                                        {a.status}
-                                    </span>
+                                        {a.status === "Paid" ? (
+                                            <div className="pl-mob-amount">
+                                                {currency?.symbol}{" "}
+                                                {fmt(Number(a.amount ?? 0))}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="pl-mob-amount">
+                                                    {currency?.symbol}{" "}
+                                                    {fmt(
+                                                        Number(
+                                                            a.collected ?? 0,
+                                                        ),
+                                                    )}
+                                                </div>
+                                                <div className="pl-mob-sub">
+                                                    of {currency?.symbol}{" "}
+                                                    {fmt(Number(a.amount ?? 0))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Bottom row: payment tag + status + view */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        marginTop: 10,
+                                        paddingTop: 10,
+                                        borderTop: "1px solid #0d111a",
+                                        gap: 8,
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "space-between",
+                                            gap: 8,
+                                            flexWrap: "wrap",
+                                        }}
+                                    >
+                                        <span
+                                            className={`pl-tag pl-${match?.categoryName.toLowerCase().replace(/\s+/g, "")}`}
+                                        >
+                                            {label}
+                                        </span>
+                                        <span
+                                            className={`pl-status ${statusClass(a.status)}`}
+                                        >
+                                            {a.status}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

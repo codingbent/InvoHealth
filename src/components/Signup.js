@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import {
-    UserPlus,
     Check,
     X,
     Plus,
@@ -15,14 +14,20 @@ import {
     ShieldCheck,
     ChevronRight,
     ChevronLeft,
+    Globe,
+    ChevronDown,
 } from "lucide-react";
+import "react-phone-input-2/lib/style.css";
+import "../css/Signup.css";
+import { API_BASE_URL } from "../components/config";
+import CountrySelect from "../hooks/CountrySelect";
+import { fetchCountries } from "../api/country.api";
+import "../css/Signup.css"
 
-const normalizePhone = (phone) => phone.replace(/\D/g, "").slice(-10);
-const isValidIndianMobile = (phone) => /^[6-9]\d{9}$/.test(phone);
+const normalizePhone = (phone) => phone.replace(/\D/g, "");
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const STEPS = ["Account", "Clinic", "Schedule", "Professional"];
-
+const STEPS = ["Account", "Center", "Schedule", "Professional", "Payments"];
 const passwordRules = {
     length: /.{8,}/,
     upper: /[A-Z]/,
@@ -30,11 +35,6 @@ const passwordRules = {
     number: /[0-9]/,
     special: /[^A-Za-z0-9]/,
 };
-
-const API_BASE_URL =
-    process.env.NODE_ENV === "production"
-        ? "https://gmsc-backend.onrender.com"
-        : "http://localhost:5001";
 
 function StepBar({ current }) {
     return (
@@ -108,7 +108,7 @@ function Alert({ msg, type, onClose }) {
 /* ─────────────────────────────────────────
    Step 1 — Account Info + Email Verify
 ───────────────────────────────────────── */
-function Step1({ data, onChange, onNext }) {
+function Step1({ data, onChange, onNext, showAlert }) {
     const [showPw, setShowPw] = useState(false);
     const [showCpw, setShowCpw] = useState(false);
     const [pwChecks, setPwChecks] = useState({
@@ -128,11 +128,17 @@ function Step1({ data, onChange, onNext }) {
     const [errors, setErrors] = useState({});
     const otpRefs = useRef([]);
     const [sendingOtp, setSendingOtp] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
 
-    const showAlert = (msg, type) => {
-        setAlert({ msg, type });
-        setTimeout(() => setAlert(null), 4000);
-    };
+    useEffect(() => {
+        if (cooldown <= 0) return;
+
+        const timer = setInterval(() => {
+            setCooldown((prev) => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [cooldown]);
 
     const handlePwChange = (e) => {
         onChange(e);
@@ -150,6 +156,8 @@ function Step1({ data, onChange, onNext }) {
         data.password && data.cpassword && data.password === data.cpassword;
 
     const sendOtp = async () => {
+        if (cooldown > 0) return;
+
         if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
             setErrors((e) => ({ ...e, email: "Enter a valid email address" }));
             return;
@@ -180,11 +188,15 @@ function Step1({ data, onChange, onNext }) {
 
             setOtpSent(true);
             setOtp(["", "", "", "", "", ""]);
+
+            //START COOLDOWN (60 sec)
+            setCooldown(60);
+
             showAlert("OTP sent to " + data.email, "success");
         } catch (err) {
             setOtpError("Failed to send OTP. Try again.");
         } finally {
-            setSendingOtp(false); // 🔥 stop animation
+            setSendingOtp(false);
         }
     };
 
@@ -261,13 +273,17 @@ function Step1({ data, onChange, onNext }) {
 
             <div className="sg-row sg-row-2">
                 <Field label="Full Name" required error={errors.name}>
-                    <input
-                        className={`sg-input${errors.name ? " sg-input-err" : ""}`}
-                        name="name"
-                        value={data.name}
-                        onChange={onChange}
-                        placeholder="Dr. John Doe"
-                    />
+                    <div className="sg-input-prefix-wrap">
+                        <span className="sg-prefix">Dr</span>
+
+                        <input
+                            className={`sg-input sg-input-with-prefix${errors.name ? " sg-input-err" : ""}`}
+                            name="name"
+                            value={data.name}
+                            onChange={onChange}
+                            placeholder="John Doe"
+                        />
+                    </div>
                 </Field>
                 <Field label="Email Address" required error={errors.email}>
                     <div className="sg-input-wrap">
@@ -277,7 +293,7 @@ function Step1({ data, onChange, onNext }) {
                             type="email"
                             value={data.email}
                             onChange={onChange}
-                            placeholder="email@clinic.com"
+                            placeholder="email@domain.com"
                             readOnly={emailVerified}
                             style={emailVerified ? { paddingRight: 36 } : {}}
                         />
@@ -304,7 +320,7 @@ function Step1({ data, onChange, onNext }) {
                             type="button"
                             className="sg-btn sg-btn-outline sg-btn-sm flex items-center gap-2"
                             onClick={sendOtp}
-                            disabled={sendingOtp}
+                            disabled={sendingOtp || cooldown > 0}
                         >
                             {sendingOtp ? (
                                 <>
@@ -360,8 +376,13 @@ function Step1({ data, onChange, onNext }) {
                                     type="button"
                                     className="sg-btn sg-btn-outline sg-btn-sm"
                                     onClick={sendOtp}
+                                    disabled={cooldown > 0 || sendingOtp}
                                 >
-                                    Resend
+                                    {cooldown > 0
+                                        ? `Resend in ${cooldown}s`
+                                        : sendingOtp
+                                          ? "Sending..."
+                                          : "Resend"}
                                 </button>
                             </div>
                         </>
@@ -462,7 +483,7 @@ function Step1({ data, onChange, onNext }) {
             {/* Step 1 nav — no back button, so use a spacer to keep hint centred */}
             <div className="sg-nav">
                 <div className="sg-nav-spacer" />
-                <span className="sg-nav-hint">Step 1 of 4</span>
+                <span className="sg-nav-hint">Step 1 of 5</span>
                 <button
                     type="button"
                     className="sg-btn sg-btn-primary"
@@ -476,40 +497,56 @@ function Step1({ data, onChange, onNext }) {
 }
 
 /* ─────────────────────────────────────────
-   Step 2 — Clinic Info + Address
+   Step 2 — medical center Info + Address
 ───────────────────────────────────────── */
-function Step2({ data, onChange, onNext, onBack }) {
+function Step2({
+    data,
+    onChange,
+    onNext,
+    onBack,
+    countries,
+    countryCode,
+    setCountryCode,
+}) {
     const [errors, setErrors] = useState({});
-
     const validate = () => {
         const errs = {};
-        if (!data.clinicName.trim())
-            errs.clinicName = "Clinic name is required";
-        const ph = normalizePhone(data.phone);
-        if (!isValidIndianMobile(ph))
-            errs.phone = "Enter a valid 10-digit Indian mobile number";
-        const aph = normalizePhone(data.secondaryPhone);
-        if (!isValidIndianMobile(aph))
-            errs.secondaryPhone = "Enter a valid appointment contact number";
-        if (!data.street.trim()) errs.street = "Address Line 1 is required";
-        if (!data.city.trim()) errs.city = "City is required";
-        if (!data.state.trim()) errs.state = "State is required";
-        if (!/^\d{6}$/.test(data.pincode))
-            errs.pincode = "Enter a valid 6-digit pincode";
+
+        if (!data.clinicName)
+            errs.clinicName = "Medical Center name is required";
+
+        if (!data.line1) errs.line1 = "Address Line 1 is required";
+
+        if (!data.city) errs.city = "City is required";
+
+        if (!data.state) errs.state = "State is required";
+
+        if (!data.country) errs.country = "Country is required";
+
+        if (!data.pincode) errs.pincode = "Pincode is required";
+
+        if (!data.phone) errs.phone = "Doctor Contact is required";
+
+        if (!data.secondaryPhone)
+            errs.secondaryPhone = "Appointment Contact is required";
+
         setErrors(errs);
         return Object.keys(errs).length === 0;
     };
 
     return (
         <div>
+            {/* ── Clinic Info ── */}
             <div className="sg-section">
                 <div className="sg-section-line" />
-                <span className="sg-section-title">Clinic Information</span>
+                <span className="sg-section-title">
+                    Medical Center Information
+                </span>
                 <div className="sg-section-line" />
             </div>
 
             <Field
-                label="Clinic / Hospital Name"
+                label="Medical Center Name"
                 required
                 error={errors.clinicName}
             >
@@ -522,6 +559,7 @@ function Step2({ data, onChange, onNext, onBack }) {
                 />
             </Field>
 
+            {/* ── Contact Numbers ── */}
             <div className="sg-section">
                 <div className="sg-section-line" />
                 <span className="sg-section-title">Contact Numbers</span>
@@ -529,108 +567,174 @@ function Step2({ data, onChange, onNext, onBack }) {
             </div>
 
             <div className="sg-row sg-row-2">
+                {/* DOCTOR CONTACT */}
                 <Field label="Doctor Contact" required error={errors.phone}>
-                    <input
-                        className={`sg-input${errors.phone ? " sg-input-err" : ""}`}
-                        name="phone"
-                        value={data.phone}
-                        onChange={onChange}
-                        placeholder="10-digit mobile number"
-                        maxLength={15}
-                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                        <select
+                            className="sg-input"
+                            style={{ maxWidth: "fit-content" }}
+                            value={countryCode}
+                            onChange={(e) => setCountryCode(e.target.value)}
+                        >
+                            {countries.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                    {c.dialCode}
+                                </option>
+                            ))}
+                        </select>
+
+                        <input
+                            className="sg-input"
+                            value={data.phone}
+                            onChange={(e) =>
+                                onChange({
+                                    target: {
+                                        name: "phone",
+                                        value: e.target.value.replace(
+                                            /\D/g,
+                                            "",
+                                        ),
+                                    },
+                                })
+                            }
+                            placeholder="Enter phone number"
+                        />
+                    </div>
                 </Field>
+
+                {/* APPOINTMENT CONTACT */}
                 <Field
                     label="Appointment Contact"
                     required
                     error={errors.secondaryPhone}
                 >
+                    <div style={{ display: "flex", gap: 8 }}>
+                        <select
+                            className="sg-input"
+                            style={{ maxWidth: "fit-content" }}
+                            value={countryCode}
+                            onChange={(e) => setCountryCode(e.target.value)}
+                        >
+                            {countries.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                    {c.dialCode}
+                                </option>
+                            ))}
+                        </select>
+
+                        <input
+                            className="sg-input"
+                            value={data.secondaryPhone}
+                            onChange={(e) =>
+                                onChange({
+                                    target: {
+                                        name: "secondaryPhone",
+                                        value: e.target.value.replace(
+                                            /\D/g,
+                                            "",
+                                        ),
+                                    },
+                                })
+                            }
+                            placeholder="Enter appointment number"
+                        />
+                    </div>
+                </Field>
+            </div>
+
+            {/* ── Clinic Address ── */}
+            <div className="sg-section">
+                <div className="sg-section-line" />
+                <span className="sg-section-title">Medical Center Address</span>
+                <div className="sg-section-line" />
+            </div>
+
+            <Field label="Address Line 1" required error={errors.line1}>
+                <input
+                    className={`sg-input${errors.line ? " sg-input-err" : ""}`}
+                    name="line1"
+                    value={data.line1}
+                    onChange={onChange}
+                    placeholder="Building Number"
+                />
+            </Field>
+
+            <div className="sg-row sg-row-2">
+                <Field label="Address Line 2">
                     <input
-                        className={`sg-input${errors.secondaryPhone ? " sg-input-err" : ""}`}
-                        name="secondaryPhone"
-                        value={data.secondaryPhone}
+                        className="sg-input"
+                        name="line2"
+                        value={data.line2}
                         onChange={onChange}
-                        placeholder="Public booking number"
-                        maxLength={15}
+                        placeholder="Street Name (optional)"
+                    />
+                </Field>
+                <Field label="Address Line 3">
+                    <input
+                        className="sg-input"
+                        name="line3"
+                        value={data.line3}
+                        onChange={onChange}
+                        placeholder="Area / Locality (optional)"
                     />
                 </Field>
             </div>
 
-            <div className="sg-section">
-                <div className="sg-section-line" />
-                <span className="sg-section-title">Clinic Address</span>
-                <div className="sg-section-line" />
-            </div>
-
-            <Field error={errors.street} style={{ marginBottom: 10 }}>
-                <input
-                    className={`sg-input${errors.street ? " sg-input-err" : ""}`}
-                    name="street"
-                    value={data.street}
-                    onChange={onChange}
-                    placeholder="Address Line 1 *"
-                />
-            </Field>
-            <div className="sg-field" style={{ marginBottom: 10 }}>
-                <input
-                    className="sg-input"
-                    name="street2"
-                    value={data.street2}
-                    onChange={onChange}
-                    placeholder="Address Line 2 (optional)"
-                />
-            </div>
-            <div className="sg-field" style={{ marginBottom: 10 }}>
-                <input
-                    className="sg-input"
-                    name="street3"
-                    value={data.street3}
-                    onChange={onChange}
-                    placeholder="Address Line 3 (optional)"
-                />
-            </div>
-            <div className="sg-row sg-row-2" style={{ marginBottom: 10 }}>
-                <div>
+            <div className="sg-row sg-row-2">
+                <Field label="City" required error={errors.city}>
                     <input
                         className={`sg-input${errors.city ? " sg-input-err" : ""}`}
                         name="city"
                         value={data.city}
                         onChange={onChange}
-                        placeholder="City *"
+                        placeholder="Enter City Name"
                     />
-                    {errors.city && (
-                        <span className="sg-errtip">{errors.city}</span>
-                    )}
-                </div>
-                <div>
+                </Field>
+                <Field label="State" required error={errors.state}>
                     <input
                         className={`sg-input${errors.state ? " sg-input-err" : ""}`}
                         name="state"
                         value={data.state}
                         onChange={onChange}
-                        placeholder="State *"
+                        placeholder="Enter State Name"
                     />
-                    {errors.state && (
-                        <span className="sg-errtip">{errors.state}</span>
-                    )}
-                </div>
+                </Field>
             </div>
-            <Field error={errors.pincode}>
-                <input
-                    className={`sg-input${errors.pincode ? " sg-input-err" : ""}`}
-                    name="pincode"
-                    value={data.pincode}
-                    onChange={(e) =>
-                        onChange({
-                            target: {
-                                name: "pincode",
-                                value: e.target.value.replace(/\D/g, ""),
-                            },
-                        })
-                    }
-                    placeholder="Pincode *"
-                    maxLength={6}
-                />
-            </Field>
+
+            <div className="sg-row sg-row-2">
+                <Field label="Pincode" required error={errors.pincode}>
+                    <input
+                        className={`sg-input${errors.pincode ? " sg-input-err" : ""}`}
+                        name="pincode"
+                        value={data.pincode}
+                        onChange={(e) =>
+                            onChange({
+                                target: {
+                                    name: "pincode",
+                                    value: e.target.value.replace(/\D/g, ""),
+                                },
+                            })
+                        }
+                        placeholder="6-digit pincode"
+                        maxLength={6}
+                    />
+                </Field>
+                <Field label="Country" required>
+                    <div className="sg-country-wrap">
+                        <Globe size={13} className="sg-country-globe" />
+                        <CountrySelect
+                            countries={countries}
+                            value={data.country}
+                            onChange={(val) =>
+                                onChange({
+                                    target: { name: "country", value: val },
+                                })
+                            }
+                        />{" "}
+                        <ChevronDown size={12} className="sg-country-chevron" />
+                    </div>
+                </Field>
+            </div>
 
             <div className="sg-nav">
                 <button
@@ -640,7 +744,7 @@ function Step2({ data, onChange, onNext, onBack }) {
                 >
                     <ChevronLeft size={14} /> Back
                 </button>
-                <span className="sg-nav-hint">Step 2 of 4</span>
+                <span className="sg-nav-hint">Step 2 of 5</span>
                 <button
                     type="button"
                     className="sg-btn sg-btn-primary"
@@ -652,18 +756,10 @@ function Step2({ data, onChange, onNext, onBack }) {
         </div>
     );
 }
-
 /* ─────────────────────────────────────────
    Step 3 — Availability
 ───────────────────────────────────────── */
-function Step3({ availability, setAvailability, onNext, onBack }) {
-    const [alert, setAlert] = useState(null);
-
-    const showAlert = (msg, type) => {
-        setAlert({ msg, type });
-        setTimeout(() => setAlert(null), 4000);
-    };
-
+function Step3({ availability, setAvailability, onNext, onBack, showAlert }) {
     const updateSlot = (bi, si, field, value) => {
         const updated = availability.map((b, i) =>
             i !== bi
@@ -744,7 +840,7 @@ function Step3({ availability, setAvailability, onNext, onBack }) {
 
     const validate = () => {
         if (availability.every((b) => b.days.length === 0)) {
-            showAlert("Add at least one working day", "error");
+            showAlert("Add at least one working day", "danger");
             return false;
         }
         for (const [bi, block] of availability.entries()) {
@@ -753,20 +849,23 @@ function Step3({ availability, setAvailability, onNext, onBack }) {
                 if (!slot.startTime || !slot.endTime) {
                     showAlert(
                         `Fill all time slots in group ${bi + 1}`,
-                        "error",
+                        "danger",
                     );
                     return false;
                 }
                 if (slot.startTime >= slot.endTime) {
                     showAlert(
                         `Start must be before end in group ${bi + 1}`,
-                        "error",
+                        "danger",
                     );
                     return false;
                 }
             }
             if (isOverlapping(block.slots)) {
-                showAlert(`Overlapping time slots in group ${bi + 1}`, "error");
+                showAlert(
+                    `Overlapping time slots in group ${bi + 1}`,
+                    "danger",
+                );
                 return false;
             }
         }
@@ -775,12 +874,6 @@ function Step3({ availability, setAvailability, onNext, onBack }) {
 
     return (
         <div>
-            <Alert
-                msg={alert?.msg}
-                type={alert?.type}
-                onClose={() => setAlert(null)}
-            />
-
             <div className="sg-section">
                 <div className="sg-section-line" />
                 <span className="sg-section-title">
@@ -798,6 +891,7 @@ function Step3({ availability, setAvailability, onNext, onBack }) {
                                 style={{ display: "inline", marginRight: 5 }}
                             />
                             Slot {bi + 1}
+                            <span className="sg-required"> *</span>
                         </span>
                         {availability.length > 1 && (
                             <button
@@ -929,7 +1023,7 @@ function Step3({ availability, setAvailability, onNext, onBack }) {
                 >
                     <ChevronLeft size={14} /> Back
                 </button>
-                <span className="sg-nav-hint">Step 3 of 4</span>
+                <span className="sg-nav-hint">Step 3 of 5</span>
                 <button
                     type="button"
                     className="sg-btn sg-btn-primary"
@@ -950,10 +1044,9 @@ function Step4({
     onChange,
     degrees,
     setDegrees,
-    acceptedTerms,
-    setAcceptedTerms,
     onBack,
-    onSubmit,
+    onNext,
+    showAlert,
 }) {
     const [errors, setErrors] = useState({});
 
@@ -971,16 +1064,24 @@ function Step4({
 
     const validate = () => {
         const errs = {};
-        if (!data.regNumber.trim())
+
+        if (!data.regNumber.trim()) {
             errs.regNumber = "Registration number is required";
-        if (!data.experience.trim()) errs.experience = "Experience is required";
-        if (degrees.every((d) => !d.trim()))
+        }
+
+        if (!data.experience.trim()) {
+            errs.experience = "Experience is required";
+        }
+
+        if (!degrees.length) {
             errs.degrees = "Add at least one degree";
-        if (!acceptedTerms) errs.terms = "Please accept the Terms & Conditions";
+        } else if (degrees.some((d) => !d.trim())) {
+            errs.degrees = "Degree cannot be empty";
+        }
+
         setErrors(errs);
         return Object.keys(errs).length === 0;
     };
-
     return (
         <div>
             <div className="sg-section">
@@ -1000,7 +1101,7 @@ function Step4({
                         name="regNumber"
                         value={data.regNumber}
                         onChange={onChange}
-                        placeholder="MCI/State reg. number"
+                        placeholder="Your country's medical license number"
                     />
                 </Field>
                 <Field label="Experience" required error={errors.experience}>
@@ -1045,45 +1146,11 @@ function Step4({
                 </button>
             </Field>
 
-            <div className="sg-terms">
-                <input
-                    type="checkbox"
-                    id="terms"
-                    className="sg-checkbox"
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                />
-                <label className="sg-terms-label" htmlFor="terms">
-                    I agree to the{" "}
-                    <Link to="/terms" target="_blank" className="sg-terms-link">
-                        Terms & Conditions
-                    </Link>{" "}
-                    and{" "}
-                    <Link
-                        to="/privacy"
-                        target="_blank"
-                        className="sg-terms-link"
-                    >
-                        Privacy Policy
-                    </Link>
-                    .
-                </label>
-            </div>
             {errors.terms && (
                 <div className="sg-errtip" style={{ marginTop: 4 }}>
                     {errors.terms}
                 </div>
             )}
-
-            <button
-                type="button"
-                className="sg-btn sg-btn-primary sg-btn-full"
-                style={{ marginTop: 20 }}
-                onClick={() => validate() && onSubmit()}
-                disabled={!acceptedTerms}
-            >
-                <UserPlus size={15} /> Create Account
-            </button>
 
             {/* Step 4 nav — no next button, spacer keeps hint centred */}
             <div className="sg-nav" style={{ paddingBottom: 0 }}>
@@ -1094,8 +1161,239 @@ function Step4({
                 >
                     <ChevronLeft size={14} /> Back
                 </button>
-                <span className="sg-nav-hint">Step 4 of 4</span>
-                <div className="sg-nav-spacer" />
+                <span className="sg-nav-hint">Step 4 of 5</span>
+                <button
+                    type="button"
+                    className="sg-btn sg-btn-primary"
+                    onClick={() => validate() && onNext()}
+                >
+                    Continue <ChevronRight size={14} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function Step5({
+    paymentMethods,
+    setPaymentMethods,
+    onBack,
+    onSubmit,
+    acceptedTerms,
+    setAcceptedTerms,
+    showAlert,
+}) {
+    const [categories, setCategories] = useState([]);
+    const [errors, setErrors] = useState([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const res = await fetch(`${API_BASE_URL}/api/doctor/all`);
+            const data = await res.json();
+
+            if (data.success) {
+                setCategories(data.data || []);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const addMethod = () => {
+        setPaymentMethods([
+            ...paymentMethods,
+            {
+                categoryId: "",
+                subCategoryId: "",
+                label: "",
+            },
+        ]);
+    };
+
+    const updateMethod = (index, field, value) => {
+        const updated = [...paymentMethods];
+
+        // RESET subcategory when category changes
+        if (field === "categoryId") {
+            updated[index].subCategoryId = "";
+        }
+
+        updated[index][field] = value;
+        setPaymentMethods(updated);
+    };
+
+    const removeMethod = (index) => {
+        setPaymentMethods(paymentMethods.filter((_, i) => i !== index));
+    };
+
+    const validate = () => {
+        const errs = [];
+
+        if (paymentMethods.length === 0) {
+            showAlert("Add at least one payment method", "danger");
+            return false;
+        }
+
+        if (!acceptedTerms) {
+            showAlert("Accept Terms & Conditions", "danger");
+            return false;
+        }
+
+        paymentMethods.forEach((m, i) => {
+            const err = {};
+
+            if (!m.categoryId) err.categoryId = "Required";
+            if (!m.subCategoryId) err.subCategoryId = "Required";
+            if (!m.label) err.label = "Required";
+
+            errs[i] = err;
+        });
+
+        setErrors(errs);
+
+        return errs.every((e) => Object.keys(e).length === 0);
+    };
+
+    return (
+        <div>
+            <div className="sg-section">
+                <span className="sg-section-title">
+                    Payment Methods <span className="sg-required">*</span>
+                </span>
+            </div>
+
+            {paymentMethods.map((m, i) => {
+                const selectedCategory = categories.find(
+                    (c) => String(c._id) === String(m.categoryId),
+                );
+
+                return (
+                    <div key={i} className="sg-avail-block">
+                        {/* CATEGORY */}
+                        <select
+                            className={`sg-input mt-2 ${
+                                errors[i]?.categoryId ? "sg-input-err" : ""
+                            }`}
+                            value={m.categoryId}
+                            onChange={(e) =>
+                                updateMethod(i, "categoryId", e.target.value)
+                            }
+                        >
+                            <option value="">Select Category *</option>
+                            {categories.map((c) => (
+                                <option key={c._id} value={c._id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        {errors[i]?.categoryId && (
+                            <div className="sg-errtip">
+                                {errors[i].categoryId}
+                            </div>
+                        )}
+
+                        {/* SUBCATEGORY */}
+                        <select
+                            className={`sg-input mt-2 ${
+                                errors[i]?.subCategoryId ? "sg-input-err" : ""
+                            }`}
+                            value={m.subCategoryId}
+                            onChange={(e) =>
+                                updateMethod(i, "subCategoryId", e.target.value)
+                            }
+                            disabled={!m.categoryId}
+                        >
+                            <option value="">Select Subcategory *</option>
+
+                            {selectedCategory?.subcategories?.map((s) => (
+                                <option key={s._id} value={s._id}>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        {errors[i]?.subCategoryId && (
+                            <div className="sg-errtip">
+                                {errors[i].subCategoryId}
+                            </div>
+                        )}
+
+                        {/* labels */}
+                        <input
+                            className={`sg-input mt-2 ${
+                                errors[i]?.label ? "sg-input-err" : ""
+                            }`}
+                            placeholder={`Enter ${selectedCategory?.name || "payment"} label`}
+                            value={m.label}
+                            onChange={(e) =>
+                                updateMethod(i, "label", e.target.value)
+                            }
+                        />
+
+                        {errors[i]?.label && (
+                            <div className="sg-errtip">{errors[i].label}</div>
+                        )}
+
+                        {/* REMOVE */}
+                        <button
+                            className="sg-btn sg-btn-danger mt-2"
+                            onClick={() => removeMethod(i)}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                );
+            })}
+
+            <button className="sg-btn sg-btn-outline" onClick={addMethod}>
+                + Add Payment Method
+            </button>
+
+            {/* TERMS */}
+            <div className="sg-terms">
+                <label className="sg-checkbox-wrap">
+                    <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    />
+
+                    <span className="sg-custom-checkbox">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M20 6L9 17L4 12" />
+                        </svg>
+                    </span>
+
+                    <span className="sg-terms-label">
+                        I agree to the{" "}
+                        <Link to="/terms" target="_blank">
+                            Terms & Conditions
+                        </Link>{" "}
+                        and{" "}
+                        <Link to="/privacy" target="_blank">
+                            Privacy Policy
+                        </Link>
+                    </span>
+                </label>
+            </div>
+
+            <div className="sg-nav">
+                <button
+                    type="button"
+                    className="sg-btn sg-btn-outline"
+                    onClick={onBack}
+                >
+                    <ChevronLeft size={14} /> Back
+                </button>
+
+                <span className="sg-nav-hint">Step 5 of 5</span>
+
+                <button
+                    className="sg-btn sg-btn-primary"
+                    onClick={() => validate() && onSubmit()}
+                >
+                    Create Account
+                </button>
             </div>
         </div>
     );
@@ -1117,6 +1415,8 @@ const Signup = (props) => {
         { days: [], slots: [{ startTime: "", endTime: "", slotDuration: 15 }] },
     ]);
     const [degrees, setDegrees] = useState([""]);
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [countryCode, setCountryCode] = useState("+91");
     const [credentials, setCredentials] = useState({
         name: "",
         email: "",
@@ -1126,27 +1426,33 @@ const Signup = (props) => {
         clinicName: "",
         phone: "",
         secondaryPhone: "",
-        street: "",
-        street2: "",
-        street3: "",
+        line: "",
+        line2: "",
+        line3: "",
         city: "",
         state: "",
+        country: "IN",
         pincode: "",
         regNumber: "",
         experience: "",
     });
 
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        [],
-    );
-
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [step]);
+
+    useEffect(() => {
+        const loadCountries = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data);
+            } catch (err) {
+                console.error("Country load failed", err);
+            }
+        };
+
+        loadCountries();
+    }, []);
 
     const onChange = (e) => {
         const { name, value } = e.target;
@@ -1185,28 +1491,47 @@ const Signup = (props) => {
         return Object.keys(dayMap).map((day) => ({ day, slots: dayMap[day] }));
     };
 
+    const [countries, setCountries] = useState([]);
+    const selectedCountry = countries.find(
+        (c) => c.code === credentials.country,
+    );
     const handleSubmit = async () => {
+        if (!selectedCountry) {
+            props.showAlert("Country not loaded", "danger");
+            return;
+        }
         const bodyToSend = {
             name: credentials.name,
             email: credentials.email,
             password: credentials.password,
             clinicName: credentials.clinicName,
-            phone: normalizePhone(credentials.phone),
-            appointmentPhone: credentials.secondaryPhone
-                ? normalizePhone(credentials.secondaryPhone)
-                : "",
+            phone: countryCode + normalizePhone(credentials.phone),
+            appointmentPhone:
+                countryCode + normalizePhone(credentials.secondaryPhone),
+
             address: {
-                line1: credentials.street,
-                line2: credentials.street2,
-                line3: credentials.street3,
+                line1: credentials.line1,
+                line2: credentials.line2,
+                line3: credentials.line3,
                 city: credentials.city,
                 state: credentials.state,
+                countryId: selectedCountry._id,
+                countryCode: selectedCountry.code,
                 pincode: credentials.pincode,
             },
+
             regNumber: credentials.regNumber,
             experience: credentials.experience,
             degree: degrees.filter((d) => d.trim() !== ""),
             role: "doctor",
+
+            paymentMethods: paymentMethods.map((m) => ({
+                categoryId: m.categoryId,
+                subCategoryId: m.subCategoryId,
+                label: m.label,
+                isActive: true,
+            })),
+
             subscription: {
                 plan: planToSave,
                 billing: selectedBilling === "yearly" ? "yearly" : "monthly",
@@ -1272,7 +1597,7 @@ const Signup = (props) => {
                         Create your <em>account</em>
                     </h1>
                     <div className="sg-subtitle">
-                        Set up your clinic profile to get started
+                        Set up your medical center profile to get started
                     </div>
                     {selectedPlan && (
                         <div
@@ -1297,6 +1622,7 @@ const Signup = (props) => {
                             data={credentials}
                             onChange={onChange}
                             onNext={() => setStep(2)}
+                            showAlert={props.showAlert}
                         />
                     )}
                     {step === 2 && (
@@ -1305,6 +1631,9 @@ const Signup = (props) => {
                             onChange={onChange}
                             onNext={() => setStep(3)}
                             onBack={() => setStep(1)}
+                            countries={countries}
+                            countryCode={countryCode}
+                            setCountryCode={setCountryCode}
                         />
                     )}
                     {step === 3 && (
@@ -1313,6 +1642,7 @@ const Signup = (props) => {
                             setAvailability={setAvailability}
                             onNext={() => setStep(4)}
                             onBack={() => setStep(2)}
+                            showAlert={props.showAlert}
                         />
                     )}
                     {step === 4 && (
@@ -1321,10 +1651,20 @@ const Signup = (props) => {
                             onChange={onChange}
                             degrees={degrees}
                             setDegrees={setDegrees}
+                            onBack={() => setStep(3)}
+                            onNext={() => setStep(5)}
+                            showAlert={props.showAlert}
+                        />
+                    )}
+                    {step === 5 && (
+                        <Step5
+                            paymentMethods={paymentMethods}
+                            setPaymentMethods={setPaymentMethods}
                             acceptedTerms={acceptedTerms}
                             setAcceptedTerms={setAcceptedTerms}
-                            onBack={() => setStep(3)}
+                            onBack={() => setStep(4)}
                             onSubmit={handleSubmit}
+                            showAlert={props.showAlert}
                         />
                     )}
 

@@ -2,8 +2,15 @@ const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
 const axios = require("axios");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 
-router.post("/signup_send_otp", async (req, res) => {
+const otpLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => req.body.identifier || ipKeyGenerator(req),
+});
+
+router.post("/signup_send_otp", otpLimiter, async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -23,7 +30,7 @@ router.post("/signup_send_otp", async (req, res) => {
             });
         }
 
-        await axios.post("https://n8n-2ud0.onrender.com/webhook/email-otp", {
+        await axios.post(`${process.env.N8N_BASE_URL}/webhook/email-otp`, {
             email,
             userId: email,
         });

@@ -2,10 +2,15 @@ const express = require("express");
 const router = express.Router();
 const fetchadmin = require("../../../middleware/fetchadmin");
 const Pricing = require("../../../models/Pricing");
+const { invalidatePricingCache } = require("../../../utils/pricingcache");
 
-router.post("/pricing/update", fetchadmin, async (req, res) => {
+router.post("/update", fetchadmin, async (req, res) => {
     try {
-        const { starter, pro, enterprise, discount } = req.body;
+        const { starter, pro, enterprise, discount, countryMultipliers } =
+            req.body;
+
+        const safeMultipliers =
+            typeof countryMultipliers === "object" ? countryMultipliers : {};
 
         const validatePlan = (plan) => {
             return (
@@ -46,6 +51,7 @@ router.post("/pricing/update", fetchadmin, async (req, res) => {
             starter,
             pro,
             enterprise,
+            countryMultipliers: safeMultipliers,
             updatedAt: new Date(),
         };
 
@@ -53,6 +59,8 @@ router.post("/pricing/update", fetchadmin, async (req, res) => {
             new: true,
             upsert: true,
         });
+
+        invalidatePricingCache();
 
         res.json({
             success: true,

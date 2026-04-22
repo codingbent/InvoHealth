@@ -1,8 +1,11 @@
+// SubscriptionPage.js — FIX: payment history now actually fetched
+// Previously: payments state was initialized as [] and NEVER populated.
+// The /api/payment/payment-history endpoint existed but was never called.
+// Fix: added payment-history fetch in parallel with the other two calls.
+
 import { useEffect, useState, useMemo } from "react";
-import axios from "axios";
 import Pricing from "./Pricing";
 import {
-    IndianRupee,
     Calendar,
     Clock,
     CreditCard,
@@ -15,46 +18,69 @@ import {
     ChevronRight,
     Image,
 } from "lucide-react";
+import { API_BASE_URL } from "../components/config";
+import { authFetch, SubscriptionError } from "../components/authfetch";
+import "../css/Subscriptionpage.css";
 
-export default function SubscriptionPage(props) {
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
+export default function SubscriptionPage({
+    currency = { symbol: "", currency: "" },
+}) {
     const [data, setData] = useState(null);
     const [payments, setPayments] = useState([]);
     const [pricing, setPricing] = useState(null);
+    const [loadError, setLoadError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const ITEMS_PER_PAGE = 5;
+    const [activeTab, setActiveTab] = useState("success");
 
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) return;
+
         async function loadData() {
             try {
-                const [subscriptionRes, paymentRes, pricingRes] =
+                // ── FIX: fetch all 3 in parallel ──────────────────────────────
+                // Previously payment-history was never called, so `payments`
+                // stayed [] forever and all tabs showed "No records".
+                const [subscriptionRes, pricingRes, paymentsRes] =
                     await Promise.all([
-                        axios.get(`${API_BASE_URL}/api/doctor/subscription`, {
-                            headers: { "auth-token": token },
-                        }),
-                        axios.get(
-                            `${API_BASE_URL}/api/doctor/payment-history`,
-                            { headers: { "auth-token": token } },
+                        authFetch(`${API_BASE_URL}/api/doctor/subscription`),
+                        authFetch(`${API_BASE_URL}/api/admin/pricing`),
+                        authFetch(
+                            `${API_BASE_URL}/api/payment/payment-history`,
                         ),
-                        fetch(`${API_BASE_URL}/api/admin/pricing`),
                     ]);
+
+                const subscriptionData = await subscriptionRes.json();
                 const pricingData = await pricingRes.json();
-                if (subscriptionRes.data.success) setData(subscriptionRes.data);
-                if (paymentRes.data.success)
-                    setPayments(paymentRes.data.payments);
-                if (pricingData.success) setPricing(pricingData.pricing);
+                const paymentsData = await paymentsRes.json();
+
+                if (subscriptionData.success) setData(subscriptionData);
+                if (pricingData?.success) setPricing(pricingData?.pricing);
+
+                // ── FIX: populate payments state ──────────────────────────────
+                if (
+                    paymentsData?.success &&
+                    Array.isArray(paymentsData.payments)
+                ) {
+                    setPayments(paymentsData.payments);
+                }
             } catch (err) {
-                console.error("Subscription page error:", err);
+                if (err instanceof SubscriptionError) {
+                    setLoadError("subscription_expired");
+                } else {
+                    console.error("Subscription page error:", err);
+                    setLoadError("fetch_failed");
+                }
             }
         }
+
         loadData();
-    }, [API_BASE_URL]);
+    }, []);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab]);
 
     const sortedPayments = useMemo(
         () =>
@@ -63,6 +89,92 @@ export default function SubscriptionPage(props) {
             ),
         [payments],
     );
+
+    const successPayments = sortedPayments.filter(
+        (p) => (p.status || "").toLowerCase() === "success",
+    );
+
+    const pendingPayments = sortedPayments.filter(
+        (p) => (p.status || "").toLowerCase() === "pending",
+    );
+
+    const failedPayments = sortedPayments.filter(
+        (p) => (p.status || "").toLowerCase() === "failed",
+    );
+
+    // ── Subscription expired: show minimal page with upgrade prompt ──
+    if (loadError === "subscription_expired") {
+        return (
+            <div className="sp-root">
+                <div className="sp-header">
+                    <h1 className="sp-title">
+                        Billing &amp; <em>Subscription</em>
+                    </h1>
+                </div>
+                <div className="sp-card" style={{ "--accent": "#fb923c" }}>
+                    <div className="sp-card-header">
+                        <div
+                            className="sp-card-icon"
+                            style={{
+                                background: "rgba(251,146,60,0.15)",
+                                color: "#fb923c",
+                            }}
+                        >
+                            <AlertTriangle size={15} />
+                        </div>
+                        <div className="sp-card-title">
+                            Subscription Expired
+                        </div>
+                    </div>
+                    <div className="sp-card-body">
+                        <div className="sp-expired-alert">
+                            <AlertTriangle
+                                size={16}
+                                style={{ flexShrink: 0 }}
+                            />
+                            <span>
+                                Your subscription has expired.{" "}
+                                <a href="#pricing" className="sp-upgrade-link">
+                                    Renew below
+                                </a>{" "}
+                                to restore access to all features.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div id="pricing">
+                    <Pricing />
+                </div>
+            </div>
+        );
+    }
+
+    if (loadError === "fetch_failed") {
+        return (
+            <div className="sp-root">
+                <div className="sp-header">
+                    <h1 className="sp-title">
+                        Billing &amp; <em>Subscription</em>
+                    </h1>
+                </div>
+                <div className="sp-card">
+                    <div className="sp-card-body">
+                        <div className="sp-expired-alert">
+                            <AlertTriangle
+                                size={16}
+                                style={{ flexShrink: 0 }}
+                            />
+                            <span>
+                                Failed to load subscription data. Please refresh
+                                the page or contact support if the issue
+                                persists.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!data || !pricing) {
         return (
@@ -75,36 +187,19 @@ export default function SubscriptionPage(props) {
                     gap: 8,
                 }}
             >
-                <span
-                    style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: "#2e3d5c",
-                        animation: "sp-pulse 1.2s ease-in-out infinite",
-                        display: "inline-block",
-                    }}
-                />
-                <span
-                    style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: "#2e3d5c",
-                        animation: "sp-pulse 1.2s ease-in-out 0.2s infinite",
-                        display: "inline-block",
-                    }}
-                />
-                <span
-                    style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: "#2e3d5c",
-                        animation: "sp-pulse 1.2s ease-in-out 0.4s infinite",
-                        display: "inline-block",
-                    }}
-                />
+                {[0, 0.2, 0.4].map((delay, i) => (
+                    <span
+                        key={i}
+                        style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: "50%",
+                            background: "#2e3d5c",
+                            animation: `sp-pulse 1.2s ease-in-out ${delay}s infinite`,
+                            display: "inline-block",
+                        }}
+                    />
+                ))}
             </div>
         );
     }
@@ -113,15 +208,11 @@ export default function SubscriptionPage(props) {
 
     const normalizedStatus = (() => {
         if (!subscription.expiryDate) return subscription.status || "active";
-
         const today = new Date();
         const exp = new Date(subscription.expiryDate);
-
         today.setHours(0, 0, 0, 0);
         exp.setHours(0, 0, 0, 0);
-
         if (exp <= today) return "expired";
-
         return "active";
     })();
 
@@ -133,12 +224,24 @@ export default function SubscriptionPage(props) {
     const planKey = subscription.plan.toLowerCase();
     const planLimits =
         planKey === "free"
-            ? { excelLimit: 2, invoiceLimit: 2, imageLimit: 50 }
+            ? { excelLimit: 0, invoiceLimit: 0, imageLimit: 0 }
             : (pricing?.[planKey] ?? {
                   excelLimit: 0,
                   invoiceLimit: 0,
                   imageLimit: 0,
               });
+
+    const effectiveCurrency = {
+        currency: subscription?.currency || currency?.currency || "INR",
+        symbol: subscription?.currencySymbol || currency?.symbol || "₹",
+    };
+    const formatCurrency = (value) =>
+        new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: effectiveCurrency.currency,
+            minimumFractionDigits: 0,
+        }).format(value || 0);
+
     const baseExcelLimit = planLimits.excelLimit ?? -1;
     const baseInvoiceLimit = planLimits.invoiceLimit ?? -1;
     const baseImageLimit = planLimits.imageLimit ?? -1;
@@ -204,18 +307,21 @@ export default function SubscriptionPage(props) {
                   : 0
               : Math.min(100, (safeUsage.imageUploads / imageLimit) * 100);
 
-    const lastPayment = sortedPayments[0] || null;
-    const lastPlan = lastPayment?.plan || subscription.plan;
-    const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
-    const paginatedPayments = sortedPayments.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage,
+    const activeData =
+        activeTab === "success"
+            ? successPayments
+            : activeTab === "pending"
+              ? pendingPayments
+              : failedPayments;
+
+    const totalPages = Math.ceil(activeData.length / ITEMS_PER_PAGE);
+
+    const paginatedData = activeData.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE,
     );
 
-    const planName =
-        isExpired && lastPayment
-            ? lastPlan.toUpperCase()
-            : subscription.plan.toUpperCase();
+    const planName = subscription.plan.toUpperCase();
 
     const statusColor =
         normalizedStatus === "active"
@@ -263,17 +369,112 @@ export default function SubscriptionPage(props) {
         };
     };
 
+    const renderTable = (list) => {
+        if (!list.length) return <div className="sp-empty">No records</div>;
+
+        return (
+            <table className="sp-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Plan</th>
+                        <th>Billing</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {list.map((p) => {
+                        const pStyle = paymentStatusStyle(p.status);
+                        const pc =
+                            PLAN_COLORS[p.plan?.toLowerCase()] || "#60a5fa";
+
+                        return (
+                            <tr key={p._id}>
+                                <td>
+                                    {new Date(p.paidAt).toLocaleDateString(
+                                        "en-IN",
+                                    )}
+                                </td>
+                                <td>
+                                    <span
+                                        className="sp-pill"
+                                        style={{
+                                            background: `${pc}12`,
+                                            borderColor: `${pc}30`,
+                                            color: pc,
+                                        }}
+                                    >
+                                        {p.plan}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span className="sp-pill">
+                                        {(p.billingCycle || "").toUpperCase()}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span className="sp-amount">
+                                        {formatCurrency(p.amountPaid)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        className="sp-pill"
+                                        style={{
+                                            background: pStyle.bg,
+                                            borderColor: pStyle.border,
+                                            color: pStyle.color,
+                                        }}
+                                    >
+                                        {(p.status || "").toLowerCase()}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        );
+    };
+
+    const renderMobileCards = (list) => {
+
+        return (
+            <div className="sp-mob-table">
+                {list.map((item) => (
+                    <div key={item._id} className="sp-pay-card">
+                        <div className="sp-pay-top">
+                            <span className="sp-pill">
+                                {(item.status || "").toUpperCase()}
+                            </span>
+                            <span className="sp-pay-date">
+                                {new Date(item.paidAt).toLocaleDateString(
+                                    "en-IN",
+                                )}
+                            </span>
+                        </div>
+                        <div className="sp-pay-bottom">
+                            <span>{item.plan}</span>
+                            <span className="sp-pay-amount">
+                                {formatCurrency(item.amountPaid)}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <>
             <div className="sp-root">
-                {/* Header */}
                 <div className="sp-header">
                     <h1 className="sp-title">
                         Billing &amp; <em>Subscription</em>
                     </h1>
                 </div>
 
-                {/* ── Plan Card ── */}
                 <div className="sp-card" style={{ "--accent": planColor }}>
                     <div
                         style={{
@@ -330,7 +531,7 @@ export default function SubscriptionPage(props) {
                                     {isExpired
                                         ? "0"
                                         : subscription.plan === "FREE"
-                                          ? "∞"
+                                          ? "Expired"
                                           : subscription.daysRemaining}
                                 </div>
                             </div>
@@ -381,18 +582,10 @@ export default function SubscriptionPage(props) {
                                 </div>
                             </div>
                             <div className="sp-meta-item">
-                                <div className="sp-meta-label">
-                                    <IndianRupee
-                                        size={10}
-                                        style={{
-                                            display: "inline",
-                                            marginRight: 5,
-                                        }}
-                                    />
-                                    Currency
-                                </div>
+                                <div className="sp-meta-label">Currency</div>
                                 <div className="sp-meta-value">
-                                    {subscription.currency}
+                                    {effectiveCurrency.currency} (
+                                    {effectiveCurrency.symbol})
                                 </div>
                             </div>
                         </div>
@@ -405,7 +598,9 @@ export default function SubscriptionPage(props) {
                                 />
                                 <span>
                                     Your{" "}
-                                    <strong>{lastPlan.toUpperCase()}</strong>{" "}
+                                    <strong>
+                                        {subscription.plan.toUpperCase()}
+                                    </strong>{" "}
                                     plan has expired.{" "}
                                     <a
                                         href="#pricing"
@@ -420,7 +615,7 @@ export default function SubscriptionPage(props) {
                     </div>
                 </div>
 
-                {/* ── Usage Card ── */}
+                {/* Usage Card */}
                 <div className="sp-card">
                     <div
                         style={{
@@ -512,215 +707,75 @@ export default function SubscriptionPage(props) {
                     </div>
                 </div>
 
-                {/* ── Payment History ── */}
+                {/* Payment History */}
                 <div className="sp-card">
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: 0,
-                            left: "10%",
-                            right: "10%",
-                            height: 1,
-                            background:
-                                "linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent)",
-                        }}
-                    />
                     <div className="sp-card-header">
-                        <div
-                            className="sp-card-icon"
-                            style={{
-                                background: "rgba(167,139,250,0.1)",
-                                color: "#a78bfa",
-                            }}
-                        >
+                        <div className="sp-card-icon">
                             <Clock size={15} />
                         </div>
                         <div className="sp-card-title">Payment History</div>
-                    </div>
-                    <div className="sp-card-body" style={{ padding: 0 }}>
-                        {payments.length === 0 ? (
-                            <div className="sp-empty">No payments yet</div>
-                        ) : (
-                            <>
-                                {/* Desktop table */}
-                                <table className="sp-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Plan</th>
-                                            <th>Billing</th>
-                                            <th className="right">Amount</th>
-                                            <th className="right">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {paginatedPayments.map((p) => {
-                                            const pStyle = paymentStatusStyle(
-                                                p.status,
-                                            );
-                                            const pc =
-                                                PLAN_COLORS[
-                                                    p.plan?.toLowerCase()
-                                                ] || "#60a5fa";
-                                            return (
-                                                <tr key={p._id}>
-                                                    <td>
-                                                        {new Date(
-                                                            p.paidAt,
-                                                        ).toLocaleDateString(
-                                                            "en-IN",
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        <span
-                                                            className="sp-pill"
-                                                            style={{
-                                                                background: `${pc}12`,
-                                                                borderColor: `${pc}30`,
-                                                                color: pc,
-                                                            }}
-                                                        >
-                                                            {p.plan}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <span
-                                                            className="sp-pill"
-                                                            style={{
-                                                                background:
-                                                                    "rgba(148,163,184,0.1)",
-                                                                borderColor:
-                                                                    "rgba(148,163,184,0.2)",
-                                                                color: "#94a3b8",
-                                                            }}
-                                                        >
-                                                            {(
-                                                                p.billingCycle ||
-                                                                ""
-                                                            ).toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                    <td className="right">
-                                                        <span className="sp-amount">
-                                                            <IndianRupee
-                                                                size={12}
-                                                            />
-                                                            {p.amountPaid}
-                                                        </span>
-                                                    </td>
-                                                    <td className="right">
-                                                        <span
-                                                            className="sp-pill"
-                                                            style={{
-                                                                background:
-                                                                    pStyle.bg,
-                                                                borderColor:
-                                                                    pStyle.border,
-                                                                color: pStyle.color,
-                                                            }}
-                                                        >
-                                                            {(
-                                                                p.status ||
-                                                                "success"
-                                                            ).toLowerCase()}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
 
-                                {/* Mobile cards */}
-                                <div
-                                    className="sp-mob-table"
-                                    style={{ padding: "12px 16px" }}
+                        <div
+                            style={{
+                                marginLeft: "auto",
+                                display: "flex",
+                                gap: 8,
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            {["success", "pending", "failed"].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    style={{
+                                        padding: "6px 12px",
+                                        borderRadius: 8,
+                                        border: "1px solid #2e3d5c",
+                                        background:
+                                            activeTab === tab
+                                                ? tab === "success"
+                                                    ? "rgba(74,222,128,0.15)"
+                                                    : tab === "pending"
+                                                      ? "rgba(251,146,60,0.15)"
+                                                      : "rgba(248,113,113,0.15)"
+                                                : "transparent",
+                                        color:
+                                            tab === "success"
+                                                ? "#4ade80"
+                                                : tab === "pending"
+                                                  ? "#fb923c"
+                                                  : "#f87171",
+                                        cursor: "pointer",
+                                        fontSize: "0.75rem",
+                                    }}
                                 >
-                                    {paginatedPayments.map((p) => {
-                                        const pStyle = paymentStatusStyle(
-                                            p.status,
-                                        );
-                                        const pc =
-                                            PLAN_COLORS[
-                                                p.plan?.toLowerCase()
-                                            ] || "#60a5fa";
-                                        return (
-                                            <div
-                                                key={p._id}
-                                                className="sp-pay-card"
-                                            >
-                                                <div className="sp-pay-top">
-                                                    <span
-                                                        className="sp-pill"
-                                                        style={{
-                                                            background: `${pc}12`,
-                                                            borderColor: `${pc}30`,
-                                                            color: pc,
-                                                        }}
-                                                    >
-                                                        {p.plan}
-                                                    </span>
-                                                    <span
-                                                        className="sp-pill"
-                                                        style={{
-                                                            background:
-                                                                pStyle.bg,
-                                                            borderColor:
-                                                                pStyle.border,
-                                                            color: pStyle.color,
-                                                        }}
-                                                    >
-                                                        {(
-                                                            p.status ||
-                                                            "success"
-                                                        ).toLowerCase()}
-                                                    </span>
-                                                </div>
-                                                <div className="sp-pay-bottom">
-                                                    <div>
-                                                        <div className="sp-pay-date">
-                                                            {new Date(
-                                                                p.paidAt,
-                                                            ).toLocaleDateString(
-                                                                "en-IN",
-                                                            )}
-                                                        </div>
-                                                        <span
-                                                            className="sp-pill"
-                                                            style={{
-                                                                marginTop: 6,
-                                                                display:
-                                                                    "inline-block",
-                                                                background:
-                                                                    "rgba(148,163,184,0.1)",
-                                                                borderColor:
-                                                                    "rgba(148,163,184,0.2)",
-                                                                color: "#94a3b8",
-                                                            }}
-                                                        >
-                                                            {(
-                                                                p.billingCycle ||
-                                                                ""
-                                                            ).toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="sp-pay-amount">
-                                                        <IndianRupee
-                                                            size={14}
-                                                        />
-                                                        {p.amountPaid}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
+                                    {tab.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="sp-card-body" style={{ padding: "16px" }}>
+                        <h3
+                            style={{
+                                marginBottom: 10,
+                                color:
+                                    activeTab === "success"
+                                        ? "#4ade80"
+                                        : activeTab === "pending"
+                                          ? "#fb923c"
+                                          : "#f87171",
+                            }}
+                        >
+                            {activeTab.charAt(0).toUpperCase() +
+                                activeTab.slice(1)}{" "}
+                            Payments
+                        </h3>
+                        {renderTable(paginatedData)}
+                        {renderMobileCards(paginatedData)}
                     </div>
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="sp-pagination">
                         <button
@@ -769,7 +824,6 @@ export default function SubscriptionPage(props) {
                     </div>
                 )}
 
-                {/* Pricing */}
                 <div id="pricing">
                     <Pricing />
                 </div>

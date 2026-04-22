@@ -4,38 +4,65 @@ const Staff = require("../../models/Staff");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 
-router.post("/login_staff", async (req, res) => {
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: 10, // max 10 requests
+    message: {
+        success: false,
+        error: "Too many attempts. Try again later.",
+    },
+});
+
+router.post("/login_staff", loginLimiter, async (req, res) => {
     try {
         const { phone, password } = req.body;
 
         const staff = await Staff.findOne({ phone });
 
         if (!staff) {
-            return res.status(404).json({
+            return res.status(400).json({
                 success: false,
-                error: "Staff not found",
+                error: "Invalid credentials",
+            });
+        }
+
+        if (!staff.isDeleted) {
+            return res.status(403).json({
+                success: false,
+                error: "You no longer have access. Contact your doctor.",
             });
         }
 
         if (!staff.isActive) {
             return res.status(403).json({
                 success: false,
-                error: "You no longer have access to this clinic. Contact your doctor.",
+                error: "You no longer have access. Contact your doctor.",
             });
         }
 
-        // FIRST LOGIN
+        // FIRST LOGIN ONLY
         if (!staff.password) {
+            const setupToken = jwt.sign(
+                {
+                    staffId: staff._id,
+                    purpose: "set_password",
+                },
+                JWT_SECRET,
+                { expiresIn: "15m" },
+            );
+
             return res.json({
                 success: true,
                 firstLogin: true,
-                staffId: staff._id,
+                setupToken,
             });
         }
 
         // NORMAL LOGIN
         const match = await bcrypt.compare(password, staff.password);
+
         if (!match) {
             return res.status(400).json({
                 success: false,
@@ -56,13 +83,14 @@ router.post("/login_staff", async (req, res) => {
             { expiresIn: "1d" },
         );
 
-        res.json({
+        return res.json({
             success: true,
             token,
             role: staff.role,
             name: staff.name,
         });
     } catch (err) {
+        console.error("login_staff error:", err);
         res.status(500).json({ success: false, error: "Server error" });
     }
 });

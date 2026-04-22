@@ -1,0 +1,414 @@
+@import "./App.css";
+
+/* ______________________________
+        Admin Payment
+______________________________ */
+
+.adm-root {
+    background: #0a0d14;
+    min-height: 100vh;
+    padding: 32px 28px 80px;
+    color: #c5d0e8;
+}
+
+/* ── Page header ── */
+.adm-page-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+}
+
+.adm-page-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(77, 124, 246, 0.1);
+    border: 1px solid rgba(77, 124, 246, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #60a5fa;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.adm-page-title {
+    font-size: 22px;
+    font-weight: 400;
+    color: #e8edf8;
+    letter-spacing: -0.01em;
+}
+
+.adm-page-title em {
+    font-style: italic;
+    color: #60a5fa;
+}
+
+.adm-page-sub {
+    font-size: 10px;
+    color: #2e3d5c;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+}
+
+/* ── Layout: two-column top, list below ── */
+.adm-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+/* ── Cards ── */
+.adm-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.adm-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.3),
+        transparent
+    );
+}
+
+.adm-card-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adm-card-eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #131929;
+}
+
+/* ── Form rows ── */
+.adm-field {
+    margin-bottom: 10px;
+}
+
+.adm-label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.adm-input,
+.adm-select {
+    width: stretch;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #c5d0e8;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.adm-input::placeholder {
+    color: #252e45;
+}
+
+.adm-input:focus,
+.adm-select:focus {
+    border-color: rgba(77, 124, 246, 0.4);
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+
+.adm-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232e3d5c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+    cursor: pointer;
+}
+
+.adm-select option {
+    background: #0d1117;
+}
+
+/* ── Buttons ── */
+.adm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    margin-top: 4px;
+}
+
+.adm-btn-primary {
+    background: #4d7cf6;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(77, 124, 246, 0.25);
+    width: stretch;
+    justify-content: center;
+}
+
+.adm-btn-primary:hover {
+    background: #6090ff;
+}
+
+.adm-btn-sm {
+    padding: 5px 11px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    border-radius: 6px;
+}
+
+.adm-btn-edit {
+    background: rgba(77, 124, 246, 0.08);
+    border: 1px solid rgba(77, 124, 246, 0.2);
+    color: #60a5fa;
+}
+
+.adm-btn-edit:hover {
+    background: rgba(77, 124, 246, 0.16);
+}
+
+.adm-btn-save {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    color: #4ade80;
+}
+
+.adm-btn-save:hover {
+    background: rgba(74, 222, 128, 0.18);
+}
+
+.adm-btn-del {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    color: #f87171;
+}
+
+.adm-btn-del:hover {
+    background: rgba(248, 113, 113, 0.16);
+}
+
+/* ── Category list card ── */
+.adm-list-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+}
+
+.adm-list-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.3),
+        transparent
+    );
+}
+
+.adm-list-header {
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid #131929;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adm-list-header::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #131929;
+}
+
+.adm-empty {
+    padding: 40px 24px;
+    text-align: center;
+    font-size: 11px;
+    color: #1e2d4a;
+    letter-spacing: 0.06em;
+}
+
+/* ── Category block ── */
+.adm-cat-block {
+    border-bottom: 1px solid #0d111a;
+    transition: background 0.12s;
+}
+
+.adm-cat-block:last-child {
+    border-bottom: none;
+}
+
+.adm-cat-block:hover {
+    background: rgba(77, 124, 246, 0.02);
+}
+
+.adm-cat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    gap: 12px;
+}
+
+.adm-cat-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #d4ddf0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adm-cat-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(77, 124, 246, 0.5);
+    flex-shrink: 0;
+}
+
+.adm-cat-count {
+    font-size: 9px;
+    color: #2e3d5c;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 20px;
+    padding: 2px 8px;
+    letter-spacing: 0.06em;
+}
+
+.adm-cat-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* inline edit row */
+.adm-inline-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.adm-inline-input {
+    flex: 1;
+    background: #080c18;
+    border: 1px solid rgba(77, 124, 246, 0.35);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: #c5d0e8;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+
+/* ── Subcategory list ── */
+.adm-sub-list {
+    list-style: none;
+    padding: 0 24px 12px 40px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px solid #0d111a;
+    padding-top: 8px;
+}
+
+.adm-sub-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 7px;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    gap: 10px;
+    transition: border-color 0.15s;
+}
+
+.adm-sub-item:hover {
+    border-color: #1e2d4a;
+}
+
+.adm-sub-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.adm-sub-name::before {
+    content: "└";
+    color: #1e2d4a;
+    font-size: 10px;
+}
+
+.adm-sub-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+    .adm-root {
+        padding: 20px 16px 60px;
+    }
+
+    .adm-top-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .adm-cat-row {
+        padding: 12px 16px;
+    }
+
+    .adm-sub-list {
+        padding-left: 28px;
+    }
+}

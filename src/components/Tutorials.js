@@ -7,6 +7,7 @@ import {
     BarChart3,
     Image,
 } from "lucide-react";
+import "../css/Tutorials.css"
 
 const tutorials = {
     "Getting Started": [

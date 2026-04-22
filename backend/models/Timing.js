@@ -20,7 +20,7 @@ const TimingSchema = new Schema(
     {
         doctorId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
+            ref: "Doc",
             required: true,
             unique: true,
         },

@@ -3,12 +3,20 @@ const router = express.Router();
 const Doc = require("../../models/Doc");
 const axios = require("axios");
 
-router.post("/send", async (req, res) => {
+const { rateLimit } = require("express-rate-limit");
+
+const otpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: 5, // max 5 requests
+    message: {
+        success: false,
+        error: "Too many OTP requests. Try later.",
+    },
+});
+router.post("/send", otpLimiter, async (req, res) => {
     try {
         const { email } = req.body;
-        console.log("Searching email:", email);
-        const user = await Doc.findOne({ email });
-        console.log("User found:", user);
+
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -16,8 +24,19 @@ router.post("/send", async (req, res) => {
             });
         }
 
-        // Check if email exists
-        // const user = await Doc.findOne({ email });
+        // ================= EMAIL COOLDOWN =================
+        const now = Date.now();
+        const lastSent = otpCooldown.get(email);
+
+        if (lastSent && now - lastSent < COOLDOWN_MS) {
+            return res.status(429).json({
+                success: false,
+                error: "Please wait before requesting another OTP",
+            });
+        }
+
+        // ================= CHECK USER =================
+        const user = await Doc.findOne({ email });
 
         if (!user) {
             return res.status(404).json({
@@ -26,10 +45,14 @@ router.post("/send", async (req, res) => {
             });
         }
 
-        await axios.post("https://n8n-2ud0.onrender.com/webhook/email-otp", {
-            email: email,
+        // ================= SEND OTP =================
+        await axios.post(`${process.env.N8N_BASE_URL}/webhook/email-otp`, {
+            email,
             userId: email,
         });
+
+        // ================= SAVE COOLDOWN =================
+        otpCooldown.set(email, now);
 
         return res.json({
             success: true,
@@ -56,7 +79,7 @@ router.post("/verify", async (req, res) => {
         }
 
         const response = await axios.post(
-            "https://n8n-2ud0.onrender.com/webhook/verify-otp",
+            `${process.env.N8N_BASE_URL}/webhook/verify-otp`,
             { email, otp },
         );
 

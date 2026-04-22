@@ -3,13 +3,23 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Admin = require("../../models/Admin");
-
-const JWT_SECRET = process.env.JWT_SECRET;
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 
 router.post("/login_admin", async (req, res) => {
-    const { email, password } = req.body;
-
     try {
+        let { email, password } = req.body;
+
+        // VALIDATION
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing credentials",
+            });
+        }
+
+        // NORMALIZE EMAIL
+        email = email.toLowerCase();
+
         const admin = await Admin.findOne({ email });
 
         if (!admin) {
@@ -28,27 +38,30 @@ router.post("/login_admin", async (req, res) => {
             });
         }
 
+        // USE ROLE FROM DB (not hardcoded)
         const payload = {
             user: {
                 id: admin._id,
-                role: "superadmin",
-                doctorId: null,
+                role: admin.role || "admin",
+                tokenType: "admin", // CRITICAL
             },
         };
 
-        const admintoken = jwt.sign(payload, JWT_SECRET, {
+        const admintoken = jwt.sign(payload, ADMIN_JWT_SECRET, {
             expiresIn: "7d",
+            issuer: "invohealth-api", // optional but recommended
+            audience: "admin", // optional but recommended
         });
 
-        res.json({
+        return res.json({
             success: true,
             admintoken,
-            role: "superadmin",
+            role: payload.user.role,
             name: admin.name,
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({
+        console.error("ADMIN LOGIN ERROR:", err);
+        return res.status(500).json({
             success: false,
             error: "Internal server error",
         });

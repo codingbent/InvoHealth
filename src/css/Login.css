@@ -1,0 +1,393 @@
+@import "./App.css";
+/* 
+____________________
+        LOGIN 
+____________________ */
+
+.lg-root {
+    min-height: 100vh;
+    background: #0a0d14;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* bg glows */
+.lg-root::before {
+    content: "";
+    position: fixed;
+    top: -200px;
+    left: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(
+        circle,
+        rgba(77, 124, 246, 0.08) 0%,
+        transparent 65%
+    );
+    pointer-events: none;
+}
+
+.lg-root::after {
+    content: "";
+    position: fixed;
+    bottom: -160px;
+    right: -120px;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(
+        circle,
+        rgba(167, 139, 250, 0.05) 0%,
+        transparent 65%
+    );
+    pointer-events: none;
+}
+
+.lg-card {
+    width: stretch;
+    max-width: 420px;
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 20px;
+    padding: 40px 36px 36px;
+    position: relative;
+    z-index: 1;
+    box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(77, 124, 246, 0.06);
+    animation: lg-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lg-rise {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* top accent line */
+.lg-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.5),
+        transparent
+    );
+    border-radius: 1px;
+}
+
+/* ── Header ── */
+.lg-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.lg-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: rgba(77, 124, 246, 0.1);
+    border: 1px solid rgba(77, 124, 246, 0.2);
+    border-radius: 12px;
+    color: #60a5fa;
+    margin-bottom: 18px;
+}
+
+.lg-title {
+    font-size: 26px;
+    font-weight: 400;
+    color: #e8edf8;
+    line-height: 1.1;
+    margin-bottom: 6px;
+}
+
+.lg-title em {
+    /* font-style: italic; */
+    color: #60a5fa;
+}
+
+.lg-subtitle {
+    font-size: 11px;
+    color: #2e3d5c;
+    letter-spacing: 0.08em;
+}
+
+/* ── Role toggle ── */
+.lg-role-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #080c18;
+    border: 1px solid #161d2e;
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+    gap: 4px;
+}
+
+.lg-role-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: #3a4a6b;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lg-role-btn.active {
+    background: rgba(77, 124, 246, 0.12);
+    border: 1px solid rgba(77, 124, 246, 0.25);
+    color: #60a5fa;
+}
+
+.lg-role-btn:not(.active):hover {
+    color: #6b7fa8;
+}
+
+/* ── Fields ── */
+.lg-field {
+    margin-bottom: 18px;
+}
+
+.lg-label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #b8bdc8;
+    margin-bottom: 8px;
+}
+
+.lg-input-wrap {
+    position: relative;
+    display: flex;
+}
+
+.lg-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    font-size: 11px;
+    color: #bcc4d4;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.lg-input {
+    width: stretch;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 12px;
+    color: #c5d0e8;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.lg-input.has-prefix {
+    border-radius: 0 8px 8px 0;
+}
+
+.lg-input::placeholder {
+    color: #252e45;
+}
+
+.lg-input:focus {
+    border-color: rgba(77, 124, 246, 0.4);
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+
+.lg-input.invalid {
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.lg-input.invalid:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+.lg-eye-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #2e3d5c;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+    z-index: 2;
+}
+
+.lg-eye-btn:hover {
+    color: #60a5fa;
+}
+
+.lg-input.has-eye {
+    padding-right: 40px;
+}
+
+.lg-error {
+    font-size: 10px;
+    color: #f87171;
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+}
+
+/* ── Forgot ── */
+.lg-forgot {
+    display: block;
+    text-align: right;
+    font-size: 11px;
+    color: #2e3d5c;
+    text-decoration: none;
+    margin-top: -8px;
+    margin-bottom: 24px;
+    letter-spacing: 0.04em;
+    transition: color 0.2s;
+}
+
+.lg-forgot:hover {
+    color: #60a5fa;
+}
+
+/* ── Submit btn ── */
+.lg-submit {
+    width: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: #4d7cf6;
+    border: none;
+    border-radius: 9px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        transform 0.15s,
+        box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(77, 124, 246, 0.25);
+}
+
+.lg-submit:hover {
+    background: #6090ff;
+    box-shadow: 0 6px 28px rgba(77, 124, 246, 0.35);
+    transform: translateY(-1px);
+}
+
+.lg-submit:active {
+    transform: translateY(0);
+}
+
+/* ── Footer ── */
+.lg-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 24px;
+    font-size: 11px;
+    color: #2e3d5c;
+    letter-spacing: 0.04em;
+}
+
+.lg-footer-link {
+    color: #4d7cf6;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+}
+
+.lg-footer-link:hover {
+    color: #60a5fa;
+}
+
+/* ── Divider ── */
+.lg-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0;
+}
+
+.lg-divider-line {
+    flex: 1;
+    height: 1px;
+    background: #131929;
+}
+
+.lg-divider-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #1e2d4a;
+}
+
+/* ── Country code select ── */
+.lg-country-select {
+    flex-shrink: 0;
+    background: #080c18;
+    border: none;
+    border-right: 1px solid #1a2540;
+    border-radius: 8px 0 0 8px;
+    color: #bcc4d4;
+    font-size: 11px;
+    padding: 0 10px;
+    cursor: pointer;
+    outline: none;
+    min-width: 86px;
+    appearance: auto;
+}
+
+/* when country select is present, square off input's left edge */
+.lg-country-select + .lg-input {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+}
+
+/* ── Staff hint ── */
+.lg-hint {
+    font-size: 10px;
+    color: #2e3d5c;
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+}

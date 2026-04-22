@@ -4,84 +4,89 @@ const Patient = require("../../../models/Patient");
 const fetchuser = require("../../../middleware/fetchuser");
 const { decrypt } = require("../../../utils/crypto");
 
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 router.get("/search_patient", fetchuser, async (req, res) => {
     try {
-        const q = req.query.q?.trim();
+        let q = req.query.q?.trim();
 
         if (!q) return res.json([]);
 
-        const doctorId = req.user.doctorId;
+        if (q.length > 50) {
+            return res.status(400).json({
+                error: "Search query too long",
+            });
+        }
 
+        const doctorId = req.user.doctorId;
         const cleanQ = q.replace(/\D/g, "");
 
-        //  Step 1: DB filter (fast)
-        const patients = await Patient.find({
-            doctor: doctorId,
-            $or: [
-                { name: { $regex: q, $options: "i" } },
-                { numberLast4: { $regex: cleanQ.slice(-4) } },
-            ],
-        }).select("name gender age numberEncrypted numberLast4 number");
+        let patients = [];
 
-        //  Step 2: JS filter (for full number)
-        const filtered = patients.filter((p) => {
-            // name match
-            if (p.name?.toLowerCase().includes(q.toLowerCase())) return true;
+        // ================= NAME SEARCH =================
+        if (q.length >= 2 && isNaN(q)) {
+            const safeQ = escapeRegex(q);
 
-            // last4 match
-            if (p.numberLast4?.includes(cleanQ)) return true;
+            patients = await Patient.find({
+                doctor: doctorId,
+                name: { $regex: safeQ, $options: "i" },
+            })
+                .select("name gender age numberLast4")
+                .limit(10)
+                .lean();
 
-            //  encrypted number match
-            if (p.numberEncrypted) {
-                try {
-                    const num = decrypt(p.numberEncrypted)
-                        .toString()
-                        .replace(/\D/g, "");
+            return res.json(
+                patients.map((p) => ({
+                    _id: p._id,
+                    name: p.name,
+                    gender: p.gender,
+                    age: p.age,
+                    number: p.numberLast4 ? `******${p.numberLast4}` : "",
+                })),
+            );
+        }
 
-                    if (num.includes(cleanQ)) return true;
-                } catch {}
+        // ================= PHONE SEARCH =================
+        if (cleanQ.length >= 3) {
+            const last4 = cleanQ.slice(-4);
+
+            const candidates = await Patient.find({
+                doctor: doctorId,
+                numberLast4: last4,
+            })
+                .select("name gender age numberEncrypted numberLast4 number")
+                .limit(10)
+                .lean();
+
+            const filtered = [];
+
+            for (const p of candidates) {
+                if (cleanQ.length >= 6 && p.numberEncrypted) {
+                    try {
+                        const num = decrypt(p.numberEncrypted)
+                            .toString()
+                            .replace(/\D/g, "");
+                        if (num.includes(cleanQ)) {
+                            filtered.push(p);
+                        }
+                    } catch {}
+                } else {
+                    filtered.push(p);
+                }
             }
 
-            // fallback (old data)
-            if (p.number) {
-                if (p.number.replace(/\D/g, "").includes(cleanQ)) return true;
-            }
+            return res.json(
+                filtered.slice(0, 10).map((p) => ({
+                    _id: p._id,
+                    name: p.name,
+                    gender: p.gender,
+                    age: p.age,
+                    number: p.numberLast4 ? `******${p.numberLast4}` : "",
+                })),
+            );
+        }
 
-            return false;
-        });
-
-        //  Step 3: return clean data
-        const qLower = q.toLowerCase();
-
-        filtered.sort((a, b) => {
-            const aName = a.name.toLowerCase();
-            const bName = b.name.toLowerCase();
-
-            const aStarts = aName.startsWith(qLower);
-            const bStarts = bName.startsWith(qLower);
-
-            // 1. startsWith comes first
-            if (aStarts && !bStarts) return -1;
-            if (!aStarts && bStarts) return 1;
-
-            // 2. shorter match first (Neeraj before Neeraj Kumar)
-            if (aName.length !== bName.length) {
-                return aName.length - bName.length;
-            }
-
-            // 3. fallback alphabetical
-            return aName.localeCompare(bName);
-        });
-
-        const result = filtered.slice(0, 10).map((p) => ({
-            _id: p._id,
-            name: p.name,
-            gender: p.gender,
-            age: p.age,
-            number: p.numberLast4 ? `******${p.numberLast4}` : "",
-        }));
-
-        res.json(result);
+        return res.json([]);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Server error" });

@@ -6,7 +6,6 @@
 .pnp.js
 .env
 generateHash.js
-auth.js
 # testing
 /coverage
 

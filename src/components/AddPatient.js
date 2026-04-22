@@ -1,173 +1,90 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import ServiceList from "./ServiceList";
-import { jwtDecode } from "jwt-decode";
-import { authFetch } from "./authfetch";
-import {
-    IndianRupee,
-    UserPlus,
-    X,
-    Check,
-    CalendarArrowDown,
-} from "lucide-react";
+import { UserPlus, X, Check, CalendarArrowDown } from "lucide-react";
 import SlotPicker from "./Slotpicker";
-import { generateSlots } from "../components/utils/Slotsutils";
 import "flatpickr/dist/themes/dark.css";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
+import { addPatient } from "../api/patient.api";
+import { addAppointment } from "../api/appointment.api";
+import { uploadImageAPI } from "../api/upload.api";
+import { useSlots } from "../hooks/useSlots";
+import { fetchPaymentMethods } from "../api/payment.api";
+import SuccessOverlay from "./SuccessOverlay";
+import { getTodayLocal } from "./utils/dateutils";
+// import "../css/Fxsuccess.css";
+import "../css/Addpatient.css";
 
-const AddPatient = ({ showAlert, showModal, setShowModal }) => {
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        [],
-    );
-
+const AddPatient = ({
+    showAlert,
+    showModal,
+    setShowModal,
+    currency,
+    usage,
+    // updateUsage,
+    services,
+    availability,
+}) => {
     const [patient, setPatient] = useState({
         name: "",
         service: [],
         number: "",
+        email: "",
         amount: 0,
         age: "",
         gender: "Male",
     });
-    const navigate = useNavigate();
     const formatTime = (time) => time;
-    const [availableServices, setAvailableServices] = useState([]);
+    const availableServices = services || [];
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
-    const getTodayIST = () => {
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const istTime = new Date(now.getTime() - offset * 60000);
-        return istTime.toISOString().slice(0, 10);
-    };
-    const [appointmentDate, setAppointmentDate] = useState(getTodayIST());
-    const [payment_type, setPaymentType] = useState("Cash");
+    const [paymentOptions, setPaymentOptions] = useState([]);
+    const [payment_type, setPaymentType] = useState("");
     const [collectFull, setCollectFull] = useState(true);
-    const { name, service, number, age, gender } = patient;
-    const token = localStorage.getItem("token");
-    const decoded = jwtDecode(token);
-    const doctorId = decoded.user?.doctorId;
-    const [availability, setAvailability] = useState([]);
-    const [timeSlots, setTimeSlots] = useState([]);
+    const { name, service, number, email, age, gender } = patient;
+    const [showSuccess, setShowSuccess] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
-    const [bookedSlots, setBookedSlots] = useState([]);
     const [showCalendar, setShowCalendar] = useState(false);
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
-    // eslint-disable-next-line
-    const [uploading, setUploading] = useState(false);
-
-    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+    const [appointmentDate, setAppointmentDate] = useState(getTodayLocal());
+    const imageUsage = usage?.images || { used: 0, limit: 0 };
+    const [loading, setLoading] = useState(false);
+    const isImageLimitReached =
+        imageUsage.limit !== -1 && imageUsage.used >= imageUsage.limit;
+    const { timeSlots, bookedSlots, groupedSlots } = useSlots(
+        availability,
+        appointmentDate,
+        showModal,
+    );
+    const fileInputRef = useRef(null);
+    const fmt = (value) =>
+        new Intl.NumberFormat("en-IN", {
+            style: "currency",
+            currency: currency?.currency || "INR",
+            minimumFractionDigits: 0,
+        }).format(value);
 
     useEffect(() => {
-        const fetchServices = async () => {
+        const loadPayments = async () => {
             try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/services/fetchall_services`,
-                );
-                const data = await res.json();
-                setAvailableServices(
-                    Array.isArray(data) ? data : data.services || [],
-                );
+                const data = await fetchPaymentMethods();
+                setPaymentOptions(data);
             } catch (err) {
-                console.error(err);
+                showAlert("Failed to load payment methods", "danger");
             }
         };
-        fetchServices();
-    }, [API_BASE_URL]);
 
-    useEffect(() => {
-        const fetchAvailability = async () => {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/timing/get_availability`,
-            );
-            const data = await res.json();
-            if (data.success) setAvailability(data.availability || []);
-        };
-        fetchAvailability();
-    }, [API_BASE_URL]);
-
-    useEffect(() => {
-        if (!availability.length) return;
-        const fetchSlots = async () => {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
-            );
-            const data = await res.json();
-            const booked = data.slots || [];
-            setBookedSlots(booked);
-            const selectedDay = new Date(appointmentDate)
-                .toLocaleDateString("en-US", { weekday: "short" })
-                .slice(0, 3);
-            const dayData = availability.find((d) =>
-                d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
-            );
-            if (!dayData) {
-                setTimeSlots([]);
-                return;
-            }
-            let allSlots = [];
-            dayData.slots.forEach((slot) => {
-                const generated = generateSlots(
-                    slot.startTime,
-                    slot.endTime,
-                    slot.slotDuration,
-                );
-                allSlots = [...allSlots, ...generated];
-            });
-            setTimeSlots(allSlots);
-        };
-        fetchSlots();
-    }, [appointmentDate, availability, API_BASE_URL]);
-
-    const groupedSlots = useMemo(() => {
-        const groups = { Morning: [], Afternoon: [], Evening: [] };
-        timeSlots.forEach((slot) => {
-            const hour = parseInt(slot.split(":")[0]);
-            if (hour < 12) groups.Morning.push(slot);
-            else if (hour < 16) groups.Afternoon.push(slot);
-            else groups.Evening.push(slot);
-        });
-        return groups;
-    }, [timeSlots]);
-
-    const uploadImage = async () => {
-        if (!imageFile) return null;
-
-        const formData = new FormData();
-        formData.append("image", imageFile);
-
-        try {
-            setUploading(true);
-
-            const res = await fetch(`${API_BASE_URL}/api/doctor/image/upload`, {
-                method: "POST",
-                body: formData,
-            });
-
-            const data = await res.json();
-
-            setUploading(false);
-
-            return data.url;
-        } catch (err) {
-            console.error(err);
-            setUploading(false);
-            showAlert("Image upload failed", "danger");
-            return null;
-        }
-    };
+        loadPayments();
+    }, [showAlert]);
 
     const isToday = useMemo(() => {
         const today = new Date().toISOString().slice(0, 10);
         return appointmentDate === today;
     }, [appointmentDate]);
+
     const currentSlot = useMemo(() => {
         if (!timeSlots.length) return null;
 
@@ -251,16 +168,24 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             ),
         [service, serviceAmounts],
     );
+
     const finalAmount = serviceTotal;
     useEffect(() => {
         setPatient((prev) => ({ ...prev, amount: finalAmount }));
     }, [finalAmount]);
+
     const calculatedDiscount = useMemo(() => {
         if (!discount || discount <= 0) return 0;
         return Math.round(
             isPercent ? (finalAmount * discount) / 100 : discount,
         );
     }, [discount, isPercent, finalAmount]);
+
+    const remainingAmount = Math.max(
+        finalAmount - patient.amount - calculatedDiscount,
+        0,
+    );
+
     useEffect(() => {
         if (collectFull) {
             const auto = Math.max(
@@ -276,6 +201,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             name: "",
             service: [],
             number: "",
+            email: "",
             amount: 0,
             age: "",
             gender: "Male",
@@ -284,119 +210,128 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
         setDiscount(0);
         setIsPercent(false);
         setCollectFull(true);
-        setAppointmentDate(new Date().toISOString().slice(0, 10));
-        setPaymentType("Cash");
+        setAppointmentDate(appointmentDate);
+        setPaymentType("");
+        setSelectedSlot("");
+        setImageFile(null);
+        setImagePreview("");
     };
+
     const onChange = (e) =>
         setPatient({ ...patient, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!service || service.length === 0) {
-            showAlert("Please select at least one service", "warning");
-            return;
-        }
-        if (number.length !== 10) {
-            showAlert("Mobile number must be exactly 10 digits", "warning");
-            return;
-        }
-        let finalNumber = number.trim();
-        if (!isPercent && discount > serviceTotal) {
-            showAlert("Discount cannot exceed total amount", "warning");
-            return;
-        }
-        if (
-            patient.amount > finalAmount ||
-            patient.amount > finalAmount - calculatedDiscount
-        ) {
-            showAlert("Collected amount cannot exceed final amount", "warning");
-            return;
-        }
-        if (isPercent && discount > 100) {
-            showAlert("Percentage cannot exceed 100%", "warning");
-            return;
-        }
-        let imageUrl = null;
 
-        if (imageFile) {
-            imageUrl = await uploadImage();
+        if (loading) return;
+
+        if (service.length === 0) {
+            return showAlert("Select at least one service", "warning");
         }
-        if (isPercent) setDiscount((finalAmount * discount) / 100);
-        const collectedAmount = Number(patient.amount) || 0;
-        const totalAmount = finalAmount;
-        let computedStatus = "Unpaid",
-            computedRemaining = totalAmount;
-        if (collectedAmount >= totalAmount) {
-            computedStatus = "Paid";
-            computedRemaining = 0;
-        } else if (collectedAmount > 0) {
-            computedStatus = "Partial";
-            computedRemaining = totalAmount - collectedAmount;
+
+        if (number.length !== 10) {
+            return showAlert("Invalid phone number", "warning");
         }
+
+        if (!payment_type) {
+            return showAlert("Select payment type", "warning");
+        }
+
+        if (!selectedSlot) {
+            return showAlert("Select time slot", "warning");
+        }
+
+        setLoading(true);
+
         try {
-            const patientRes = await authFetch(
-                `${API_BASE_URL}/api/doctor/patient/add_patient`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        name,
-                        gender,
-                        number: finalNumber,
-                        age,
-                    }),
-                },
-            );
-            const patientJson = await patientRes.json();
-            if (!patientJson.success) {
-                showAlert(
-                    patientJson.error || "Failed to add patient",
-                    "danger",
-                );
+            var imageUrl = null;
+
+            if (imageFile) {
+                imageUrl = await uploadImageAPI(imageFile);
+            }
+
+            const patientRes = await addPatient({
+                name,
+                gender,
+                number,
+                email,
+                age,
+            });
+
+            if (!patientRes.success) {
+                // showAlert(patientRes.error, "danger");
+                setLoading(false);
                 return;
             }
 
-            if (patientJson.alreadyExists) {
-                showAlert(
-                    "Patient already exists, using existing record",
-                    "warning",
-                );
-            }
-            const newPatientId = patientJson.patient._id;
-            const appointmentRes = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/add_appointment/${newPatientId}`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        service: service.map((s) => ({
-                            id: s._id,
-                            name: s.name,
-                            amount: serviceAmounts[s._id] ?? s.amount ?? 0,
-                        })),
-                        collected: patient.amount,
-                        status: computedStatus,
-                        remaining: computedRemaining,
-                        date: appointmentDate,
-                        time: selectedSlot,
-                        payment_type,
-                        doctorId,
-                        discount,
-                        isPercent,
-                        image: imageUrl,
-                    }),
-                },
+            const patientId = patientRes.patient._id;
+
+            const formData = new FormData();
+
+            formData.append("patientId", patientId);
+            formData.append("collected", patient.amount);
+            formData.append("date", appointmentDate);
+            formData.append("time", selectedSlot);
+            formData.append("payment_type", payment_type);
+            formData.append("image", imageUrl);
+
+            // services
+            formData.append(
+                "services",
+                JSON.stringify(
+                    service.map((s) => ({
+                        id: s._id,
+                        name: s.name,
+                        amount: serviceAmounts[s._id] ?? s.amount,
+                    })),
+                ),
             );
-            const appointmentJson = await appointmentRes.json();
-            if (appointmentJson.success) {
-                showAlert("Patient and appointment added!", "success");
-                resetForm();
-                setShowModal(false);
-                navigate("/");
-            } else showAlert("Patient added but appointment failed", "warning");
+
+            // image (use file, not URL)
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
+
+            const appointmentRes = await addAppointment(formData);
+
+            if (appointmentRes.success) {
+                setShowSuccess(true);
+                resetForm(); // USE IT HERE
+            } else {
+                showAlert("Failed to create appointment", "danger");
+            }
         } catch (err) {
-            console.log(err);
             showAlert("Server error", "danger");
+        } finally {
+            setLoading(false);
         }
     };
+
+    const handleAddService = useCallback((s) => {
+        setPatient((prev) =>
+            prev.service.some((x) => x._id === s._id)
+                ? prev
+                : { ...prev, service: [...prev.service, s] },
+        );
+
+        setServiceAmounts((prev) => ({
+            ...prev,
+            [s._id]: s.amount ?? 0,
+        }));
+    }, []);
+
+    const handleRemoveService = useCallback((id) => {
+        setPatient((prev) => ({
+            ...prev,
+            service: prev.service.filter((s) => s._id !== id),
+        }));
+
+        setServiceAmounts((prev) => {
+            const copy = { ...prev };
+            delete copy[id];
+            return copy;
+        });
+    }, []);
 
     const statusColor =
         patient.amount >= finalAmount - calculatedDiscount
@@ -404,6 +339,7 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
             : patient.amount > 0
               ? "#fb923c"
               : "#f87171";
+
     const statusLabel =
         patient.amount >= finalAmount - calculatedDiscount
             ? "Paid"
@@ -412,444 +348,450 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
               : "Unpaid";
 
     return (
-        showModal && (
-            <>
-                <div className="modal-content">
-                    <div className="ap-header">
-                        <div className="ap-header-left">
-                            <div className="ap-header-icon">
-                                <UserPlus size={15} />
+        <>
+            <div className="modal-content">
+                <SuccessOverlay
+                    visible={showSuccess}
+                    onDone={() => {
+                        setShowSuccess(false);
+                        showAlert("Patient & Appointment created", "success");
+                        setShowModal(false);
+                    }}
+                    title="Patient Created"
+                    sub="Appointment booked"
+                    variant="green"
+                    duration={1600}
+                />
+                <div className="ap-header">
+                    <div className="ap-header-left">
+                        <div className="ap-header-icon">
+                            <UserPlus size={15} />
+                        </div>
+                        <div>
+                            <div className="ap-title">
+                                Add <em>Patient</em>
                             </div>
-                            <div>
-                                <div className="ap-title">
-                                    Add <em>Patient</em>
-                                </div>
-                                <div className="ap-subtitle">
-                                    Create patient & initial appointment
-                                </div>
+                            <div className="ap-subtitle">
+                                Create patient & initial appointment
                             </div>
                         </div>
-                        <button
-                            className="ap-close"
-                            onClick={() => setShowModal(false)}
-                        >
-                            <X size={13} />
-                        </button>
                     </div>
+                    <button
+                        className="ap-close"
+                        onClick={() => setShowModal(false)}
+                    >
+                        <X size={13} />
+                    </button>
+                </div>
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="ap-body">
-                            {/* Patient Details */}
-                            <div className="ap-section">Patient Details</div>
-                            <div className="ap-grid3">
-                                <div
-                                    className="ap-field"
-                                    style={{ gridColumn: "span 1" }}
-                                >
-                                    <label className="ap-label">
-                                        Full Name
-                                        <span className="sg-required">
-                                            <sup>*</sup>
-                                        </span>
-                                    </label>
-                                    <input
-                                        className="ap-input"
-                                        name="name"
-                                        value={name}
-                                        onChange={onChange}
-                                        placeholder="Patient name"
-                                        required
-                                    />
-                                </div>
-                                <div className="ap-field">
-                                    <label className="ap-label">
-                                        Gender
-                                        <span className="sg-required">
-                                            <sup>*</sup>
-                                        </span>
-                                    </label>
-                                    <select
-                                        className="ap-select"
-                                        name="gender"
-                                        value={gender}
-                                        onChange={onChange}
-                                    >
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div className="ap-field">
-                                    <label className="ap-label">
-                                        Age
-                                        <span className="sg-required">
-                                            <sup>*</sup>
-                                        </span>
-                                    </label>
-                                    <input
-                                        className="ap-input"
-                                        type="number"
-                                        name="age"
-                                        value={age}
-                                        onChange={onChange}
-                                        placeholder="Age"
-                                    />
-                                </div>
-                            </div>
-                            <div className="ap-field">
-                                <label className="ap-label">
-                                    Mobile Number
+                <form onSubmit={handleSubmit}>
+                    <div className="ap-body">
+                        {/* Patient Details */}
+                        <div className="ap-section">Patient Details</div>
+                        <div className="ap-grid3">
+                            <div
+                                className="ap-field"
+                                style={{ gridColumn: "span 1" }}
+                            >
+                                <label htmlFor="name" className="ap-label">
+                                    Full Name
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
                                 </label>
                                 <input
+                                    id="name"
                                     className="ap-input"
-                                    type="tel"
-                                    name="number"
-                                    value={number}
-                                    placeholder="10-digit number"
-                                    onChange={(e) => {
-                                        const d = e.target.value.replace(
-                                            /\D/g,
-                                            "",
-                                        );
-                                        if (d.length <= 10)
-                                            setPatient({
-                                                ...patient,
-                                                number: d,
-                                            });
-                                    }}
+                                    name="name"
+                                    value={name}
+                                    onChange={onChange}
+                                    placeholder="Patient name"
+                                    required
                                 />
                             </div>
+                            <div className="ap-field">
+                                <label htmlFor="gender" className="ap-label">
+                                    Gender
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
 
-                            {/* Services */}
-                            <div className="ap-section">
-                                Services & Billing
+                                <select
+                                    id="gender"
+                                    name="gender"
+                                    className="ap-select"
+                                    value={gender}
+                                    onChange={onChange}
+                                >
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div className="ap-field">
+                                <label htmlFor="age" className="ap-label">
+                                    Age
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
+                                <input
+                                    id="age"
+                                    className="ap-input"
+                                    type="number"
+                                    name="age"
+                                    value={age}
+                                    onChange={onChange}
+                                    placeholder="Age"
+                                />
+                            </div>
+                        </div>
+                        <div className="ap-field">
+                            <label htmlFor="number" className="ap-label">
+                                Mobile Number
                                 <span className="sg-required">
                                     <sup>*</sup>
                                 </span>
-                            </div>
-                            <ServiceList
-                                services={availableServices}
-                                selectedServices={service}
-                                onAdd={(s) => {
-                                    setPatient((prev) =>
-                                        prev.service.some(
-                                            (x) => x._id === s._id,
-                                        )
-                                            ? prev
-                                            : {
-                                                  ...prev,
-                                                  service: [...prev.service, s],
-                                              },
-                                    );
-                                    setServiceAmounts((prev) => ({
-                                        ...prev,
-                                        [s._id]: s.amount ?? 0,
-                                    }));
-                                }}
-                                onRemove={(id) => {
-                                    setPatient((prev) => ({
-                                        ...prev,
-                                        service: prev.service.filter(
-                                            (s) => s._id !== id,
-                                        ),
-                                    }));
-                                    setServiceAmounts((prev) => {
-                                        const c = { ...prev };
-                                        delete c[id];
-                                        return c;
-                                    });
+                            </label>
+                            <input
+                                id="number"
+                                className="ap-input"
+                                type="tel"
+                                name="number"
+                                value={number}
+                                placeholder="Mobile number"
+                                onChange={(e) => {
+                                    const d = e.target.value.replace(/\D/g, "");
+                                    if (d.length <= 10)
+                                        setPatient({
+                                            ...patient,
+                                            number: d,
+                                        });
                                 }}
                             />
+                        </div>
+                        <div className="ap-field">
+                            <label htmlFor="email" className="ap-label">
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                className="ap-input"
+                                type="email"
+                                name="email"
+                                value={patient.email}
+                                placeholder="Enter email"
+                                onChange={onChange}
+                            />
+                        </div>
 
-                            {service.length > 0 && (
-                                <>
-                                    <div style={{ marginTop: 12 }}>
-                                        {service.map((s) => (
-                                            <div
-                                                key={s._id}
-                                                className="ap-service-row"
-                                            >
-                                                <span className="ap-service-name">
-                                                    {s.name}
-                                                </span>
-                                                <div className="ap-amount-wrap">
-                                                    <IndianRupee size={12} />
-                                                    <input
-                                                        type="number"
-                                                        className="ap-amount-input"
-                                                        value={
-                                                            serviceAmounts[
-                                                                s._id
-                                                            ] ?? s.amount
-                                                        }
-                                                        onChange={(e) =>
-                                                            setServiceAmounts(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    [s._id]:
-                                                                        Number(
-                                                                            e
-                                                                                .target
-                                                                                .value,
-                                                                        ),
-                                                                }),
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                        {/* Services */}
+                        <div className="ap-section">
+                            Services & Billing
+                            <span className="sg-required">
+                                <sup>*</sup>
+                            </span>
+                        </div>
+                        <ServiceList
+                            services={availableServices}
+                            selectedServices={service}
+                            currency={currency}
+                            onAdd={handleAddService}
+                            onRemove={handleRemoveService}
+                        />
 
-                                    {/* Discount */}
-                                    <div
-                                        className="ap-discount-row"
-                                        style={{ marginTop: 10 }}
-                                    >
-                                        <label
-                                            className="ap-label"
-                                            style={{
-                                                margin: 0,
-                                                whiteSpace: "nowrap",
-                                            }}
+                        {service.length > 0 && (
+                            <>
+                                <div style={{ marginTop: 12 }}>
+                                    {service.map((s) => (
+                                        <div
+                                            key={s._id}
+                                            className="ap-service-row"
                                         >
-                                            Discount
-                                        </label>
-                                        <input
-                                            type="number"
-                                            className="ap-input"
-                                            placeholder="0"
-                                            value={discount}
-                                            min={0}
-                                            max={isPercent ? 100 : finalAmount}
-                                            onChange={(e) => {
-                                                let v = Number(e.target.value);
-                                                if (v < 0) v = 0;
-                                                if (isPercent && v > 100)
-                                                    v = 100;
-                                                if (
-                                                    !isPercent &&
-                                                    v > finalAmount
-                                                )
-                                                    v = finalAmount;
-                                                setDiscount(v);
-                                            }}
-                                            style={{ flex: 1 }}
-                                        />
-                                        <label
-                                            className={`ap-percent-toggle ${isPercent ? "on" : ""}`}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={isPercent}
-                                                onChange={(e) =>
-                                                    setIsPercent(
-                                                        e.target.checked,
-                                                    )
-                                                }
-                                            />
-                                            % Percent
-                                        </label>
-                                    </div>
-
-                                    {/* Summary */}
-                                    <div className="ap-summary">
-                                        <div className="ap-summary-row">
-                                            <span>Subtotal</span>
-                                            <span className="ap-summary-val">
-                                                <IndianRupee size={11} />
-                                                {fmt(finalAmount)}
+                                            <span className="ap-service-name">
+                                                {s.name}
                                             </span>
-                                        </div>
-                                        {calculatedDiscount > 0 && (
-                                            <div className="ap-summary-row">
-                                                <span>Discount</span>
-                                                <span
-                                                    className="ap-summary-val"
-                                                    style={{
-                                                        color: "#fb923c",
-                                                    }}
-                                                >
-                                                    − <IndianRupee size={11} />
-                                                    {fmt(calculatedDiscount)}
-                                                </span>
+                                            <div className="ap-amount-wrap">
+                                                {currency?.symbol}
+                                                <input
+                                                    type="number"
+                                                    name={`serviceAmount-${s._id}`}
+                                                    className="ap-amount-input"
+                                                    value={
+                                                        serviceAmounts[s._id] ??
+                                                        s.amount
+                                                    }
+                                                    onChange={(e) =>
+                                                        setServiceAmounts(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                [s._id]: Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            }),
+                                                        )
+                                                    }
+                                                />
                                             </div>
-                                        )}
-                                        <div className="ap-summary-row final">
-                                            <span>Payable Amount</span>
-                                            <span className="ap-summary-val">
-                                                <IndianRupee size={12} />
-                                                {fmt(
-                                                    Math.max(
-                                                        finalAmount -
-                                                            calculatedDiscount,
-                                                        0,
-                                                    ),
-                                                )}
-                                            </span>
                                         </div>
-                                    </div>
+                                    ))}
+                                </div>
 
-                                    {/* Collected */}
-                                    <div className="ap-collected-row">
-                                        <span className="ap-collect-label">
-                                            Amount Collected{" "}
-                                            {collectFull && (
-                                                <span
-                                                    style={{
-                                                        color: "#2e3d5c",
-                                                        fontSize: 10,
-                                                    }}
-                                                >
-                                                    (Auto)
-                                                </span>
-                                            )}
-                                        </span>
-                                        <div className="ap-amount-wrap">
-                                            <IndianRupee size={12} />
-                                            <input
-                                                type="number"
-                                                className="ap-amount-input"
-                                                value={patient.amount.toFixed(
-                                                    2,
-                                                )}
-                                                disabled={collectFull}
-                                                onChange={(e) =>
-                                                    setPatient((prev) => ({
-                                                        ...prev,
-                                                        amount: Number(
-                                                            e.target.value,
-                                                        ),
-                                                    }))
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                    <label className="ap-checkbox-row">
-                                        <input
-                                            type="checkbox"
-                                            className="ap-checkbox"
-                                            checked={collectFull}
-                                            onChange={(e) =>
-                                                setCollectFull(e.target.checked)
-                                            }
-                                        />
-                                        Collect full payable amount
-                                        automatically
-                                    </label>
-
-                                    {/* Status */}
-                                    <div
+                                {/* Discount */}
+                                <div
+                                    className="ap-discount-row"
+                                    style={{ marginTop: 10 }}
+                                >
+                                    <label
+                                        className="ap-label"
                                         style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            marginBottom: 8,
-                                            fontSize: 11,
+                                            margin: 0,
+                                            whiteSpace: "nowrap",
                                         }}
                                     >
-                                        <span style={{ color: "#4a5a7a" }}>
-                                            Remaining:{" "}
-                                            <IndianRupee
-                                                size={11}
+                                        Discount
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="ap-input"
+                                        placeholder="0"
+                                        value={discount}
+                                        min={0}
+                                        max={isPercent ? 100 : finalAmount}
+                                        onChange={(e) => {
+                                            let v = Number(e.target.value);
+                                            if (v < 0) v = 0;
+                                            if (isPercent && v > 100) v = 100;
+                                            if (!isPercent && v > finalAmount)
+                                                v = finalAmount;
+                                            setDiscount(v);
+                                        }}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <label
+                                        className={`ap-percent-toggle ${isPercent ? "on" : ""}`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isPercent}
+                                            onChange={(e) =>
+                                                setIsPercent(e.target.checked)
+                                            }
+                                        />
+                                        % Percent
+                                    </label>
+                                </div>
+
+                                {/* Summary */}
+                                <div className="ap-summary">
+                                    <div className="ap-summary-row">
+                                        <span>Subtotal</span>
+                                        <span className="ap-summary-val">
+                                            {fmt(finalAmount)}
+                                        </span>
+                                    </div>
+                                    {calculatedDiscount > 0 && (
+                                        <div className="ap-summary-row">
+                                            <span>Discount</span>
+                                            <span
+                                                className="ap-summary-val"
                                                 style={{
-                                                    display: "inline",
+                                                    color: "#fb923c",
                                                 }}
-                                            />
+                                            >
+                                                - {fmt(calculatedDiscount)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="ap-summary-row final">
+                                        <span>Payable Amount</span>
+                                        <span className="ap-summary-val">
                                             {fmt(
                                                 Math.max(
                                                     finalAmount -
-                                                        patient.amount -
                                                         calculatedDiscount,
                                                     0,
                                                 ),
                                             )}
                                         </span>
-                                        <span
-                                            className="ap-status-badge"
-                                            style={{
-                                                background: `${statusColor}12`,
-                                                borderColor: `${statusColor}30`,
-                                                color: statusColor,
-                                            }}
-                                        >
-                                            {statusLabel}
-                                        </span>
                                     </div>
-                                </>
-                            )}
+                                </div>
 
-                            <div className="ap-field">
-                                <label className="ap-label">
-                                    Upload Report / Image
+                                {/* Collected */}
+                                <div className="ap-collected-row">
+                                    <span className="ap-collect-label">
+                                        Amount Collected{" "}
+                                        {collectFull && (
+                                            <span
+                                                style={{
+                                                    color: "#2e3d5c",
+                                                    fontSize: 10,
+                                                }}
+                                            >
+                                                (Auto)
+                                            </span>
+                                        )}
+                                    </span>
+                                    <div className="ap-amount-wrap">
+                                        {currency?.symbol}
+                                        <input
+                                            type="number"
+                                            name="collectedAmount"
+                                            className="ap-amount-input"
+                                            value={patient.amount.toFixed(2)}
+                                            disabled={collectFull}
+                                            onChange={(e) =>
+                                                setPatient((prev) => ({
+                                                    ...prev,
+                                                    amount: Number(
+                                                        e.target.value,
+                                                    ),
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                                <label className="ap-checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        className="ap-checkbox"
+                                        checked={collectFull}
+                                        onChange={(e) =>
+                                            setCollectFull(e.target.checked)
+                                        }
+                                    />
+                                    Collect full payable amount automatically
+                                </label>
+
+                                {/* Status */}
+                                <div
+                                    className="ap-status"
+                                    style={{
+                                        color:
+                                            remainingAmount === 0
+                                                ? "#ffffff"
+                                                : "var(--danger)",
+                                    }}
+                                >
+                                    <span>
+                                        Remaining: {fmt(remainingAmount)}
+                                    </span>
+                                    <span
+                                        className="ap-status-badge"
+                                        style={{
+                                            background: `${statusColor}12`,
+                                            borderColor: `${statusColor}30`,
+                                            color: statusColor,
+                                        }}
+                                    >
+                                        {statusLabel}
+                                    </span>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="ap-field">
+                            <div className="ap-section">
+                                <label
+                                    className="ap-label"
+                                    style={{ margin: 0 }}
+                                >
+                                    Upload Image
                                     <span
                                         style={{
-                                            color: "#2e3d5c",
-                                            fontWeight: 400,
-                                            marginLeft: 6,
                                             fontSize: 9,
+                                            marginLeft: 6,
+                                            textTransform: "none",
+                                            letterSpacing: 0,
                                         }}
                                     >
                                         — max 2 MB
                                     </span>
                                 </label>
-
-                                <label className="ap-upload-zone">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        style={{ display: "none" }}
-                                        onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            if (!file) return;
-                                            if (file.size > 2 * 1024 * 1024) {
-                                                showAlert(
-                                                    "Image must be under 2 MB",
-                                                    "danger",
-                                                );
-                                                return;
-                                            }
-                                            setImageFile(file);
-                                            setImagePreview(
-                                                URL.createObjectURL(file),
-                                            );
-                                        }}
-                                    />
-                                    {imagePreview ? (
-                                        <div className="ap-upload-preview">
-                                            <img
-                                                src={imagePreview}
-                                                alt="preview"
-                                                className="ap-preview-img"
-                                            />
-                                            <div className="ap-preview-name">
-                                                {imageFile?.name}
-                                            </div>
-                                            <div className="ap-preview-size">
-                                                {(
-                                                    imageFile?.size / 1024
-                                                ).toFixed(0)}{" "}
-                                                KB
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="ap-upload-empty">
-                                            <div className="ap-upload-icon">
-                                                ↑
-                                            </div>
-                                            <div className="ap-upload-text">
-                                                Click to upload
-                                            </div>
-                                            <div className="ap-upload-hint">
-                                                PNG, JPG, WEBP · max 2 MB
-                                            </div>
-                                        </div>
+                                <div className="ap-upload-meta">
+                                    <span
+                                        className={`ap-upload-count ${isImageLimitReached ? "limit-hit" : ""}`}
+                                    >
+                                        {imageUsage.used}/
+                                        {imageUsage.limit === -1
+                                            ? "∞"
+                                            : imageUsage.limit}
+                                    </span>
+                                    {isImageLimitReached && (
+                                        <span className="ap-limit-badge">
+                                            Limit Reached
+                                        </span>
                                     )}
-                                </label>
+                                </div>
+                            </div>
 
-                                {imagePreview && (
+                            <input
+                                ref={fileInputRef}
+                                id="fileInput"
+                                type="file"
+                                accept="image/*"
+                                style={{ display: "none" }}
+                                disabled={isImageLimitReached}
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (!file) return;
+                                    if (!file.type.startsWith("image/")) {
+                                        showAlert(
+                                            "Only images allowed",
+                                            "warning",
+                                        );
+                                        return;
+                                    }
+                                    if (file.size > 2 * 1024 * 1024) {
+                                        showAlert(
+                                            "Image must be under 2 MB",
+                                            "warning",
+                                        );
+                                        return;
+                                    }
+                                    setImageFile(file);
+                                    setImagePreview(URL.createObjectURL(file));
+                                }}
+                            />
+
+                            <button
+                                type="button"
+                                className={`ap-upload-btn ${isImageLimitReached ? "ap-upload-btn--disabled" : ""}`}
+                                disabled={isImageLimitReached}
+                                onClick={() => {
+                                    if (isImageLimitReached) {
+                                        showAlert(
+                                            `Image limit reached (${usage?.images?.used}/${usage?.images?.limit}). Upgrade plan 🚀`,
+                                            "warning",
+                                        );
+                                        return;
+                                    }
+
+                                    fileInputRef.current?.click();
+                                }}
+                            >
+                                ↑ Upload Image
+                            </button>
+
+                            {imagePreview && (
+                                <div className="ap-upload-preview">
+                                    <img
+                                        src={imagePreview}
+                                        alt="preview"
+                                        className="ap-preview-img"
+                                    />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div className="ap-preview-name">
+                                            {imageFile?.name}
+                                        </div>
+                                        <div className="ap-preview-size">
+                                            {(imageFile?.size / 1024).toFixed(
+                                                0,
+                                            )}{" "}
+                                            KB
+                                        </div>
+                                    </div>
                                     <button
                                         type="button"
                                         className="ap-upload-remove"
@@ -858,156 +800,168 @@ const AddPatient = ({ showAlert, showModal, setShowModal }) => {
                                             setImagePreview("");
                                         }}
                                     >
-                                        Remove image
+                                        ✕
                                     </button>
-                                )}
-                            </div>
-                            {/* Appointment */}
-                            <div className="ap-section">
-                                Appointment & Payment
-                            </div>
-                            <div className="ap-grid2">
-                                <div className="ap-field">
-                                    <label className="ap-label">
-                                        Date
-                                        <span className="sg-required">
-                                            <sup>*</sup>
-                                        </span>
-                                    </label>
+                                </div>
+                            )}
+                        </div>
+                        {/* Appointment */}
+                        <div className="ap-section">Appointment & Payment</div>
+                        <div className="ap-grid2">
+                            <div className="ap-field">
+                                <label
+                                    htmlFor="appointment-date"
+                                    className="ap-label"
+                                >
+                                    Date
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
 
-                                    {/* Trigger button showing selected date */}
-                                    <button
-                                        type="button"
-                                        className="ap-input"
-                                        onClick={() =>
-                                            setShowCalendar((p) => !p)
-                                        }
+                                <button
+                                    id="appointment-date"
+                                    name="appointmentDate"
+                                    type="button"
+                                    className="ap-input"
+                                    onClick={() => setShowCalendar((p) => !p)}
+                                    style={{
+                                        textAlign: "left",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                    }}
+                                >
+                                    <span
                                         style={{
-                                            textAlign: "left",
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
+                                            color: appointmentDate
+                                                ? "#c5d0e8"
+                                                : "#252e45",
                                         }}
                                     >
-                                        <span
-                                            style={{
-                                                color: appointmentDate
-                                                    ? "#c5d0e8"
-                                                    : "#252e45",
-                                            }}
-                                        >
-                                            {appointmentDate
-                                                ? new Date(
-                                                      appointmentDate,
-                                                  ).toLocaleDateString(
-                                                      "en-IN",
-                                                      {
-                                                          day: "numeric",
-                                                          month: "short",
-                                                          year: "numeric",
-                                                      },
-                                                  )
-                                                : "Select date"}
-                                        </span>
-                                        <span
-                                            style={{
-                                                fontSize: 13,
-                                                color: "#3a4a6b",
-                                            }}
-                                        >
-                                            <CalendarArrowDown size={18} />
-                                        </span>
-                                    </button>
-
-                                    {/* Calendar dropdown */}
-                                    {showCalendar && (
-                                        <div
-                                            className="dp-wrapper"
-                                            style={{
-                                                position: "absolute",
-                                                zIndex: 100,
-                                                marginTop: 4,
-                                            }}
-                                        >
-                                            <DayPicker
-                                                mode="single"
-                                                selected={
-                                                    appointmentDate
-                                                        ? new Date(
-                                                              appointmentDate,
-                                                          )
-                                                        : undefined
-                                                }
-                                                onSelect={(date) => {
-                                                    if (!date) return;
-                                                    setAppointmentDate(
-                                                        date.toLocaleDateString(
-                                                            "en-CA",
-                                                        ),
-                                                    );
-                                                    setShowCalendar(false); // close on select
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="ap-field">
-                                    <label className="ap-label">
-                                        Payment Type
-                                        <span className="sg-required">
-                                            <sup>*</sup>
-                                        </span>
-                                    </label>
-                                    <select
-                                        className="ap-select"
-                                        value={payment_type}
-                                        onChange={(e) =>
-                                            setPaymentType(e.target.value)
-                                        }
+                                        {appointmentDate
+                                            ? new Date(
+                                                  appointmentDate,
+                                              ).toLocaleDateString("en-IN", {
+                                                  day: "numeric",
+                                                  month: "short",
+                                                  year: "numeric",
+                                              })
+                                            : "Select date"}
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontSize: 13,
+                                            color: "#3a4a6b",
+                                        }}
                                     >
-                                        <option>Cash</option>
-                                        <option>Card</option>
-                                        <option>SBI</option>
-                                        <option>ICICI</option>
-                                        <option>HDFC</option>
-                                        <option>Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <SlotPicker
-                                groupedSlots={groupedSlots}
-                                selectedSlot={selectedSlot}
-                                setSelectedSlot={setSelectedSlot}
-                                bookedSlots={bookedSlots}
-                                openSection={openSection}
-                                setOpenSection={setOpenSection}
-                                formatTime={formatTime}
-                                currentSlot={currentSlot}
-                                nextSlot={nextSlot}
-                            />
-                        </div>
+                                        <CalendarArrowDown size={18} />
+                                    </span>
+                                </button>
 
-                        <div className="ap-footer">
-                            <button
-                                type="button"
-                                className="ap-btn ap-btn-outline"
-                                onClick={() => setShowModal(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="ap-btn ap-btn-primary"
-                                disabled={service.length === 0}
-                            >
-                                <Check size={13} /> Save & Create
-                            </button>
+                                {/* Calendar dropdown */}
+                                {showCalendar && (
+                                    <div
+                                        className="dp-wrapper"
+                                        style={{
+                                            position: "absolute",
+                                            zIndex: 100,
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        <DayPicker
+                                            mode="single"
+                                            selected={
+                                                appointmentDate
+                                                    ? new Date(appointmentDate)
+                                                    : undefined
+                                            }
+                                            onSelect={(date) => {
+                                                if (!date) return;
+                                                setAppointmentDate(
+                                                    date.toLocaleDateString(
+                                                        "en-CA",
+                                                    ),
+                                                );
+                                                setShowCalendar(false);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="ap-field">
+                                <label
+                                    htmlFor="payment_type"
+                                    className="ap-label"
+                                >
+                                    Payment Type
+                                    <span className="sg-required">
+                                        <sup>*</sup>
+                                    </span>
+                                </label>
+
+                                <select
+                                    className="ap-select"
+                                    value={payment_type}
+                                    onChange={(e) =>
+                                        setPaymentType(e.target.value)
+                                    }
+                                >
+                                    <option value="">Select Payment</option>
+
+                                    {paymentOptions.map((p) => (
+                                        <option
+                                            key={p.id}
+                                            value={p.subCategoryName}
+                                        >
+                                            {p.subCategoryName
+                                                ? p.subCategoryName
+                                                : p.categoryName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
-                    </form>
-                </div>
-            </>
-        )
+                        <SlotPicker
+                            groupedSlots={groupedSlots}
+                            selectedSlot={selectedSlot}
+                            setSelectedSlot={setSelectedSlot}
+                            bookedSlots={bookedSlots}
+                            openSection={openSection}
+                            setOpenSection={setOpenSection}
+                            formatTime={formatTime}
+                            currentSlot={currentSlot}
+                            nextSlot={nextSlot}
+                        />
+                    </div>
+
+                    <div className="ap-footer">
+                        <button
+                            type="button"
+                            className="ap-btn ap-btn-outline"
+                            onClick={() => setShowModal(false)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="ap-btn ap-btn-primary"
+                            disabled={service.length === 0 || loading}
+                        >
+                            {loading ? (
+                                "Saving..."
+                            ) : (
+                                <>
+                                    {" "}
+                                    <Check size={13} /> Save & Create{" "}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </>
     );
 };
 

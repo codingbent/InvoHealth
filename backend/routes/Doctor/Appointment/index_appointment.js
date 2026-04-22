@@ -7,7 +7,6 @@ router.use("/", require("./edit_appointment"));
 router.use("/", require("./export_appointments"));
 router.use("/", require("./fetchall_appointments"));
 router.use("/", require("./booked_slots"));
-router.use("/",require("./check_invoice_limit"));
-router.use("/",require("./increment_invoice_usage"));
+router.use("/", require("./get_usage"));
 
 module.exports = router;

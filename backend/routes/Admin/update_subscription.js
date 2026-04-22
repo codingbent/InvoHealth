@@ -1,18 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
-const fetchuser = require("../../middleware/fetchuser");
+const fetchadmin = require("../../middleware/fetchadmin");
 
-router.put("/update_subscription/:id", fetchuser, async (req, res) => {
+router.put("/update_subscription/:id", fetchadmin, async (req, res) => {
     try {
-        if (req.user.role !== "superadmin") {
+        if (req.admin.role !== "superadmin") {
             return res.status(403).json({
                 success: false,
                 error: "Access denied",
             });
         }
 
-        const { plan, billingCycle = "monthly" } = req.body;
+        const { plan, billingCycle = "monthly", months = 1 } = req.body;
 
         if (!plan) {
             return res.status(400).json({
@@ -21,25 +21,35 @@ router.put("/update_subscription/:id", fetchuser, async (req, res) => {
             });
         }
 
-        // calculate expiry
-        const startDate = new Date();
-        const expiryDate =
-            billingCycle === "yearly"
-                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        const expiryDate = new Date();
+        expiryDate.setMonth(expiryDate.getMonth() + months);
 
         const updated = await Doc.findByIdAndUpdate(
             req.params.id,
             {
                 "subscription.plan": plan.toUpperCase(),
                 "subscription.billingCycle": billingCycle,
+                // FIX: Use "active" directly — never "trial".
+                //
+                // WHY: getSubscriptionStatus() in subscription_check.js determines
+                // status purely from expiryDate math (expiry > today → "active").
+                // It ignores the DB status field entirely. So the DB status field
+                // is only used for display purposes in the /subscription endpoint.
+                //
+                // If we store "trial" here, the DB and API disagree:
+                //   - DB says: "trial"
+                //   - /subscription endpoint says: "active" (translates trial → active)
+                //   - All guards say: "active" (from date math, ignores DB status)
+                //
+                // That silent translation (subscription.js line 55) is confusing and
+                // fragile. We normalize to "active" at the source so the DB, API,
+                // and all middleware always agree on the same value.
                 "subscription.status": "active",
-                "subscription.startDate": startDate,
+                "subscription.startDate": new Date(),
                 "subscription.expiryDate": expiryDate,
-
-                // reset usage limits when plan changes
                 "usage.excelExports": 0,
                 "usage.invoiceDownloads": 0,
+                "usage.imageUploads": 0,
             },
             { new: true },
         );
@@ -53,7 +63,7 @@ router.put("/update_subscription/:id", fetchuser, async (req, res) => {
 
         res.json({
             success: true,
-            message: "Subscription updated successfully",
+            message: `Subscription updated to ${plan.toUpperCase()} (${billingCycle}) for ${months} month(s)`,
             doctor: updated,
         });
     } catch (err) {

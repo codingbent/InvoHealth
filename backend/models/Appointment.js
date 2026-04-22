@@ -1,19 +1,22 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
-const Counter = require("./Counter");
 
 const AppointmentSchema = new Schema({
     patient: {
         type: Schema.Types.ObjectId,
         ref: "Patient",
         required: true,
-        unique: true,
     },
-    doctor: { type: Schema.Types.ObjectId, ref: "Doc", required: true },
+    doctor: {
+        type: Schema.Types.ObjectId,
+        ref: "Doc",
+        required: true,
+    },
     visits: [
         {
             date: { type: Date, default: Date.now },
-             time: { type: String }, 
+            time: { type: String },
+
             service: [
                 {
                     id: { type: Schema.Types.ObjectId, ref: "Service" },
@@ -33,12 +36,15 @@ const AppointmentSchema = new Schema({
                 enum: ["Paid", "Partial", "Unpaid"],
                 default: "Unpaid",
             },
-            payment_type: {
-                type: String,
-                enum: ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"],
-                default: "Cash",
+
+            paymentMethodId: {
+                type: Schema.Types.ObjectId,
+                ref: "PaymentSubCategory",
+                default: null,
             },
+
             invoiceNumber: { type: Number, default: 1 },
+
             image: {
                 type: String,
                 default: "",
@@ -47,35 +53,16 @@ const AppointmentSchema = new Schema({
     ],
 });
 
-async function getNextInvoiceNumber(doctorId) {
-    const counter = await Counter.findOneAndUpdate(
-        { _id: `invoice_${doctorId}` },
-        { $inc: { seq: 1 } },
-        { new: true },
-    );
-
-    if (!counter) {
-        const newCounter = await Counter.create({
-            _id: `invoice_${doctorId}`,
-            seq: 1,
-        });
-        return newCounter.seq;
-    }
-
-    return counter.seq;
-}
-
 AppointmentSchema.statics.addVisit = async function (
     patientId,
     doctorId,
     service,
     amount,
-    payment_type,
+    paymentMethodId,
     invoiceNumber,
     date,
     collectedInput,
 ) {
-    // Safe date parsing
     let visitDate = new Date();
     if (date && !isNaN(Date.parse(date))) {
         visitDate = new Date(date);
@@ -83,20 +70,14 @@ AppointmentSchema.statics.addVisit = async function (
 
     const finalAmount = Number(amount) || 0;
 
-    // Safe collected calculation
     let collected = Number(collectedInput);
-
-    if (isNaN(collected)) {
-        collected = finalAmount;
-    }
+    if (isNaN(collected)) collected = finalAmount;
 
     if (collected < 0) collected = 0;
     if (collected > finalAmount) collected = finalAmount;
 
-    // Remaining
     const remaining = Math.max(finalAmount - collected, 0);
 
-    // Status logic
     const status =
         remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 
@@ -107,21 +88,21 @@ AppointmentSchema.statics.addVisit = async function (
         collected,
         remaining,
         status,
-        payment_type,
+        paymentMethodId: paymentMethodId || null, // ✅ FIXED
         invoiceNumber,
     };
 
-    const appointment = await this.findOneAndUpdate(
-        { patient: patientId },
+    return await this.findOneAndUpdate(
+        { patient: patientId, doctor: doctorId },
         {
             $push: { visits: newVisit },
             $set: { doctor: doctorId },
         },
         { upsert: true, new: true },
     );
-
-    return appointment;
 };
+
+AppointmentSchema.index({ doctor: 1, "visits.paymentMethodId": 1 });
 
 const Appointment = mongoose.model("Appointment", AppointmentSchema);
 module.exports = Appointment;

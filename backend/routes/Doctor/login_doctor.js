@@ -1,52 +1,30 @@
+require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const Doc = require("../../models/Doc");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const normalizePhone = (phone) =>
-    phone ? phone.replace(/\D/g, "").slice(-10) : "";
+const normalizePhone = (phone) => (phone ? phone.replace(/\D/g, "") : "");
 
-router.post("/login_doctor", async (req, res) => {
-    const { identifier, password, identifierType } = req.body;
+const isValidPhone = (phone) =>
+    phone && phone.length >= 8 && phone.length <= 15;
+
+const loginLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => req.body.identifier || ipKeyGenerator(req),
+});
+
+router.post("/login_doctor", loginLimiter, async (req, res) => {
+    const { identifier, password } = req.body;
 
     try {
-        let user = null;
+        const user = await Doc.findOne({ email: identifier });
 
-        if (identifierType === "email") {
-            user = await Doc.findOne({ email: identifier });
-        }
-
-        // ================= PHONE LOGIN =================
-        else if (identifierType === "phone") {
-            const cleanPhone = normalizePhone(identifier);
-
-            //  Step 1: narrow down using last4
-            const candidates = await Doc.find({
-                phoneLast4: cleanPhone.slice(-4),
-            });
-
-            //  Step 2: compare hash
-            for (let doc of candidates) {
-                if (!doc.phoneHash) continue;
-
-                const isMatch = await bcrypt.compare(cleanPhone, doc.phoneHash);
-
-                if (isMatch) {
-                    user = doc;
-                    break;
-                }
-            }
-        } else {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid identifier type",
-            });
-        }
-
-        // ================= VALIDATION =================
         if (!user || !user.password) {
             return res.status(400).json({
                 success: false,
@@ -61,6 +39,16 @@ router.post("/login_doctor", async (req, res) => {
                 success: false,
                 error: "Invalid credentials",
             });
+        }
+
+        let safeSubscription = null;
+
+        if (user.subscription) {
+            safeSubscription = {
+                plan: user.subscription.plan,
+                status: user.subscription.status,
+                expiryDate: user.subscription.expiryDate,
+            };
         }
 
         const payload = {
@@ -81,7 +69,7 @@ router.post("/login_doctor", async (req, res) => {
             role: "doctor",
             name: user.name,
             doctorId: user._id,
-            subscription: user.subscription || null,
+            subscription: safeSubscription,
         });
     } catch (err) {
         console.error("Doctor Login Error:", err);

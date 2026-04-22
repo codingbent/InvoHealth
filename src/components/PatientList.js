@@ -6,6 +6,9 @@ import { authFetch } from "./authfetch";
 import FilterPanel from "./FilterPanel";
 import AppointmentList from "./AppointmentList";
 import { SlidersHorizontal, FileSpreadsheet } from "lucide-react";
+import { API_BASE_URL } from "../components/config";
+import { fetchPaymentMethods } from "../api/payment.api";
+import "../css/Patientlist.css"
 
 export default function PatientList(props) {
     const navigate = useNavigate();
@@ -24,12 +27,8 @@ export default function PatientList(props) {
     const [page, setPage] = useState(0);
     const [filterOpen, setFilterOpen] = useState(false);
     const [total, setTotal] = useState(0);
+    const [paymentOptions, setPaymentOptions] = useState([]);
     const limit = 20;
-
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
 
     const activeFiltersCount =
         selectedPayments.length +
@@ -48,19 +47,39 @@ export default function PatientList(props) {
     ) => {
         const row = sheet.addRow([label, value]);
         if (bold) row.font = { bold: true };
-        if (isCurrency) row.getCell(2).numFmt = "₹#,##0";
+        if (isCurrency) row.getCell(2).numFmt = `${currencySymbol}#,##0`;
         return row;
     };
-
+    const currencySymbol = props.currency?.symbol || "₹";
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
+    }, []);
+
+    useEffect(() => {
+        const loadPaymentMethods = async () => {
+            try {
+                const methods = await fetchPaymentMethods();
+                setPaymentOptions(methods);
+            } catch (err) {
+                console.error("Payment fetch error:", err);
+            }
+        };
+
+        loadPaymentMethods();
     }, []);
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
         return () => clearTimeout(t);
     }, [searchTerm]);
+
+    useEffect(() => {
+        if (!paymentOptions.length) return;
+
+        setAppointments((prev) => [...prev]);
+    }, [paymentOptions]);
 
     const fetchServices = useCallback(async () => {
         try {
@@ -76,7 +95,8 @@ export default function PatientList(props) {
         } catch (err) {
             console.error("Error fetching services", err);
         }
-    }, [API_BASE_URL]);
+    }, []);
+
     useEffect(() => {
         fetchServices();
     }, [fetchServices]);
@@ -84,32 +104,59 @@ export default function PatientList(props) {
     const fetchAppointments = useCallback(async () => {
         try {
             setLoading(true);
-            const query = new URLSearchParams({
-                limit,
-                skip: page * limit,
-                search: debouncedSearch.toLowerCase(),
-                gender: selectedGender,
-                payments: selectedPayments.join(","),
-                status: selectedStatus.join(","),
-                services: selectedServices.join(","),
-                startDate,
-                endDate,
-            }).toString();
+            const params = new URLSearchParams();
+
+            params.set("limit", limit);
+            params.set("skip", page * limit);
+
+            if (debouncedSearch) {
+                params.set("search", debouncedSearch.toLowerCase());
+            }
+            if (selectedGender) {
+                params.set("gender", selectedGender);
+            }
+            if (selectedPayments.length) {
+                params.set("payments", selectedPayments.join(","));
+            }
+            if (selectedStatus.length) {
+                params.set("status", selectedStatus.join(","));
+            }
+            if (selectedServices.length) {
+                params.set("services", selectedServices.join(","));
+            }
+            if (startDate) {
+                params.set("startDate", startDate);
+            }
+            if (endDate) {
+                params.set("endDate", endDate);
+            }
+
+            const query = params.toString();
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/fetchall_appointments?${query}`,
             );
             const data = await res.json();
-            const sortAppointments = (arr) =>
-                [...arr].sort(
-                    (a, b) =>
-                        new Date(`${b.date}T${b.time || "00:00"}`) -
-                        new Date(`${a.date}T${a.time || "00:00"}`),
-                );
-            const flatData = data.data;
-            setAppointments((prev) => {
-                const merged = page === 0 ? flatData : [...prev, ...flatData];
+
+            const flatData = Array.isArray(data?.data) ? data.data : [];
+
+            const sortAppointments = (arr = []) =>
+                Array.isArray(arr)
+                    ? [...arr].sort(
+                          (a, b) =>
+                              new Date(`${b.date}T${b.time || "00:00"}`) -
+                              new Date(`${a.date}T${a.time || "00:00"}`),
+                      )
+                    : [];
+
+            setAppointments((prev = []) => {
+                const merged =
+                    page === 0
+                        ? flatData
+                        : [...(Array.isArray(prev) ? prev : []), ...flatData];
+
                 return sortAppointments(merged);
             });
+
             setTotal(data.total || 0);
         } catch (err) {
             console.error(err);
@@ -125,11 +172,12 @@ export default function PatientList(props) {
         selectedServices,
         startDate,
         endDate,
-        API_BASE_URL,
     ]);
+
     useEffect(() => {
         fetchAppointments();
     }, [fetchAppointments]);
+
     useEffect(() => {
         setPage(0);
     }, [
@@ -172,7 +220,7 @@ export default function PatientList(props) {
                 a.number?.includes(debouncedSearch);
             const paymentMatch =
                 selectedPayments.length === 0 ||
-                selectedPayments.includes(a.payment_type);
+                selectedPayments.includes(String(a.paymentMethodId));
             const statusMatch =
                 selectedStatus.length === 0 ||
                 selectedStatus.includes(a.status);
@@ -197,35 +245,89 @@ export default function PatientList(props) {
             );
         });
 
+    const getPaymentLabel = (a) => {
+        const match = paymentOptions.find(
+            (p) => String(p.id) === String(a.paymentMethodId),
+        );
+
+        let label = "Other";
+
+        if (match) {
+            label = match.subCategoryName || match.categoryName;
+        } else if (a?.subCategoryName) {
+            label = a.subCategoryName;
+        } else if (a?.categoryName) {
+            label = a.categoryName;
+        }
+
+        // MATCH TABLE UI
+        return label?.split(" ")[0];
+    };
+
     const downloadExcel = async () => {
         try {
             const checkRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/check_export_limit`,
             );
+
             const check = await checkRes.json();
+
+            // Handle HTTP errors FIRST
+            if (!checkRes.ok) {
+                if (checkRes.status === 403) {
+                    props.showAlert(
+                        check.error || "Excel export limit reached",
+                        "danger",
+                    );
+                } else {
+                    props.showAlert(
+                        check.error || "Failed to export Excel",
+                        "danger",
+                    );
+                }
+                return;
+            }
+
+            // Handle logical API failure
             if (!check.success) {
                 props.showAlert(check.error, "danger");
                 return;
             }
+
+            // Last export warning
             if (check.remaining === 1) {
                 const confirmExport = window.confirm(
                     "⚠ This is your LAST Excel export for this plan.\n\nDo you want to continue?",
                 );
                 if (!confirmExport) return;
             }
+
+            // Export API
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/export_appointments`,
             );
+
             const result = await res.json();
+
+            if (!res.ok) {
+                props.showAlert(
+                    result.error || "Failed to export Excel",
+                    "danger",
+                );
+                return;
+            }
+
             const filteredForExport = applyFilters(result.data);
+
             if (!filteredForExport.length) {
                 props.showAlert("No data to export", "warning");
                 return;
             }
+
             exportToExcel(filteredForExport);
         } catch (err) {
             console.error(err);
-            props.showAlert("Failed to export Excel", "danger");
+            props.showAlert("Something went wrong", "danger");
         }
     };
 
@@ -260,7 +362,7 @@ export default function PatientList(props) {
             if (remaining <= 0) paidCount++;
             else if (collected > 0) partialCount++;
             else unpaidCount++;
-            const key = a.payment_type || "Other";
+            const key = getPaymentLabel(a) || "Unknown";
             paymentSummary[key] = (paymentSummary[key] || 0) + collected;
         });
 
@@ -270,7 +372,7 @@ export default function PatientList(props) {
         const sheet = workbook.addWorksheet("Visit Records");
 
         // ── Header info ──
-        const titleRow = sheet.addRow(["INVOHEALTH — CLINIC RECORDS"]);
+        const titleRow = sheet.addRow(["INVOHEALTH — MEDICAL CENTER RECORDS"]);
         titleRow.font = { bold: true, size: 13 };
         sheet.addRow([`Doctor:`, doctor || ""]).font = { bold: true };
         sheet.addRow(["Period:", `${fromDate} → ${toDate}`]);
@@ -280,7 +382,13 @@ export default function PatientList(props) {
         // ── Financial summary ──
         sheet.addRow(["FINANCIAL SUMMARY"]).font = { bold: true, size: 11 };
         addRowWithFormat(sheet, "Total Billed", totalRevenue, true, true);
-        addRowWithFormat(sheet, "Total Collected", totalCollected, true, true);
+        addRowWithFormat(
+            sheet,
+            "Total Collected",
+            totalCollected - totalDiscount,
+            true,
+            true,
+        );
         addRowWithFormat(sheet, "Total Pending", totalPending, true, true);
         addRowWithFormat(
             sheet,
@@ -312,7 +420,7 @@ export default function PatientList(props) {
                         ? ((amount / totalCollected) * 100).toFixed(1)
                         : "0.0";
                 const row = sheet.addRow([type, amount, `${pct}%`]);
-                row.getCell(2).numFmt = "₹#,##0";
+                row.getCell(2).numFmt = `${currencySymbol}#,##0`;
             });
         sheet.addRow([]);
 
@@ -341,16 +449,16 @@ export default function PatientList(props) {
                         "",
                         "",
                         "",
-                        "",
+                        // "",
                         "DAY TOTAL →",
                         dayBilledTotal,
                         dayCollectedTotal,
                         dayBilledTotal - dayCollectedTotal,
                     ]);
                     totalRow.font = { bold: true };
-                    totalRow.getCell(7).numFmt = "₹#,##0";
-                    totalRow.getCell(8).numFmt = "₹#,##0";
-                    totalRow.getCell(9).numFmt = "₹#,##0";
+                    totalRow.getCell(7).numFmt = `${currencySymbol}#,##0`;
+                    totalRow.getCell(8).numFmt = `${currencySymbol}#,##0`;
+                    totalRow.getCell(9).numFmt = `${currencySymbol}#,##0`;
                     sheet.addRow([]);
                 }
 
@@ -403,7 +511,7 @@ export default function PatientList(props) {
                 (a.services || [])
                     .map((s) => (typeof s === "object" ? s.name : s))
                     .join(", "),
-                a.payment_type || "",
+                getPaymentLabel(a),
                 billed,
                 collected,
                 remaining > 0 ? remaining : 0,
@@ -412,10 +520,10 @@ export default function PatientList(props) {
                 a.invoiceNumber || "",
             ]);
 
-            row.getCell(7).numFmt = "₹#,##0";
-            row.getCell(8).numFmt = "₹#,##0";
-            row.getCell(9).numFmt = "₹#,##0";
-            if (discount > 0) row.getCell(10).numFmt = "₹#,##0";
+            row.getCell(7).numFmt = `${currencySymbol}#,##0`;
+            row.getCell(8).numFmt = `${currencySymbol}#,##0`;
+            row.getCell(9).numFmt = `${currencySymbol}#,##0`;
+            if (discount > 0) row.getCell(10).numFmt = `${currencySymbol}#,##0`;
 
             // Color status cell
             const statusColors = {
@@ -441,9 +549,9 @@ export default function PatientList(props) {
                     dayBilledTotal - dayCollectedTotal,
                 ]);
                 lastTotalRow.font = { bold: true };
-                lastTotalRow.getCell(7).numFmt = "₹#,##0";
-                lastTotalRow.getCell(8).numFmt = "₹#,##0";
-                lastTotalRow.getCell(9).numFmt = "₹#,##0";
+                lastTotalRow.getCell(7).numFmt = `${currencySymbol}#,##0`;
+                lastTotalRow.getCell(8).numFmt = `${currencySymbol}#,##0`;
+                lastTotalRow.getCell(9).numFmt = `${currencySymbol}#,##0`;
             }
         });
 
@@ -488,13 +596,23 @@ export default function PatientList(props) {
 
     const IncreaseLimit = () => setPage((prev) => prev + 1);
 
-    const paymentColor = {
+    const categoryColor = {
         Cash: "pl-tag pl-cash",
-        SBI: "pl-tag pl-sbi",
+        Bank: "pl-tag pl-bank",
         Card: "pl-tag pl-card",
-        ICICI: "pl-tag pl-bank",
-        HDFC: "pl-tag pl-bank",
-        Other: "pl-tag pl-other",
+        UPI: "pl-tag pl-upi",
+        Wallet: "pl-tag pl-wallet",
+        Online: "pl-tag pl-online",
+        Default: "pl-tag pl-other",
+    };
+
+    const subCategoryColor = {
+        SBI: "pl-tag pl-sbi",
+        ICICI: "pl-tag pl-icici",
+        HDFC: "pl-tag pl-hdfc",
+        GPay: "pl-tag pl-gpay",
+        PhonePe: "pl-tag pl-phonepe",
+        Paytm: "pl-tag pl-paytm",
     };
 
     return (
@@ -550,6 +668,8 @@ export default function PatientList(props) {
                     setEndDate={setEndDate}
                     selectedFY={selectedFY}
                     setSelectedFY={setSelectedFY}
+                    paymentOptions={paymentOptions}
+                    currency={props.currency}
                 />
 
                 <AppointmentList
@@ -560,7 +680,11 @@ export default function PatientList(props) {
                     total={total}
                     IncreaseLimit={IncreaseLimit}
                     loading={loading}
-                    paymentColor={paymentColor}
+                    categoryColor={categoryColor}
+                    subCategoryColor={subCategoryColor}
+                    currency={props.currency}
+                    paymentOptions={paymentOptions}
+                    getPaymentLabel={getPaymentLabel}
                 />
             </div>
         </>

@@ -5,16 +5,24 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const { encrypt } = require("../../../utils/crypto"); //  add this
 var fetchuser = require("../../../middleware/fetchuser");
+const requireDoctor = require("../../../middleware/requireDoctor");
+const requireSubscription = require("../../../middleware/requireSubscription");
 
 const saltRounds = 10;
 
 router.put(
     "/update_patient/:id",
-    fetchuser, //  add auth
+    fetchuser,
+    requireDoctor,
+    requireSubscription,
     [
         body("name", "Enter Name").optional().notEmpty(),
         body("service").optional(),
         body("number").optional(),
+        body("email")
+            .optional({ checkFalsy: true })
+            .isEmail()
+            .withMessage("Invalid email"),
         body("amount").optional(),
         body("age")
             .optional({ checkFalsy: true })
@@ -33,7 +41,8 @@ router.put(
             }
 
             const doctorId = req.user.doctorId;
-            const { name, service, number, amount, age, gender } = req.body;
+            const { name, service, number, email, amount, age, gender } =
+                req.body;
 
             //  fetch existing patient (for security + fallback name)
             const existingPatient = await Patient.findById(req.params.id);
@@ -49,11 +58,16 @@ router.put(
             const updateFields = {};
 
             const finalName = name ? name.trim() : existingPatient.name;
+            const cleanEmail = email?.trim().toLowerCase() || undefined;
+
+            const escapeRegex = (str) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
             if (name) updateFields.name = finalName;
             if (service) updateFields.service = service;
-            if (amount) updateFields.amount = amount;
-            if (age) updateFields.age = age;
+            if (email !== undefined) updateFields.email = cleanEmail;
+            if (amount !== undefined) updateFields.amount = amount;
+            if (age !== undefined) updateFields.age = age;
             if (gender) updateFields.gender = gender;
 
             if (number) {

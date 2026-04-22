@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Appointment = require("../../../models/Appointment");
 const fetchuser = require("../../../middleware/fetchuser");
-const { decrypt } = require("../../../utils/crypto");
 
 router.get("/fetchall_appointments", fetchuser, async (req, res) => {
     try {
@@ -18,155 +18,266 @@ router.get("/fetchall_appointments", fetchuser, async (req, res) => {
             endDate,
         } = req.query;
 
-        const parsedLimit = parseInt(limit) || 20;
+        const VALID_STATUS = ["Unpaid", "Paid", "Partial"];
+        const VALID_GENDER = ["male", "female"];
+        const escapeRegex = (s = "") =>
+            s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        const parsedLimit = Math.min(parseInt(limit) || 20, 100);
         const parsedSkip = parseInt(skip) || 0;
+
+        // FIX: safeSearch was used in the pipeline below but never defined.
+        // escapeRegex was also declared but never called on the search param.
+        const safeSearch = search?.trim() ? escapeRegex(search.trim()) : "";
 
         const doctorId =
             req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
-        const appointments = await Appointment.find({
-            doctor: doctorId,
-        }).populate("patient");
+        const matchStage = {
+            doctor: new mongoose.Types.ObjectId(doctorId),
+        };
 
-        let allVisits = [];
+        const visitMatch = {};
 
-        // ================= PREPARE DATA =================
-        appointments.forEach((appt) => {
-            if (!appt.patient) return;
+        // DATE FILTER
+        const isValidDate = (d) => !isNaN(new Date(d).getTime());
 
-            //  decrypt once per patient
-            let fullNumber = "";
+        const genderLower = gender?.toLowerCase();
 
-            if (appt.patient.numberEncrypted) {
-                try {
-                    fullNumber = decrypt(appt.patient.numberEncrypted)
-                        .toString()
-                        .replace(/\D/g, "");
-                } catch (err) {
-                    console.log("Decrypt error:", err.message);
-                    fullNumber = "";
+        if (startDate || endDate) {
+            visitMatch["visits.date"] = {};
+
+            if (startDate) {
+                if (!isValidDate(startDate)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Invalid startDate",
+                    });
                 }
-            } else if (appt.patient.number) {
-                fullNumber = appt.patient.number.toString().replace(/\D/g, "");
+                visitMatch["visits.date"].$gte = new Date(startDate);
             }
 
-            appt.visits.forEach((visit) => {
-                const amount = Number(visit.amount) || 0;
-                const collected =
-                    visit.collected !== undefined
-                        ? Number(visit.collected)
-                        : amount;
+            if (endDate) {
+                if (!isValidDate(endDate)) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Invalid endDate",
+                    });
+                }
 
-                const remaining =
-                    visit.remaining !== undefined
-                        ? Number(visit.remaining)
-                        : Math.max(amount - collected, 0);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                visitMatch["visits.date"].$lte = end;
+            }
+        }
 
-                const visitStatus =
-                    visit.status ||
-                    (remaining === 0
-                        ? "Paid"
-                        : collected > 0
-                          ? "Partial"
-                          : "Unpaid");
+        // PAYMENT FILTER
+        if (payments) {
+            const ids = payments.split(",");
 
-                allVisits.push({
-                    patientId: appt.patient._id,
-                    name: appt.patient.name || "",
-                    number: fullNumber, //  decrypted number
-                    numberLast4: appt.patient.numberLast4 || "",
-                    gender: appt.patient.gender || "",
-                    date: visit.date,
-                    time: visit.time,
-                    payment_type: visit.payment_type,
-                    amount,
-                    collected,
-                    remaining,
-                    status: visitStatus,
-                    services: visit.service || [],
-                    invoiceNumber: visit.invoiceNumber || "",
-                });
-            });
-        });
-
-        // ================= FILTERS =================
-        const cleanSearch = search.replace(/\D/g, "").trim();
-
-        allVisits = allVisits.filter((v) => {
-            const searchMatch =
-                !search ||
-                v.name.toLowerCase().includes(search.toLowerCase()) ||
-                (cleanSearch && v.number.includes(cleanSearch)) ||
-                (cleanSearch && v.numberLast4.includes(cleanSearch));
-
-            const genderMatch = !gender || v.gender === gender;
-
-            const paymentMatch =
-                !payments || payments.split(",").includes(v.payment_type);
-
-            const statusMatch = !status || status.split(",").includes(v.status);
-
-            const serviceMatch =
-                !services ||
-                (v.services || []).some((s) =>
-                    services
-                        .split(",")
-                        .includes(typeof s === "object" ? s.name : s),
-                );
-
-            const dateObj = new Date(v.date);
-
-            const startMatch = !startDate || dateObj >= new Date(startDate);
-
-            const end = endDate ? new Date(endDate) : null;
-            if (end) end.setHours(23, 59, 59, 999);
-
-            const endMatch = !end || dateObj <= end;
-
-            return (
-                searchMatch &&
-                genderMatch &&
-                paymentMatch &&
-                statusMatch &&
-                serviceMatch &&
-                startMatch &&
-                endMatch
+            const validIds = ids.filter((id) =>
+                mongoose.Types.ObjectId.isValid(id),
             );
-        });
 
-        // ================= SORT =================
-        allVisits.sort((a, b) => {
-            const d1 = new Date(a.date);
-            const d2 = new Date(b.date);
-
-            if (a.time) {
-                const [h, m] = a.time.split(":").map(Number);
-                d1.setHours(h, m, 0, 0);
+            if (!validIds.length) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid payment IDs",
+                });
             }
 
-            if (b.time) {
-                const [h, m] = b.time.split(":").map(Number);
-                d2.setHours(h, m, 0, 0);
+            visitMatch["visits.paymentMethodId"] = {
+                $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
+            };
+        }
+
+        // STATUS FILTER
+        if (status) {
+            const statusArray = status.split(",");
+
+            const invalid = statusArray.filter(
+                (s) => !VALID_STATUS.includes(s),
+            );
+
+            if (invalid.length) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid status filter",
+                });
             }
 
-            return d2 - d1;
-        });
+            visitMatch["visits.status"] = { $in: statusArray };
+        }
 
-        const total = allVisits.length;
+        // SERVICE FILTER
+        if (services) {
+            const serviceList = services.split(",");
 
-        const paginatedVisits = allVisits.slice(
-            parsedSkip,
-            parsedSkip + parsedLimit,
-        );
+            visitMatch["visits.service"] = {
+                $elemMatch: {
+                    name: { $in: serviceList },
+                },
+            };
+        }
 
-        res.json({
+        if (gender) {
+            if (!VALID_GENDER.includes(genderLower)) {
+                return res.status(400).json({ error: "Invalid gender filter" });
+            }
+
+            // visitMatch["patient.gender"] = genderLower;
+
+            // pipeline.push({
+            //     $match: { "patient.gender": gender },
+            // });
+        }
+
+        const pipeline = [
+            { $match: matchStage },
+
+            // FETCH DOCTOR ONCE
+            {
+                $lookup: {
+                    from: "docs",
+                    localField: "doctor",
+                    foreignField: "_id",
+                    as: "doc",
+                },
+            },
+            { $unwind: "$doc" },
+
+            // FETCH PATIENT
+            {
+                $lookup: {
+                    from: "patients",
+                    localField: "patient",
+                    foreignField: "_id",
+                    as: "patient",
+                },
+            },
+            { $unwind: "$patient" },
+
+            // NOW UNWIND VISITS
+            { $unwind: "$visits" },
+
+            ...(Object.keys(visitMatch).length ? [{ $match: visitMatch }] : []),
+
+            ...(safeSearch
+                ? [
+                      {
+                          $match: {
+                              "patient.name": {
+                                  $regex: safeSearch,
+                                  $options: "i",
+                              },
+                          },
+                      },
+                  ]
+                : []),
+
+            ...(gender
+                ? [
+                      {
+                          $match: {
+                              "patient.gender": {
+                                  $regex: `^${gender}$`,
+                                  $options: "i",
+                              },
+                          },
+                      },
+                  ]
+                : []),
+
+            // USE ALREADY FETCHED DOC
+            {
+                $addFields: {
+                    paymentMethod: {
+                        $arrayElemAt: [
+                            {
+                                $filter: {
+                                    input: "$doc.paymentMethods",
+                                    as: "pm",
+                                    cond: {
+                                        $eq: [
+                                            "$$pm._id",
+                                            "$visits.paymentMethodId",
+                                        ],
+                                    },
+                                },
+                            },
+                            0,
+                        ],
+                    },
+                },
+            },
+
+            {
+                $lookup: {
+                    from: "paymentcategories",
+                    localField: "paymentMethod.categoryId",
+                    foreignField: "_id",
+                    as: "category",
+                },
+            },
+            {
+                $lookup: {
+                    from: "paymentsubcategories",
+                    localField: "paymentMethod.subCategoryId",
+                    foreignField: "_id",
+                    as: "subCategory",
+                },
+            },
+
+            {
+                $addFields: {
+                    categoryName: { $arrayElemAt: ["$category.name", 0] },
+                    subCategoryName: { $arrayElemAt: ["$subCategory.name", 0] },
+                },
+            },
+
+            {
+                $facet: {
+                    data: [
+                        { $sort: { "visits.date": -1, "visits.time": -1 } },
+                        { $skip: parsedSkip },
+                        { $limit: parsedLimit },
+                        {
+                            $project: {
+                                patientId: "$patient._id",
+                                name: "$patient.name",
+                                gender: "$patient.gender",
+                                date: "$visits.date",
+                                time: "$visits.time",
+                                categoryName: 1,
+                                subCategoryName: 1,
+                                paymentMethodId: "$visits.paymentMethodId",
+                                amount: "$visits.amount",
+                                collected: "$visits.collected",
+                                remaining: "$visits.remaining",
+                                status: "$visits.status",
+                                services: "$visits.service",
+                                invoiceNumber: "$visits.invoiceNumber",
+                            },
+                        },
+                    ],
+                    totalCount: [{ $count: "count" }],
+                },
+            },
+        ];
+
+        const result = await Appointment.aggregate(pipeline);
+
+        const data = result?.[0]?.data || [];
+        const total = result?.[0]?.totalCount?.[0]?.count || 0;
+
+        return res.json({
             success: true,
+            data,
             total,
-            data: paginatedVisits,
         });
     } catch (err) {
         console.error("fetchallappointments error:", err);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: "Server error",
         });

@@ -2,45 +2,78 @@ const express = require("express");
 const router = express.Router();
 const Staff = require("../../models/Staff");
 const bcrypt = require("bcryptjs");
-var jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 router.post("/set_password", async (req, res) => {
-    const { staffId, password } = req.body;
+    try {
+        const { setupToken, password } = req.body;
 
-    if (!password || password.length < 6) {
-        return res.status(400).json({
+        // ── Basic validation ──
+        if (!setupToken || !password) {
+            return res.status(400).json({
+                success: false,
+                error: "Missing data",
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                error: "Password must be at least 8 characters",
+            });
+        }
+
+        // ── Verify token ──
+        let decoded;
+        try {
+            decoded = jwt.verify(setupToken, JWT_SECRET);
+        } catch (err) {
+            return res.status(403).json({
+                success: false,
+                error: "Invalid or expired token",
+            });
+        }
+
+        if (decoded.purpose !== "set_password") {
+            return res.status(403).json({
+                success: false,
+                error: "Invalid token purpose",
+            });
+        }
+
+        const staff = await Staff.findById(decoded.staffId);
+
+        // ── Check valid user + token reuse ──
+        if (!staff || staff.password) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid or already used link",
+            });
+        }
+
+        // ── Hash password ──
+        const salt = await bcrypt.genSalt(10);
+        staff.password = await bcrypt.hash(password, salt);
+
+        // OPTIONAL: mark token used (recommended if field exists)
+        staff.setupTokenUsed = true;
+
+        await staff.save();
+
+        // ── NO AUTO LOGIN ──
+        return res.json({
+            success: true,
+            message: "Password set successfully. Please login.",
+        });
+    } catch (err) {
+        console.error("SET PASSWORD ERROR:", err);
+        res.status(500).json({
             success: false,
-            error: "Password must be at least 6 characters",
+            error: "Server error",
         });
     }
-
-    const staff = await Staff.findById(staffId);
-    if (!staff || staff.password) {
-        return res.status(400).json({
-            success: false,
-            error: "Invalid request",
-        });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    staff.password = await bcrypt.hash(password, salt);
-    await staff.save();
-
-    const token = jwt.sign(
-        {
-            user: {
-                id: staff._id,
-                role: "staff",
-                staffRole: staff.role,
-                doctorId: staff.doctorId,
-            },
-        },
-        JWT_SECRET,
-        { expiresIn: "1d" },
-    );
-
-    res.json({ success: true, token, role: "staff", name: staff.name });
 });
 
 module.exports = router;

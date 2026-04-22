@@ -2,25 +2,48 @@ const express = require("express");
 const router = express.Router();
 const Appointment = require("../../../models/Appointment");
 var fetchuser = require("../../../middleware/fetchuser");
+const mongoose = require("mongoose");
+const requireSubscription = require("../../../middleware/requireSubscription");
 
 router.delete(
     "/delete_appointment/:appointmentId/:visitId",
     fetchuser,
+    requireSubscription,
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
 
-            const appointment = await Appointment.findById(appointmentId);
-            if (!appointment)
+            if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
                 return res
-                    .status(404)
-                    .json({ message: "Appointment not found" });
+                    .status(400)
+                    .json({ message: "Invalid appointment ID" });
+            }
+            if (!mongoose.Types.ObjectId.isValid(visitId)) {
+                return res.status(400).json({ message: "Invalid visit ID" });
+            }
 
-            appointment.visits = appointment.visits.filter(
-                (v) => v._id.toString() !== visitId,
-            );
+            const appointment = await Appointment.findOne({
+                _id: appointmentId,
+                doctor: req.user.doctorId,
+            });
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Appointment not found",
+                });
+            }
+
+            //NOW safe to check ownership
+            if (appointment.doctor.toString() !== req.user.doctorId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized",
+                });
+            }
 
             appointment.visits = appointment.visits.filter((v) => {
+                if (v._id.toString() === visitId) return false;
+
                 const isEmptyVisit =
                     (!v.service || v.service.length === 0) &&
                     (!v.amount || v.amount === 0);

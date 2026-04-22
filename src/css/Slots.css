@@ -1,0 +1,126 @@
+@import "./App.css";
+
+/* ________________________________
+        Slots 
+________________________________ */
+
+.sp-wrap {
+    margin-top: 14px;
+}
+.sp-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.sp-time-label {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.sp-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.sp-now-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    color: #fb923c;
+}
+.sp-next-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.18);
+    color: #4ade80;
+}
+.sp-section {
+    margin-bottom: 4px;
+}
+.sp-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 8px;
+    transition: background 0.15s;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+.sp-section-header:hover {
+    background: rgba(77, 124, 246, 0.06);
+    color: #6b7fa8;
+}
+.sp-section-header.open {
+    border-color: rgba(77, 124, 246, 0.2);
+    color: #60a5fa;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.sp-slot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+    background: #080c18;
+    border: 1px solid rgba(77, 124, 246, 0.15);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    margin-bottom: 4px;
+}
+.sp-slot {
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid #1a2540;
+    background: #0d1117;
+    color: var(--text-muted);
+}
+.sp-slot:hover:not(:disabled) {
+    border-color: rgba(77, 124, 246, 0.3);
+    color: #60a5fa;
+}
+.sp-slot.selected {
+    background: rgba(77, 124, 246, 0.12);
+    border-color: rgba(77, 124, 246, 0.4);
+    color: #60a5fa;
+}
+.sp-slot.booked {
+    background: rgba(248, 113, 113, 0.05);
+    border-color: rgba(248, 113, 113, 0.15);
+    color: var(--danger);
+    cursor: not-allowed;
+}
+.sp-slot.current {
+    border-color: rgba(251, 146, 60, 0.3);
+    color: #fb923c;
+}
+.sp-slot.next {
+    border-color: rgba(74, 222, 128, 0.3);
+    color: #4ade80;
+}

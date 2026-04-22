@@ -2,88 +2,92 @@ const express = require("express");
 const router = express.Router();
 const Staff = require("../../../models/Staff");
 const Doctor = require("../../../models/Doc");
-const Pricing = require("../../../models/Pricing");
-var fetchuser = require("../../../middleware/fetchuser");
+const fetchuser = require("../../../middleware/fetchuser");
+const requireDoctor = require("../../../middleware/requireDoctor");
+const { getPricing } = require("../../../utils/pricingcache");
+const { getSubscriptionStatus } = require("../../../utils/subscription_check");
+const requireSubscription = require("../../../middleware/requireSubscription");
 
-router.post("/add_staff", fetchuser, async (req, res) => {
-    try {
-        const doctorId = req.user.doctorId;
+router.post(
+    "/add_staff",
+    fetchuser,
+    requireDoctor,
+    requireSubscription,
+    async (req, res) => {
+        try {
+            const doctorId = req.user.doctorId;
 
-        if (!doctorId) {
-            return res.status(401).json({
-                success: false,
-                error: "Unauthorized",
-            });
-        }
+            if (!doctorId) {
+                return res.status(401).json({
+                    success: false,
+                    error: "Unauthorized",
+                });
+            }
 
-        let { name, phone, role } = req.body;
+            let { name, phone, role } = req.body;
 
-        phone = phone.replace(/\D/g, "").slice(-10);
+            if (!name || !phone || !role) {
+                return res.status(400).json({
+                    success: false,
+                    error: "All fields are required",
+                });
+            }
 
-        if (!name || !phone || !role) {
-            return res.status(400).json({
-                success: false,
-                error: "All fields are required",
-            });
-        }
+            if (!["receptionist", "assistant", "nurse"].includes(role)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid role",
+                });
+            }
 
-        if (!["receptionist", "assistant", "nurse"].includes(role)) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid role",
-            });
-        }
+            const doctor =
+                await Doctor.findById(doctorId).populate("address.countryId");
 
-        // =================  GET DOCTOR =================
-        const doctor = await Doctor.findById(doctorId);
+            if (!doctor) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Doctor not found",
+                });
+            }
 
-        if (!doctor) {
-            return res.status(404).json({
-                success: false,
-                error: "Doctor not found",
-            });
-        }
+            // Subscription gate — same logic as requireSubscription middleware
+            const subStatus = getSubscriptionStatus(doctor.subscription);
+            const plan = doctor.subscription?.plan?.toLowerCase();
 
-        const plan = doctor.subscription?.plan?.toLowerCase() || "free";
+            let staffLimit = 0;
+            const pricing = await getPricing();
 
-        // =================  GET STAFF LIMIT =================
-        let staffLimit = 1; // default FREE plan
-
-        if (plan !== "free") {
-            const pricing = await Pricing.findOne();
-
-            if (!pricing || !pricing[plan]) {
+            if (!pricing) {
                 return res.status(500).json({
                     success: false,
                     error: "Pricing not configured",
                 });
             }
 
-            staffLimit = pricing[plan].staffLimit;
-        }
+            if (subStatus === "active" && plan && pricing[plan]) {
+                staffLimit = pricing[plan].staffLimit;
+            }
 
-        // =================  COUNT STAFF =================
-        const currentStaffCount = await Staff.countDocuments({
-            doctorId,
-            isActive: true,
-            isDeleted: false,
-        });
+            const cleanPhone = phone.replace(/\D/g, "").replace(/^0/, "");
+            const dialCode = doctor.address?.countryId?.dialCode || "+91";
+            const fullPhone = `${dialCode}${cleanPhone}`;
 
-        // ================= AUTO FIX STAFF OVERFLOW =================
-        if (staffLimit !== -1) {
+            // Get active staff count
             const activeStaff = await Staff.find({
                 doctorId,
                 isActive: true,
                 isDeleted: false,
-            }).sort({ createdAt: 1 });
+            })
+                .sort({ createdAt: 1 })
+                .select("_id");
 
-            if (activeStaff.length >= staffLimit) {
-                // keep only allowed number
-                const allowedStaff = activeStaff.slice(0, staffLimit);
-                const extraStaff = activeStaff.slice(staffLimit);
+            const currentStaffCount = activeStaff.length;
 
-                const extraIds = extraStaff.map((s) => s._id);
-
+            // Auto-deactivate overflow staff (e.g. after plan downgrade)
+            if (staffLimit !== -1 && currentStaffCount > staffLimit) {
+                const extraIds = activeStaff
+                    .slice(staffLimit)
+                    .map((s) => s._id);
                 if (extraIds.length > 0) {
                     await Staff.updateMany(
                         { _id: { $in: extraIds } },
@@ -91,75 +95,58 @@ router.post("/add_staff", fetchuser, async (req, res) => {
                     );
                 }
             }
-        }
-        // ================= LIMIT CHECK =================
-        if (staffLimit !== -1 && currentStaffCount >= staffLimit) {
-            return res.status(403).json({
-                success: false,
-                error: `Staff limit reached (${staffLimit}). Upgrade your plan.`,
+
+            // Enforce limit
+            if (staffLimit !== -1 && currentStaffCount >= staffLimit) {
+                return res.status(403).json({
+                    success: false,
+                    error: `Staff limit reached (${staffLimit}). Upgrade your plan.`,
+                });
+            }
+
+            // Duplicate phone check
+            const existingStaff = await Staff.findOne({
+                phone: fullPhone,
+                isDeleted: false,
             });
-        }
 
-        // ================= EXISTING STAFF =================
-        const existingStaff = await Staff.findOne({
-            phone,
-            isDeleted: false,
-        });
-
-        if (existingStaff) {
-            // SAME DOCTOR
-            if (existingStaff.doctorId.toString() === doctorId.toString()) {
-                if (!existingStaff.isActive) {
-                    existingStaff.isActive = true;
-                    existingStaff.name = name;
-                    existingStaff.role = role;
-                    await existingStaff.save();
-
-                    return res.json({
-                        success: true,
-                        message: "Staff reactivated",
+            if (existingStaff) {
+                if (
+                    existingStaff.doctorId &&
+                    existingStaff.doctorId.toString() !== doctorId.toString()
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "This phone number is already registered with another doctor.",
                     });
                 }
 
                 return res.status(400).json({
                     success: false,
-                    error: "Staff already exists",
+                    error: "Staff with this phone number already exists in your clinic.",
                 });
             }
 
-            existingStaff.doctorId = doctorId;
-            existingStaff.name = name;
-            existingStaff.role = role;
-            existingStaff.isActive = true;
-
-            await existingStaff.save();
+            // Create staff
+            const staff = await Staff.create({
+                doctorId,
+                name,
+                phone: fullPhone,
+                role,
+            });
 
             return res.json({
                 success: true,
-                message: "Staff transferred",
-                staff: existingStaff,
+                staff,
+            });
+        } catch (err) {
+            console.error("add_staff error:", err);
+            return res.status(500).json({
+                success: false,
+                error: "Server error",
             });
         }
-
-        // ================= CREATE STAFF =================
-        const staff = await Staff.create({
-            doctorId,
-            name,
-            phone,
-            role,
-        });
-
-        res.json({
-            success: true,
-            staff,
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({
-            success: false,
-            error: "Server error",
-        });
-    }
-});
+    },
+);
 
 module.exports = router;

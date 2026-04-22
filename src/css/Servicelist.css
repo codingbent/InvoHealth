@@ -1,0 +1,113 @@
+@import "./App.css";
+
+/* ____________________
+        SERVICE LIST
+____________________ */
+
+.sl-available {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.sl-avail-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: #080c18;
+    border: 1px solid #1a2540;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+}
+
+.sl-avail-chip:hover {
+    border-color: rgba(77, 124, 246, 0.35);
+    color: var(--text-secondary);
+    background: rgba(77, 124, 246, 0.06);
+}
+
+.sl-avail-chip:hover .sl-avail-plus {
+    color: #60a5fa;
+}
+
+.sl-avail-name {
+    color: var(--text-secondary);
+}
+
+.sl-avail-amount {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--text-primary);
+}
+
+.sl-avail-chip:hover .sl-avail-amount {
+    color: var(--text-secondary);
+}
+
+.sl-avail-plus {
+    color: #1e2d4a;
+    transition: color 0.15s;
+}
+
+/* ── Selected pills ── */
+.sl-selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.sl-selected-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 12px;
+    background: rgba(77, 124, 246, 0.1);
+    border: 1px solid rgba(77, 124, 246, 0.25);
+    border-radius: 20px;
+    font-size: 11px;
+    color: #93c5fd;
+    letter-spacing: 0.02em;
+}
+
+.sl-selected-name {
+    color: #93c5fd;
+}
+
+.sl-selected-amount {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: #4d7cf6;
+    opacity: 0.8;
+}
+
+.sl-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    border-radius: 50%;
+    color: #f87171;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.sl-remove-btn:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.4);
+}

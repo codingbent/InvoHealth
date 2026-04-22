@@ -1,8 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import ServiceList from "./ServiceList";
-import { authFetch } from "./authfetch";
 import {
-    IndianRupee,
     Plus,
     Search,
     User,
@@ -11,15 +9,21 @@ import {
     CheckCircle,
 } from "lucide-react";
 import SlotPicker from "./Slotpicker";
-import { generateSlots } from "../components/utils/Slotsutils";
 import { DayPicker } from "react-day-picker";
+import { fetchPaymentMethods } from "../api/payment.api";
+// eslint-disable-next-line
+import { uploadImageAPI } from "../api/upload.api";
+import { addAppointment } from "../api/appointment.api";
+import { useSlots } from "../hooks/useSlots";
+import { fetchAvailability } from "../api/availability.api";
+import { fetchServices } from "../api/service.api";
+import { searchPatients } from "../api/patientSearch.api";
+import SuccessOverlay from "./SuccessOverlay";
+import { getTodayLocal } from "./utils/dateutils";
+// import "../css/Fxsuccess.css";
+import "../css/Addappointment.css";
 
-export default function AddAppointment({ showAlert }) {
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
+export default function AddAppointment({ showAlert, currency, usage }) {
     const [searchText, setSearchText] = useState("");
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
@@ -27,48 +31,45 @@ export default function AddAppointment({ showAlert }) {
     const [allServices, setAllServices] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
+    // eslint-disable-next-line
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const getTodayIST = () => {
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const istTime = new Date(now.getTime() - offset * 60000);
-        return istTime.toISOString().slice(0, 10);
-    };
-    const [appointmentDate, setAppointmentDate] = useState(getTodayIST());
-    const [paymentType, setPaymentType] = useState("Cash");
+    const [appointmentDate, setAppointmentDate] = useState(getTodayLocal());
+    const [paymentOptions, setPaymentOptions] = useState([]);
+    const [selectedPaymentId, setSelectedPaymentId] = useState("");
     const [manualOverride, setManualOverride] = useState(false);
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const [availability, setAvailability] = useState([]);
-    const [timeSlots, setTimeSlots] = useState([]);
+    const [showSuccess, setShowSuccess] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
     const [image, setImage] = useState(null);
-    const [bookedSlots, setBookedSlots] = useState([]);
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
     const [showCalendar, setShowCalendar] = useState(false);
+    const isImageLimitReached = usage?.images?.isLimitReached;
 
+    const fileInputRef = useRef(null);
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
     const discountValue = Math.min(
         isPercent ? (total * discount) / 100 : discount,
         total,
     );
 
+    const { timeSlots, bookedSlots, groupedSlots } = useSlots(
+        availability,
+        appointmentDate,
+        true,
+    );
+
+    const selectedPayment = paymentOptions.find(
+        (p) => String(p.id) === String(selectedPaymentId),
+    );
+
     const isToday = useMemo(() => {
         const today = new Date().toISOString().slice(0, 10);
         return appointmentDate === today;
     }, [appointmentDate]);
-    const groupedSlots = useMemo(() => {
-        const groups = { Morning: [], Afternoon: [], Evening: [] };
-        timeSlots.forEach((slot) => {
-            const hour = parseInt(slot.split(":")[0]);
-            if (hour < 12) groups.Morning.push(slot);
-            else if (hour < 16) groups.Afternoon.push(slot);
-            else groups.Evening.push(slot);
-        });
-        return groups;
-    }, [timeSlots]);
 
     const currentSlot = useMemo(() => {
         if (!timeSlots.length) return null;
@@ -98,20 +99,31 @@ export default function AddAppointment({ showAlert }) {
     const status =
         remaining === 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 
+    const handleAddService = useCallback((s) => {
+        setServices((prev) =>
+            prev.some((x) => x._id === s._id) ? prev : [...prev, s],
+        );
+    }, []);
+
+    const handleRemoveService = useCallback((id) => {
+        setServices((prev) => prev.filter((s) => s._id !== id));
+
+        setServiceAmounts((prev) => {
+            const copy = { ...prev };
+            delete copy[id];
+            return copy;
+        });
+    }, []);
+
     useEffect(() => {
-        const fetchAvailability = async () => {
+        const load = async () => {
             try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/timing/get_availability`,
-                );
-                const data = await res.json();
-                if (data.success) setAvailability(data.availability || []);
-            } catch (err) {
-                console.error(err);
-            }
+                const data = await fetchAvailability();
+                setAvailability(data);
+            } catch {}
         };
-        fetchAvailability();
-    }, [API_BASE_URL]);
+        load();
+    }, []);
 
     const nextSlot = useMemo(() => {
         if (!currentSlot || !timeSlots.length) return null;
@@ -137,73 +149,41 @@ export default function AddAppointment({ showAlert }) {
     }, [currentSlot]);
 
     useEffect(() => {
-        if (!availability.length) return;
-        const fetchData = async () => {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${appointmentDate}`,
-            );
-            const data = await res.json();
-            const booked = data.slots || [];
-            setBookedSlots(booked);
-            const selectedDay = new Date(appointmentDate)
-                .toLocaleDateString("en-US", { weekday: "short" })
-                .slice(0, 3);
-            const dayData = availability.find((d) =>
-                d.day.toLowerCase().startsWith(selectedDay.toLowerCase()),
-            );
-            if (!dayData) {
-                setTimeSlots([]);
-                return;
+        const load = async () => {
+            try {
+                const data = await fetchServices();
+                setAllServices(data);
+            } catch {
+                showAlert("Failed to load services", "danger");
             }
-            let allSlots = [];
-            dayData.slots.forEach((slot) => {
-                const generated = generateSlots(
-                    slot.startTime,
-                    slot.endTime,
-                    slot.slotDuration,
-                );
-                allSlots = [...allSlots, ...generated];
-            });
-            setTimeSlots(allSlots);
         };
-        fetchData();
-    }, [appointmentDate, availability, API_BASE_URL]);
-
-    const formatTime = (time) => time;
+        load();
+    }, [showAlert]);
 
     useEffect(() => {
-        const fetchServices = async () => {
+        const load = async () => {
             try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/services/fetchall_services`,
-                );
-                const data = await res.json();
-                setAllServices(data.services || data || []);
-            } catch (err) {
-                console.error(err);
+                const data = await fetchPaymentMethods();
+                setPaymentOptions(data);
+            } catch {
+                showAlert("Failed to load payments", "danger");
             }
         };
-        fetchServices();
-    }, [API_BASE_URL]);
+        load();
+    }, [showAlert]);
 
     useEffect(() => {
         const delay = setTimeout(async () => {
-            if (!searchText.trim()) {
-                setPatients([]);
-                return;
-            }
+            if (!searchText.trim()) return setPatients([]);
+
             try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/patient/search_patient?q=${searchText}`,
-                );
-                const data = await res.json();
+                const data = await searchPatients(searchText);
                 setPatients(data);
-            } catch (err) {
-                console.error(err);
-            }
+            } catch {}
         }, 300);
+
         return () => clearTimeout(delay);
-    }, [searchText, API_BASE_URL]);
+    }, [searchText]);
 
     useEffect(() => {
         const t = services.reduce(
@@ -226,13 +206,14 @@ export default function AddAppointment({ showAlert }) {
     };
     const changeServiceAmount = (id, value) =>
         setServiceAmounts((prev) => ({ ...prev, [id]: Number(value) }));
+    // eslint-disable-next-line
     const resetForm = () => {
         setSelectedPatient(null);
         setServices([]);
         setServiceAmounts({});
         setDiscount(0);
         setIsPercent(false);
-        setPaymentType("Cash");
+        setSelectedPaymentId("");
         setAppointmentDate(new Date().toISOString().slice(0, 10));
     };
 
@@ -242,76 +223,64 @@ export default function AddAppointment({ showAlert }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (isSubmitting) return;
+
         if (!selectedPatient) {
             showAlert("Please select a patient", "warning");
             return;
         }
+
         if (services.length === 0) {
             showAlert("Select at least one service", "warning");
             return;
         }
-        setIsSubmitting(true);
 
-        let imageUrl = "";
-
-        if (image) {
-            const formData = new FormData();
-            formData.append("image", image);
-
-            const uploadRes = await fetch(
-                `${API_BASE_URL}/api/doctor/image/upload`,
-                {
-                    method: "POST",
-                    body: formData,
-                },
-            );
-
-            const uploadData = await uploadRes.json();
-
-            if (!uploadRes.ok) {
-                showAlert("Image upload failed", "danger");
-                setIsSubmitting(false);
-                return;
-            }
-
-            imageUrl = uploadData.url;
+        if (!selectedPayment) {
+            showAlert("Select Payment Method", "warning");
+            return;
         }
 
+        setIsSubmitting(true);
+
         try {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/add_appointment/${selectedPatient._id}`,
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        service: services.map((s) => ({
-                            id: s._id,
-                            name: s.name,
-                            amount: serviceAmounts[s._id] ?? s.amount,
-                        })),
-                        amount: finalAmount,
-                        collected,
-                        remaining,
-                        status,
-                        payment_type: paymentType,
-                        discount,
-                        isPercent,
-                        date: appointmentDate,
-                        time: selectedSlot,
-                        image: imageUrl,
-                    }),
-                },
+            const formData = new FormData();
+
+            formData.append("patientId", selectedPatient._id);
+            formData.append("amount", finalAmount);
+            formData.append("collected", collected);
+            formData.append("remaining", remaining);
+            formData.append("status", status);
+            formData.append("date", appointmentDate);
+            formData.append("time", selectedSlot);
+            formData.append("discount", discount);
+            formData.append("isPercent", isPercent);
+
+            formData.append(
+                "services",
+                JSON.stringify(
+                    services.map((s) => ({
+                        id: s._id,
+                        name: s.name,
+                        amount: serviceAmounts[s._id] ?? s.amount,
+                    })),
+                ),
             );
-            const data = await res.json();
-            if (!res.ok) {
-                showAlert(data.error || "Failed to add appointment", "danger");
-                return;
+
+            if (selectedPayment) {
+                formData.append("paymentMethodId", selectedPayment.id);
             }
-            showAlert("Appointment added successfully", "success");
+
+            if (image) {
+                formData.append("image", image);
+            }
+
+            await addAppointment(formData);
+            setShowSuccess(true);
             resetForm();
-            setTimeout(() => setIsSubmitting(false), 1500);
         } catch (err) {
             showAlert("Server error", "danger");
+        } finally {
             setIsSubmitting(false);
         }
     };
@@ -340,8 +309,8 @@ export default function AddAppointment({ showAlert }) {
             return;
         }
 
-        if (file.size > 1 * 1024 * 1024) {
-            showAlert("Max 1MB allowed", "warning");
+        if (file.size > 2 * 1024 * 1024) {
+            showAlert("Max 2MB allowed", "warning");
             return;
         }
 
@@ -351,6 +320,17 @@ export default function AddAppointment({ showAlert }) {
     return (
         <>
             <div className="aa-root">
+                <SuccessOverlay
+                    visible={showSuccess}
+                    onDone={() => {
+                        setShowSuccess(false);
+                        showAlert("Appointment added successfully", "success");
+                    }}
+                    title="Appointment Saved"
+                    sub="Record created"
+                    variant="green"
+                    duration={1800}
+                />
                 <div className="aa-header">
                     <div className="aa-header-icon">
                         <Plus size={16} />
@@ -368,12 +348,15 @@ export default function AddAppointment({ showAlert }) {
                     </div>
 
                     <div className="aa-mb">
-                        <label className="aa-label">Search Patient</label>
+                        <label htmlFor="nameorphone" className="aa-label">
+                            Search Patient
+                        </label>
                         <div className="aa-search-wrap">
                             <span className="aa-search-icon">
                                 <Search size={14} />
                             </span>
                             <input
+                                id="nameorphone"
                                 className="aa-input aa-search-input"
                                 placeholder="Name or phone number"
                                 value={searchText}
@@ -499,7 +482,6 @@ export default function AddAppointment({ showAlert }) {
                                 bookedSlots={bookedSlots}
                                 openSection={openSection}
                                 setOpenSection={setOpenSection}
-                                formatTime={formatTime}
                                 currentSlot={currentSlot}
                                 nextSlot={nextSlot}
                             />
@@ -519,23 +501,9 @@ export default function AddAppointment({ showAlert }) {
                                 <ServiceList
                                     services={allServices}
                                     selectedServices={services}
-                                    onAdd={(s) =>
-                                        setServices((prev) =>
-                                            prev.some((x) => x._id === s._id)
-                                                ? prev
-                                                : [...prev, s],
-                                        )
-                                    }
-                                    onRemove={(id) => {
-                                        setServices((prev) =>
-                                            prev.filter((s) => s._id !== id),
-                                        );
-                                        setServiceAmounts((prev) => {
-                                            const c = { ...prev };
-                                            delete c[id];
-                                            return c;
-                                        });
-                                    }}
+                                    currency={currency}
+                                    onAdd={handleAddService}
+                                    onRemove={handleRemoveService}
                                 />
                             </div>
 
@@ -609,7 +577,7 @@ export default function AddAppointment({ showAlert }) {
                                         <div className="aa-summary-row">
                                             <span>Total</span>
                                             <span className="aa-summary-val">
-                                                <IndianRupee size={12} />
+                                                {currency?.symbol}
                                                 {fmt(total)}
                                             </span>
                                         </div>
@@ -620,7 +588,7 @@ export default function AddAppointment({ showAlert }) {
                                                     className="aa-summary-val"
                                                     style={{ color: "#fb923c" }}
                                                 >
-                                                    − <IndianRupee size={12} />
+                                                    - {currency?.symbol}
                                                     {fmt(discountValue)}
                                                 </span>
                                             </div>
@@ -628,7 +596,7 @@ export default function AddAppointment({ showAlert }) {
                                         <div className="aa-summary-row final">
                                             <span>Final Amount</span>
                                             <span className="aa-summary-val">
-                                                <IndianRupee size={13} />
+                                                {currency?.symbol}
                                                 {fmt(finalAmount)}
                                             </span>
                                         </div>
@@ -653,11 +621,7 @@ export default function AddAppointment({ showAlert }) {
                                     </div>
                                     <div className="aa-status-row">
                                         <span>
-                                            Remaining{" "}
-                                            <IndianRupee
-                                                size={12}
-                                                style={{ display: "inline" }}
-                                            />
+                                            Remaining {currency?.symbol}
                                             {fmt(remaining)}
                                         </span>
                                         <span
@@ -682,7 +646,7 @@ export default function AddAppointment({ showAlert }) {
                                 <div className="aa-section-line" />
                             </div>
                             <div className="aa-mb">
-                                <label className="aa-label">
+                                <label htmlFor="payment" className="aa-label">
                                     <CreditCard
                                         size={11}
                                         style={{
@@ -697,17 +661,20 @@ export default function AddAppointment({ showAlert }) {
                                 </label>
                                 <select
                                     className="aa-select"
-                                    value={paymentType}
+                                    value={selectedPaymentId}
                                     onChange={(e) =>
-                                        setPaymentType(e.target.value)
+                                        setSelectedPaymentId(e.target.value)
                                     }
                                 >
-                                    <option>Cash</option>
-                                    <option>Card</option>
-                                    <option>SBI</option>
-                                    <option>ICICI</option>
-                                    <option>HDFC</option>
-                                    <option>Other</option>
+                                    <option value="">Select Payment</option>
+
+                                    {paymentOptions.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.subCategoryName
+                                                ? p.subCategoryName
+                                                : p.categoryName}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -722,26 +689,64 @@ export default function AddAppointment({ showAlert }) {
                                             fontSize: 9,
                                         }}
                                     >
-                                        — max 1 MB
+                                        — max 2 MB
                                     </span>
                                 </label>
+                                <span
+                                    style={{
+                                        fontSize: 10,
+                                        color: "#6b7fa8",
+                                        marginLeft: 8,
+                                    }}
+                                >
+                                    ({usage?.images?.used || 0}/
+                                    {usage?.images?.limit === -1
+                                        ? "∞"
+                                        : usage?.images?.limit}
+                                    )
+                                </span>
                                 <input
-                                    id="fileInput"
+                                    ref={fileInputRef}
                                     type="file"
                                     accept="image/*"
                                     style={{ display: "none" }}
-                                    onChange={handleImageChange}
+                                    disabled={isImageLimitReached}
+                                    onChange={(e) => {
+                                        if (isImageLimitReached) {
+                                            showAlert(
+                                                "Image limit reached 🚫",
+                                                "warning",
+                                            );
+                                            return;
+                                        }
+                                        handleImageChange(e);
+                                    }}
                                 />
 
                                 <div className="aa-upload-btns">
                                     <button
                                         type="button"
                                         className="aa-upload-btn"
-                                        onClick={() =>
-                                            document
-                                                .getElementById("fileInput")
-                                                .click()
-                                        }
+                                        disabled={isImageLimitReached}
+                                        style={{
+                                            opacity: isImageLimitReached
+                                                ? 0.5
+                                                : 1,
+                                            cursor: isImageLimitReached
+                                                ? "not-allowed"
+                                                : "pointer",
+                                        }}
+                                        onClick={() => {
+                                            if (isImageLimitReached) {
+                                                showAlert(
+                                                    `Image limit reached (${usage?.images?.used}/${usage?.images?.limit}). Upgrade plan 🚀`,
+                                                    "warning",
+                                                );
+                                                return;
+                                            }
+
+                                            fileInputRef.current?.click();
+                                        }}
                                     >
                                         <span className="aa-upload-btn-icon">
                                             ↑

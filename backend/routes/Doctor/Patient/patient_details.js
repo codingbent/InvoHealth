@@ -1,26 +1,34 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Patient = require("../../../models/Patient");
-var fetchuser = require("../../../middleware/fetchuser");
+const fetchuser = require("../../../middleware/fetchuser");
 
 router.get("/patient_details/:id", fetchuser, async (req, res) => {
     try {
-        const patient = await Patient.findById(req.params.id).lean();
+        const patientId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(patientId)) {
+            return res.status(400).json({
+                message: "Invalid patient ID",
+            });
+        }
+
+        const patient = await Patient.findById(patientId).lean();
+
         if (!patient) {
-            return res.status(404).json({ message: "Patient not found" });
+            return res.status(404).json({
+                message: "Patient not found",
+            });
         }
 
         if (patient.doctor.toString() !== req.user.doctorId) {
-            return res.status(403).json({ message: "Unauthorized" });
+            return res.status(403).json({
+                message: "Unauthorized",
+            });
         }
 
         let maskedNumber = "";
-
-        let plainNumber = null;
-
-        if (patient.number && !patient.numberEncrypted) {
-            plainNumber = patient.number;
-        }
 
         const needsNumberUpdate = !patient.numberEncrypted;
 
@@ -34,16 +42,16 @@ router.get("/patient_details/:id", fetchuser, async (req, res) => {
         delete patient.numberHash;
         delete patient.numberEncrypted;
 
-        res.json({
+        return res.json({
             ...patient,
             numberMasked: maskedNumber,
             needsNumberUpdate,
-            plainNumber,
         });
     } catch (err) {
-        res.status(500).json({
+        console.error("patient_details error:", err);
+
+        return res.status(500).json({
             message: "Error fetching patient",
-            error: err.message,
         });
     }
 });

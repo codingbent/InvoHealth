@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import "../css/Filterpanel.css";
+import { fetchPaymentMethods } from "../api/payment.api";
+
 export default function FilterPanel({
     open,
     setOpen,
@@ -20,6 +24,8 @@ export default function FilterPanel({
     setSelectedFY,
     isdashboard = false,
 }) {
+    const [paymentOptions, setPaymentOptions] = useState([]);
+
     const formatDate = (date) => {
         const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -54,6 +60,18 @@ export default function FilterPanel({
         return { start: formatDate(start), end: formatDate(end) };
     };
 
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await fetchPaymentMethods();
+                setPaymentOptions(data);
+            } catch {
+                alert("Failed to load payments", "danger");
+            }
+        };
+        load();
+    }, []);
+
     return (
         <>
             {/* Backdrop */}
@@ -80,8 +98,13 @@ export default function FilterPanel({
                     {/* Search */}
                     {!isdashboard && (
                         <div className="fp-section">
-                            <label className="fp-label">Search Patient</label>
+                            <label htmlFor="search" className="fp-label">
+                                Search Patient
+                            </label>
                             <input
+                                id="search"
+                                name="search"
+                                autoComplete="name"
                                 className="fp-input"
                                 placeholder="Enter Name"
                                 value={searchTerm}
@@ -92,81 +115,110 @@ export default function FilterPanel({
 
                     {/* Payment Method */}
                     <div className="fp-section">
-                        <label className="fp-label">Payment Method</label>
-                        <div className="fp-chips">
-                            {[
-                                "Cash",
-                                "Card",
-                                "SBI",
-                                "ICICI",
-                                "HDFC",
-                                "Other",
-                            ].map((type) => {
-                                const isActive =
-                                    selectedPayments.includes(type);
-                                return (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        className={`fp-chip ${isActive ? "active" : ""}`}
-                                        onClick={() =>
-                                            setSelectedPayments(
-                                                isActive
-                                                    ? selectedPayments.filter(
-                                                          (p) => p !== type,
-                                                      )
-                                                    : [
-                                                          ...selectedPayments,
-                                                          type,
-                                                      ],
-                                            )
-                                        }
-                                    >
-                                        {type}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        <fieldset className="fp-fieldset">
+                            <legend className="fp-label">Payment Method</legend>
+
+                            <div
+                                className="fp-chips"
+                                role="group"
+                                aria-label="Payment Method"
+                            >
+                                {Array.isArray(paymentOptions) &&
+                                    paymentOptions.map((p) => {
+                                        const label = `${p.subCategoryName}`;
+                                        const isActive =
+                                            selectedPayments.includes(p.id);
+
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                role="checkbox"
+                                                aria-checked={isActive}
+                                                className={`fp-chip ${isActive ? "active" : ""}`}
+                                                onClick={() =>
+                                                    setSelectedPayments(
+                                                        isActive
+                                                            ? selectedPayments.filter(
+                                                                  (id) =>
+                                                                      id !==
+                                                                      p.id,
+                                                              )
+                                                            : [
+                                                                  ...selectedPayments,
+                                                                  p.id,
+                                                              ],
+                                                    )
+                                                }
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                            </div>
+                        </fieldset>
                     </div>
 
                     {/* Payment Status */}
                     {!isdashboard && (
                         <div className="fp-section">
-                            <label className="fp-label">Payment Status</label>
-                            <div className="fp-chips">
-                                {["Unpaid", "Paid", "Partial"].map((type) => {
-                                    const isActive =
-                                        selectedStatus.includes(type);
-                                    return (
-                                        <button
-                                            key={type}
-                                            type="button"
-                                            className={`fp-chip ${isActive ? "active" : ""}`}
-                                            onClick={() =>
-                                                setSelectedStatus(
-                                                    isActive
-                                                        ? selectedStatus.filter(
-                                                              (p) => p !== type,
-                                                          )
-                                                        : [
-                                                              ...selectedStatus,
-                                                              type,
-                                                          ],
-                                                )
-                                            }
-                                        >
-                                            {type}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <fieldset className="fp-fieldset">
+                                <legend className="fp-label">
+                                    Payment Status
+                                </legend>
+
+                                <div
+                                    className="fp-chips"
+                                    role="group"
+                                    aria-label="Payment Status"
+                                >
+                                    {["Unpaid", "Paid", "Partial"].map(
+                                        (type) => {
+                                            const isActive =
+                                                selectedStatus.includes(type);
+
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    role="checkbox"
+                                                    aria-checked={isActive}
+                                                    aria-label={type}
+                                                    className={`fp-chip ${isActive ? "active" : ""}`}
+                                                    onClick={() =>
+                                                        setSelectedStatus(
+                                                            isActive
+                                                                ? selectedStatus.filter(
+                                                                      (p) =>
+                                                                          p !==
+                                                                          type,
+                                                                  )
+                                                                : [
+                                                                      ...selectedStatus,
+                                                                      type,
+                                                                  ],
+                                                        )
+                                                    }
+                                                >
+                                                    {type}
+                                                </button>
+                                            );
+                                        },
+                                    )}
+                                </div>
+                            </fieldset>
                         </div>
                     )}
 
                     {/* Gender */}
                     <div className="fp-section">
-                        <label className="fp-label">Gender</label>
+                        <label htmlFor="gender" className="fp-label">
+                            Gender
+                        </label>
                         <select
+                            id="gender"
+                            name="gender"
+                            autoComplete="sex"
                             className="fp-select"
                             value={selectedGender}
                             onChange={(e) => setSelectedGender(e.target.value)}
@@ -181,103 +233,154 @@ export default function FilterPanel({
 
                     {/* Services */}
                     <div className="fp-section">
-                        <label className="fp-label">Services</label>
-                        <div className="fp-chips">
-                            {allServices.map((s) => {
-                                const active = selectedServices.includes(s);
-                                return (
-                                    <button
-                                        key={s}
-                                        type="button"
-                                        className={`fp-chip ${active ? "active" : ""}`}
-                                        onClick={() =>
-                                            setSelectedServices(
-                                                active
-                                                    ? selectedServices.filter(
-                                                          (x) => x !== s,
-                                                      )
-                                                    : [...selectedServices, s],
-                                            )
-                                        }
-                                    >
-                                        {s}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                        <fieldset className="fp-fieldset">
+                            <legend className="fp-label">Services</legend>
 
-                    <div className="fp-divider" />
+                            <div
+                                className="fp-chips"
+                                role="group"
+                                aria-label="Services"
+                            >
+                                {allServices.map((s) => {
+                                    const active = selectedServices.includes(s);
+
+                                    return (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            role="checkbox"
+                                            aria-checked={active}
+                                            aria-label={`Service ${s}`}
+                                            name="services"
+                                            className={`fp-chip ${active ? "active" : ""}`}
+                                            onClick={() =>
+                                                setSelectedServices(
+                                                    active
+                                                        ? selectedServices.filter(
+                                                              (x) => x !== s,
+                                                          )
+                                                        : [
+                                                              ...selectedServices,
+                                                              s,
+                                                          ],
+                                                )
+                                            }
+                                        >
+                                            {s}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </fieldset>
+                    </div>
 
                     {/* Quick Filters */}
                     <div className="fp-section">
-                        <label className="fp-label">Quick Filters</label>
-                        <div className="fp-chips">
-                            <button
-                                className="fp-chip quick"
-                                onClick={() => {
-                                    const { start, end } = getTodayRange();
-                                    setStartDate(start);
-                                    setEndDate(end);
-                                    setSelectedFY("");
-                                }}
+                        <fieldset className="fp-fieldset">
+                            <legend className="fp-label">Quick Filters</legend>
+
+                            <div
+                                className="fp-chips"
+                                role="group"
+                                aria-label="Quick Filters"
                             >
-                                Today
-                            </button>
-                            <button
-                                className="fp-chip quick"
-                                onClick={() => {
-                                    const { start, end } = getThisMonthRange();
-                                    setStartDate(start);
-                                    setEndDate(end);
-                                    setSelectedFY("");
-                                }}
-                            >
-                                This Month
-                            </button>
-                            <button
-                                className="fp-chip quick"
-                                onClick={() => {
-                                    const { start, end } = getLast30DaysRange();
-                                    setStartDate(start);
-                                    setEndDate(end);
-                                    setSelectedFY("");
-                                }}
-                            >
-                                Last 30 Days
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    name="quickFilter"
+                                    aria-label="Filter Today"
+                                    className="fp-chip quick"
+                                    onClick={() => {
+                                        const { start, end } = getTodayRange();
+                                        setStartDate(start);
+                                        setEndDate(end);
+                                        setSelectedFY("");
+                                    }}
+                                >
+                                    Today
+                                </button>
+
+                                <button
+                                    type="button"
+                                    name="quickFilter"
+                                    aria-label="Filter This Month"
+                                    className="fp-chip quick"
+                                    onClick={() => {
+                                        const { start, end } =
+                                            getThisMonthRange();
+                                        setStartDate(start);
+                                        setEndDate(end);
+                                        setSelectedFY("");
+                                    }}
+                                >
+                                    This Month
+                                </button>
+
+                                <button
+                                    type="button"
+                                    name="quickFilter"
+                                    aria-label="Filter Last 30 Days"
+                                    className="fp-chip quick"
+                                    onClick={() => {
+                                        const { start, end } =
+                                            getLast30DaysRange();
+                                        setStartDate(start);
+                                        setEndDate(end);
+                                        setSelectedFY("");
+                                    }}
+                                >
+                                    Last 30 Days
+                                </button>
+                            </div>
+                        </fieldset>
                     </div>
 
                     {/* Date Range */}
                     <div className="fp-section">
-                        <label className="fp-label">Date Range</label>
-                        <div className="fp-date-row">
-                            <input
-                                type="date"
-                                className="fp-input"
-                                value={startDate || ""}
-                                onChange={(e) => {
-                                    setSelectedFY("");
-                                    setStartDate(e.target.value);
-                                }}
-                            />
-                            <input
-                                type="date"
-                                className="fp-input"
-                                value={endDate || ""}
-                                onChange={(e) => {
-                                    setSelectedFY("");
-                                    setEndDate(e.target.value);
-                                }}
-                            />
-                        </div>
+                        <fieldset className="fp-fieldset">
+                            <legend className="fp-label">Date Range</legend>
+
+                            <div className="fp-date-row">
+                                <input
+                                    id="start-date"
+                                    name="startDate"
+                                    type="date"
+                                    autoComplete="off"
+                                    className="fp-input"
+                                    value={startDate || ""}
+                                    aria-label="Start Date"
+                                    onChange={(e) => {
+                                        setSelectedFY("");
+                                        setStartDate(e.target.value);
+                                    }}
+                                />
+
+                                <input
+                                    id="end-date"
+                                    name="endDate"
+                                    type="date"
+                                    autoComplete="off"
+                                    className="fp-input"
+                                    value={endDate || ""}
+                                    aria-label="End Date"
+                                    onChange={(e) => {
+                                        setSelectedFY("");
+                                        setEndDate(e.target.value);
+                                    }}
+                                />
+                            </div>
+                        </fieldset>
                     </div>
 
                     {/* Financial Year */}
                     <div className="fp-section">
-                        <label className="fp-label">Financial Year</label>
+                        <label htmlFor="financial-year" className="fp-label">
+                            Financial Year
+                        </label>
+
                         <select
+                            id="financial-year"
+                            name="financialYear"
+                            autoComplete="off"
                             className="fp-select"
                             value={selectedFY}
                             onChange={(e) => {

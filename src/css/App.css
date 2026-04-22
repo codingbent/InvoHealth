@@ -1,0 +1,173 @@
+#root {
+    min-height: 100vh;
+    background: inherit;
+}
+/* -------- DARK THEME -------- */
+:root {
+    --bg-main: #0a0d14;
+    --bg-surface: #0d1117;
+    --bg-alt: #080c18;
+
+    --text-primary: #d4ddf0;
+    --text-secondary: #c5d0e8;
+    --text-muted: #9ba9c3;
+
+    --hover-bg: #1e293b;
+
+    --primary: #4d7cf6;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+
+    --chart-text: #e5e7eb;
+    --chart-grid: rgba(255, 255, 255, 0.08);
+
+    --dropdown-bg: #020617;
+    --border-color: #080c18;
+
+    --card-bg: #020617;
+    --input-bg: #080c18;
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+}
+
+/* __________________
+         MODALS
+__________________ */
+
+.modal-backdrop {
+    position: fixed; /* CRITICAL */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6); /* overlay */
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* MUST be high */
+}
+
+/* MODAL BOX */
+.modal-container {
+    background: #0d1117;
+    border: 1px solid #1a2540;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.modal-content {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--border-color);
+}
+
+/* _______________________
+   PAYMENT TAGS 
+_________________________ */
+
+/* Base tag style */
+.pl-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* Bank Transfer */
+.pl-bank,
+.pl-bank\ transfer,
+.pl-banktransfer {
+    background: rgba(14, 165, 233, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+/* UPI */
+.pl-upi {
+    background: rgba(139, 92, 246, 0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* Cash */
+.pl-cash {
+    background: rgba(234, 179, 8, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+/* Card */
+.pl-card {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Insurance */
+.pl-insurance {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Online Gateway */
+.pl-online\ gateway,
+.pl-onlinegateway,
+.pl-online {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* Wallet */
+.pl-wallet {
+    background: rgba(251, 146, 60, 0.12);
+    color: #fb923c;
+    border: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+/* International Transfer */
+.pl-international\ transfer,
+.pl-international {
+    background: rgba(20, 184, 166, 0.12);
+    color: #2dd4bf;
+    border: 1px solid rgba(20, 184, 166, 0.2);
+}
+
+/* Crypto */
+.pl-crypto {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* BNPL */
+.pl-bnpl {
+    background: rgba(236, 72, 153, 0.12);
+    color: #f472b6;
+    border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+/* Other / fallback */
+.pl-other {
+    background: rgba(100, 116, 139, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.2);
+}

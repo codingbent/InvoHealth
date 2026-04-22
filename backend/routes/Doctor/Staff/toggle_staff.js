@@ -4,8 +4,10 @@ const Staff = require("../../../models/Staff");
 const Doctor = require("../../../models/Doc");
 const Pricing = require("../../../models/Pricing");
 var fetchuser = require("../../../middleware/fetchuser");
+const requireDoctor = require("../../../middleware/requireDoctor");
+const { getPricing } = require("../../../utils/pricingcache");
 
-router.put("/toggle_staff/:id", fetchuser, async (req, res) => {
+router.put("/toggle_staff/:id", fetchuser, requireDoctor, async (req, res) => {
     try {
         const doctorId = req.user.doctorId;
 
@@ -19,16 +21,33 @@ router.put("/toggle_staff/:id", fetchuser, async (req, res) => {
         }
 
         const doctor = await Doctor.findById(doctorId);
-        const plan = doctor.subscription?.plan?.toLowerCase() || "free";
 
-        let staffLimit = 1;
-
-        if (plan !== "free") {
-            const pricing = await Pricing.findOne();
-            staffLimit = pricing?.[plan]?.staffLimit ?? 1;
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                error: "Doctor not found",
+            });
         }
 
-        // 👉 If activating, check limit
+        const plan = doctor.subscription?.plan?.toLowerCase();
+        const isActive = doctor.subscription?.status === "active";
+
+        let staffLimit = 0;
+
+        const pricing = await getPricing();
+
+        if (!pricing) {
+            return res.status(500).json({
+                success: false,
+                error: "Pricing not configured",
+            });
+        }
+
+        if (isActive && plan && pricing[plan]) {
+            staffLimit = pricing[plan].staffLimit;
+        }
+
+        // ACTIVATION CHECK
         if (!staff.isActive) {
             const activeCount = await Staff.countDocuments({
                 doctorId,
@@ -44,7 +63,6 @@ router.put("/toggle_staff/:id", fetchuser, async (req, res) => {
             }
         }
 
-        // TOGGLE
         staff.isActive = !staff.isActive;
         await staff.save();
 

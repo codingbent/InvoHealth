@@ -2,20 +2,27 @@ const express = require("express");
 const router = express.Router();
 const Patient = require("../../../models/Patient");
 var fetchuser = require("../../../middleware/fetchuser");
+var requireSubscription = require("../../../middleware/requireSubscription");
 const { body } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const { encrypt } = require("../../../utils/crypto");
-const Doc = require("../../../models/Doc");
-const checkSubscription = require("../../../utils/subscription_check");
+const { validationResult } = require("express-validator");
 
 const saltRounds = 10;
 
 router.post(
     "/add_patient",
     fetchuser,
+    requireSubscription, // handles Doc lookup + subscription gate in one place
     [
         body("name", "Enter Name").notEmpty(),
-        body("number").isLength({ min: 10, max: 10 }),
+        body("number")
+            .matches(/^\d{10}$/)
+            .withMessage("Invalid phone number"),
+        body("email")
+            .optional({ checkFalsy: true })
+            .isEmail()
+            .withMessage("Invalid email"),
         body("age")
             .optional({ checkFalsy: true })
             .isNumeric()
@@ -27,49 +34,51 @@ router.post(
     ],
     async (req, res) => {
         try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({
+                    success: false,
+                    errors: errors.array(),
+                });
+            }
+
             const doctorId = req.user.doctorId;
-            const doctor = await Doc.findById(doctorId);
-
-            // AUTO EXPIRE
-            if (!doctor) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Doctor not found",
-                });
-            }
-
-            await checkSubscription(doctor);
-
-            // BLOCK
-            if (doctor.subscription?.status === "expired") {
-                return res.status(403).json({
-                    success: false,
-                    message: "Subscription expired. Upgrade required.",
-                });
-            }
-            const { name, number, age, gender } = req.body;
+            const { name, number, email, age, gender } = req.body;
 
             const cleanName = name.trim();
             const cleanNumber = number.trim();
+            const cleanEmail = email?.trim().toLowerCase() || undefined;
+            const escapeRegex = (str) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-            //Find same-name patients
+            // Optimized candidate query
             const candidates = await Patient.find({
                 doctor: doctorId,
-                name: { $regex: `^${cleanName}$`, $options: "i" },
-            });
+                name: {
+                    $regex: `^${escapeRegex(cleanName)}$`,
+                    $options: "i",
+                },
+                numberLast4: cleanNumber.slice(-4),
+            })
+                .limit(10)
+                .lean();
 
+            // Parallel bcrypt check
             let existingPatient = null;
 
-            //Compare using bcrypt
-            for (let p of candidates) {
-                if (!p.numberHash) continue;
+            if (candidates.length > 0) {
+                const matches = await Promise.all(
+                    candidates.map(async (p) => {
+                        if (!p.numberHash) return null;
+                        const isMatch = await bcrypt.compare(
+                            cleanNumber,
+                            p.numberHash,
+                        );
+                        return isMatch ? p : null;
+                    }),
+                );
 
-                const isMatch = await bcrypt.compare(cleanNumber, p.numberHash);
-
-                if (isMatch) {
-                    existingPatient = p;
-                    break;
-                }
+                existingPatient = matches.find((p) => p !== null);
             }
 
             if (existingPatient) {
@@ -80,16 +89,17 @@ router.post(
                 });
             }
 
-            //Encrypt + Hash
+            // Encrypt + Hash
             const encryptedNumber = encrypt(cleanNumber);
             const hashedNumber = await bcrypt.hash(cleanNumber, saltRounds);
 
-            //Create patient
+            // Create patient
             const patient = await Patient.create({
                 name: cleanName,
                 numberEncrypted: encryptedNumber,
                 numberHash: hashedNumber,
                 numberLast4: cleanNumber.slice(-4),
+                email: cleanEmail,
                 age,
                 gender,
                 doctor: doctorId,

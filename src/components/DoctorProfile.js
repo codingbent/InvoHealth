@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { authFetch } from "./authfetch";
 import {
     Pencil,
@@ -14,10 +14,16 @@ import {
     Plus,
     X,
     ChevronDown,
-    ChevronUp,
     Check,
     AlertTriangle,
+    CreditCard,
+    Stethoscope,
+    MapPin,
+    GraduationCap,
+    ShieldCheck,
 } from "lucide-react";
+import { API_BASE_URL } from "../components/config";
+import "../css/Doctorprofile.css";
 
 /* ── Password input sub-component ── */
 const PasswordInput = ({
@@ -71,28 +77,119 @@ const Section = ({ icon: Icon, title, children, accent = "#60a5fa" }) => {
             >
                 <span
                     className="dp-section-icon"
-                    style={{ background: `${accent}15`, color: accent }}
+                    style={{ background: `${accent}14`, color: accent }}
                 >
                     <Icon size={15} />
                 </span>
                 <span className="dp-section-title">{title}</span>
-                {open ? (
-                    <ChevronUp
-                        size={14}
-                        style={{ color: "#2e3d5c", marginLeft: "auto" }}
-                    />
-                ) : (
-                    <ChevronDown
-                        size={14}
-                        style={{ color: "#2e3d5c", marginLeft: "auto" }}
-                    />
-                )}
+                <ChevronDown
+                    size={14}
+                    className={`dp-chevron ${open ? "open" : ""}`}
+                />
             </button>
             {open && <div className="dp-section-body">{children}</div>}
         </div>
     );
 };
 
+/* ── Add Payment Form ── */
+function AddPaymentForm({ categories, subCategories, onAdd }) {
+    const [categoryId, setCategoryId] = useState("");
+    const [subCategoryId, setSubCategoryId] = useState("");
+    const [label, setLabel] = useState("");
+    const filteredSubs = subCategories.filter(
+        (s) => s.categoryId?.toString() === categoryId,
+    );
+
+    const handleAdd = () => {
+        if (!categoryId || !subCategoryId) {
+            alert("Please select category and subcategory");
+            return;
+        }
+        onAdd({
+            categoryId,
+            subCategoryId,
+            label:
+                label.trim() ||
+                filteredSubs.find((s) => s._id === subCategoryId)?.name ||
+                "",
+            isActive: true,
+        });
+        setCategoryId("");
+        setSubCategoryId("");
+        setLabel("");
+    };
+
+    return (
+        <div
+            style={{
+                padding: "12px",
+                borderRadius: 10,
+                border: "1px dashed rgba(255,255,255,.1)",
+                marginBottom: 8,
+            }}
+        >
+            <div className="dp-field dp-mb">
+                <label className="dp-label">Category</label>
+                <select
+                    className="dp-select"
+                    value={categoryId}
+                    onChange={(e) => {
+                        setCategoryId(e.target.value);
+                        setSubCategoryId("");
+                    }}
+                >
+                    <option value="">Select Category</option>
+                    {categories.map((c) => (
+                        <option key={c._id} value={c._id}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="dp-field dp-mb">
+                <label className="dp-label">Subcategory</label>
+                <select
+                    className="dp-select"
+                    value={subCategoryId}
+                    onChange={(e) => setSubCategoryId(e.target.value)}
+                    disabled={!categoryId}
+                >
+                    <option value="">Select Subcategory</option>
+                    {filteredSubs.map((s) => (
+                        <option key={s._id} value={s._id}>
+                            {s.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="dp-field dp-mb">
+                <label className="dp-label">
+                    Label{" "}
+                    <span style={{ opacity: 0.4, fontSize: 10 }}>
+                        (optional)
+                    </span>
+                </label>
+                <input
+                    className="dp-input"
+                    placeholder="e.g. My HDFC Account"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                />
+            </div>
+            <button
+                className="dp-btn dp-btn-primary dp-btn-sm"
+                onClick={handleAdd}
+            >
+                <Plus size={11} /> Add to List
+            </button>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════════════════ */
 export default function DoctorProfile(props) {
     const [doctor, setDoctor] = useState(null);
     const [staffList, setStaffList] = useState([]);
@@ -109,6 +206,16 @@ export default function DoctorProfile(props) {
     const [availability, setAvailability] = useState([]);
     const [editAvailability, setEditAvailability] = useState([]);
     const [selectedDays, setSelectedDays] = useState([]);
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [editPaymentsOpen, setEditPaymentsOpen] = useState(false);
+    const [editProfileOpen, setEditProfileOpen] = useState(false);
+    const [editStaffOpen, setEditStaffOpen] = useState(false);
+    const [editAvailOpen, setEditAvailOpen] = useState(false);
+    const [showPhone, setShowPhone] = useState(false);
+    const [showApptPhone, setShowApptPhone] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [subCategories, setSubCategories] = useState([]);
+    const planKey = subscription?.plan?.toLowerCase();
     const [tempSlots, setTempSlots] = useState([
         { startTime: "10:00", endTime: "15:00", slotDuration: 15 },
     ]);
@@ -144,24 +251,67 @@ export default function DoctorProfile(props) {
         new: false,
         confirm: false,
     });
-    const [editProfileOpen, setEditProfileOpen] = useState(false);
-    const [editStaffOpen, setEditStaffOpen] = useState(false);
-    const [editAvailOpen, setEditAvailOpen] = useState(false);
-    const [askedPhoneOnce, setAskedPhoneOnce] = useState(false);
-    const [askedApptOnce, setAskedApptOnce] = useState(false);
-    const [showPhone, setShowPhone] = useState(false);
-    const [showApptPhone, setShowApptPhone] = useState(false);
 
-    const API_BASE_URL = useMemo(
-        () =>
-            process.env.NODE_ENV === "production"
-                ? "https://gmsc-backend.onrender.com"
-                : "http://localhost:5001",
-        [],
-    );
+    const ROLE_COLORS = {
+        receptionist: {
+            bg: "rgba(96,165,250,.1)",
+            border: "rgba(96,165,250,.2)",
+            color: "#60a5fa",
+        },
+        assistant: {
+            bg: "rgba(167,139,250,.1)",
+            border: "rgba(167,139,250,.2)",
+            color: "#a78bfa",
+        },
+        nurse: {
+            bg: "rgba(244,114,182,.1)",
+            border: "rgba(244,114,182,.2)",
+            color: "#f472b6",
+        },
+    };
+
+    const COUNTRY_CODES = [
+        { code: "+91", flag: "🇮🇳", country: "India", min: 10, max: 10 },
+        { code: "+1", flag: "🇺🇸", country: "USA", min: 10, max: 10 },
+        { code: "+44", flag: "🇬🇧", country: "UK", min: 10, max: 10 },
+        { code: "+49", flag: "🇩🇪", country: "Germany", min: 10, max: 11 },
+        { code: "+1", flag: "🇨🇦", country: "Canada", min: 10, max: 10 },
+        { code: "+45", flag: "🇩🇰", country: "Denmark", min: 8, max: 8 },
+    ];
 
     const passwordsMatch =
         passwordData.newPassword === passwordData.confirmPassword;
+    const staffLimit =
+        planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
+    const isLimitReached = staffLimit !== -1 && staffCount >= staffLimit;
+
+    const formatTime = (time) => {
+        const [h, m] = time.split(":");
+        let hour = parseInt(h);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour}:${m} ${ampm}`;
+    };
+
+    const handleEditChange = (e) =>
+        setEditData({ ...editData, [e.target.name]: e.target.value });
+    const handleAddressChange = (e) =>
+        setEditData({
+            ...editData,
+            address: { ...editData.address, [e.target.name]: e.target.value },
+        });
+    const handleDegreeChange = (index, value) => {
+        const u = [...editData.degree];
+        u[index] = value;
+        setEditData({ ...editData, degree: u });
+    };
+    const addDegreeField = () =>
+        setEditData({ ...editData, degree: [...editData.degree, ""] });
+    const removeDegreeField = (index) => {
+        const u = [...editData.degree];
+        u.splice(index, 1);
+        setEditData({ ...editData, degree: u });
+    };
 
     const fetchDoctor = useCallback(async () => {
         try {
@@ -176,11 +326,32 @@ export default function DoctorProfile(props) {
                 (data.staff || []).filter((s) => s.isActive && !s.isDeleted)
                     .length,
             );
+            setPaymentMethods(
+                (doc.paymentMethods || []).map((m) => ({
+                    categoryId:
+                        m.categoryId?._id?.toString() ||
+                        m.categoryId?.toString() ||
+                        "",
+                    subCategoryId:
+                        m.subCategoryId?._id?.toString() ||
+                        m.subCategoryId?.toString() ||
+                        "",
+                    label: m.label || "",
+                    isActive: m.isActive ?? true,
+                    _categoryName: m.categoryId?.name || "",
+                    _subCategoryName: m.subCategoryId?.name || "",
+                })),
+            );
             setEditData({
                 name: doc.name || "",
                 clinicName: doc.clinicName || "",
-                phone: doc.phone || "",
-                appointmentPhone: doc.appointmentPhone || "",
+                phone: doc.phoneLast4
+                    ? `••••${doc.phoneLast4}`
+                    : doc.phone || "",
+                appointmentPhone: doc.appointmentPhoneLast4
+                    ? `••••${doc.appointmentPhoneLast4}`
+                    : doc.appointmentPhone || "",
+                countryCode: doc.address?.countryCode || "+91",
                 regNumber: doc.regNumber || "",
                 degree: doc.degree?.length ? doc.degree : [""],
                 address: {
@@ -195,7 +366,7 @@ export default function DoctorProfile(props) {
         } catch (err) {
             console.error("Fetch doctor error:", err);
         }
-    }, [API_BASE_URL]);
+    }, []);
 
     const fetchAvailability = useCallback(async () => {
         try {
@@ -208,7 +379,7 @@ export default function DoctorProfile(props) {
         } catch (err) {
             console.error("Fetch availability error:", err);
         }
-    }, [API_BASE_URL]);
+    }, []);
 
     const fetchStaff = useCallback(async () => {
         try {
@@ -223,108 +394,94 @@ export default function DoctorProfile(props) {
         } catch (err) {
             console.error(err);
         }
-    }, [API_BASE_URL]);
-
-    useEffect(() => {
-        fetchDoctor();
-        fetchStaff();
-        fetchAvailability();
-    }, [fetchDoctor, fetchStaff, fetchAvailability]);
-
-    useEffect(() => {
-        const fetchPricing = async () => {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
-                const data = await res.json();
-                if (data.success) setPricing(data.pricing);
-            } catch (err) {
-                console.error(err);
-            }
-        };
-        fetchPricing();
-    }, [API_BASE_URL]);
-
-    const handleEditChange = (e) =>
-        setEditData({ ...editData, [e.target.name]: e.target.value });
-
-    const handleAddressChange = (e) =>
-        setEditData({
-            ...editData,
-            address: { ...editData.address, [e.target.name]: e.target.value },
-        });
-
-    const handleDegreeChange = (index, value) => {
-        const u = [...editData.degree];
-        u[index] = value;
-        setEditData({ ...editData, degree: u });
-    };
-
-    const addDegreeField = () =>
-        setEditData({ ...editData, degree: [...editData.degree, ""] });
-
-    const removeDegreeField = (index) => {
-        const u = [...editData.degree];
-        u.splice(index, 1);
-        setEditData({ ...editData, degree: u });
-    };
+    }, []);
 
     const handleSaveProfile = async () => {
-        const cleanPhone = editData.phone?.replace(/\D/g, "");
-        const cleanAppt = editData.appointmentPhone?.replace(/\D/g, "");
+        try {
+            if (!editData.name?.trim())
+                return props.showAlert("Name is required", "danger");
+            if (!editData.clinicName?.trim())
+                return props.showAlert(
+                    "Medical Center name is required",
+                    "danger",
+                );
 
-        if (cleanPhone && cleanPhone.length !== 10) {
-            props.showAlert("Phone must be 10 digits", "warning");
-            return;
-        }
+            let cleanPhone = (editData.phone || "").replace(/\D/g, "");
+            if (cleanPhone.startsWith("0")) cleanPhone = cleanPhone.slice(1);
+            if (cleanPhone.length < 8 || cleanPhone.length > 15)
+                return props.showAlert("Invalid phone number", "danger");
 
-        if (cleanAppt && cleanAppt.length !== 10) {
-            props.showAlert("Appointment phone must be 10 digits", "warning");
-            return;
-        }
+            let cleanAppt = (editData.appointmentPhone || "").replace(
+                /\D/g,
+                "",
+            );
+            if (cleanAppt.startsWith("0")) cleanAppt = cleanAppt.slice(1);
+            if (cleanAppt && (cleanAppt.length < 8 || cleanAppt.length > 15))
+                return props.showAlert("Invalid appointment phone", "danger");
 
-        const payload = {
-            ...editData,
-            phone: cleanPhone,
-            appointmentPhone: cleanAppt,
-            degree: editData.degree.filter((d) => d.trim() !== ""),
-        };
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/update_profile`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            },
-        );
-        const data = await res.json();
-        if (data.success) {
+            const dialCode =
+                editData.countryCode || doctor?.address?.countryCode || "+91";
+            const fullPhone = `${dialCode}${cleanPhone}`;
+            const fullApptPhone = cleanAppt ? `${dialCode}${cleanAppt}` : "";
+
+            const cleanDegree = Array.isArray(editData.degree)
+                ? editData.degree
+                      .filter((d) => typeof d === "string" && d.trim() !== "")
+                      .map((d) => d.trim())
+                : [];
+
+            const allowedAddressFields = ["line", "city", "state", "pincode"];
+            const cleanAddress = {};
+            if (editData.address && typeof editData.address === "object") {
+                allowedAddressFields.forEach((key) => {
+                    const val = editData.address[key];
+                    if (typeof val === "string" && val.trim())
+                        cleanAddress[key] = val.trim();
+                });
+            }
+
+            const payload = {
+                name: editData.name.trim(),
+                clinicName: editData.clinicName.trim(),
+                regNumber: editData.regNumber?.trim() || "",
+                degree: cleanDegree,
+                experience: editData.experience || "",
+                phone: fullPhone,
+                appointmentPhone: fullApptPhone,
+                countryCode: dialCode,
+                address: cleanAddress,
+            };
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/update_profile`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                },
+            );
+            const data = await res.json();
+
+            if (!res.ok || !data.success)
+                return props.showAlert(
+                    data.error || "Profile update failed",
+                    "danger",
+                );
+
             await fetchDoctor();
             setEditProfileOpen(false);
             props.showAlert("Profile updated successfully", "success");
-        } else props.showAlert("Profile update failed", "danger");
-    };
-
-    const planKey = subscription?.plan?.toLowerCase();
-    const staffLimit =
-        planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
-    const isLimitReached = staffLimit !== -1 && staffCount >= staffLimit;
-
-    const formatTime = (time) => {
-        const [h, m] = time.split(":");
-        let hour = parseInt(h);
-        const ampm = hour >= 12 ? "PM" : "AM";
-        hour = hour % 12 || 12;
-        return `${hour}:${m} ${ampm}`;
+        } catch (err) {
+            console.error("Update profile error:", err);
+            props.showAlert("Server error. Please try again.", "danger");
+        }
     };
 
     const handleAddStaff = async () => {
-        // BLOCK IF EXPIRED
         if (subscription?.status === "expired") {
             props.showAlert("Subscription expired. Please upgrade.", "danger");
             return;
         }
-
-        // BLOCK IF LIMIT REACHED
         if (isLimitReached) {
             props.showAlert(
                 `Staff limit reached (${staffLimit}). Upgrade required.`,
@@ -332,7 +489,6 @@ export default function DoctorProfile(props) {
             );
             return;
         }
-
         if (!staffName || !staffPhone || !staffRole) {
             props.showAlert("All fields required", "danger");
             return;
@@ -345,22 +501,18 @@ export default function DoctorProfile(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: staffName,
-                    phone: staffPhone.replace(/\D/g, "").slice(-10),
+                    phone: staffPhone.replace(/\s+/g, ""),
                     role: staffRole,
                 }),
             },
         );
-
         const data = await res.json();
-
         if (data.success) {
             fetchStaff();
             setStaffName("");
             setStaffPhone("");
             setStaffRole("");
-        } else {
-            props.showAlert(data.error || "Failed", "danger");
-        }
+        } else props.showAlert(data.error || "Failed", "danger");
     };
 
     const toggleStaff = async (id) => {
@@ -368,145 +520,34 @@ export default function DoctorProfile(props) {
             `${API_BASE_URL}/api/doctor/staff/toggle_staff/${id}`,
             { method: "PUT" },
         );
-
         const data = await res.json();
-
         if (data.success) {
             fetchStaff();
             props.showAlert(data.message, "success");
-        } else {
-            props.showAlert(data.error, "danger");
-        }
+        } else props.showAlert(data.error, "danger");
     };
 
-    const updateDoctorPhone = useCallback(
-        async (phone) => {
-            try {
-                //  normalize (remove spaces, symbols)
-                const clean = phone.replace(/\D/g, "");
+    const validatePassword = (password) => ({
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+    });
 
-                //  reject invalid
-                if (clean.length !== 10) {
-                    props.showAlert("Enter valid 10 digit number", "warning");
-                    return;
-                }
-
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/update_profile`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phone: clean }),
-                    },
-                );
-
-                const data = await res.json();
-
-                if (data.success) {
-                    props.showAlert("Phone updated securely", "success");
-
-                    //  IMPORTANT FIX (your previous bug)
-                    await fetchDoctor(); //  refresh decrypted data
-                } else {
-                    props.showAlert(data.error || "Update failed", "danger");
-                }
-            } catch (err) {
-                console.error(err);
-                props.showAlert("Server error", "danger");
-            }
-        },
-        [API_BASE_URL, fetchDoctor, props],
-    );
-
-    useEffect(() => {
-        if (doctor?.needsPhoneUpdate && !askedPhoneOnce) {
-            setAskedPhoneOnce(true);
-
-            let message = "⚠ Please enter your phone number:";
-
-            if (doctor?.plainPhone) {
-                message = `⚠ Please re-enter your phone number for security:\n\nOld number: ${doctor.plainPhone}\n\n(Sorry for inconvenience 🙏)`;
-            }
-
-            const phone = prompt(message, doctor?.plainPhone || "");
-
-            if (phone && /^\d{10}$/.test(phone)) {
-                updateDoctorPhone(phone);
-            }
-        }
-    }, [doctor, askedPhoneOnce, updateDoctorPhone]);
-
-    const updateDoctorAppointmentPhone = useCallback(
-        async (appointmentPhone) => {
-            try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/update_profile`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ appointmentPhone }),
-                    },
-                );
-
-                const data = await res.json();
-
-                if (data.success) {
-                    props.showAlert("Appointment number secured", "success");
-                    fetchDoctor();
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        },
-        [API_BASE_URL, fetchDoctor, props],
-    );
-
-    useEffect(() => {
-        if (doctor?.needsAppointmentPhoneUpdate && !askedApptOnce) {
-            setAskedApptOnce(true);
-
-            const phone = prompt(
-                `⚠ Please re-enter appointment number:\n\nOld: ${doctor.plainAppointmentPhone}`,
-                doctor?.plainAppointmentPhone || "",
-            );
-
-            if (phone && /^\d{10}$/.test(phone)) {
-                updateDoctorAppointmentPhone(phone);
-            }
-        }
-    }, [doctor, askedApptOnce, updateDoctorAppointmentPhone]);
-
-    const validatePassword = (password) => {
-        return {
-            length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            number: /[0-9]/.test(password),
-            special: /[^A-Za-z0-9]/.test(password),
-        };
-    };
     const passwordRules = validatePassword(passwordData.newPassword);
-
-    const isPasswordValid =
-        passwordRules.length &&
-        passwordRules.uppercase &&
-        passwordRules.lowercase &&
-        passwordRules.number &&
-        passwordRules.special;
+    const isPasswordValid = Object.values(passwordRules).every(Boolean);
 
     const handleChangePassword = async () => {
         const { currentPassword, newPassword, confirmPassword } = passwordData;
-
         if (!currentPassword || !newPassword || !confirmPassword) {
             props.showAlert("All fields required", "danger");
             return;
         }
-
         if (newPassword !== confirmPassword) {
             props.showAlert("Passwords do not match", "danger");
             return;
         }
-
         if (!isPasswordValid) {
             props.showAlert(
                 "Password must include uppercase, lowercase, number, and special character",
@@ -523,9 +564,7 @@ export default function DoctorProfile(props) {
                 body: JSON.stringify({ currentPassword, newPassword }),
             },
         );
-
         const data = await res.json();
-
         if (data.success) {
             props.showAlert("Password updated", "success");
             setPasswordData({
@@ -535,18 +574,15 @@ export default function DoctorProfile(props) {
             });
             setShowPasswords({ current: false, new: false, confirm: false });
             fetchAvailability();
-        } else {
+        } else
             props.showAlert(
                 data.error || "Server Error try again later",
                 "danger",
             );
-        }
     };
+
     const deletestaff = async (staffId) => {
-        const confirmDelete = window.confirm(
-            "Do you want to delete this staff member?",
-        );
-        if (!confirmDelete) return;
+        if (!window.confirm("Do you want to delete this staff member?")) return;
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/delete_staff/${staffId}`,
             { method: "DELETE" },
@@ -586,7 +622,41 @@ export default function DoctorProfile(props) {
         } else alert(data.error);
     };
 
-    if (!doctor)
+    useEffect(() => {
+        fetchDoctor();
+        fetchStaff();
+        fetchAvailability();
+    }, [fetchDoctor, fetchStaff, fetchAvailability]);
+
+    useEffect(() => {
+        const fetchMaster = async () => {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/payment-master`,
+            );
+            const data = await res.json();
+            if (data.success) {
+                setCategories(data.categories);
+                setSubCategories(data.subCategories);
+            }
+        };
+        fetchMaster();
+    }, []);
+
+    useEffect(() => {
+        const fetchPricing = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/admin/pricing`);
+                const data = await res.json();
+                if (data.success) setPricing(data.pricing);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchPricing();
+    }, []);
+
+    /* ── Skeleton loader ── */
+    if (!doctor) {
         return (
             <>
                 <div className="dp-root">
@@ -594,21 +664,21 @@ export default function DoctorProfile(props) {
                         <div
                             key={i}
                             className="dp-card dp-mb"
-                            style={{ padding: 24 }}
+                            style={{ padding: 24, opacity: 1 - i * 0.22 }}
                         >
                             <div
                                 style={{
                                     display: "flex",
-                                    gap: 14,
+                                    gap: 16,
                                     alignItems: "center",
                                 }}
                             >
                                 <div
                                     className="dp-skeleton"
                                     style={{
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: "50%",
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: 14,
                                     }}
                                 />
                                 <div style={{ flex: 1 }}>
@@ -616,16 +686,16 @@ export default function DoctorProfile(props) {
                                         className="dp-skeleton"
                                         style={{
                                             height: 12,
-                                            width: "40%",
-                                            marginBottom: 8,
-                                            borderRadius: 4,
+                                            width: "38%",
+                                            marginBottom: 9,
+                                            borderRadius: 5,
                                         }}
                                     />
                                     <div
                                         className="dp-skeleton"
                                         style={{
-                                            height: 10,
-                                            width: "25%",
+                                            height: 9,
+                                            width: "22%",
                                             borderRadius: 4,
                                         }}
                                     />
@@ -636,24 +706,29 @@ export default function DoctorProfile(props) {
                 </div>
             </>
         );
+    }
 
-    const ROLE_COLORS = {
-        receptionist: {
-            bg: "rgba(96,165,250,0.1)",
-            border: "rgba(96,165,250,0.2)",
-            color: "#60a5fa",
+    /* ── Subscription header badge ── */
+    const subStatus = subscription?.status || "free";
+    const subPlan = subscription?.plan?.toUpperCase() || "FREE";
+    const badgeColors = {
+        active: {
+            bg: "rgba(74,222,128,.1)",
+            border: "rgba(74,222,128,.2)",
+            color: "#4ade80",
         },
-        assistant: {
-            bg: "rgba(167,139,250,0.1)",
-            border: "rgba(167,139,250,0.2)",
-            color: "#a78bfa",
+        expired: {
+            bg: "rgba(248,113,113,.1)",
+            border: "rgba(248,113,113,.2)",
+            color: "#f87171",
         },
-        nurse: {
-            bg: "rgba(244,114,182,0.1)",
-            border: "rgba(244,114,182,0.2)",
-            color: "#f472b6",
+        trial: {
+            bg: "rgba(251,146,60,.1)",
+            border: "rgba(251,146,60,.2)",
+            color: "#fb923c",
         },
     };
+    const bc = badgeColors[subStatus] || badgeColors.trial;
 
     return (
         <>
@@ -673,23 +748,44 @@ export default function DoctorProfile(props) {
                             </div>
                             <div>
                                 <div className="dp-doc-name">{doctor.name}</div>
-                                <div className="dp-doc-clinic">
+                                <div className="dp-doc-center">
                                     {doctor.clinicName}
                                 </div>
                             </div>
                         </div>
-                        <button
-                            className="dp-edit-btn"
-                            onClick={() => setEditProfileOpen(true)}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                flexWrap: "wrap",
+                            }}
                         >
-                            <Pencil size={13} /> Edit Profile
-                        </button>
+                            <span
+                                className="dp-sub-badge"
+                                style={{
+                                    background: bc.bg,
+                                    borderColor: bc.border,
+                                    color: bc.color,
+                                }}
+                            >
+                                <ShieldCheck size={10} />
+                                {subPlan} · {subStatus.toUpperCase()}
+                            </span>
+                            <button
+                                className="dp-edit-btn"
+                                onClick={() => setEditProfileOpen(true)}
+                            >
+                                <Pencil size={13} /> Edit Profile
+                            </button>
+                        </div>
                     </div>
 
                     <div className="dp-info-grid">
                         {[
                             {
                                 label: "Contact",
+                                icon: Phone,
                                 value: (
                                     <>
                                         <div className="dp-row">
@@ -700,7 +796,6 @@ export default function DoctorProfile(props) {
                                                 {doctor.email}
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">
                                                 Phone
@@ -725,39 +820,37 @@ export default function DoctorProfile(props) {
                                                 </button>
                                             )}
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">Appt</span>
                                             <span className="dp-row-value">
-                                                <span className="dp-row-value">
-                                                    {showApptPhone
-                                                        ? doctor.appointmentPhone ||
-                                                          "N/A"
-                                                        : doctor.appointmentPhoneMasked ||
-                                                          "N/A"}
-                                                </span>
-                                                {doctor.appointmentPhone && (
-                                                    <button
-                                                        onClick={() =>
-                                                            setShowApptPhone(
-                                                                (p) => !p,
-                                                            )
-                                                        }
-                                                    >
-                                                        {showApptPhone ? (
-                                                            <EyeOff size={13} />
-                                                        ) : (
-                                                            <Eye size={13} />
-                                                        )}
-                                                    </button>
-                                                )}
+                                                {showApptPhone
+                                                    ? doctor.appointmentPhone ||
+                                                      "N/A"
+                                                    : doctor.appointmentPhoneMasked ||
+                                                      "N/A"}
                                             </span>
+                                            {doctor.appointmentPhone && (
+                                                <button
+                                                    onClick={() =>
+                                                        setShowApptPhone(
+                                                            (p) => !p,
+                                                        )
+                                                    }
+                                                >
+                                                    {showApptPhone ? (
+                                                        <EyeOff size={13} />
+                                                    ) : (
+                                                        <Eye size={13} />
+                                                    )}
+                                                </button>
+                                            )}
                                         </div>
                                     </>
                                 ),
                             },
                             {
                                 label: "Professional",
+                                icon: Stethoscope,
                                 value: (
                                     <div className="dp-group">
                                         <div className="dp-row">
@@ -768,7 +861,6 @@ export default function DoctorProfile(props) {
                                                 {doctor.experience || "N/A"} yrs
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">
                                                 Degree
@@ -778,7 +870,6 @@ export default function DoctorProfile(props) {
                                                     "N/A"}
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">
                                                 Reg No
@@ -792,6 +883,7 @@ export default function DoctorProfile(props) {
                             },
                             {
                                 label: "Address",
+                                icon: MapPin,
                                 value: (
                                     <div className="dp-group">
                                         <div className="dp-row">
@@ -806,14 +898,12 @@ export default function DoctorProfile(props) {
                                                     .join(", ") || "N/A"}
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">City</span>
                                             <span>
                                                 {doctor.address?.city || "N/A"}
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">
                                                 State
@@ -822,7 +912,6 @@ export default function DoctorProfile(props) {
                                                 {doctor.address?.state || "N/A"}
                                             </span>
                                         </div>
-
                                         <div className="dp-row">
                                             <span className="dp-key">
                                                 Pincode
@@ -832,12 +921,22 @@ export default function DoctorProfile(props) {
                                                     "N/A"}
                                             </span>
                                         </div>
+                                        <div className="dp-row">
+                                            <span className="dp-key">
+                                                Country
+                                            </span>
+                                            <span>
+                                                {doctor.address?.country ||
+                                                    "N/A"}
+                                            </span>
+                                        </div>
                                     </div>
                                 ),
                             },
                         ].map((item) => (
                             <div key={item.label} className="dp-info-item">
                                 <div className="dp-info-label">
+                                    <item.icon size={10} />
                                     {item.label}
                                 </div>
                                 <div className="dp-info-value">
@@ -864,7 +963,7 @@ export default function DoctorProfile(props) {
                             <label className="dp-label">Phone Number</label>
                             <input
                                 className="dp-input"
-                                placeholder="10 digit number"
+                                placeholder="Enter phone number"
                                 value={staffPhone}
                                 onChange={(e) => setStaffPhone(e.target.value)}
                             />
@@ -922,11 +1021,11 @@ export default function DoctorProfile(props) {
                                         key={s._id}
                                         className="dp-staff-card"
                                         style={{
-                                            position: "relative",
                                             opacity: s.isActive ? 1 : 0.5,
                                             filter: s.isActive
                                                 ? "none"
                                                 : "grayscale(80%)",
+                                            position: "relative",
                                         }}
                                     >
                                         {!s.isActive && (
@@ -936,12 +1035,12 @@ export default function DoctorProfile(props) {
                                                     top: 8,
                                                     right: 8,
                                                     fontSize: 10,
-                                                    padding: "2px 6px",
+                                                    padding: "2px 7px",
                                                     borderRadius: 6,
                                                     background:
-                                                        "rgba(248,113,113,0.1)",
+                                                        "rgba(248,113,113,.1)",
                                                     color: "#f87171",
-                                                    border: "1px solid rgba(248,113,113,0.3)",
+                                                    border: "1px solid rgba(248,113,113,.3)",
                                                 }}
                                             >
                                                 Inactive
@@ -1054,6 +1153,85 @@ export default function DoctorProfile(props) {
                     </button>
                 </Section>
 
+                {/* ── Payment Methods ── */}
+                <Section
+                    icon={CreditCard}
+                    title="Payment Methods"
+                    accent="#34d399"
+                >
+                    {paymentMethods.length === 0 ? (
+                        <div className="dp-empty">No payment methods added</div>
+                    ) : (
+                        <div className="dp-staff-grid dp-mb">
+                            {paymentMethods.map((p, i) => (
+                                <div key={i} className="dp-staff-card">
+                                    <div className="dp-staff-info">
+                                        <div className="dp-staff-name">
+                                            {p.label || "Payment"}
+                                        </div>
+                                        <div className="dp-staff-phone">
+                                            {categories.find(
+                                                (c) =>
+                                                    c._id?.toString() ===
+                                                    p.categoryId?.toString(),
+                                            )?.name || p._categoryName}
+                                            {" - "}
+                                            {subCategories.find(
+                                                (s) =>
+                                                    s._id?.toString() ===
+                                                    p.subCategoryId?.toString(),
+                                            )?.name || p._subCategoryName}
+                                        </div>
+                                        <span className="dp-role-badge">
+                                            {p.isActive ? "Active" : "Inactive"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-staff-actions">
+                                        <button
+                                            className="dp-icon-btn"
+                                            onClick={() => {
+                                                const updated = [
+                                                    ...paymentMethods,
+                                                ];
+                                                updated[i] = {
+                                                    ...updated[i],
+                                                    isActive:
+                                                        !updated[i].isActive,
+                                                };
+                                                setPaymentMethods(updated);
+                                            }}
+                                        >
+                                            {p.isActive ? (
+                                                <EyeOff size={13} />
+                                            ) : (
+                                                <Eye size={13} />
+                                            )}
+                                        </button>
+                                        <button
+                                            className="dp-icon-btn dp-icon-del"
+                                            onClick={() =>
+                                                setPaymentMethods(
+                                                    paymentMethods.filter(
+                                                        (_, idx) => idx !== i,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <button
+                        className="dp-btn dp-btn-outline"
+                        onClick={() => setEditPaymentsOpen(true)}
+                    >
+                        <Pencil size={13} /> Edit Payment Methods
+                    </button>
+                </Section>
+
                 {/* ── Change Password ── */}
                 <Section icon={Lock} title="Change Password" accent="#fb923c">
                     <div className="dp-grid3 dp-mb">
@@ -1071,10 +1249,11 @@ export default function DoctorProfile(props) {
                             showPasswords={showPasswords}
                             setShowPasswords={setShowPasswords}
                         />
+
                         <div>
                             <PasswordInput
                                 label="New Password"
-                                placeholder="Min. 6 characters"
+                                placeholder="Min. 8 characters"
                                 value={passwordData.newPassword}
                                 onChange={(e) =>
                                     setPasswordData({
@@ -1086,58 +1265,38 @@ export default function DoctorProfile(props) {
                                 showPasswords={showPasswords}
                                 setShowPasswords={setShowPasswords}
                             />
-                            <div style={{ fontSize: 10, marginTop: 6 }}>
-                                <div
-                                    style={{
-                                        color: passwordRules.length
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                    }}
-                                >
-                                    {passwordRules.length ? "✓" : "✗"} Min 8
-                                    characters
-                                </div>
-                                <div
-                                    style={{
-                                        color: passwordRules.uppercase
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                    }}
-                                >
-                                    {passwordRules.uppercase ? "✓" : "✗"}{" "}
-                                    Uppercase letter
-                                </div>
-                                <div
-                                    style={{
-                                        color: passwordRules.lowercase
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                    }}
-                                >
-                                    {passwordRules.lowercase ? "✓" : "✗"}{" "}
-                                    Lowercase letter
-                                </div>
-                                <div
-                                    style={{
-                                        color: passwordRules.number
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                    }}
-                                >
-                                    {passwordRules.number ? "✓" : "✗"} Number
-                                </div>
-                                <div
-                                    style={{
-                                        color: passwordRules.special
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                    }}
-                                >
-                                    {passwordRules.special ? "✓" : "✗"} Special
-                                    character
-                                </div>
+                            <div style={{ marginTop: 8 }}>
+                                {[
+                                    ["length", "Min 8 characters"],
+                                    ["uppercase", "Uppercase letter"],
+                                    ["lowercase", "Lowercase letter"],
+                                    ["number", "Number"],
+                                    ["special", "Special character"],
+                                ].map(([key, label]) => (
+                                    <div key={key} className="dp-pw-rule">
+                                        <div
+                                            className="dp-pw-rule-dot"
+                                            style={{
+                                                background: passwordRules[key]
+                                                    ? "#4ade80"
+                                                    : "#1a2540",
+                                            }}
+                                        />
+                                        <span
+                                            style={{
+                                                fontSize: 10,
+                                                color: passwordRules[key]
+                                                    ? "#4ade80"
+                                                    : "#2e3d5c",
+                                            }}
+                                        >
+                                            {label}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
+
                         <div>
                             <PasswordInput
                                 label="Confirm Password"
@@ -1160,7 +1319,7 @@ export default function DoctorProfile(props) {
                                         color: passwordsMatch
                                             ? "#4ade80"
                                             : "#f87171",
-                                        marginTop: 5,
+                                        marginTop: 6,
                                     }}
                                 >
                                     {passwordsMatch
@@ -1228,7 +1387,7 @@ export default function DoctorProfile(props) {
                                     </div>
                                     <div className="dp-field">
                                         <label className="dp-label">
-                                            Clinic Name
+                                            Medical Center Name
                                         </label>
                                         <input
                                             className="dp-input"
@@ -1241,25 +1400,114 @@ export default function DoctorProfile(props) {
                                         <label className="dp-label">
                                             Phone
                                         </label>
-                                        <input
-                                            className="dp-input"
-                                            name="phone"
-                                            value={editData.phone}
-                                            onChange={handleEditChange}
-                                        />
+                                        <div
+                                            style={{ display: "flex", gap: 6 }}
+                                        >
+                                            <select
+                                                className="dp-select"
+                                                style={{
+                                                    width: "auto",
+                                                    flexShrink: 0,
+                                                    paddingRight: 28,
+                                                }}
+                                                value={
+                                                    editData.countryCode ||
+                                                    doctor.address
+                                                        ?.countryCode ||
+                                                    "+91"
+                                                }
+                                                onChange={(e) =>
+                                                    setEditData({
+                                                        ...editData,
+                                                        countryCode:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            >
+                                                {COUNTRY_CODES.map((c, i) => (
+                                                    <option
+                                                        key={`${c.code}-${i}`}
+                                                        value={c.code}
+                                                    >
+                                                        {c.flag} {c.code}{" "}
+                                                        {c.country}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                className="dp-input"
+                                                name="phone"
+                                                placeholder="Phone number"
+                                                value={editData.phone}
+                                                onChange={(e) =>
+                                                    setEditData({
+                                                        ...editData,
+                                                        phone: e.target.value.replace(
+                                                            /\D/g,
+                                                            "",
+                                                        ),
+                                                    })
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                     <div className="dp-field">
                                         <label className="dp-label">
                                             Appointment Phone
                                         </label>
-                                        <input
-                                            className="dp-input"
-                                            name="appointmentPhone"
-                                            value={
-                                                editData.appointmentPhone || ""
-                                            }
-                                            onChange={handleEditChange}
-                                        />
+                                        <div
+                                            style={{ display: "flex", gap: 6 }}
+                                        >
+                                            <select
+                                                className="dp-select"
+                                                style={{
+                                                    width: "auto",
+                                                    flexShrink: 0,
+                                                    paddingRight: 28,
+                                                }}
+                                                value={
+                                                    editData.countryCode ||
+                                                    doctor.address
+                                                        ?.countryCode ||
+                                                    "+91"
+                                                }
+                                                onChange={(e) =>
+                                                    setEditData({
+                                                        ...editData,
+                                                        countryCode:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                            >
+                                                {COUNTRY_CODES.map((c, i) => (
+                                                    <option
+                                                        key={`${c.code}-${i}`}
+                                                        value={c.code}
+                                                    >
+                                                        {c.flag} {c.code}{" "}
+                                                        {c.country}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                className="dp-input"
+                                                name="appointmentphone"
+                                                placeholder="Phone number"
+                                                value={
+                                                    editData.appointmentPhone
+                                                }
+                                                onChange={(e) =>
+                                                    setEditData({
+                                                        ...editData,
+                                                        appointmentPhone:
+                                                            e.target.value.replace(
+                                                                /\D/g,
+                                                                "",
+                                                            ),
+                                                    })
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                     <div className="dp-field">
                                         <label className="dp-label">
@@ -1275,7 +1523,7 @@ export default function DoctorProfile(props) {
                                 </div>
 
                                 <div className="dp-modal-section-title">
-                                    Qualifications
+                                    <GraduationCap size={10} /> Qualifications
                                 </div>
                                 {editData.degree.map((deg, index) => (
                                     <div
@@ -1318,7 +1566,7 @@ export default function DoctorProfile(props) {
                                 </button>
 
                                 <div className="dp-modal-section-title">
-                                    Clinic Address
+                                    <MapPin size={10} /> Medical Center Address
                                 </div>
                                 <div className="dp-field dp-mb">
                                     <input
@@ -1663,7 +1911,7 @@ export default function DoctorProfile(props) {
                                             style={{
                                                 fontSize: 11,
                                                 color: "#a78bfa",
-                                                letterSpacing: "0.08em",
+                                                letterSpacing: ".08em",
                                                 marginBottom: 4,
                                             }}
                                         >
@@ -1735,6 +1983,238 @@ export default function DoctorProfile(props) {
                                     }}
                                 >
                                     <Check size={13} /> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Payment Methods Modal */}
+                {editPaymentsOpen && (
+                    <div
+                        className="dp-modal-bg"
+                        onClick={() => setEditPaymentsOpen(false)}
+                    >
+                        <div
+                            className="dp-modal"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="dp-modal-header">
+                                <div className="dp-modal-title">
+                                    Edit <em>Payment Methods</em>
+                                </div>
+                                <button
+                                    className="dp-modal-close"
+                                    onClick={() => setEditPaymentsOpen(false)}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <div className="dp-modal-body">
+                                {paymentMethods.length > 0 && (
+                                    <>
+                                        <div className="dp-modal-section-title">
+                                            Existing Methods
+                                        </div>
+                                        {paymentMethods.map((p, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 8,
+                                                    padding: "10px 12px",
+                                                    marginBottom: 8,
+                                                    borderRadius: 10,
+                                                    background:
+                                                        "rgba(255,255,255,.03)",
+                                                    border: "1px solid rgba(255,255,255,.06)",
+                                                    transition:
+                                                        "border-color .15s",
+                                                }}
+                                            >
+                                                <div style={{ flex: 1 }}>
+                                                    <div
+                                                        style={{
+                                                            fontSize: 13,
+                                                            fontWeight: 500,
+                                                        }}
+                                                    >
+                                                        {p.label || "Unnamed"}
+                                                    </div>
+                                                    <div
+                                                        style={{
+                                                            fontSize: 11,
+                                                            opacity: 0.45,
+                                                            marginTop: 2,
+                                                        }}
+                                                    >
+                                                        {
+                                                            categories.find(
+                                                                (c) =>
+                                                                    c._id?.toString() ===
+                                                                    p.categoryId?.toString(),
+                                                            )?.name
+                                                        }
+                                                        {" → "}
+                                                        {
+                                                            subCategories.find(
+                                                                (s) =>
+                                                                    s._id?.toString() ===
+                                                                    p.subCategoryId?.toString(),
+                                                            )?.name
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    className="dp-icon-btn"
+                                                    title={
+                                                        p.isActive
+                                                            ? "Deactivate"
+                                                            : "Activate"
+                                                    }
+                                                    onClick={() => {
+                                                        const updated = [
+                                                            ...paymentMethods,
+                                                        ];
+                                                        updated[i] = {
+                                                            ...updated[i],
+                                                            isActive:
+                                                                !updated[i]
+                                                                    .isActive,
+                                                        };
+                                                        setPaymentMethods(
+                                                            updated,
+                                                        );
+                                                    }}
+                                                >
+                                                    {p.isActive ? (
+                                                        <Eye size={13} />
+                                                    ) : (
+                                                        <EyeOff size={13} />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    className="dp-icon-btn dp-icon-del"
+                                                    onClick={() =>
+                                                        setPaymentMethods(
+                                                            paymentMethods.filter(
+                                                                (_, idx) =>
+                                                                    idx !== i,
+                                                            ),
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <div className="dp-divider" />
+                                    </>
+                                )}
+                                <div className="dp-modal-section-title">
+                                    Add New Method
+                                </div>
+                                <AddPaymentForm
+                                    categories={categories}
+                                    subCategories={subCategories}
+                                    onAdd={(newMethod) =>
+                                        setPaymentMethods((prev) => [
+                                            ...prev,
+                                            newMethod,
+                                        ])
+                                    }
+                                />
+                            </div>
+                            <div className="dp-modal-footer">
+                                <button
+                                    className="dp-btn dp-btn-outline"
+                                    onClick={() => setEditPaymentsOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="dp-btn dp-btn-primary"
+                                    onClick={async () => {
+                                        try {
+                                            const cleanMethods =
+                                                paymentMethods.map((m) => ({
+                                                    categoryId:
+                                                        m.categoryId?.toString(),
+                                                    subCategoryId:
+                                                        m.subCategoryId?.toString(),
+                                                    label: m.label || "",
+                                                    isActive:
+                                                        m.isActive ?? true,
+                                                }));
+
+                                            const res = await authFetch(
+                                                `${API_BASE_URL}/api/doctor/update_payment_methods`,
+                                                {
+                                                    method: "PUT",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        paymentMethods:
+                                                            cleanMethods,
+                                                    }),
+                                                },
+                                            );
+                                            const data = await res.json();
+
+                                            if (data.success) {
+                                                const normalized = (
+                                                    data.paymentMethods ||
+                                                    cleanMethods
+                                                ).map((m) => ({
+                                                    ...m,
+                                                    categoryId:
+                                                        m.categoryId?._id?.toString() ||
+                                                        m.categoryId?.toString() ||
+                                                        "",
+                                                    subCategoryId:
+                                                        m.subCategoryId?._id?.toString() ||
+                                                        m.subCategoryId?.toString() ||
+                                                        "",
+                                                    _categoryName:
+                                                        categories.find(
+                                                            (c) =>
+                                                                c._id?.toString() ===
+                                                                (m.categoryId?._id?.toString() ||
+                                                                    m.categoryId?.toString()),
+                                                        )?.name || "",
+                                                    _subCategoryName:
+                                                        subCategories.find(
+                                                            (s) =>
+                                                                s._id?.toString() ===
+                                                                (m.subCategoryId?._id?.toString() ||
+                                                                    m.subCategoryId?.toString()),
+                                                        )?.name || "",
+                                                }));
+                                                setPaymentMethods(normalized);
+                                                setEditPaymentsOpen(false);
+                                                props.showAlert(
+                                                    "Updated successfully",
+                                                    "success",
+                                                );
+                                            } else
+                                                props.showAlert(
+                                                    data.error ||
+                                                        "Update failed",
+                                                    "danger",
+                                                );
+                                        } catch (err) {
+                                            console.error(err);
+                                            props.showAlert(
+                                                "Server error",
+                                                "danger",
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Check size={13} /> Save All
                                 </button>
                             </div>
                         </div>

@@ -25,7 +25,11 @@ const checkSubscription = async (doctor) => {
     }
 
     // ACTIVE (IMPORTANT FIX)
-    if (expiry > today && doctor.subscription.status !== "active") {
+    if (
+        expiry > today &&
+        doctor.subscription.status !== "active" &&
+        doctor.subscription.status !== "cancelled"
+    ) {
         doctor.subscription.status = "active";
         updated = true;
     }
@@ -35,4 +39,11 @@ const checkSubscription = async (doctor) => {
     return doctor;
 };
 
-module.exports = checkSubscription;
+const getSubscriptionStatus = (subscription) => {
+    if (!subscription?.expiryDate) return "free";
+    const today = normalizeDate(new Date());
+    const expiry = normalizeDate(subscription.expiryDate);
+    return expiry <= today ? "expired" : "active";
+};
+
+module.exports = { checkSubscription, getSubscriptionStatus, normalizeDate };

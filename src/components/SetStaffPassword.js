@@ -2,22 +2,20 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { KeyRound, ShieldCheck, AlertTriangle } from "lucide-react";
+import { API_BASE_URL } from "./config";
+import "../css/Setstaffpassword.css";
 
 export default function SetStaffPassword(props) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { staffId } = location.state || {};
+    const params = new URLSearchParams(location.search);
+    const setupToken = params.get("token");
 
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
-    if (!staffId) {
+    if (!setupToken) {
         return (
             <>
                 <div className="ssp-root">
@@ -36,33 +34,45 @@ export default function SetStaffPassword(props) {
     }
 
     const submitPassword = async () => {
-        if (password.length < 6) {
-            props.showAlert("Password must be at least 6 characters", "danger");
+        if (password.length < 8) {
+            props.showAlert("Password must be at least 8 characters", "danger");
             return;
         }
+
         if (password !== confirm) {
             props.showAlert("Passwords do not match", "danger");
             return;
         }
+
         setLoading(true);
-        const res = await authFetch(`${API_BASE_URL}/api/staff/set_password`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ staffId, password }),
-        });
-        const data = await res.json();
-        setLoading(false);
-        if (data.success) {
-            props.showAlert(
-                "Password set successfully. Please login.",
-                "success",
+
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/staff/set_password`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ setupToken, password }),
+                },
             );
-            navigate("/login");
-        } else {
-            props.showAlert(
-                data.error || "Server Error try again later",
-                "danger",
-            );
+
+            const data = await res.json();
+            setLoading(false);
+
+            if (data.success) {
+                props.showAlert(
+                    "Password set successfully. Please login.",
+                    "success",
+                );
+
+                // Redirect to login (correct behavior now)
+                navigate("/login");
+            } else {
+                props.showAlert(data.error || "Something went wrong", "danger");
+            }
+        } catch (err) {
+            setLoading(false);
+            props.showAlert("Network error. Try again.", "danger");
         }
     };
 
@@ -92,7 +102,7 @@ export default function SetStaffPassword(props) {
                         <input
                             type="password"
                             className="ssp-input"
-                            placeholder="Min. 6 characters"
+                            placeholder="Min. 8 characters"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />

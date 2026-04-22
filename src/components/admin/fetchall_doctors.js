@@ -1,6 +1,8 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
+import "../../css/Doctorlist.css";
 
 const subscriptionPlans = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
 
@@ -40,11 +42,6 @@ const AdminDoctors = () => {
         document.body.classList.add("dark-theme");
     }, []);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
     const fetchDoctors = useCallback(async () => {
         try {
             const token = localStorage.getItem("admintoken");
@@ -73,7 +70,7 @@ const AdminDoctors = () => {
             setError("Server error");
             setLoading(false);
         }
-    }, [API_BASE_URL, navigate]);
+    }, [navigate]);
 
     useEffect(() => {
         fetchDoctors();
@@ -164,10 +161,14 @@ const AdminDoctors = () => {
         }
     };
 
-    if (localStorage.getItem("role") !== "superadmin") {
-        navigate("/");
-        return null;
-    }
+    useEffect(() => {
+        const role = localStorage.getItem("role");
+        const token = localStorage.getItem("admintoken");
+
+        if (!token || role !== "superadmin") {
+            navigate("/admin/login_admin");
+        }
+    }, [navigate]);
 
     return (
         <>
@@ -193,7 +194,7 @@ const AdminDoctors = () => {
                                 <tr>
                                     <th>Name</th>
                                     <th>Email</th>
-                                    <th>Clinic</th>
+                                    <th>Center</th>
                                     <th>Phone</th>
                                     <th>Subscription</th>
                                 </tr>
@@ -348,6 +349,13 @@ const AdminDoctors = () => {
                                                 : "XXXXXX" +
                                                   (doc.phoneLast4 || "")}
                                             <button
+                                                style={{
+                                                    background: "transparent",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    fontSize: 14,
+                                                    color: "#60a5fa",
+                                                }}
                                                 onClick={() =>
                                                     handleTogglePhone(doc._id)
                                                 }

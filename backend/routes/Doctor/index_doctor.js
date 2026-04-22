@@ -9,11 +9,13 @@ router.use("/", require("./get_doc"));
 router.use("/", require("./change_password"));
 router.use("/", require("./reset_password"));
 router.use("/", require("./subscription"));
-router.use("/", require("./payment_history"));
+router.use("/", require("./payment_methods"));
 router.use("/", require("./otp"));
 router.use("/", require("./signup_verify_otp"));
-router.use("/", require("./verify"));
+router.use("/", require("./email_verify"));
 router.use("/", require("./signup_send_otp"));
+router.use("/", require("./get_currency"));
+router.use("/",require("./get_methods"));
 
 router.use("/appointment", require("./Appointment/index_appointment"));
 router.use("/patient", require("./Patient/index_patient"));

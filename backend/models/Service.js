@@ -10,7 +10,7 @@ const ServiceSchema = new Schema(
         },
         amount: {
             type: Number,
-            default: 0,
+            default: null,
         },
         doctor: {
             type: Schema.Types.ObjectId,

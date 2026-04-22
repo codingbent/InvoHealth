@@ -1,0 +1,525 @@
+@import "./App.css";
+
+@keyframes sfp-rise {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes sfp-shimmer {
+    0% {
+        background-position: -600px 0;
+    }
+    100% {
+        background-position: 600px 0;
+    }
+}
+@keyframes sfp-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes sfp-slide-down {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 800px;
+    }
+}
+@keyframes sfp-modal-rise {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes sfp-pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.3);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(248, 113, 113, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(248, 113, 113, 0);
+    }
+}
+
+.sfp-root {
+    background: #080b12;
+    min-height: 100vh;
+    padding: 32px 24px 90px;
+    color: #c5d0e8;
+    animation: sfp-fade-in 0.35s ease both;
+}
+
+/* ── Page title ── */
+.sfp-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #2a374f;
+    margin-bottom: 5px;
+}
+.sfp-page-title {
+    font-size: 27px;
+    font-weight: 400;
+    color: #e8edf8;
+    margin-bottom: 28px;
+    letter-spacing: -0.01em;
+}
+.sfp-page-title em {
+    font-style: italic;
+    color: #60a5fa;
+}
+
+/* ── Profile card ── */
+.sfp-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 16px;
+    padding: 26px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+    animation: sfp-rise 0.3s ease both;
+}
+.sfp-card:hover {
+    border-color: #1e2d48;
+}
+.sfp-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.4),
+        transparent
+    );
+}
+.sfp-card::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(
+        circle at 100% 100%,
+        rgba(77, 124, 246, 0.05) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+}
+
+.sfp-profile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.sfp-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+.sfp-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(
+        135deg,
+        rgba(77, 124, 246, 0.15),
+        rgba(96, 165, 250, 0.08)
+    );
+    border: 1px solid rgba(77, 124, 246, 0.25);
+    color: #60a5fa;
+    font-size: 22px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(77, 124, 246, 0.06);
+    transition: box-shadow 0.22s;
+}
+.sfp-card:hover .sfp-avatar {
+    box-shadow: 0 0 0 7px rgba(77, 124, 246, 0.1);
+}
+.sfp-name {
+    font-size: 21px;
+    font-weight: 400;
+    color: #e8edf8;
+    margin-bottom: 7px;
+    letter-spacing: -0.01em;
+}
+.sfp-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    border: 1px solid;
+}
+.sfp-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.sfp-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #2e3d5c;
+}
+
+/* ── Section ── */
+.sfp-section {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+}
+.sfp-section:hover {
+    border-color: #1e2d48;
+}
+.sfp-section-hdr {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 17px 22px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: stretch;
+    transition: background 0.15s;
+}
+.sfp-section-hdr:hover {
+    background: rgba(255, 255, 255, 0.018);
+}
+.sfp-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.22s;
+}
+.sfp-section-hdr:hover .sfp-section-icon {
+    transform: scale(1.08);
+}
+.sfp-section-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #c5d0e8;
+    letter-spacing: 0.04em;
+}
+.sfp-chevron {
+    color: #2e3d5c;
+    margin-left: auto;
+    transition: transform 0.22s ease;
+}
+.sfp-chevron.open {
+    transform: rotate(180deg);
+}
+.sfp-section-body {
+    padding: 0 22px 22px;
+    border-top: 1px solid #131929;
+    padding-top: 20px;
+    animation: sfp-slide-down 0.22s ease both;
+}
+
+/* ── Inputs ── */
+.sfp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 13px;
+    margin-bottom: 18px;
+}
+.sfp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sfp-label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #2a374f;
+}
+.sfp-input-wrap {
+    position: relative;
+}
+.sfp-input {
+    width: stretch;
+    background: #07090f;
+    border: 1px solid #192035;
+    border-radius: 9px;
+    padding: 10px 40px 10px 13px;
+    font-size: 12px;
+    color: #c5d0e8;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    box-sizing: border-box;
+}
+.sfp-input::placeholder {
+    color: #1e2b40;
+}
+.sfp-input:focus {
+    border-color: rgba(77, 124, 246, 0.45);
+    box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
+}
+.sfp-eye {
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #2e3d5c;
+    cursor: pointer;
+    padding: 2px;
+    transition: color 0.15s;
+}
+.sfp-eye:hover {
+    color: #60a5fa;
+}
+.sfp-pw-hint {
+    font-size: 10px;
+    margin-top: 5px;
+}
+
+/* ── Buttons ── */
+.sfp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+.sfp-btn-outline {
+    background: transparent;
+    border: 1px solid #1a2540;
+    color: #3a4a6b;
+}
+.sfp-btn-outline:hover {
+    border-color: rgba(77, 124, 246, 0.35);
+    color: #60a5fa;
+    background: rgba(77, 124, 246, 0.05);
+}
+.sfp-btn-danger {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.18);
+    color: #f87171;
+}
+.sfp-btn-danger:hover:not(:disabled) {
+    background: rgba(248, 113, 113, 0.16);
+    border-color: rgba(248, 113, 113, 0.4);
+    transform: translateY(-1px);
+}
+.sfp-btn-danger:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ── Danger zone card ── */
+.sfp-danger-zone {
+    background: rgba(248, 113, 113, 0.03);
+    border: 1px solid rgba(248, 113, 113, 0.12);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+    animation: sfp-rise 0.4s ease 0.15s both;
+}
+.sfp-danger-zone::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(248, 113, 113, 0.3),
+        transparent
+    );
+}
+.sfp-danger-title {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(248, 113, 113, 0.4);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sfp-danger-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(248, 113, 113, 0.08);
+}
+.sfp-leave-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: stretch;
+    padding: 12px;
+    background: rgba(248, 113, 113, 0.06);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    border-radius: 10px;
+    color: #f87171;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.sfp-leave-btn:hover {
+    background: rgba(248, 113, 113, 0.14);
+    border-color: rgba(248, 113, 113, 0.45);
+    transform: translateY(-1px);
+    animation: sfp-pulse-ring 0.6s ease;
+}
+.sfp-leave-desc {
+    font-size: 10px;
+    color: #2e3d5c;
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+}
+
+/* ── Confirm modal ── */
+.sfp-modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: sfp-fade-in 0.18s ease both;
+}
+.sfp-modal {
+    background: #0d1117;
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    border-radius: 18px;
+    padding: 28px;
+    width: stretch;
+    max-width: 380px;
+    box-shadow:
+        0 40px 100px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(248, 113, 113, 0.06);
+    animation: sfp-modal-rise 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    position: relative;
+}
+.sfp-modal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(248, 113, 113, 0.4),
+        transparent
+    );
+}
+.sfp-modal-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    margin: 0 auto 16px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f87171;
+}
+.sfp-modal-title {
+    font-size: 18px;
+    font-weight: 400;
+    color: #e8edf8;
+    text-align: center;
+    margin-bottom: 8px;
+}
+.sfp-modal-desc {
+    font-size: 12px;
+    color: #4a5a7a;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 22px;
+}
+.sfp-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+.sfp-modal-actions .sfp-btn {
+    flex: 1;
+    justify-content: center;
+}
+
+/* ── Skeleton ── */
+.sfp-skel {
+    background: linear-gradient(90deg, #0d1117 25%, #111827 50%, #0d1117 75%);
+    background-size: 600px 100%;
+    animation: sfp-shimmer 1.5s infinite linear;
+    border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+    .sfp-root {
+        padding: 20px 14px 70px;
+    }
+    .sfp-grid {
+        grid-template-columns: 1fr;
+    }
+}

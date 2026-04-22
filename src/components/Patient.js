@@ -22,9 +22,13 @@ import {
     CreditCard,
     ChevronRight,
     User,
+    Mail,
+    Globe,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Pricing from "./Pricing";
+import { API_BASE_URL } from "../components/config";
+import "../css/Landingpage.css";
 
 const FEATURES = [
     {
@@ -55,6 +59,24 @@ const FEATURES = [
         glow: "rgba(96,165,250,0.6)",
     },
     {
+        name: "Gmail Notifications",
+        desc: "Send invoices and appointment confirmations directly via Gmail API — no extra setup.",
+        icon: <Mail size={18} />,
+        color: "#fb923c",
+        bg: "rgba(251,146,60,0.1)",
+        border: "rgba(251,146,60,0.3)",
+        glow: "rgba(251,146,60,0.6)",
+    },
+    {
+        name: "Staff Management",
+        desc: "Add receptionists, assistants and nurses with role-based access control.",
+        icon: <User size={18} />,
+        color: "#c084fc",
+        bg: "rgba(192,132,252,0.1)",
+        border: "rgba(192,132,252,0.3)",
+        glow: "rgba(192,132,252,0.6)",
+    },
+    {
         name: "Smart Billing",
         desc: "Generate invoices instantly with automated calculations, discounts, and payment tracking.",
         icon: <FileText size={18} />,
@@ -73,7 +95,7 @@ const FEATURES = [
         glow: "rgba(245,158,11,0.6)",
     },
     {
-        name: "Clinic Insights",
+        name: "Medical Center Insights",
         desc: "Monitor revenue, patient flow, and performance with simple analytics.",
         icon: <BarChart3 size={18} />,
         color: "#f87171",
@@ -82,10 +104,17 @@ const FEATURES = [
         glow: "rgba(248,113,113,0.6)",
     },
 ];
-const Patient = ({ showAlert }) => {
+const Patient = ({
+    showAlert,
+    currency,
+    usage,
+    // updateUsage,
+    services,
+    availability,
+}) => {
     const [role, setRole] = useState(null);
     //eslint-disable-next-line
-    const [subscriptionStatus, setSubscriptionStatus] = useState("active");
+    const [subscriptionStatus, setSubscriptionStatus] = useState(null);
     const [showAppointment, setShowAppointment] = useState(false);
     const [showPatientDetails, setShowPatientDetails] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -93,11 +122,8 @@ const Patient = ({ showAlert }) => {
     const [showPatientModal, setShowPatientModal] = useState(false);
     const [showServiceModal, setShowServiceModal] = useState(false);
     const [showEditServiceModal, setShowEditServiceModal] = useState(false);
-
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
+    // eslint-disable-next-line
+    const [subscription, setSubscription] = useState(null);
 
     const Modal = ({ isOpen, onClose, children }) => {
         if (!isOpen) return null;
@@ -107,9 +133,9 @@ const Patient = ({ showAlert }) => {
                     className="modal-container"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <button className="modal-close" onClick={onClose}>
+                    {/* <button className="modal-close" onClick={onClose}>
                         ✕
-                    </button>
+                    </button> */}
                     {children}
                 </div>
             </div>
@@ -149,31 +175,27 @@ const Patient = ({ showAlert }) => {
         })
             .then((res) => res.json())
             .then((data) => {
-                if (!data.success) return;
-
-                const sub = data.subscription;
-                let status = sub.status;
-
-                // 🔥 DATE-ONLY EXPIRY CHECK
-                if (sub.expiryDate) {
-                    const today = new Date();
-                    const exp = new Date(sub.expiryDate);
-
-                    today.setHours(0, 0, 0, 0);
-                    exp.setHours(0, 0, 0, 0);
-
-                    if (
-                        (status === "trial" || status === "active") &&
-                        exp <= today
-                    ) {
-                        status = "expired";
-                    }
+                if (!data.success) {
+                    setSubscriptionStatus("expired");
+                    return;
                 }
 
-                setSubscriptionStatus(status);
+                const sub = data.subscription;
+
+                // compute real status (IMPORTANT)
+                const now = new Date();
+                const expiry = sub.expiryDate ? new Date(sub.expiryDate) : null;
+
+                if (expiry && expiry <= now) {
+                    setSubscriptionStatus("expired");
+                } else {
+                    setSubscriptionStatus(sub.status || "active");
+                }
             })
-            .catch(() => {});
-    }, [API_BASE_URL]);
+            .catch(() => {
+                setSubscriptionStatus(null); // allow fallback
+            });
+    }, []);
 
     const closeAppointment = () => {
         setShowAppointment(false);
@@ -187,6 +209,16 @@ const Patient = ({ showAlert }) => {
         setShowPatientDetails(false);
         setSelectedPatientId(null);
     };
+
+    // useEffect(() => {
+    //     if (!localStorage.getItem("token")) return;
+
+    //     if (!subscriptionStatus) return;
+
+    //     if (subscriptionStatus !== "active") {
+    //         showAlert("Subscription expired. Please upgrade.", "danger");
+    //     }
+    // }, [subscriptionStatus, showAlert]);
 
     // ── Landing (not logged in) ──
     if (!localStorage.getItem("token")) {
@@ -204,13 +236,13 @@ const Patient = ({ showAlert }) => {
                             <ShieldCheck size={11} /> FinTech for Healthcare
                         </div>
                         <h1 className="lp-h1">
-                            Clinic billing,
+                            Medical Center billing,
                             <br />
                             <em>simplified</em> for doctors
                         </h1>
                         <p className="lp-sub">
                             Manage patients, appointments, invoices and staff —
-                            all in one place. Built for modern Indian clinics.
+                            all in one place. Built for modern Medical center.
                         </p>
                         <div className="lp-hero-btns">
                             <a href="#pricing" className="lp-btn-hero">
@@ -223,12 +255,30 @@ const Patient = ({ showAlert }) => {
                     </section>
 
                     <div className="lp-divider" />
-
+                    {/* Trust strip */}
+                    <div className="lp-trust-strip">
+                        <span className="lp-trust-item">
+                            <ShieldCheck size={13} /> Encrypted patient data
+                        </span>
+                        <span className="lp-trust-dot" />
+                        <span className="lp-trust-item">
+                            <Mail size={13} /> Gmail API notifications
+                        </span>
+                        <span className="lp-trust-dot" />
+                        <span className="lp-trust-item">
+                            <CreditCard size={13} /> Razorpay &amp;
+                            international payments
+                        </span>
+                        <span className="lp-trust-dot" />
+                        <span className="lp-trust-item">
+                            <Globe size={13} /> Works worldwide
+                        </span>
+                    </div>
                     {/* Features */}
                     <section className="lp-features">
                         <div className="lp-section-eyebrow">What you get</div>
                         <h2 className="lp-section-title">
-                            Everything a clinic <em>needs</em>
+                            Everything a Maedical Center <em>needs</em>
                         </h2>
                         <div className="lp-feat-grid">
                             {FEATURES.map((f) => (
@@ -266,6 +316,8 @@ const Patient = ({ showAlert }) => {
                     <div id="pricing">
                         <Pricing />
                     </div>
+
+                    {/* Trial banner */}
                 </motion.div>
             </>
         );
@@ -298,9 +350,12 @@ const Patient = ({ showAlert }) => {
                             className={`fab-item ${fabOpen ? "show" : ""}`}
                             style={{ "--i": 1 }}
                             onClick={() => {
-                                if (subscriptionStatus === "expired") {
+                                if (
+                                    subscriptionStatus !== null &&
+                                    subscriptionStatus !== "active"
+                                ) {
                                     showAlert(
-                                        "Subscription expired. Please upgrade.",
+                                        "Please upgrade your plan to continue.",
                                         "danger",
                                     );
                                     return;
@@ -317,9 +372,12 @@ const Patient = ({ showAlert }) => {
                             className={`fab-item ${fabOpen ? "show" : ""}`}
                             style={{ "--i": 2 }}
                             onClick={() => {
-                                if (subscriptionStatus === "expired") {
+                                if (
+                                    subscriptionStatus !== null &&
+                                    subscriptionStatus !== "active"
+                                ) {
                                     showAlert(
-                                        "Subscription expired. Please upgrade.",
+                                        "Please upgrade your plan to continue.",
                                         "danger",
                                     );
                                     return;
@@ -337,9 +395,12 @@ const Patient = ({ showAlert }) => {
                                 className={`fab-item ${fabOpen ? "show" : ""}`}
                                 style={{ "--i": 3 }}
                                 onClick={() => {
-                                    if (subscriptionStatus === "expired") {
+                                    if (
+                                        subscriptionStatus !== null &&
+                                        subscriptionStatus !== "active"
+                                    ) {
                                         showAlert(
-                                            "Subscription expired. Please upgrade.",
+                                            "Please upgrade your plan to continue.",
                                             "danger",
                                         );
                                         return;
@@ -358,9 +419,12 @@ const Patient = ({ showAlert }) => {
                                 className={`fab-item ${fabOpen ? "show" : ""}`}
                                 style={{ "--i": 4 }}
                                 onClick={() => {
-                                    if (subscriptionStatus === "expired") {
+                                    if (
+                                        subscriptionStatus !== null &&
+                                        subscriptionStatus !== "active"
+                                    ) {
                                         showAlert(
-                                            "Subscription expired. Please upgrade.",
+                                            "Please upgrade your plan to continue.",
                                             "danger",
                                         );
                                         return;
@@ -385,6 +449,11 @@ const Patient = ({ showAlert }) => {
                     showAlert={showAlert}
                     showModal={showPatientModal}
                     setShowModal={setShowPatientModal}
+                    currency={currency}
+                    usage={usage}
+                    // updateUsage={updateUsage}
+                    services={services}
+                    availability={availability}
                 />
             </Modal>
             <Modal
@@ -393,6 +462,7 @@ const Patient = ({ showAlert }) => {
             >
                 <AddServices
                     showAlert={showAlert}
+                    currency={currency}
                     onClose={() => setShowServiceModal(false)}
                 />
             </Modal>
@@ -402,6 +472,7 @@ const Patient = ({ showAlert }) => {
             >
                 <EditService
                     showAlert={showAlert}
+                    currency={currency}
                     onClose={() => setShowEditServiceModal(false)}
                 />
             </Modal>
@@ -410,12 +481,20 @@ const Patient = ({ showAlert }) => {
                 {!showAppointment && !showPatientDetails && (
                     <PatientList
                         showAlert={showAlert}
+                        currency={currency}
                         openPatientDetails={openPatientDetails}
                     />
                 )}
                 {showAppointment && (
                     <div className="app-section">
-                        <AddAppointment showAlert={showAlert} />
+                        <AddAppointment
+                            showAlert={showAlert}
+                            currency={currency}
+                            usage={usage}
+                            // updateUsage={updateUsage}
+                            services={services}
+                            availability={availability}
+                        />
                         <button
                             className="app-close-btn"
                             onClick={closeAppointment}
@@ -427,8 +506,11 @@ const Patient = ({ showAlert }) => {
                 {showPatientDetails && selectedPatientId && (
                     <div className="app-section">
                         <PatientDetails
+                            currency={currency}
                             patientId={selectedPatientId}
                             showAlert={showAlert}
+                            services={services}
+                            availability={availability}
                             onClose={closePatientDetails}
                         />
                     </div>

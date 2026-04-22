@@ -1,16 +1,20 @@
 import { useEffect, useRef } from "react";
 import AppointmentDay from "./AppointmentDay";
-import { IndianRupee } from "lucide-react";
+import "../css/Appointmentlist.css";
 
 export default function AppointmentList({
     appointmentsByMonth,
     monthTotal,
-    paymentColor,
+    categoryColor,
+    subCategoryColor,
     navigate,
     appointments,
     total,
     IncreaseLimit,
     loading,
+    currency,
+    getPaymentLabel,
+    paymentOptions,
 }) {
     const loadMoreRef = useRef(null);
     const isFetchingRef = useRef(false);
@@ -28,7 +32,7 @@ export default function AppointmentList({
                     IncreaseLimit();
                     setTimeout(() => {
                         isFetchingRef.current = false;
-                    }, 4000);
+                    }, 1000);
                 }
             },
             { threshold: 1 },
@@ -109,8 +113,7 @@ export default function AppointmentList({
                         </div>
                         {role === "doctor" && (
                             <div className="al-month-total">
-                                <IndianRupee size={13} />
-                                {fmt(monthTotal[month])}
+                                {currency?.symbol} {fmt(monthTotal[month])}
                             </div>
                         )}
                     </div>
@@ -120,9 +123,13 @@ export default function AppointmentList({
                             key={day}
                             day={day}
                             dayApps={appointmentsByMonth[month][day]}
-                            paymentColor={paymentColor}
+                            categoryColor={categoryColor}
                             navigate={navigate}
                             loading={loading}
+                            currency={currency}
+                            subCategoryColor={subCategoryColor}
+                            paymentOptions={paymentOptions}
+                            getPaymentLabel={getPaymentLabel}
                         />
                     ))}
                 </div>

@@ -1,0 +1,163 @@
+@import "./App.css";
+/* _____________________________________
+        Doctor List 
+____________________________________ */
+
+.ad-root {
+    background: #0a0d14;
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    color: #c5d0e8;
+}
+.ad-eyebrow {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    margin-bottom: 4px;
+}
+.ad-title {
+    font-size: 26px;
+    font-weight: 400;
+    color: #e8edf8;
+    margin-bottom: 28px;
+}
+.ad-title em {
+    font-style: italic;
+    color: #60a5fa;
+}
+/* Table */
+.ad-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+}
+.ad-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.3),
+        transparent
+    );
+}
+.ad-table {
+    width: stretch;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+.ad-table thead tr {
+    border-bottom: 1px solid #131929;
+}
+.ad-table th {
+    padding: 11px 16px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #2e3d5c;
+    font-weight: 600;
+    text-align: left;
+}
+.ad-table tbody tr {
+    border-bottom: 1px solid #0d111a;
+    transition: background 0.12s;
+}
+.ad-table tbody tr:last-child {
+    border-bottom: none;
+}
+.ad-table tbody tr:hover {
+    background: rgba(77, 124, 246, 0.04);
+}
+.ad-table td {
+    padding: 13px 16px;
+    color: #8ba0c4;
+    vertical-align: middle;
+}
+.ad-td-name {
+    color: #d4ddf0;
+    font-weight: 500;
+}
+/* Plan select */
+.ad-plan-select {
+    padding: 5px 30px 5px 10px;
+    border-radius: 20px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid;
+    outline: none;
+    transition: all 0.15s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232e3d5c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+.ad-plan-select option {
+    background: #0d1117;
+    color: #c5d0e8;
+}
+.ad-plan-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+/* Mobile cards */
+.ad-mob-cards {
+    display: none;
+}
+.ad-mob-card {
+    background: #0d1117;
+    border: 1px solid #161d2e;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 8px;
+}
+.ad-mob-name {
+    font-size: 13px;
+    color: #d4ddf0;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+.ad-mob-meta {
+    font-size: 11px;
+    color: #4a5a7a;
+    margin-bottom: 3px;
+}
+.ad-mob-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #131929;
+}
+/* States */
+.ad-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    font-size: 11px;
+    color: #2e3d5c;
+    letter-spacing: 0.08em;
+    gap: 8px;
+}
+@keyframes ad-pulse {
+    0%,
+    80%,
+    100% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1.4);
+        opacity: 1;
+    }
+}

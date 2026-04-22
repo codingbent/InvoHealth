@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const Staff = require("../../../models/Staff");
 var fetchuser = require("../../../middleware/fetchuser");
+const requireDoctor = require("../../../middleware/requireDoctor");
 
-router.put("/edit_staff/:id", fetchuser, async (req, res) => {
+router.put("/edit_staff/:id", fetchuser, requireDoctor, async (req, res) => {
     try {
         const doctorId = req.user.doctorId;
         const { name, phone, role } = req.body;

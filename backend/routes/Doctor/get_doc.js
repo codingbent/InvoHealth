@@ -9,7 +9,11 @@ router.get("/get_doc", fetchuser, async (req, res) => {
         const doctorId =
             req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
-        const doc = await Doc.findById(doctorId).select("-password");
+        const doc = await Doc.findById(doctorId)
+            .select("-password")
+            .populate("address.countryId")
+            .populate("paymentMethods.categoryId", "name")
+            .populate("paymentMethods.subCategoryId", "name");
 
         if (!doc) {
             return res.status(404).json({
@@ -57,34 +61,39 @@ router.get("/get_doc", fetchuser, async (req, res) => {
                 name: doc.name,
                 email: doc.email,
                 clinicName: doc.clinicName,
-
                 phone: phoneToSend,
                 phoneMasked: doc.phoneLast4 ? `******${doc.phoneLast4}` : "",
-
-                //  ADD THIS
                 needsPhoneUpdate,
                 plainPhone,
-
                 appointmentPhone: appointmentPhoneToSend,
-
                 appointmentPhoneMasked: doc.appointmentPhoneLast4
                     ? `******${doc.appointmentPhoneLast4}`
                     : "",
-
                 needsAppointmentPhoneUpdate:
                     !doc.appointmentPhoneEncrypted && !!doc.appointmentPhone,
-
                 plainAppointmentPhone: !doc.appointmentPhoneEncrypted
                     ? doc.appointmentPhone
                     : "",
-                address: doc.address,
+                address: {
+                    line1: doc.address?.line1 || "",
+                    line2: doc.address?.line2 || "",
+                    line3: doc.address?.line3 || "",
+                    city: doc.address?.city || "",
+                    state: doc.address?.state || "",
+                    pincode: doc.address?.pincode || "",
+                    country: doc.address?.countryId?.name || "",
+                    countryCode: doc.address?.countryCode || "",
+                    currency: doc.address?.countryId?.currency || "",
+                },
                 degree: doc.degree,
                 experience: doc.experience,
                 regNumber: doc.regNumber,
-
                 subscription: doc.subscription,
                 usage: doc.usage,
                 staffCount: doc.staff?.length || 0,
+
+                // ── ADD THIS ──
+                paymentMethods: doc.paymentMethods || [],
             },
         });
     } catch (error) {

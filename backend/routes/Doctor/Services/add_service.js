@@ -2,17 +2,45 @@ const express = require("express");
 const router = express.Router();
 const Service = require("../../../models/Service");
 var fetchuser = require("../../../middleware/fetchuser");
-const { body } = require("express-validator");
+var requireDoctor = require("../../../middleware/requireDoctor");
+var requireSubscription = require("../../../middleware/requireSubscription");
+const { body, validationResult } = require("express-validator");
 
 router.post(
     "/create_service",
     fetchuser,
-    [body("name").notEmpty(), body("amount").isNumeric()],
+    requireDoctor,
+    requireSubscription, 
+    [
+        body("name").trim().notEmpty().withMessage("Service name is required"),
+        body("amount")
+            .optional({ checkFalsy: true })
+            .isNumeric()
+            .withMessage("Amount must be a number")
+            .custom((v) => Number(v) >= 0)
+            .withMessage("Amount cannot be negative"),
+    ],
     async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array(),
+            });
+        }
+
         try {
+            const doctorId = req.user.doctorId;
+
+            const escapeRegex = (text) =>
+                text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            const name = req.body.name.trim();
+            const safeName = escapeRegex(name);
+
             const existingService = await Service.findOne({
-                name: req.body.name,
-                doctor: req.user.doctorId,
+                name: { $regex: `^${safeName}$`, $options: "i" },
+                doctor: doctorId,
             });
 
             if (existingService) {
@@ -23,19 +51,29 @@ router.post(
             }
 
             const service = await Service.create({
-                name: req.body.name,
-                amount: req.body.amount,
-                doctor: req.user.doctorId,
+                name,
+                amount:
+                    req.body.amount !== undefined && req.body.amount !== ""
+                        ? Number(req.body.amount)
+                        : null,
+                doctor: doctorId,
             });
 
-            res.status(200).json({
+            return res.status(201).json({
                 success: true,
-                status: "Added successfully",
                 service,
             });
         } catch (error) {
-            console.error(error.message);
-            res.status(500).json({
+            console.error("create_service error:", error);
+
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Service already exists",
+                });
+            }
+
+            return res.status(500).json({
                 success: false,
                 error: "Internal server error",
             });

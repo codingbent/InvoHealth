@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import "../css/Slots.css";
 
 export default function Slotpicker({
     groupedSlots,
@@ -7,11 +8,12 @@ export default function Slotpicker({
     bookedSlots,
     openSection,
     setOpenSection,
-    formatTime,
     currentSlot,
     nextSlot,
 }) {
     const displaySlot = selectedSlot || nextSlot || currentSlot;
+
+    const formatTime = (time) => time;
 
     useEffect(() => {
         const targetSlot = selectedSlot || nextSlot || currentSlot;

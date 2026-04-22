@@ -2,10 +2,13 @@ const express = require("express");
 const router = express.Router();
 const Appointment = require("../../../models/Appointment");
 var fetchuser = require("../../../middleware/fetchuser");
+const mongoose = require("mongoose");
+const requireSubscription = require("../../../middleware/requireSubscription");
 
 router.put(
     "/edit_appointment/:appointmentId/:visitId",
     fetchuser,
+    requireSubscription,
     async (req, res) => {
         try {
             const { appointmentId, visitId } = req.params;
@@ -14,9 +17,11 @@ router.put(
                 time,
                 service,
                 payment_type,
+                paymentMethodId,
                 discount,
                 isPercent,
                 collected,
+                image,
             } = req.body;
 
             // Validation
@@ -27,6 +32,12 @@ router.put(
                 });
             }
 
+            if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
+                return res
+                    .status(400)
+                    .json({ message: "Invalid appointment ID" });
+            }
+
             //  TIME VALIDATION
             if (time && !/^\d{2}:\d{2}$/.test(time)) {
                 return res.status(400).json({
@@ -35,11 +46,15 @@ router.put(
                 });
             }
             // Find appointment
-            const appointment = await Appointment.findById(appointmentId);
+            const appointment = await Appointment.findOne({
+                _id: appointmentId,
+                doctor: req.user.doctorId,
+            });
+
             if (!appointment) {
                 return res.status(404).json({
                     success: false,
-                    message: "Appointment not found",
+                    message: "Appointment not found or unauthorized",
                 });
             }
             // Find visit
@@ -147,7 +162,16 @@ router.put(
             visit.remaining = remainingAmount;
             visit.status = status;
 
-            if (
+            // ===== PAYMENT HANDLING =====
+
+            // New system
+            if (paymentMethodId) {
+                visit.paymentMethodId = paymentMethodId;
+                visit.payment_type = undefined; // clean old
+            }
+
+            // Old system fallback
+            else if (
                 payment_type &&
                 ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"].includes(
                     payment_type,
@@ -156,6 +180,9 @@ router.put(
                 visit.payment_type = payment_type;
             }
 
+            if (image !== undefined && image !== null) {
+                visit.image = image;
+            }
             // Save
             await appointment.save();
 

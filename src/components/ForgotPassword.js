@@ -10,11 +10,12 @@ import {
     EyeOff,
     Check,
 } from "lucide-react";
+import { API_BASE_URL } from "../components/config";
+import "../css/Forgotpassword.css"
 
 export default function ForgotPassword(props) {
     const navigate = useNavigate();
 
-    // Steps: 1 = enter email, 2 = enter OTP, 3 = reset password
     const [step, setStep] = useState(1);
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -28,16 +29,9 @@ export default function ForgotPassword(props) {
     const [pwError, setPwError] = useState("");
     const otpRefs = useRef([]);
 
-    const API_BASE_URL =
-        process.env.NODE_ENV === "production"
-            ? "https://gmsc-backend.onrender.com"
-            : "http://localhost:5001";
-
     const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-    /* ── Step 1: Send OTP to email ── */
     const sendOtp = async () => {
-        
         if (!isValidEmail(email)) {
             setEmailError("Enter a valid email address");
             return;
@@ -45,16 +39,11 @@ export default function ForgotPassword(props) {
         setEmailError("");
         setLoading(true);
         try {
-            console.log(API_BASE_URL);
-            
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/send`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email }),
-                },
-            );
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
             const data = await res.json();
             if (data.success) {
                 setStep(2);
@@ -72,7 +61,6 @@ export default function ForgotPassword(props) {
         }
     };
 
-    /* ── Step 2: Verify OTP ── */
     const verifyOtp = async () => {
         const entered = otp.join("");
         if (entered.length !== 6) {
@@ -82,14 +70,11 @@ export default function ForgotPassword(props) {
         setOtpError("");
         setLoading(true);
         try {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/verify`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, otp: entered }),
-                },
-            );
+            const res = await authFetch(`${API_BASE_URL}/api/doctor/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp: entered }),
+            });
             const data = await res.json();
             if (data.success) {
                 setStep(3);
@@ -103,7 +88,6 @@ export default function ForgotPassword(props) {
         }
     };
 
-    /* ── Step 3: Reset password ── */
     const resetPassword = async () => {
         setPwError("");
         if (newPassword.length < 8) {
@@ -138,7 +122,6 @@ export default function ForgotPassword(props) {
         }
     };
 
-    /* ── OTP input helpers ── */
     const handleOtpInput = (i, val) => {
         val = val.replace(/\D/g, "").slice(0, 1);
         const next = [...otp];
@@ -158,34 +141,33 @@ export default function ForgotPassword(props) {
         await sendOtp();
     };
 
-    /* ── Step metadata ── */
     const STEPS = [{ label: "Email" }, { label: "Verify" }, { label: "Reset" }];
 
     return (
-        <div className="fp-root">
-            <div className="fp-card">
+        <div className="fpw-root">
+            <div className="fpw-card">
                 {/* ── Step bar ── */}
-                <div className="fp-stepbar">
+                <div className="fpw-stepbar">
                     {STEPS.map((s, i) => {
                         const num = i + 1;
                         const done = num < step;
                         const active = num === step;
                         return (
-                            <div key={s.label} className="fp-step-wrap">
-                                <div className="fp-step-row">
+                            <div key={s.label} className="fpw-step-wrap">
+                                <div className="fpw-step-row">
                                     <div
-                                        className={`fp-step-dot${done ? " done" : active ? " active" : ""}`}
+                                        className={`fpw-step-dot${done ? " done" : active ? " active" : ""}`}
                                     >
                                         {done ? <Check size={10} /> : num}
                                     </div>
                                     {i < STEPS.length - 1 && (
                                         <div
-                                            className={`fp-step-line${done ? " done" : ""}`}
+                                            className={`fpw-step-line${done ? " done" : ""}`}
                                         />
                                     )}
                                 </div>
                                 <span
-                                    className={`fp-step-label${done ? " done" : active ? " active" : ""}`}
+                                    className={`fpw-step-label${done ? " done" : active ? " active" : ""}`}
                                 >
                                     {s.label}
                                 </span>
@@ -195,8 +177,8 @@ export default function ForgotPassword(props) {
                 </div>
 
                 {/* ── Header ── */}
-                <div className="fp-header">
-                    <div className={`fp-icon${step === 3 ? " verified" : ""}`}>
+                <div className="fpw-header">
+                    <div className={`fpw-icon${step === 3 ? " verified" : ""}`}>
                         {step === 3 ? (
                             <KeyRound size={20} />
                         ) : step === 2 ? (
@@ -205,7 +187,7 @@ export default function ForgotPassword(props) {
                             <Mail size={20} />
                         )}
                     </div>
-                    <h1 className="fp-title">
+                    <h1 className="fpw-title">
                         {step === 1 && (
                             <>
                                 Forgot <em>Password</em>
@@ -222,15 +204,16 @@ export default function ForgotPassword(props) {
                             </>
                         )}
                     </h1>
-                    <p className="fp-subtitle">
+                    <p className="fpw-subtitle">
                         {step === 1 &&
                             "Enter your registered email to receive a verification code"}
                         {step === 2 && (
                             <>
+                                {" "}
                                 Code sent to{" "}
                                 <strong style={{ color: "#60a5fa" }}>
                                     {email}
-                                </strong>
+                                </strong>{" "}
                             </>
                         )}
                         {step === 3 &&
@@ -240,16 +223,16 @@ export default function ForgotPassword(props) {
 
                 {/* ── Step 1: Email ── */}
                 {step === 1 && (
-                    <div className="fp-body">
-                        <div className="fp-field">
-                            <label className="fp-label">Email Address</label>
-                            <div className="fp-input-wrap">
-                                <span className="fp-input-icon">
+                    <div className="fpw-body">
+                        <div className="fpw-field">
+                            <label className="fpw-label">Email Address</label>
+                            <div className="fpw-input-wrap">
+                                <span className="fpw-input-icon">
                                     <Mail size={14} />
                                 </span>
                                 <input
                                     type="email"
-                                    className={`fp-input${emailError ? " fp-input-err" : ""}`}
+                                    className={`fpw-input${emailError ? " fpw-input-err" : ""}`}
                                     placeholder="your@email.com"
                                     value={email}
                                     onChange={(e) => {
@@ -262,12 +245,11 @@ export default function ForgotPassword(props) {
                                 />
                             </div>
                             {emailError && (
-                                <span className="fp-errtip">{emailError}</span>
+                                <span className="fpw-errtip">{emailError}</span>
                             )}
                         </div>
-
                         <button
-                            className="fp-btn fp-btn-primary"
+                            className="fpw-btn fpw-btn-primary"
                             onClick={sendOtp}
                             disabled={loading || !email}
                         >
@@ -279,10 +261,10 @@ export default function ForgotPassword(props) {
 
                 {/* ── Step 2: OTP ── */}
                 {step === 2 && (
-                    <div className="fp-body">
-                        <div className="fp-field">
+                    <div className="fpw-body">
+                        <div className="fpw-field">
                             <label
-                                className="fp-label"
+                                className="fpw-label"
                                 style={{
                                     textAlign: "center",
                                     display: "block",
@@ -290,7 +272,7 @@ export default function ForgotPassword(props) {
                             >
                                 Enter 6-digit code
                             </label>
-                            <div className="fp-otp-wrap">
+                            <div className="fpw-otp-wrap">
                                 {otp.map((digit, i) => (
                                     <input
                                         key={i}
@@ -298,7 +280,7 @@ export default function ForgotPassword(props) {
                                         type="text"
                                         inputMode="numeric"
                                         maxLength={1}
-                                        className="fp-otp-box"
+                                        className="fpw-otp-box"
                                         value={digit}
                                         onChange={(e) =>
                                             handleOtpInput(i, e.target.value)
@@ -311,7 +293,7 @@ export default function ForgotPassword(props) {
                             </div>
                             {otpError && (
                                 <span
-                                    className="fp-errtip"
+                                    className="fpw-errtip"
                                     style={{
                                         textAlign: "center",
                                         display: "block",
@@ -321,30 +303,28 @@ export default function ForgotPassword(props) {
                                 </span>
                             )}
                         </div>
-
                         <button
-                            className="fp-btn fp-btn-primary"
+                            className="fpw-btn fpw-btn-primary"
                             onClick={verifyOtp}
                             disabled={otp.join("").length !== 6 || loading}
                         >
                             <ShieldCheck size={14} />
                             {loading ? "Verifying..." : "Verify Code"}
                         </button>
-
-                        <div className="fp-resend-row">
+                        <div className="fpw-resend-row">
                             Didn't receive it?{" "}
                             <button
                                 type="button"
-                                className="fp-resend-btn"
+                                className="fpw-resend-btn"
                                 onClick={resendOtp}
                                 disabled={loading}
                             >
                                 Resend code
-                            </button>{" "}
-                            ·{" "}
+                            </button>
+                            {" · "}
                             <button
                                 type="button"
-                                className="fp-resend-btn"
+                                className="fpw-resend-btn"
                                 onClick={() => {
                                     setStep(1);
                                     setOtp(["", "", "", "", "", ""]);
@@ -359,13 +339,13 @@ export default function ForgotPassword(props) {
 
                 {/* ── Step 3: New Password ── */}
                 {step === 3 && (
-                    <div className="fp-body">
-                        <div className="fp-field">
-                            <label className="fp-label">New Password</label>
-                            <div className="fp-input-wrap">
+                    <div className="fpw-body">
+                        <div className="fpw-field">
+                            <label className="fpw-label">New Password</label>
+                            <div className="fpw-input-wrap">
                                 <input
                                     type={showPw ? "text" : "password"}
-                                    className={`fp-input fp-input-noicon fp-input-eye${pwError ? " fp-input-err" : ""}`}
+                                    className={`fpw-input fpw-input-eye${pwError ? " fpw-input-err" : ""}`}
                                     placeholder="Create new password"
                                     value={newPassword}
                                     onChange={(e) => {
@@ -375,7 +355,7 @@ export default function ForgotPassword(props) {
                                 />
                                 <button
                                     type="button"
-                                    className="fp-eye-btn"
+                                    className="fpw-eye-btn"
                                     onClick={() => setShowPw((p) => !p)}
                                 >
                                     {showPw ? (
@@ -386,13 +366,14 @@ export default function ForgotPassword(props) {
                                 </button>
                             </div>
                         </div>
-
-                        <div className="fp-field">
-                            <label className="fp-label">Confirm Password</label>
-                            <div className="fp-input-wrap">
+                        <div className="fpw-field">
+                            <label className="fpw-label">
+                                Confirm Password
+                            </label>
+                            <div className="fpw-input-wrap">
                                 <input
                                     type={showCpw ? "text" : "password"}
-                                    className={`fp-input fp-input-noicon fp-input-eye${pwError ? " fp-input-err" : ""}`}
+                                    className={`fpw-input fpw-input-eye${pwError ? " fpw-input-err" : ""}`}
                                     placeholder="Repeat new password"
                                     value={confirmPassword}
                                     onChange={(e) => {
@@ -402,7 +383,7 @@ export default function ForgotPassword(props) {
                                 />
                                 <button
                                     type="button"
-                                    className="fp-eye-btn"
+                                    className="fpw-eye-btn"
                                     onClick={() => setShowCpw((p) => !p)}
                                 >
                                     {showCpw ? (
@@ -413,14 +394,12 @@ export default function ForgotPassword(props) {
                                 </button>
                             </div>
                             {pwError && (
-                                <span className="fp-errtip">{pwError}</span>
+                                <span className="fpw-errtip">{pwError}</span>
                             )}
                         </div>
-
-                        {/* Password match indicator */}
                         {confirmPassword && (
                             <div
-                                className={`fp-match-hint${newPassword === confirmPassword ? " ok" : ""}`}
+                                className={`fpw-match-hint${newPassword === confirmPassword ? " ok" : ""}`}
                             >
                                 {newPassword === confirmPassword ? (
                                     <>
@@ -431,9 +410,8 @@ export default function ForgotPassword(props) {
                                 )}
                             </div>
                         )}
-
                         <button
-                            className="fp-btn fp-btn-primary"
+                            className="fpw-btn fpw-btn-primary"
                             onClick={resetPassword}
                             disabled={
                                 loading || !newPassword || !confirmPassword
@@ -446,9 +424,9 @@ export default function ForgotPassword(props) {
                     </div>
                 )}
 
-                <div className="fp-divider" />
+                <div className="fpw-divider" />
 
-                <Link to="/login" className="fp-back">
+                <Link to="/login" className="fpw-back">
                     <ArrowLeft size={13} /> Back to Login
                 </Link>
             </div>

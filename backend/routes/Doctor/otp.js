@@ -1,10 +1,21 @@
 const express = require("express");
 const router = express.Router();
+const {rateLimit,ipKeyGenerator} = require("express-rate-limit");
 
-router.post("/send-otp", async (req, res) => {
+const otpLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 5,
+    keyGenerator: (req) =>
+        req.body.identifier || ipKeyGenerator(req),
+});
+
+router.post("/send-otp", otpLimiter, async (req, res) => {
+    if (!req.body.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email)) {
+        return res.status(400).json({ error: "Invalid email" });
+    }
     try {
         const response = await fetch(
-            "https://n8n-2ud0.onrender.com/webhook/email-otp",
+            `${process.env.N8N_BASE_URL}/webhook/email-otp`,
             {
                 method: "POST",
                 headers: {

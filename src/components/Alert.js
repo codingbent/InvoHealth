@@ -1,8 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info } from "lucide-react";
+import "../css/Alert.css"
+
+const DURATION = 3500;
 
 export default function Alert({ alert, clearAlert }) {
+    // eslint-disable-next-line
+    const [progress, setProgress] = useState(100);
+
     const icons = {
         success: <CheckCircle size={20} />,
         danger: <XCircle size={20} />,
@@ -13,11 +19,19 @@ export default function Alert({ alert, clearAlert }) {
     useEffect(() => {
         if (!alert) return;
 
-        const timer = setTimeout(() => {
-            clearAlert();
-        }, 3500);
+        setProgress(100);
 
-        return () => clearTimeout(timer);
+        const timer = setTimeout(clearAlert, DURATION);
+
+        // trigger animation AFTER render
+        const animation = setTimeout(() => {
+            setProgress(0);
+        }, 50);
+
+        return () => {
+            clearTimeout(timer);
+            clearTimeout(animation);
+        };
     }, [alert, clearAlert]);
 
     return (
@@ -36,6 +50,9 @@ export default function Alert({ alert, clearAlert }) {
                             {icons[alert.type] || <Info size={20} />}
                         </span>
                         <span className="alert-text">{alert.msg}</span>
+                        <div className="alert-progress-bar">
+                            <div className="alert-progress-fill" />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

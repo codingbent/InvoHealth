@@ -1,12 +1,14 @@
-import { IndianRupee, X, Plus } from "lucide-react";
+import { X, Plus } from "lucide-react";
+import "../css/Servicelist.css"
 
 export default function ServiceList({
-    services = [],
+    services,
     selectedServices = [],
     onAdd,
     onRemove,
+    currency,
 }) {
-    const selectedIds = new Set(selectedServices.map((s) => s._id));
+    const selectedIds = new Set(selectedServices.map((s) => String(s._id)));
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
 
     return (
@@ -14,7 +16,7 @@ export default function ServiceList({
             {/* Available services */}
             <div className="sl-available">
                 {services
-                    .filter((s) => !selectedIds.has(s._id))
+                    .filter((s) => !selectedIds.has(String(s._id)))
                     .map((service) => (
                         <button
                             key={service._id}
@@ -27,7 +29,7 @@ export default function ServiceList({
                                 {service.name}
                             </span>
                             <span className="sl-avail-amount">
-                                <IndianRupee size={11} />
+                                {currency?.symbol}
                                 {fmt(service.amount ?? 0)}
                             </span>
                         </button>
@@ -43,7 +45,7 @@ export default function ServiceList({
                                 {service.name}
                             </span>
                             <span className="sl-selected-amount">
-                                <IndianRupee size={11} />
+                                {currency?.symbol}
                                 {fmt(service.amount ?? 0)}
                             </span>
                             <button
