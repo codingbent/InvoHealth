@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import { Stethoscope, Users, LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
-import "../css/Login.css"
+import "../css/Login.css";
 
 const COUNTRY_CODES = [
     { code: "+91", flag: "🇮🇳", country: "India", min: 10, max: 10 },
@@ -59,10 +59,17 @@ export default function Login(props) {
     };
 
     const staffLogin = async () => {
+        const phoneWithCode = countryCode + identifier.replace(/\D/g, "");
+        const phoneWithoutCode = identifier.replace(/\D/g, "");
+
         const res = await authFetch(`${API_BASE_URL}/api/staff/login_staff`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone: getFullPhone(), password }),
+            body: JSON.stringify({
+                phone: phoneWithCode,
+                phoneFallback: phoneWithoutCode,
+                password,
+            }),
         });
         if (!res) {
             props.showAlert("Session expired. Login again.", "danger");

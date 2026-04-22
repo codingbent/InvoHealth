@@ -17,9 +17,22 @@ const loginLimiter = rateLimit({
 
 router.post("/login_staff", loginLimiter, async (req, res) => {
     try {
-        const { phone, password } = req.body;
+        const { phone, phoneFallback, password } = req.body;
 
-        const staff = await Staff.findOne({ phone });
+        // Try with country code first, then without, then raw digits
+        let staff = await Staff.findOne({ phone });
+
+        if (!staff && phoneFallback) {
+            staff = await Staff.findOne({ phone: phoneFallback });
+        }
+
+        // Also try searching by just the last 10 digits as fallback
+        if (!staff) {
+            const digits = phone.replace(/\D/g, "");
+            staff = await Staff.findOne({
+                phone: { $regex: digits + "$" },
+            });
+        }
 
         if (!staff) {
             return res.status(400).json({
@@ -28,7 +41,7 @@ router.post("/login_staff", loginLimiter, async (req, res) => {
             });
         }
 
-        if (!staff.isDeleted) {
+        if (staff.isDeleted) {
             return res.status(403).json({
                 success: false,
                 error: "You no longer have access. Contact your doctor.",
@@ -42,27 +55,16 @@ router.post("/login_staff", loginLimiter, async (req, res) => {
             });
         }
 
-        // FIRST LOGIN ONLY
         if (!staff.password) {
             const setupToken = jwt.sign(
-                {
-                    staffId: staff._id,
-                    purpose: "set_password",
-                },
+                { staffId: staff._id, purpose: "set_password" },
                 JWT_SECRET,
                 { expiresIn: "15m" },
             );
-
-            return res.json({
-                success: true,
-                firstLogin: true,
-                setupToken,
-            });
+            return res.json({ success: true, firstLogin: true, setupToken });
         }
 
-        // NORMAL LOGIN
         const match = await bcrypt.compare(password, staff.password);
-
         if (!match) {
             return res.status(400).json({
                 success: false,
