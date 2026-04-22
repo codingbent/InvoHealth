@@ -22,7 +22,7 @@ import "../css/Signup.css";
 import { API_BASE_URL } from "../components/config";
 import CountrySelect from "../hooks/CountrySelect";
 import { fetchCountries } from "../api/country.api";
-import "../css/Signup.css"
+import "../css/Signup.css";
 
 const normalizePhone = (phone) => phone.replace(/\D/g, "");
 
@@ -246,14 +246,14 @@ function Step1({ data, onChange, onNext, showAlert }) {
 
     const validate = () => {
         const errs = {};
-        if (!data.name.trim()) errs.name = "Full name is required";
-        if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
-            errs.email = "Valid email is required";
-        if (!emailVerified) errs.email = "Please verify your email first";
-        if (!Object.values(pwChecks).every(Boolean))
-            errs.password = "Password does not meet all requirements";
-        if (!passwordsMatch) errs.cpassword = "Passwords do not match";
-        setErrors(errs);
+        // if (!data.name.trim()) errs.name = "Full name is required";
+        // if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
+        //     errs.email = "Valid email is required";
+        // if (!emailVerified) errs.email = "Please verify your email first";
+        // if (!Object.values(pwChecks).every(Boolean))
+        //     errs.password = "Password does not meet all requirements";
+        // if (!passwordsMatch) errs.cpassword = "Passwords do not match";
+        // setErrors(errs);
         return Object.keys(errs).length === 0;
     };
 
@@ -512,25 +512,25 @@ function Step2({
     const validate = () => {
         const errs = {};
 
-        if (!data.clinicName)
-            errs.clinicName = "Medical Center name is required";
+        // if (!data.clinicName)
+        //     errs.clinicName = "Medical Center name is required";
 
-        if (!data.line1) errs.line1 = "Address Line 1 is required";
+        // if (!data.line1) errs.line1 = "Address Line 1 is required";
 
-        if (!data.city) errs.city = "City is required";
+        // if (!data.city) errs.city = "City is required";
 
-        if (!data.state) errs.state = "State is required";
+        // if (!data.state) errs.state = "State is required";
 
-        if (!data.country) errs.country = "Country is required";
+        // if (!data.country) errs.country = "Country is required";
 
-        if (!data.pincode) errs.pincode = "Pincode is required";
+        // if (!data.pincode) errs.pincode = "Pincode is required";
 
-        if (!data.phone) errs.phone = "Doctor Contact is required";
+        // if (!data.phone) errs.phone = "Doctor Contact is required";
 
-        if (!data.secondaryPhone)
-            errs.secondaryPhone = "Appointment Contact is required";
+        // if (!data.secondaryPhone)
+        //     errs.secondaryPhone = "Appointment Contact is required";
 
-        setErrors(errs);
+        // setErrors(errs);
         return Object.keys(errs).length === 0;
     };
 
@@ -839,36 +839,36 @@ function Step3({ availability, setAvailability, onNext, onBack, showAlert }) {
     }
 
     const validate = () => {
-        if (availability.every((b) => b.days.length === 0)) {
-            showAlert("Add at least one working day", "danger");
-            return false;
-        }
-        for (const [bi, block] of availability.entries()) {
-            if (block.days.length === 0) continue;
-            for (const slot of block.slots) {
-                if (!slot.startTime || !slot.endTime) {
-                    showAlert(
-                        `Fill all time slots in group ${bi + 1}`,
-                        "danger",
-                    );
-                    return false;
-                }
-                if (slot.startTime >= slot.endTime) {
-                    showAlert(
-                        `Start must be before end in group ${bi + 1}`,
-                        "danger",
-                    );
-                    return false;
-                }
-            }
-            if (isOverlapping(block.slots)) {
-                showAlert(
-                    `Overlapping time slots in group ${bi + 1}`,
-                    "danger",
-                );
-                return false;
-            }
-        }
+        // if (availability.every((b) => b.days.length === 0)) {
+        //     showAlert("Add at least one working day", "danger");
+        //     return false;
+        // }
+        // for (const [bi, block] of availability.entries()) {
+        //     if (block.days.length === 0) continue;
+        //     for (const slot of block.slots) {
+        //         if (!slot.startTime || !slot.endTime) {
+        //             showAlert(
+        //                 `Fill all time slots in group ${bi + 1}`,
+        //                 "danger",
+        //             );
+        //             return false;
+        //         }
+        //         if (slot.startTime >= slot.endTime) {
+        //             showAlert(
+        //                 `Start must be before end in group ${bi + 1}`,
+        //                 "danger",
+        //             );
+        //             return false;
+        //         }
+        //     }
+        //     if (isOverlapping(block.slots)) {
+        //         showAlert(
+        //             `Overlapping time slots in group ${bi + 1}`,
+        //             "danger",
+        //         );
+        //         return false;
+        //     }
+        // }
         return true;
     };
 
@@ -924,7 +924,7 @@ function Step3({ availability, setAvailability, onNext, onBack, showAlert }) {
                                     <label className="sg-label">Start</label>
                                     <input
                                         type="time"
-                                        className="sg-input"
+                                        className="sg-input w-80"
                                         value={slot.startTime}
                                         onChange={(e) =>
                                             updateSlot(
@@ -940,7 +940,7 @@ function Step3({ availability, setAvailability, onNext, onBack, showAlert }) {
                                     <label className="sg-label">End</label>
                                     <input
                                         type="time"
-                                        className="sg-input"
+                                        className="sg-input w-80"
                                         value={slot.endTime}
                                         onChange={(e) =>
                                             updateSlot(
@@ -1065,21 +1065,21 @@ function Step4({
     const validate = () => {
         const errs = {};
 
-        if (!data.regNumber.trim()) {
-            errs.regNumber = "Registration number is required";
-        }
+        // if (!data.regNumber.trim()) {
+        //     errs.regNumber = "Registration number is required";
+        // }
 
-        if (!data.experience.trim()) {
-            errs.experience = "Experience is required";
-        }
+        // if (!data.experience.trim()) {
+        //     errs.experience = "Experience is required";
+        // }
 
-        if (!degrees.length) {
-            errs.degrees = "Add at least one degree";
-        } else if (degrees.some((d) => !d.trim())) {
-            errs.degrees = "Degree cannot be empty";
-        }
+        // if (!degrees.length) {
+        //     errs.degrees = "Add at least one degree";
+        // } else if (degrees.some((d) => !d.trim())) {
+        //     errs.degrees = "Degree cannot be empty";
+        // }
 
-        setErrors(errs);
+        // setErrors(errs);
         return Object.keys(errs).length === 0;
     };
     return (
@@ -1257,9 +1257,13 @@ function Step5({
         <div>
             <div className="sg-section">
                 <span className="sg-section-title">
-                    Payment Methods <span className="sg-required">*</span>
+                    Accepted Payment Methods{" "}
+                    <span className="sg-required">*</span>
                 </span>
             </div>
+            <p className="sg-subtext">
+                Add the payment methods patients can use to pay you
+            </p>
 
             {paymentMethods.map((m, i) => {
                 const selectedCategory = categories.find(
@@ -1270,7 +1274,7 @@ function Step5({
                     <div key={i} className="sg-avail-block">
                         {/* CATEGORY */}
                         <select
-                            className={`sg-input mt-2 ${
+                            className={`sg-input my-2 ${
                                 errors[i]?.categoryId ? "sg-input-err" : ""
                             }`}
                             value={m.categoryId}
@@ -1294,7 +1298,7 @@ function Step5({
 
                         {/* SUBCATEGORY */}
                         <select
-                            className={`sg-input mt-2 ${
+                            className={`sg-input my-2 ${
                                 errors[i]?.subCategoryId ? "sg-input-err" : ""
                             }`}
                             value={m.subCategoryId}
@@ -1320,7 +1324,7 @@ function Step5({
 
                         {/* labels */}
                         <input
-                            className={`sg-input mt-2 ${
+                            className={`sg-input my-2 ${
                                 errors[i]?.label ? "sg-input-err" : ""
                             }`}
                             placeholder={`Enter ${selectedCategory?.name || "payment"} label`}

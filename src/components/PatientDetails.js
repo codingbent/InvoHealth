@@ -22,7 +22,7 @@ import { API_BASE_URL } from "../components/config";
 import { fetchPaymentMethods } from "../api/payment.api";
 import EditAppointment from "./EditAppointment";
 import EditPatient from "./EditPatient";
-import "../css/Patientdetails.css"
+import "../css/Patientdetails.css";
 
 export default function PatientDetails({ showAlert, currency, usage }) {
     const navigate = useNavigate();
@@ -220,19 +220,111 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     // ─────────────────────────────────────────────────────────────────────────
     // Invoice generation
     // ─────────────────────────────────────────────────────────────────────────
+    // ─── Drop-in replacement for PatientDetails.js ───────────────────────────────
+    // Requires: currency prop { symbol: "₹", code: "INR" } passed from App.js
+    // No new API needed — currency is already fetched via /api/doctor/get_currency
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // jsPDF's built-in Helvetica/Times fonts only support ASCII + Latin-1.
+    // Unicode symbols like ₹ (U+20B9), ₩ (U+20A9) etc. render as garbage or are
+    // dropped entirely. This map converts them to ASCII-safe equivalents FOR PDF
+    // output only — the UI still shows the real symbol from currency.symbol.
+    const PDF_SYMBOL_MAP = {
+        INR: "Rs.",
+        USD: "$",
+        GBP: "GBP",
+        EUR: "EUR",
+        CAD: "CAD",
+        AUD: "AUD",
+        SGD: "SGD",
+        AED: "AED",
+        JPY: "JPY",
+        CNY: "CNY",
+        CHF: "CHF",
+        MYR: "MYR",
+        THB: "THB",
+        IDR: "IDR",
+        PHP: "PHP",
+        VND: "VND",
+        KRW: "KRW",
+        BDT: "BDT",
+        PKR: "PKR",
+        LKR: "LKR",
+        NPR: "NPR",
+        NZD: "NZD",
+        ZAR: "ZAR",
+        NGN: "NGN",
+        KES: "KES",
+        GHS: "GHS",
+        EGP: "EGP",
+        BRL: "BRL",
+        MXN: "MXN",
+        ARS: "ARS",
+        TRY: "TRY",
+        SAR: "SAR",
+        QAR: "QAR",
+        KWD: "KWD",
+        BHD: "BHD",
+        OMR: "OMR",
+    };
+
+    // Human-readable currency word used in receipt text
+    // e.g. "Received with thanks... the sum of Rupees 20,000 only"
+    const CURRENCY_WORD_MAP = {
+        INR: "Rupees",
+        USD: "Dollars",
+        GBP: "Pounds",
+        EUR: "Euros",
+        CAD: "Canadian Dollars",
+        AUD: "Australian Dollars",
+        SGD: "Singapore Dollars",
+        AED: "Dirhams",
+        JPY: "Yen",
+        CNY: "Yuan",
+        CHF: "Swiss Francs",
+        MYR: "Ringgit",
+        THB: "Baht",
+        IDR: "Rupiah",
+        PHP: "Pesos",
+        VND: "Dong",
+        KRW: "Won",
+        BDT: "Taka",
+        PKR: "Rupees",
+        LKR: "Rupees",
+        NPR: "Rupees",
+        NZD: "New Zealand Dollars",
+        ZAR: "Rand",
+        NGN: "Naira",
+        KES: "Shillings",
+        GHS: "Cedis",
+        EGP: "Pounds",
+        BRL: "Reais",
+        MXN: "Pesos",
+        ARS: "Pesos",
+        TRY: "Lira",
+        SAR: "Riyals",
+        QAR: "Riyals",
+        KWD: "Dinars",
+        BHD: "Dinars",
+        OMR: "Riyals",
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
 
     const handleInvoiceClick = async (visit) => {
         try {
             const invoiceUsage = usage?.invoices;
+
             if (invoiceUsage?.isLimitReached) {
-                showAlert("Invoice download limit reached 🚫", "warning");
+                showAlert("Invoice download limit reached", "warning");
                 return;
             }
+
             if (invoiceUsage?.remaining === 1) {
-                const c = window.confirm(
-                    "⚠ This is your LAST invoice download for this plan.\n\nDo you want to continue?",
+                const confirmed = window.confirm(
+                    "This is your LAST invoice download for this plan.\n\nDo you want to continue?",
                 );
-                if (!c) return;
+                if (!confirmed) return;
             }
 
             let includeDiscount = true;
@@ -254,37 +346,61 @@ export default function PatientDetails({ showAlert, currency, usage }) {
             showAlert("Doctor details not loaded yet!", "warning");
             return;
         }
+
         try {
+            // ── Currency resolution ──────────────────────────────────────────────
+            // currency prop from App.js: { code: "INR", symbol: "₹" }
+            // pdfSymbol: ASCII-safe for jsPDF (₹ can't render in built-in fonts)
+            // currencyWord: used in receipt text ("Rupees twenty thousand only")
+            const code = currency?.code || "INR";
+            const pdfSymbol = PDF_SYMBOL_MAP[code] ?? currency?.symbol ?? code;
+            const currencyWord = CURRENCY_WORD_MAP[code] ?? code;
+
+            // ── PDF init ─────────────────────────────────────────────────────────
             const margin = 20;
-            const invoiceNumber = visit.invoiceNumber || "N/A";
             const docPdf = new jsPDF();
             const pageWidth = docPdf.internal.pageSize.getWidth();
             let leftY = 20;
             let rightY = 20;
 
+            const invoiceNumber = visit.invoiceNumber || "N/A";
+
+            // ── Left column: clinic + doctor info ────────────────────────────────
             docPdf.setFontSize(16);
+            docPdf.setFont(undefined, "bold");
             docPdf.text(doctor.clinicName || "", margin, leftY);
             leftY += 10;
+
             docPdf.setFontSize(14);
+            docPdf.setFont(undefined, "bold");
             docPdf.text(doctor.name || "", margin, leftY);
             leftY += 8;
+
             docPdf.setFontSize(11);
+            docPdf.setFont(undefined, "normal");
+
             if (doctor.degree?.length) {
                 docPdf.text(doctor.degree.join(", "), margin, leftY);
                 leftY += 6;
             }
+
             if (doctor.regNumber) {
                 docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
                 leftY += 6;
             }
+
+            docPdf.setFont(undefined, "bold");
             docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
             leftY += 8;
-            docPdf.text(
-                `Patient: ${details.name} | Age: ${details.age || "N/A"} | Gender: ${details.gender || "N/A"}`,
-                margin,
-                leftY,
-            );
+
+            docPdf.setFont(undefined, "normal");
+            const patientLine = `Patient: ${details.name} | Age: ${details.age || "N/A"} | Gender: ${details.gender || "N/A"}`;
+            docPdf.text(patientLine, margin, leftY);
             leftY += 6;
+
+            // ── Right column: address + phone + date ─────────────────────────────
+            docPdf.setFontSize(11);
+            docPdf.setFont(undefined, "normal");
 
             if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
@@ -298,19 +414,26 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 });
                 rightY += 5;
             }
-            if (doctor.address?.city) {
-                docPdf.text(
-                    `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`,
-                    pageWidth - margin,
-                    rightY,
-                    { align: "right" },
-                );
+            if (doctor.address?.line3) {
+                docPdf.text(doctor.address.line3, pageWidth - margin, rightY, {
+                    align: "right",
+                });
                 rightY += 5;
             }
+            if (doctor.address?.city) {
+                const cityLine = `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`;
+                docPdf.text(cityLine, pageWidth - margin, rightY, {
+                    align: "right",
+                });
+                rightY += 5;
+            }
+
+            // phoneMasked is safe (backend masks it). phoneDecrypted only present
+            // if the user clicked "reveal" in the UI — either way it's their own data.
             const docPhone =
-                doctor.phone ||
                 doctor.phoneDecrypted ||
                 doctor.phoneMasked ||
+                doctor.phone ||
                 "";
             if (docPhone) {
                 docPdf.text(`Phone: ${docPhone}`, pageWidth - margin, rightY, {
@@ -318,6 +441,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 });
                 rightY += 5;
             }
+
             docPdf.text(
                 `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
                 pageWidth - margin,
@@ -325,13 +449,16 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 { align: "right" },
             );
 
+            // ── Billing calculations ─────────────────────────────────────────────
             const services = visit.service || [];
             const baseAmount = services.reduce(
                 (sum, s) => sum + Number(s.amount || 0),
                 0,
             );
+
             let discountValue = 0;
             let finalAmt = baseAmount;
+
             if (includeDiscount && visit.discount > 0) {
                 discountValue = visit.isPercent
                     ? (baseAmount * visit.discount) / 100
@@ -342,6 +469,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 );
                 finalAmt = baseAmount - discountValue;
             }
+
             const collectedAmount = Number(visit.collected ?? finalAmt);
             const remainingAmount = finalAmt - collectedAmount;
             const paymentStatus =
@@ -351,32 +479,39 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                       ? "Partial"
                       : "Unpaid";
 
+            // ── Table rows ───────────────────────────────────────────────────────
             const tableRows = services.map((s) => [
                 s.name,
-                `${currency?.symbol} ${fmt(s.amount)}`,
+                `${pdfSymbol} ${fmt(s.amount)}`,
             ]);
-            tableRows.push([
-                "TOTAL AMOUNT",
-                `${currency?.symbol} ${fmt(finalAmt)}`,
-            ]);
+
+            tableRows.push(["TOTAL AMOUNT", `${pdfSymbol} ${fmt(finalAmt)}`]);
+
             if (includeDiscount && visit.discount > 0) {
+                const discountLabel = visit.isPercent
+                    ? `Discount (${visit.discount}%)`
+                    : `Discount (${pdfSymbol} ${visit.discount})`;
                 tableRows.push([
-                    `Discount ${visit.isPercent ? `(${visit.discount}%)` : `(${currency?.symbol} ${visit.discount})`}`,
-                    `- ${currency?.symbol} ${fmt(discountValue)}`,
+                    discountLabel,
+                    `- ${pdfSymbol} ${fmt(discountValue)}`,
                 ]);
             }
+
             tableRows.push([
                 "Collected",
-                `${currency?.symbol} ${fmt(collectedAmount)}`,
+                `${pdfSymbol} ${fmt(collectedAmount)}`,
             ]);
+
             if (remainingAmount !== 0) {
                 tableRows.push([
                     "Payable Amount",
-                    `${currency?.symbol} ${fmt(remainingAmount)}`,
+                    `${pdfSymbol} ${fmt(Math.abs(remainingAmount))}`,
                 ]);
             }
+
             tableRows.push(["Status", paymentStatus]);
 
+            // ── Render table ─────────────────────────────────────────────────────
             autoTable(docPdf, {
                 startY: leftY + 4,
                 head: [["Service", "Amount"]],
@@ -388,58 +523,73 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     textColor: [255, 255, 255],
                     fontStyle: "bold",
                 },
+                columnStyles: {
+                    0: { cellWidth: "auto" },
+                    1: { cellWidth: 50, halign: "right" },
+                },
                 didParseCell: (data) => {
-                    if (data.row.index >= tableRows.length - 4)
+                    // Bold the summary rows at the bottom (everything after service rows)
+                    if (data.row.index >= services.length) {
                         data.cell.styles.fontStyle = "bold";
+                    }
                 },
             });
 
+            // ── Amount in words ──────────────────────────────────────────────────
             const roundedAmount = Math.round(finalAmt);
             let y = docPdf.lastAutoTable.finalY + 8;
-            const currencyNameMap = {
-                INR: "Rupees",
-                USD: "Dollars",
-                GBP: "Pounds",
-            };
-            const currencyWord = currencyNameMap[currency?.code] || "Amount";
-            const amountInWords = `${currencyWord} ${toWords(roundedAmount)} Only`;
+
+            // toWords() throws on 0 — guard it
+            const amountInWords =
+                roundedAmount > 0
+                    ? `${currencyWord} ${toWords(roundedAmount)} Only`
+                    : `${currencyWord} Zero Only`;
 
             docPdf.setFontSize(11);
             docPdf.setFont(undefined, "bold");
             docPdf.text("Amount in Words:", margin, y);
             docPdf.setFont(undefined, "normal");
-            docPdf.text(amountInWords, margin + 40, y);
-            y += 8;
+            docPdf.text(amountInWords, margin + 42, y);
+            y += 10;
 
+            // ── Receipt text ─────────────────────────────────────────────────────
             const receiptText =
                 paymentStatus === "Paid"
                     ? `Received with thanks from ${details.name} the sum of ${currencyWord} ${fmt(collectedAmount)} only`
                     : paymentStatus === "Partial"
-                      ? `Part payment of ${currencyWord} ${fmt(collectedAmount)} received from ${details.name}. Remaining amount of ${currencyWord} ${fmt(remainingAmount)} is pending.`
+                      ? `Part payment of ${currencyWord} ${fmt(collectedAmount)} received from ${details.name}. Balance of ${currencyWord} ${fmt(remainingAmount)} is pending.`
                       : `Total amount of ${currencyWord} ${fmt(finalAmt)} is pending from ${details.name}.`;
 
             docPdf.setFontSize(11);
+            docPdf.setFont(undefined, "normal");
             docPdf.text(receiptText, margin, y, {
                 maxWidth: pageWidth - margin * 2,
             });
-            y += 12;
-            docPdf.setFontSize(15);
-            docPdf.text(doctor.name, pageWidth - margin, y, {
-                align: "right",
-            });
-            y += 6;
-            docPdf.setFontSize(12);
-            docPdf.text("Signature", pageWidth - margin, y, {
-                align: "right",
-            });
+            y += 14;
 
-            docPdf.save(`Invoice_${details.name}.pdf`);
+            // ── Signature ────────────────────────────────────────────────────────
+            docPdf.setFontSize(15);
+            docPdf.setFont(undefined, "bold");
+            docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
+            y += 6;
+
+            docPdf.setFontSize(12);
+            docPdf.setFont(undefined, "normal");
+            docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
+
+            // ── Save ─────────────────────────────────────────────────────────────
+            // Sanitise filename — patient name may have spaces or special chars
+            const safeName = (details.name || "patient")
+                .replace(/[^a-zA-Z0-9\s]/g, "")
+                .trim()
+                .replace(/\s+/g, "_");
+
+            docPdf.save(`Invoice_${safeName}_INV${invoiceNumber}.pdf`);
         } catch (err) {
             console.error(err);
             showAlert("Failed to generate invoice", "danger");
         }
     };
-
     // ─────────────────────────────────────────────────────────────────────────
     // Derived / memoised values
     // ─────────────────────────────────────────────────────────────────────────

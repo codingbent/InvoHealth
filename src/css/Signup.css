@@ -972,3 +972,11 @@
         display: none;
     }
 }
+
+.my-2{
+    margin: 10px 0px;
+}
+
+.w-80{
+    width:80%
+}

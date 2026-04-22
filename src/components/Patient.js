@@ -108,7 +108,7 @@ const Patient = ({
     showAlert,
     currency,
     usage,
-    // updateUsage,
+    doctor,
     services,
     availability,
 }) => {
@@ -451,7 +451,7 @@ const Patient = ({
                     setShowModal={setShowPatientModal}
                     currency={currency}
                     usage={usage}
-                    // updateUsage={updateUsage}
+                    doctor={doctor}
                     services={services}
                     availability={availability}
                 />

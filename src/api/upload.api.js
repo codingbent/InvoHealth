@@ -15,14 +15,3 @@ export const uploadImageAPI = async (file) => {
 
     return data.url;
 };
-
-// export const updateImageUsage = async () => {
-//     await authFetch(
-//         `${API_BASE_URL}/api/doctor/appointment/update_usage`,
-//         {
-//             method: "POST",
-//             headers: { "Content-Type": "application/json" },
-//             body: JSON.stringify({ type: "image" }),
-//         }
-//     );
-// };

@@ -19,9 +19,9 @@ router.get("/get_currency", fetchuser, async (req, res) => {
 
         res.json({
             success: true,
-            currency: doc.address?.countryId?.currency || "INR",
-            symbol: doc.address?.countryId?.symbol || "₹",
-            country: doc.address?.countryId?.name || "India",
+            currency: doc.address?.countryId?.currency || "",
+            symbol: doc.address?.countryId?.symbol || "",
+            country: doc.address?.countryId?.name || "",
         });
     } catch (err) {
         console.error(err);

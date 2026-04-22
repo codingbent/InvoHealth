@@ -52,6 +52,7 @@ app.options("*", cors(corsOptions));
 // Payment ENV validation (FAIL FAST)
 // app.js — add to requiredEnv
 const requiredEnv = [
+    "MONGO_URL",
     "Razor_Pay_Key_ID",
     "Razor_Pay_Key_Secret",
     "PAYPAL_CLIENT_ID",

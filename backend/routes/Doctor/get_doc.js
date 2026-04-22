@@ -82,16 +82,16 @@ router.get("/get_doc", fetchuser, async (req, res) => {
                     state: doc.address?.state || "",
                     pincode: doc.address?.pincode || "",
                     country: doc.address?.countryId?.name || "",
-                    countryCode: doc.address?.countryCode || "",
                     currency: doc.address?.countryId?.currency || "",
                 },
+                countryCode: doc?.dialCode || "",
                 degree: doc.degree,
                 experience: doc.experience,
                 regNumber: doc.regNumber,
                 subscription: doc.subscription,
                 usage: doc.usage,
                 staffCount: doc.staff?.length || 0,
-
+                dialCode: doc.address?.countryId?.dialCode || "",
                 // ── ADD THIS ──
                 paymentMethods: doc.paymentMethods || [],
             },

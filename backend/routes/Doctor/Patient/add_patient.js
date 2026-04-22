@@ -16,9 +16,7 @@ router.post(
     requireSubscription, // handles Doc lookup + subscription gate in one place
     [
         body("name", "Enter Name").notEmpty(),
-        body("number")
-            .matches(/^\d{10}$/)
-            .withMessage("Invalid phone number"),
+        body("number").isLength({ min: 8 }),
         body("email")
             .optional({ checkFalsy: true })
             .isEmail()

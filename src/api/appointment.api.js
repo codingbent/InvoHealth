@@ -5,11 +5,12 @@ export const addAppointment = async (formData) => {
         `${API_BASE_URL}/api/doctor/appointment/add_appointment`,
         {
             method: "POST",
-            body: formData, // ❗ NO JSON.stringify
+            body: formData,
         },
     );
 
     const data = await res.json();
+    console.log(data);
 
     if (!res.ok) {
         throw new Error(

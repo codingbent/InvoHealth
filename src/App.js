@@ -32,43 +32,11 @@ function App() {
     const [usage, setUsage] = useState(null);
     const [services, setServices] = useState([]);
     const [availability, setAvailability] = useState([]);
+    const [doctor, setDoctor] = useState(null);
     const [currency, setCurrency] = useState(() => {
         const saved = localStorage.getItem("currency");
         return saved ? JSON.parse(saved) : null;
     });
-
-    // const updateUsage = (type) => {
-    //     setUsage((prev) => {
-    //         if (!prev) return prev;
-
-    //         const map = {
-    //             image: "images",
-    //             invoice: "invoices",
-    //             export: "exports",
-    //         };
-
-    //         const key = map[type];
-    //         if (!key) return prev;
-
-    //         const current = prev[key];
-
-    //         const newUsed = current.used + 1;
-
-    //         return {
-    //             ...prev,
-    //             [key]: {
-    //                 ...current,
-    //                 used: newUsed,
-    //                 remaining:
-    //                     current.limit === -1
-    //                         ? -1
-    //                         : Math.max(current.limit - newUsed, 0),
-    //                 isLimitReached:
-    //                     current.limit !== -1 && newUsed >= current.limit,
-    //             },
-    //         };
-    //     });
-    // };
 
     const showAlert = useCallback((msg, type = "info") => {
         setAlert({ msg, type });
@@ -83,35 +51,45 @@ function App() {
 
         const fetchAllData = async () => {
             try {
-                const [servicesRes, availabilityRes, usageRes, currencyRes] =
-                    await Promise.all([
-                        fetch(
-                            `${API_BASE_URL}/api/doctor/services/fetchall_services`,
-                            { headers: { "auth-token": token } },
-                        ),
-                        fetch(
-                            `${API_BASE_URL}/api/doctor/timing/get_availability`,
-                            { headers: { "auth-token": token } },
-                        ),
-                        fetch(
-                            `${API_BASE_URL}/api/doctor/appointment/get_usage`,
-                            { headers: { "auth-token": token } },
-                        ),
-                        fetch(`${API_BASE_URL}/api/doctor/get_currency`, {
-                            headers: { "auth-token": token },
-                        }),
-                    ]);
+                const [
+                    servicesRes,
+                    availabilityRes,
+                    usageRes,
+                    currencyRes,
+                    doctorRes,
+                ] = await Promise.all([
+                    fetch(
+                        `${API_BASE_URL}/api/doctor/services/fetchall_services`,
+                        { headers: { "auth-token": token } },
+                    ),
+                    fetch(
+                        `${API_BASE_URL}/api/doctor/timing/get_availability`,
+                        { headers: { "auth-token": token } },
+                    ),
+                    fetch(`${API_BASE_URL}/api/doctor/appointment/get_usage`, {
+                        headers: { "auth-token": token },
+                    }),
+                    fetch(`${API_BASE_URL}/api/doctor/get_currency`, {
+                        headers: { "auth-token": token },
+                    }),
+                    fetch(
+                        `${API_BASE_URL}/api/doctor/get_doc`, // ← ADD
+                        { headers: { "auth-token": token } },
+                    ),
+                ]);
 
                 const [
                     servicesData,
                     availabilityData,
                     usageData,
                     currencyData,
+                    doctorData,
                 ] = await Promise.all([
                     servicesRes.json(),
                     availabilityRes.json(),
                     usageRes.json(),
                     currencyRes.json(),
+                    doctorRes.json(),
                 ]);
 
                 // services
@@ -146,6 +124,10 @@ function App() {
                         JSON.stringify(newCurrency),
                     );
                 }
+
+                if (doctorData.success) {
+                    setDoctor(doctorData.doctor);
+                }
             } catch (err) {
                 console.error("App init error:", err);
             }
@@ -153,7 +135,6 @@ function App() {
 
         fetchAllData();
     }, [token]);
-
 
     return (
         <>
@@ -168,9 +149,8 @@ function App() {
                             <Home
                                 showAlert={showAlert}
                                 currency={currency}
-                                setCurrency={setCurrency}
+                                doctor={doctor}
                                 usage={usage}
-                                // updateUsage={updateUsage}
                                 services={services}
                                 availability={availability}
                             />

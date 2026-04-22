@@ -28,6 +28,7 @@ router.post(
         body("password").isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/),
         body("clinicName").notEmpty(),
         body("phone").isLength({ min: 8 }),
+        body("appointmentPhone").isLength({ min: 8 }),
         body("address.line1").notEmpty(),
         body("address.city").notEmpty(),
         body("address.state").notEmpty(),

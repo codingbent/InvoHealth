@@ -5,7 +5,7 @@ export default function Home(props) {
         showAlert,
         currency,
         usage,
-        //  updateUsage,
+        doctor,
         services,
         availability,
     } = props;
@@ -16,7 +16,7 @@ export default function Home(props) {
                 showAlert={showAlert}
                 currency={currency}
                 usage={usage}
-                // updateUsage={updateUsage}
+                doctor={doctor}
                 services={services}
                 availability={availability}
             />

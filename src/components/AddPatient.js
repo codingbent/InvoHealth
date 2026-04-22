@@ -7,13 +7,12 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { addPatient } from "../api/patient.api";
 import { addAppointment } from "../api/appointment.api";
-import { uploadImageAPI } from "../api/upload.api";
 import { useSlots } from "../hooks/useSlots";
 import { fetchPaymentMethods } from "../api/payment.api";
 import SuccessOverlay from "./SuccessOverlay";
 import { getTodayLocal } from "./utils/dateutils";
-// import "../css/Fxsuccess.css";
 import "../css/Addpatient.css";
+import { fetchCountries } from "../api/country.api";
 
 const AddPatient = ({
     showAlert,
@@ -21,265 +20,305 @@ const AddPatient = ({
     setShowModal,
     currency,
     usage,
-    // updateUsage,
     services,
     availability,
+    doctor,
 }) => {
-    const [patient, setPatient] = useState({
-        name: "",
-        service: [],
-        number: "",
-        email: "",
-        amount: 0,
-        age: "",
-        gender: "Male",
-    });
-    const formatTime = (time) => time;
-    const availableServices = services || [];
+    // ── Patient fields ────────────────────────────────────────────────────────
+    const [name, setName] = useState("");
+    const [number, setNumber] = useState("");
+    const [email, setEmail] = useState("");
+    const [age, setAge] = useState("");
+    const [gender, setGender] = useState("Male");
+
+    // ── Services & billing ────────────────────────────────────────────────────
+    const [selectedServices, setSelectedServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
-    const [paymentOptions, setPaymentOptions] = useState([]);
-    const [payment_type, setPaymentType] = useState("");
     const [collectFull, setCollectFull] = useState(true);
-    const { name, service, number, email, age, gender } = patient;
-    const [showSuccess, setShowSuccess] = useState(false);
+    // collectedAmount is what the doctor actually collected
+    // initialised to 0; auto-updated by collectFull logic
+    const [collectedAmount, setCollectedAmount] = useState(0);
+
+    // ── Appointment ───────────────────────────────────────────────────────────
+    const [appointmentDate, setAppointmentDate] = useState(getTodayLocal());
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
     const [showCalendar, setShowCalendar] = useState(false);
+
+    // ── Payment ───────────────────────────────────────────────────────────────
+    // FIX: store the full payment option object so we have both id and name
+    const [paymentOptions, setPaymentOptions] = useState([]);
+    const [selectedPaymentId, setSelectedPaymentId] = useState(""); // ObjectId string
+
+    // ── Image ─────────────────────────────────────────────────────────────────
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
-    const [appointmentDate, setAppointmentDate] = useState(getTodayLocal());
-    const imageUsage = usage?.images || { used: 0, limit: 0 };
+    const fileInputRef = useRef(null);
+
+    // ── UI ────────────────────────────────────────────────────────────────────
+    const [showSuccess, setShowSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [countryCode, setCountryCode] = useState(
+        doctor?.dialCode || "+91",
+    );
+    const [countries, setCountries] = useState([]);
+
+    const availableServices = services || [];
+    const imageUsage = usage?.images || { used: 0, limit: 0 };
     const isImageLimitReached =
         imageUsage.limit !== -1 && imageUsage.used >= imageUsage.limit;
+
     const { timeSlots, bookedSlots, groupedSlots } = useSlots(
         availability,
         appointmentDate,
         showModal,
     );
-    const fileInputRef = useRef(null);
+
     const fmt = (value) =>
         new Intl.NumberFormat("en-IN", {
             style: "currency",
-            currency: currency?.currency || "INR",
+            currency: currency?.code || "INR",
             minimumFractionDigits: 0,
         }).format(value);
 
+    // ── Load payment methods ──────────────────────────────────────────────────
     useEffect(() => {
-        const loadPayments = async () => {
+        const load = async () => {
             try {
                 const data = await fetchPaymentMethods();
                 setPaymentOptions(data);
-            } catch (err) {
+            } catch {
                 showAlert("Failed to load payment methods", "danger");
             }
         };
-
-        loadPayments();
+        load();
     }, [showAlert]);
 
+    useEffect(() => {
+        if (doctor?.address?.dialCode) {
+            setCountryCode(doctor.address.dialCode);
+        }
+    }, [doctor]);
+    // ── Auto-select current slot ──────────────────────────────────────────────
     const isToday = useMemo(() => {
-        const today = new Date().toISOString().slice(0, 10);
-        return appointmentDate === today;
+        return appointmentDate === new Date().toISOString().slice(0, 10);
     }, [appointmentDate]);
 
     const currentSlot = useMemo(() => {
         if (!timeSlots.length) return null;
+        if (!isToday)
+            return timeSlots.find((s) => !bookedSlots.includes(s)) || null;
 
-        //  if future date → return first available
-        if (!isToday) {
-            return (
-                timeSlots.find((slot) => !bookedSlots.includes(slot)) || null
-            );
-        }
-
-        //  today logic
         const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-        let index = -1;
-
+        const cur = now.getHours() * 60 + now.getMinutes();
+        let idx = -1;
         for (let i = 0; i < timeSlots.length; i++) {
             const [h, m] = timeSlots[i].split(":").map(Number);
-            const minutes = h * 60 + m;
-
-            if (minutes <= currentMinutes) {
-                index = i;
-            } else break;
+            if (h * 60 + m <= cur) idx = i;
+            else break;
         }
-
-        if (index === -1) index = 0;
-
-        for (let i = index; i < timeSlots.length; i++) {
-            if (!bookedSlots.includes(timeSlots[i])) {
-                return timeSlots[i];
-            }
-        }
-
-        for (let i = index - 1; i >= 0; i--) {
-            if (!bookedSlots.includes(timeSlots[i])) {
-                return timeSlots[i];
-            }
-        }
-
+        if (idx === -1) idx = 0;
+        for (let i = idx; i < timeSlots.length; i++)
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
+        for (let i = idx - 1; i >= 0; i--)
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
         return null;
     }, [timeSlots, bookedSlots, isToday]);
 
     const nextSlot = useMemo(() => {
         if (!currentSlot || !timeSlots.length) return null;
-
-        let index = timeSlots.indexOf(currentSlot);
-
-        //  FIX: if not found, find closest slot
-        if (index === -1) {
+        let idx = timeSlots.indexOf(currentSlot);
+        if (idx === -1) {
             const [h, m] = currentSlot.split(":").map(Number);
-            const currentMinutes = h * 60 + m;
-
-            index =
-                timeSlots.findIndex((slot) => {
-                    const [sh, sm] = slot.split(":").map(Number);
-                    return sh * 60 + sm > currentMinutes;
+            const cur = h * 60 + m;
+            idx =
+                timeSlots.findIndex((s) => {
+                    const [sh, sm] = s.split(":").map(Number);
+                    return sh * 60 + sm > cur;
                 }) - 1;
-
-            if (index < 0) index = 0;
+            if (idx < 0) idx = 0;
         }
-
-        //  forward search only
-        for (let i = index + 1; i < timeSlots.length; i++) {
-            if (!bookedSlots.includes(timeSlots[i])) {
-                return timeSlots[i];
-            }
-        }
-
+        for (let i = idx + 1; i < timeSlots.length; i++)
+            if (!bookedSlots.includes(timeSlots[i])) return timeSlots[i];
         return null;
     }, [timeSlots, currentSlot, bookedSlots]);
 
+    const isInitialMount = useRef(true);
     useEffect(() => {
-        if (currentSlot) setSelectedSlot(currentSlot);
+        if (isInitialMount.current && currentSlot) {
+            setSelectedSlot(currentSlot);
+            isInitialMount.current = false;
+        }
     }, [currentSlot]);
 
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data || []);
+            } catch (err) {
+                console.error("Country fetch failed", err);
+                setCountries([
+                    { dialCode: "+91", _id: "fallback", flag: "🇮🇳" },
+                ]);
+            }
+        };
+        load();
+    }, []);
+
+    // ── Billing calculations (all derived, no state) ──────────────────────────
     const serviceTotal = useMemo(
         () =>
-            service.reduce(
+            selectedServices.reduce(
                 (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
                 0,
             ),
-        [service, serviceAmounts],
+        [selectedServices, serviceAmounts],
     );
-
-    const finalAmount = serviceTotal;
-    useEffect(() => {
-        setPatient((prev) => ({ ...prev, amount: finalAmount }));
-    }, [finalAmount]);
 
     const calculatedDiscount = useMemo(() => {
         if (!discount || discount <= 0) return 0;
-        return Math.round(
-            isPercent ? (finalAmount * discount) / 100 : discount,
-        );
-    }, [discount, isPercent, finalAmount]);
+        const raw = isPercent ? (serviceTotal * discount) / 100 : discount;
+        return Math.min(Math.round(raw), serviceTotal);
+    }, [discount, isPercent, serviceTotal]);
 
-    const remainingAmount = Math.max(
-        finalAmount - patient.amount - calculatedDiscount,
-        0,
-    );
+    // finalAmount = what patient owes after discount
+    const finalAmount = Math.max(serviceTotal - calculatedDiscount, 0);
 
     useEffect(() => {
         if (collectFull) {
-            const auto = Math.max(
-                Math.round(finalAmount - calculatedDiscount),
-                0,
-            );
-            setPatient((prev) => ({ ...prev, amount: auto }));
+            setCollectedAmount(finalAmount);
         }
-    }, [calculatedDiscount, finalAmount, collectFull]);
+    }, [collectFull, finalAmount]);
 
-    const resetForm = () => {
-        setPatient({
-            name: "",
-            service: [],
-            number: "",
-            email: "",
-            amount: 0,
-            age: "",
-            gender: "Male",
-        });
+    const remainingAmount = Math.max(finalAmount - collectedAmount, 0);
+
+    const paymentStatus =
+        remainingAmount <= 0
+            ? "Paid"
+            : collectedAmount > 0
+              ? "Partial"
+              : "Unpaid";
+
+    const statusColor =
+        paymentStatus === "Paid"
+            ? "#4ade80"
+            : paymentStatus === "Partial"
+              ? "#fb923c"
+              : "#f87171";
+
+    // ── Reset ─────────────────────────────────────────────────────────────────
+    const resetForm = useCallback(() => {
+        setName("");
+        setCountryCode(doctor?.dialCode || "+91");
+        setEmail("");
+        setAge("");
+        setGender("Male");
+        setSelectedServices([]);
         setServiceAmounts({});
         setDiscount(0);
         setIsPercent(false);
         setCollectFull(true);
-        setAppointmentDate(appointmentDate);
-        setPaymentType("");
+        setCollectedAmount(0);
+        setSelectedPaymentId("");
         setSelectedSlot("");
         setImageFile(null);
         setImagePreview("");
-    };
+        // Keep date — user probably wants to keep booking for same day
+    }, [doctor]);
 
-    const onChange = (e) =>
-        setPatient({ ...patient, [e.target.name]: e.target.value });
+    // ── Service handlers ──────────────────────────────────────────────────────
+    const handleAddService = useCallback((s) => {
+        setSelectedServices((prev) =>
+            prev.some((x) => x._id === s._id) ? prev : [...prev, s],
+        );
+        setServiceAmounts((prev) => ({
+            ...prev,
+            [s._id]: s.amount ?? 0,
+        }));
+    }, []);
 
+    const handleRemoveService = useCallback((id) => {
+        setSelectedServices((prev) => prev.filter((s) => s._id !== id));
+        setServiceAmounts((prev) => {
+            const copy = { ...prev };
+            delete copy[id];
+            return copy;
+        });
+    }, []);
+
+    // ── Submit ────────────────────────────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (loading) return;
 
-        if (service.length === 0) {
+        // Validations — these must NOT reset the form
+        if (selectedServices.length === 0)
             return showAlert("Select at least one service", "warning");
+
+        if (!/^[1-9][0-9]{7,14}$/.test(number)) {
+            return showAlert("Enter valid phone number", "warning");
         }
 
-        if (number.length !== 10) {
-            return showAlert("Invalid phone number", "warning");
-        }
-
-        if (!payment_type) {
+        // FIX: validate against selectedPaymentId, not a string payment_type
+        if (!selectedPaymentId)
             return showAlert("Select payment type", "warning");
-        }
 
-        if (!selectedSlot) {
-            return showAlert("Select time slot", "warning");
-        }
+        if (!selectedSlot) return showAlert("Select a time slot", "warning");
 
         setLoading(true);
 
         try {
-            var imageUrl = null;
-
-            if (imageFile) {
-                imageUrl = await uploadImageAPI(imageFile);
-            }
+            const fullPhone = `${countryCode}${number}`;
 
             const patientRes = await addPatient({
                 name,
                 gender,
-                number,
+                number: fullPhone,
                 email,
                 age,
             });
-
             if (!patientRes.success) {
-                // showAlert(patientRes.error, "danger");
-                setLoading(false);
+                showAlert(
+                    patientRes.message || "Failed to create patient",
+                    "danger",
+                );
                 return;
             }
 
-            const patientId = patientRes.patient._id;
-
+            const newPatientId = patientRes.patient._id;
             const formData = new FormData();
 
-            formData.append("patientId", patientId);
-            formData.append("collected", patient.amount);
+            formData.append("patientId", newPatientId);
+            formData.append("amount", finalAmount);
+            formData.append("collected", collectedAmount);
+            formData.append("remaining", remainingAmount);
+            formData.append("status", paymentStatus);
             formData.append("date", appointmentDate);
             formData.append("time", selectedSlot);
-            formData.append("payment_type", payment_type);
-            formData.append("image", imageUrl);
+            formData.append("discount", discount);
+            formData.append("isPercent", isPercent);
+            formData.append("paymentMethodId", selectedPaymentId);
 
-            // services
+            const selectedPaymentOption = paymentOptions.find(
+                (p) => String(p.id || p._id) === String(selectedPaymentId),
+            );
+
+            if (selectedPaymentOption) {
+                formData.append(
+                    "categoryName",
+                    selectedPaymentOption.subCategoryName ||
+                        selectedPaymentOption.categoryName ||
+                        "",
+                );
+            }
+
             formData.append(
                 "services",
                 JSON.stringify(
-                    service.map((s) => ({
+                    selectedServices.map((s) => ({
                         id: s._id,
                         name: s.name,
                         amount: serviceAmounts[s._id] ?? s.amount,
@@ -287,7 +326,6 @@ const AddPatient = ({
                 ),
             );
 
-            // image (use file, not URL)
             if (imageFile) {
                 formData.append("image", imageFile);
             }
@@ -296,57 +334,22 @@ const AddPatient = ({
 
             if (appointmentRes.success) {
                 setShowSuccess(true);
-                resetForm(); // USE IT HERE
+                resetForm();
             } else {
-                showAlert("Failed to create appointment", "danger");
+                showAlert(
+                    appointmentRes.message || "Failed to create appointment",
+                    "danger",
+                );
             }
         } catch (err) {
-            showAlert("Server error", "danger");
+            console.error(err);
+            showAlert("Server error. Please try again.", "danger");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddService = useCallback((s) => {
-        setPatient((prev) =>
-            prev.service.some((x) => x._id === s._id)
-                ? prev
-                : { ...prev, service: [...prev.service, s] },
-        );
-
-        setServiceAmounts((prev) => ({
-            ...prev,
-            [s._id]: s.amount ?? 0,
-        }));
-    }, []);
-
-    const handleRemoveService = useCallback((id) => {
-        setPatient((prev) => ({
-            ...prev,
-            service: prev.service.filter((s) => s._id !== id),
-        }));
-
-        setServiceAmounts((prev) => {
-            const copy = { ...prev };
-            delete copy[id];
-            return copy;
-        });
-    }, []);
-
-    const statusColor =
-        patient.amount >= finalAmount - calculatedDiscount
-            ? "#4ade80"
-            : patient.amount > 0
-              ? "#fb923c"
-              : "#f87171";
-
-    const statusLabel =
-        patient.amount >= finalAmount - calculatedDiscount
-            ? "Paid"
-            : patient.amount > 0
-              ? "Partial"
-              : "Unpaid";
-
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <>
             <div className="modal-content">
@@ -394,7 +397,7 @@ const AddPatient = ({
                                 style={{ gridColumn: "span 1" }}
                             >
                                 <label htmlFor="name" className="ap-label">
-                                    Full Name
+                                    Full Name{" "}
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
@@ -402,27 +405,24 @@ const AddPatient = ({
                                 <input
                                     id="name"
                                     className="ap-input"
-                                    name="name"
                                     value={name}
-                                    onChange={onChange}
+                                    onChange={(e) => setName(e.target.value)}
                                     placeholder="Patient name"
                                     required
                                 />
                             </div>
                             <div className="ap-field">
                                 <label htmlFor="gender" className="ap-label">
-                                    Gender
+                                    Gender{" "}
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
                                 </label>
-
                                 <select
                                     id="gender"
-                                    name="gender"
                                     className="ap-select"
                                     value={gender}
-                                    onChange={onChange}
+                                    onChange={(e) => setGender(e.target.value)}
                                 >
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
@@ -430,7 +430,7 @@ const AddPatient = ({
                             </div>
                             <div className="ap-field">
                                 <label htmlFor="age" className="ap-label">
-                                    Age
+                                    Age{" "}
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
@@ -439,36 +439,48 @@ const AddPatient = ({
                                     id="age"
                                     className="ap-input"
                                     type="number"
-                                    name="age"
                                     value={age}
-                                    onChange={onChange}
+                                    onChange={(e) => setAge(e.target.value)}
                                     placeholder="Age"
                                 />
                             </div>
                         </div>
+
                         <div className="ap-field">
-                            <label htmlFor="number" className="ap-label">
-                                Mobile Number
-                                <span className="sg-required">
-                                    <sup>*</sup>
-                                </span>
-                            </label>
-                            <input
-                                id="number"
-                                className="ap-input"
-                                type="tel"
-                                name="number"
-                                value={number}
-                                placeholder="Mobile number"
-                                onChange={(e) => {
-                                    const d = e.target.value.replace(/\D/g, "");
-                                    if (d.length <= 10)
-                                        setPatient({
-                                            ...patient,
-                                            number: d,
-                                        });
-                                }}
-                            />
+                            <div style={{ display: "flex", gap: 8 }}>
+                                {/* COUNTRY CODE */}
+                                <select
+                                    className="ap-input"
+                                    style={{ maxWidth: 120 }}
+                                    value={countryCode}
+                                    onChange={(e) =>
+                                        setCountryCode(e.target.value)
+                                    }
+                                >
+                                    {countries.map((c) => (
+                                        <option key={c._id} value={c.dialCode}>
+                                            {c.flag} {c.dialCode}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {/* PHONE */}
+                                <input
+                                    id="number"
+                                    className="ap-input"
+                                    type="tel"
+                                    value={number}
+                                    placeholder="Enter phone number"
+                                    onChange={(e) => {
+                                        const digits = e.target.value.replace(
+                                            /\D/g,
+                                            "",
+                                        );
+                                        if (digits.length <= 15)
+                                            setNumber(digits);
+                                    }}
+                                />
+                            </div>
                         </div>
                         <div className="ap-field">
                             <label htmlFor="email" className="ap-label">
@@ -478,32 +490,31 @@ const AddPatient = ({
                                 id="email"
                                 className="ap-input"
                                 type="email"
-                                name="email"
-                                value={patient.email}
-                                placeholder="Enter email"
-                                onChange={onChange}
+                                value={email}
+                                placeholder="Enter email (optional)"
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
 
-                        {/* Services */}
+                        {/* ── Services & Billing ── */}
                         <div className="ap-section">
-                            Services & Billing
+                            Services & Billing{" "}
                             <span className="sg-required">
                                 <sup>*</sup>
                             </span>
                         </div>
                         <ServiceList
                             services={availableServices}
-                            selectedServices={service}
+                            selectedServices={selectedServices}
                             currency={currency}
                             onAdd={handleAddService}
                             onRemove={handleRemoveService}
                         />
 
-                        {service.length > 0 && (
+                        {selectedServices.length > 0 && (
                             <>
                                 <div style={{ marginTop: 12 }}>
-                                    {service.map((s) => (
+                                    {selectedServices.map((s) => (
                                         <div
                                             key={s._id}
                                             className="ap-service-row"
@@ -515,7 +526,6 @@ const AddPatient = ({
                                                 {currency?.symbol}
                                                 <input
                                                     type="number"
-                                                    name={`serviceAmount-${s._id}`}
                                                     className="ap-amount-input"
                                                     value={
                                                         serviceAmounts[s._id] ??
@@ -558,13 +568,13 @@ const AddPatient = ({
                                         placeholder="0"
                                         value={discount}
                                         min={0}
-                                        max={isPercent ? 100 : finalAmount}
+                                        max={isPercent ? 100 : serviceTotal}
                                         onChange={(e) => {
                                             let v = Number(e.target.value);
                                             if (v < 0) v = 0;
                                             if (isPercent && v > 100) v = 100;
-                                            if (!isPercent && v > finalAmount)
-                                                v = finalAmount;
+                                            if (!isPercent && v > serviceTotal)
+                                                v = serviceTotal;
                                             setDiscount(v);
                                         }}
                                         style={{ flex: 1 }}
@@ -588,7 +598,7 @@ const AddPatient = ({
                                     <div className="ap-summary-row">
                                         <span>Subtotal</span>
                                         <span className="ap-summary-val">
-                                            {fmt(finalAmount)}
+                                            {fmt(serviceTotal)}
                                         </span>
                                     </div>
                                     {calculatedDiscount > 0 && (
@@ -596,9 +606,7 @@ const AddPatient = ({
                                             <span>Discount</span>
                                             <span
                                                 className="ap-summary-val"
-                                                style={{
-                                                    color: "#fb923c",
-                                                }}
+                                                style={{ color: "#fb923c" }}
                                             >
                                                 - {fmt(calculatedDiscount)}
                                             </span>
@@ -607,13 +615,7 @@ const AddPatient = ({
                                     <div className="ap-summary-row final">
                                         <span>Payable Amount</span>
                                         <span className="ap-summary-val">
-                                            {fmt(
-                                                Math.max(
-                                                    finalAmount -
-                                                        calculatedDiscount,
-                                                    0,
-                                                ),
-                                            )}
+                                            {fmt(finalAmount)}
                                         </span>
                                     </div>
                                 </div>
@@ -637,17 +639,18 @@ const AddPatient = ({
                                         {currency?.symbol}
                                         <input
                                             type="number"
-                                            name="collectedAmount"
                                             className="ap-amount-input"
-                                            value={patient.amount.toFixed(2)}
+                                            value={collectedAmount}
                                             disabled={collectFull}
+                                            min={0}
+                                            max={finalAmount}
                                             onChange={(e) =>
-                                                setPatient((prev) => ({
-                                                    ...prev,
-                                                    amount: Number(
-                                                        e.target.value,
+                                                setCollectedAmount(
+                                                    Math.min(
+                                                        Number(e.target.value),
+                                                        finalAmount,
                                                     ),
-                                                }))
+                                                )
                                             }
                                         />
                                     </div>
@@ -685,7 +688,7 @@ const AddPatient = ({
                                             color: statusColor,
                                         }}
                                     >
-                                        {statusLabel}
+                                        {paymentStatus}
                                     </span>
                                 </div>
                             </>
@@ -728,7 +731,6 @@ const AddPatient = ({
 
                             <input
                                 ref={fileInputRef}
-                                id="fileInput"
                                 type="file"
                                 accept="image/*"
                                 style={{ display: "none" }}
@@ -762,12 +764,11 @@ const AddPatient = ({
                                 onClick={() => {
                                     if (isImageLimitReached) {
                                         showAlert(
-                                            `Image limit reached (${usage?.images?.used}/${usage?.images?.limit}). Upgrade plan 🚀`,
+                                            `Image limit reached (${imageUsage.used}/${imageUsage.limit}). Upgrade plan.`,
                                             "warning",
                                         );
                                         return;
                                     }
-
                                     fileInputRef.current?.click();
                                 }}
                             >
@@ -805,23 +806,23 @@ const AddPatient = ({
                                 </div>
                             )}
                         </div>
-                        {/* Appointment */}
+
+                        {/* ── Appointment & Payment ── */}
                         <div className="ap-section">Appointment & Payment</div>
+
                         <div className="ap-grid2">
                             <div className="ap-field">
                                 <label
                                     htmlFor="appointment-date"
                                     className="ap-label"
                                 >
-                                    Date
+                                    Date{" "}
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
                                 </label>
-
                                 <button
                                     id="appointment-date"
-                                    name="appointmentDate"
                                     type="button"
                                     className="ap-input"
                                     onClick={() => setShowCalendar((p) => !p)}
@@ -850,17 +851,11 @@ const AddPatient = ({
                                               })
                                             : "Select date"}
                                     </span>
-                                    <span
-                                        style={{
-                                            fontSize: 13,
-                                            color: "#3a4a6b",
-                                        }}
-                                    >
-                                        <CalendarArrowDown size={18} />
-                                    </span>
+                                    <CalendarArrowDown
+                                        size={18}
+                                        style={{ color: "#3a4a6b" }}
+                                    />
                                 </button>
-
-                                {/* Calendar dropdown */}
                                 {showCalendar && (
                                     <div
                                         className="dp-wrapper"
@@ -890,31 +885,29 @@ const AddPatient = ({
                                     </div>
                                 )}
                             </div>
+
                             <div className="ap-field">
                                 <label
                                     htmlFor="payment_type"
                                     className="ap-label"
                                 >
-                                    Payment Type
+                                    Payment Type{" "}
                                     <span className="sg-required">
                                         <sup>*</sup>
                                     </span>
                                 </label>
 
                                 <select
+                                    id="payment_type"
                                     className="ap-select"
-                                    value={payment_type}
+                                    value={selectedPaymentId}
                                     onChange={(e) =>
-                                        setPaymentType(e.target.value)
+                                        setSelectedPaymentId(e.target.value)
                                     }
                                 >
                                     <option value="">Select Payment</option>
-
                                     {paymentOptions.map((p) => (
-                                        <option
-                                            key={p.id}
-                                            value={p.subCategoryName}
-                                        >
+                                        <option key={p.id} value={p.id}>
                                             {p.subCategoryName
                                                 ? p.subCategoryName
                                                 : p.categoryName}
@@ -930,7 +923,7 @@ const AddPatient = ({
                             bookedSlots={bookedSlots}
                             openSection={openSection}
                             setOpenSection={setOpenSection}
-                            formatTime={formatTime}
+                            formatTime={(t) => t}
                             currentSlot={currentSlot}
                             nextSlot={nextSlot}
                         />
@@ -947,14 +940,13 @@ const AddPatient = ({
                         <button
                             type="submit"
                             className="ap-btn ap-btn-primary"
-                            disabled={service.length === 0 || loading}
+                            disabled={selectedServices.length === 0 || loading}
                         >
                             {loading ? (
                                 "Saving..."
                             ) : (
                                 <>
-                                    {" "}
-                                    <Check size={13} /> Save & Create{" "}
+                                    <Check size={13} /> Save & Create
                                 </>
                             )}
                         </button>

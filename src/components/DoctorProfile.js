@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
 import "../css/Doctorprofile.css";
+import { fetchCountries } from "../api/country.api";
 
 /* ── Password input sub-component ── */
 const PasswordInput = ({
@@ -198,6 +199,7 @@ export default function DoctorProfile(props) {
     const [staffRole, setStaffRole] = useState("");
     const [subscription, setSubscription] = useState(null);
     const isExpired = subscription?.status === "expired";
+    const [staffCountryCode, setStaffCountryCode] = useState("+91");
     // eslint-disable-next-line
     const [usage, setUsage] = useState(null);
     // eslint-disable-next-line
@@ -216,6 +218,7 @@ export default function DoctorProfile(props) {
     const [categories, setCategories] = useState([]);
     const [subCategories, setSubCategories] = useState([]);
     const planKey = subscription?.plan?.toLowerCase();
+    const [countries, setCountries] = useState([]);
     const [tempSlots, setTempSlots] = useState([
         { startTime: "10:00", endTime: "15:00", slotDuration: 15 },
     ]);
@@ -228,6 +231,7 @@ export default function DoctorProfile(props) {
         _id: "",
         name: "",
         phone: "",
+        countryCode: "",
         role: "",
     });
     const [editData, setEditData] = useState({
@@ -235,6 +239,7 @@ export default function DoctorProfile(props) {
         clinicName: "",
         phone: "",
         appointmentPhone: "",
+        countryCode: "+91",
         regNumber: "",
         degree: [""],
         address: {
@@ -246,6 +251,12 @@ export default function DoctorProfile(props) {
             pincode: "",
         },
     });
+
+    // selectedCountry drives the payload — derived from editData.countryCode
+    const selectedCountry = countries.find(
+        (c) => c.dialCode === editData.countryCode,
+    );
+
     const [showPasswords, setShowPasswords] = useState({
         current: false,
         new: false,
@@ -270,15 +281,6 @@ export default function DoctorProfile(props) {
         },
     };
 
-    const COUNTRY_CODES = [
-        { code: "+91", flag: "🇮🇳", country: "India", min: 10, max: 10 },
-        { code: "+1", flag: "🇺🇸", country: "USA", min: 10, max: 10 },
-        { code: "+44", flag: "🇬🇧", country: "UK", min: 10, max: 10 },
-        { code: "+49", flag: "🇩🇪", country: "Germany", min: 10, max: 11 },
-        { code: "+1", flag: "🇨🇦", country: "Canada", min: 10, max: 10 },
-        { code: "+45", flag: "🇩🇰", country: "Denmark", min: 8, max: 8 },
-    ];
-
     const passwordsMatch =
         passwordData.newPassword === passwordData.confirmPassword;
     const staffLimit =
@@ -291,6 +293,14 @@ export default function DoctorProfile(props) {
         const ampm = hour >= 12 ? "PM" : "AM";
         hour = hour % 12 || 12;
         return `${hour}:${m} ${ampm}`;
+    };
+
+    const splitPhone = (phone = "") => {
+        const match = phone.match(/^(\+\d+)(\d+)$/);
+        return {
+            countryCode: match?.[1] || "+91",
+            number: match?.[2] || phone,
+        };
     };
 
     const handleEditChange = (e) =>
@@ -326,6 +336,8 @@ export default function DoctorProfile(props) {
                 (data.staff || []).filter((s) => s.isActive && !s.isDeleted)
                     .length,
             );
+
+            // FIX: was setPaymentMethods() with no args — now correctly maps the array
             setPaymentMethods(
                 (doc.paymentMethods || []).map((m) => ({
                     categoryId:
@@ -342,16 +354,34 @@ export default function DoctorProfile(props) {
                     _subCategoryName: m.subCategoryId?.name || "",
                 })),
             );
+
+            // dialCode comes from the backend get_doc response (e.g. "+1", "+91")
+            const dialCode = doc?.dialCode || "+91";
+
+            // Strip the dial code prefix from the stored full phone so the
+            // input only shows the local number (e.g. "8273427800" not "18273427800")
+            const stripDialCode = (fullPhone = "") => {
+                if (!fullPhone) return "";
+                const dialDigits = dialCode.replace(/\D/g, ""); // "1" from "+1"
+                const phoneDigits = fullPhone.replace(/\D/g, "");
+                if (phoneDigits.startsWith(dialDigits)) {
+                    return phoneDigits.slice(dialDigits.length);
+                }
+                return phoneDigits;
+            };
+
             setEditData({
                 name: doc.name || "",
                 clinicName: doc.clinicName || "",
+                // Show masked placeholder if we only have last4;
+                // otherwise strip dial code so input shows local digits only
                 phone: doc.phoneLast4
                     ? `••••${doc.phoneLast4}`
-                    : doc.phone || "",
+                    : stripDialCode(doc.phone),
                 appointmentPhone: doc.appointmentPhoneLast4
                     ? `••••${doc.appointmentPhoneLast4}`
-                    : doc.appointmentPhone || "",
-                countryCode: doc.address?.countryCode || "+91",
+                    : stripDialCode(doc.appointmentPhone),
+                countryCode: dialCode,
                 regNumber: doc.regNumber || "",
                 degree: doc.degree?.length ? doc.degree : [""],
                 address: {
@@ -396,8 +426,21 @@ export default function DoctorProfile(props) {
         }
     }, []);
 
+    // Sync staff country code default to doctor's country after fetch
+    useEffect(() => {
+        if (doctor?.dialCode) {
+            setStaffCountryCode(doctor.dialCode);
+        } else if (doctor?.address?.dialCode) {
+            setStaffCountryCode(doctor.address.dialCode);
+        }
+    }, [doctor]);
+
     const handleSaveProfile = async () => {
         try {
+            if (!selectedCountry) {
+                props.showAlert("Country not loaded", "danger");
+                return;
+            }
             if (!editData.name?.trim())
                 return props.showAlert("Name is required", "danger");
             if (!editData.clinicName?.trim())
@@ -406,23 +449,31 @@ export default function DoctorProfile(props) {
                     "danger",
                 );
 
-            let cleanPhone = (editData.phone || "").replace(/\D/g, "");
-            if (cleanPhone.startsWith("0")) cleanPhone = cleanPhone.slice(1);
-            if (cleanPhone.length < 8 || cleanPhone.length > 15)
+            const isMasked = (val) => val?.includes("•");
+
+            // If masked, send null (skip update); otherwise strip non-digits
+            const cleanPhone = isMasked(editData.phone)
+                ? null
+                : editData.phone.replace(/\D/g, "");
+
+            const cleanAppt = isMasked(editData.appointmentPhone)
+                ? null
+                : editData.appointmentPhone.replace(/\D/g, "");
+
+            if (
+                cleanPhone !== null &&
+                (cleanPhone.length < 8 || cleanPhone.length > 15)
+            )
                 return props.showAlert("Invalid phone number", "danger");
 
-            let cleanAppt = (editData.appointmentPhone || "").replace(
-                /\D/g,
-                "",
-            );
-            if (cleanAppt.startsWith("0")) cleanAppt = cleanAppt.slice(1);
-            if (cleanAppt && (cleanAppt.length < 8 || cleanAppt.length > 15))
+            if (
+                cleanAppt !== null &&
+                cleanAppt.length > 0 &&
+                (cleanAppt.length < 8 || cleanAppt.length > 15)
+            )
                 return props.showAlert("Invalid appointment phone", "danger");
 
-            const dialCode =
-                editData.countryCode || doctor?.address?.countryCode || "+91";
-            const fullPhone = `${dialCode}${cleanPhone}`;
-            const fullApptPhone = cleanAppt ? `${dialCode}${cleanAppt}` : "";
+            const dialCode = editData.countryCode || "+91";
 
             const cleanDegree = Array.isArray(editData.degree)
                 ? editData.degree
@@ -430,7 +481,14 @@ export default function DoctorProfile(props) {
                       .map((d) => d.trim())
                 : [];
 
-            const allowedAddressFields = ["line", "city", "state", "pincode"];
+            const allowedAddressFields = [
+                "line1",
+                "line2",
+                "line3",
+                "city",
+                "state",
+                "pincode",
+            ];
             const cleanAddress = {};
             if (editData.address && typeof editData.address === "object") {
                 allowedAddressFields.forEach((key) => {
@@ -446,9 +504,17 @@ export default function DoctorProfile(props) {
                 regNumber: editData.regNumber?.trim() || "",
                 degree: cleanDegree,
                 experience: editData.experience || "",
-                phone: fullPhone,
-                appointmentPhone: fullApptPhone,
-                countryCode: dialCode,
+                // Only send phone fields if the user actually changed them
+                // (unmasked and typed a new number)
+                ...(cleanPhone !== null && {
+                    phone: `${dialCode}${cleanPhone}`,
+                }),
+                ...(cleanAppt !== null &&
+                    cleanAppt.length > 0 && {
+                        appointmentPhone: `${dialCode}${cleanAppt}`,
+                    }),
+                countryId: selectedCountry._id,
+                countryCode: selectedCountry.dialCode,
                 address: cleanAddress,
             };
 
@@ -501,7 +567,9 @@ export default function DoctorProfile(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: staffName,
-                    phone: staffPhone.replace(/\s+/g, ""),
+                    // FIX: staffCountryCode already contains "+" (e.g. "+91")
+                    // so do NOT prefix another "+" — was: `+${staffCountryCode}${staffPhone}`
+                    phone: `${staffCountryCode}${staffPhone}`,
                     role: staffRole,
                 }),
             },
@@ -593,10 +661,12 @@ export default function DoctorProfile(props) {
     };
 
     const openEditStaffModal = (staff) => {
+        const parsed = splitPhone(staff.phone);
         setEditStaffData({
             _id: staff._id,
             name: staff.name,
-            phone: staff.phone,
+            phone: parsed.number,
+            countryCode: parsed.countryCode,
             role: staff.role,
         });
         setEditStaffOpen(true);
@@ -610,7 +680,7 @@ export default function DoctorProfile(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: editStaffData.name,
-                    phone: editStaffData.phone,
+                    phone: `${editStaffData.countryCode}${editStaffData.phone}`,
                     role: editStaffData.role,
                 }),
             },
@@ -627,6 +697,18 @@ export default function DoctorProfile(props) {
         fetchStaff();
         fetchAvailability();
     }, [fetchDoctor, fetchStaff, fetchAvailability]);
+
+    useEffect(() => {
+        const loadCountries = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data || []);
+            } catch (err) {
+                console.error("Failed to load countries", err);
+            }
+        };
+        loadCountries();
+    }, []);
 
     useEffect(() => {
         const fetchMaster = async () => {
@@ -658,53 +740,51 @@ export default function DoctorProfile(props) {
     /* ── Skeleton loader ── */
     if (!doctor) {
         return (
-            <>
-                <div className="dp-root">
-                    {[1, 2, 3].map((i) => (
+            <div className="dp-root">
+                {[1, 2, 3].map((i) => (
+                    <div
+                        key={i}
+                        className="dp-card dp-mb"
+                        style={{ padding: 24, opacity: 1 - i * 0.22 }}
+                    >
                         <div
-                            key={i}
-                            className="dp-card dp-mb"
-                            style={{ padding: 24, opacity: 1 - i * 0.22 }}
+                            style={{
+                                display: "flex",
+                                gap: 16,
+                                alignItems: "center",
+                            }}
                         >
                             <div
+                                className="dp-skeleton"
                                 style={{
-                                    display: "flex",
-                                    gap: 16,
-                                    alignItems: "center",
+                                    width: 50,
+                                    height: 50,
+                                    borderRadius: 14,
                                 }}
-                            >
+                            />
+                            <div style={{ flex: 1 }}>
                                 <div
                                     className="dp-skeleton"
                                     style={{
-                                        width: 50,
-                                        height: 50,
-                                        borderRadius: 14,
+                                        height: 12,
+                                        width: "38%",
+                                        marginBottom: 9,
+                                        borderRadius: 5,
                                     }}
                                 />
-                                <div style={{ flex: 1 }}>
-                                    <div
-                                        className="dp-skeleton"
-                                        style={{
-                                            height: 12,
-                                            width: "38%",
-                                            marginBottom: 9,
-                                            borderRadius: 5,
-                                        }}
-                                    />
-                                    <div
-                                        className="dp-skeleton"
-                                        style={{
-                                            height: 9,
-                                            width: "22%",
-                                            borderRadius: 4,
-                                        }}
-                                    />
-                                </div>
+                                <div
+                                    className="dp-skeleton"
+                                    style={{
+                                        height: 9,
+                                        width: "22%",
+                                        borderRadius: 4,
+                                    }}
+                                />
                             </div>
                         </div>
-                    ))}
-                </div>
-            </>
+                    </div>
+                ))}
+            </div>
         );
     }
 
@@ -731,404 +811,1168 @@ export default function DoctorProfile(props) {
     const bc = badgeColors[subStatus] || badgeColors.trial;
 
     return (
-        <>
-            <div className="dp-root">
-                {/* ── Profile Card ── */}
-                <div className="dp-card dp-mb">
-                    <div className="dp-profile-header">
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 16,
-                            }}
-                        >
-                            <div className="dp-avatar">
-                                {doctor.name?.charAt(0)?.toUpperCase()}
-                            </div>
-                            <div>
-                                <div className="dp-doc-name">{doctor.name}</div>
-                                <div className="dp-doc-center">
-                                    {doctor.clinicName}
-                                </div>
-                            </div>
+        <div className="dp-root">
+            {/* ── Profile Card ── */}
+            <div className="dp-card dp-mb">
+                <div className="dp-profile-header">
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 16,
+                        }}
+                    >
+                        <div className="dp-avatar">
+                            {doctor.name?.charAt(0)?.toUpperCase()}
                         </div>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            <span
-                                className="dp-sub-badge"
-                                style={{
-                                    background: bc.bg,
-                                    borderColor: bc.border,
-                                    color: bc.color,
-                                }}
-                            >
-                                <ShieldCheck size={10} />
-                                {subPlan} · {subStatus.toUpperCase()}
-                            </span>
-                            <button
-                                className="dp-edit-btn"
-                                onClick={() => setEditProfileOpen(true)}
-                            >
-                                <Pencil size={13} /> Edit Profile
-                            </button>
+                        <div>
+                            <div className="dp-doc-name">{doctor.name}</div>
+                            <div className="dp-doc-center">
+                                {doctor.clinicName}
+                            </div>
                         </div>
                     </div>
-
-                    <div className="dp-info-grid">
-                        {[
-                            {
-                                label: "Contact",
-                                icon: Phone,
-                                value: (
-                                    <>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Email
-                                            </span>
-                                            <span className="dp-row-value">
-                                                {doctor.email}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Phone
-                                            </span>
-                                            <span className="dp-row-value">
-                                                {showPhone
-                                                    ? doctor.phone || "N/A"
-                                                    : doctor.phoneMasked ||
-                                                      "N/A"}
-                                            </span>
-                                            {doctor.phone && (
-                                                <button
-                                                    onClick={() =>
-                                                        setShowPhone((p) => !p)
-                                                    }
-                                                >
-                                                    {showPhone ? (
-                                                        <EyeOff size={13} />
-                                                    ) : (
-                                                        <Eye size={13} />
-                                                    )}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">Appt</span>
-                                            <span className="dp-row-value">
-                                                {showApptPhone
-                                                    ? doctor.appointmentPhone ||
-                                                      "N/A"
-                                                    : doctor.appointmentPhoneMasked ||
-                                                      "N/A"}
-                                            </span>
-                                            {doctor.appointmentPhone && (
-                                                <button
-                                                    onClick={() =>
-                                                        setShowApptPhone(
-                                                            (p) => !p,
-                                                        )
-                                                    }
-                                                >
-                                                    {showApptPhone ? (
-                                                        <EyeOff size={13} />
-                                                    ) : (
-                                                        <Eye size={13} />
-                                                    )}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </>
-                                ),
-                            },
-                            {
-                                label: "Professional",
-                                icon: Stethoscope,
-                                value: (
-                                    <div className="dp-group">
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Experience
-                                            </span>
-                                            <span>
-                                                {doctor.experience || "N/A"} yrs
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Degree
-                                            </span>
-                                            <span>
-                                                {doctor.degree?.join(", ") ||
-                                                    "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Reg No
-                                            </span>
-                                            <span>
-                                                {doctor.regNumber || "N/A"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ),
-                            },
-                            {
-                                label: "Address",
-                                icon: MapPin,
-                                value: (
-                                    <div className="dp-group">
-                                        <div className="dp-row">
-                                            <span className="dp-key">Line</span>
-                                            <span>
-                                                {[
-                                                    doctor.address?.line1,
-                                                    doctor.address?.line2,
-                                                    doctor.address?.line3,
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(", ") || "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">City</span>
-                                            <span>
-                                                {doctor.address?.city || "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                State
-                                            </span>
-                                            <span>
-                                                {doctor.address?.state || "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Pincode
-                                            </span>
-                                            <span>
-                                                {doctor.address?.pincode ||
-                                                    "N/A"}
-                                            </span>
-                                        </div>
-                                        <div className="dp-row">
-                                            <span className="dp-key">
-                                                Country
-                                            </span>
-                                            <span>
-                                                {doctor.address?.country ||
-                                                    "N/A"}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ),
-                            },
-                        ].map((item) => (
-                            <div key={item.label} className="dp-info-item">
-                                <div className="dp-info-label">
-                                    <item.icon size={10} />
-                                    {item.label}
-                                </div>
-                                <div className="dp-info-value">
-                                    {item.value}
-                                </div>
-                            </div>
-                        ))}
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            flexWrap: "wrap",
+                        }}
+                    >
+                        <span
+                            className="dp-sub-badge"
+                            style={{
+                                background: bc.bg,
+                                borderColor: bc.border,
+                                color: bc.color,
+                            }}
+                        >
+                            <ShieldCheck size={10} />
+                            {subPlan} · {subStatus.toUpperCase()}
+                        </span>
+                        <button
+                            className="dp-edit-btn"
+                            onClick={() => setEditProfileOpen(true)}
+                        >
+                            <Pencil size={13} /> Edit Profile
+                        </button>
                     </div>
                 </div>
 
-                {/* ── Staff Management ── */}
-                <Section icon={Users} title="Staff Management" accent="#60a5fa">
-                    <div className="dp-grid3 dp-mb">
-                        <div className="dp-field">
-                            <label className="dp-label">Staff Name</label>
-                            <input
-                                className="dp-input"
-                                placeholder="Enter name"
-                                value={staffName}
-                                onChange={(e) => setStaffName(e.target.value)}
-                            />
-                        </div>
-                        <div className="dp-field">
-                            <label className="dp-label">Phone Number</label>
-                            <input
-                                className="dp-input"
-                                placeholder="Enter phone number"
-                                value={staffPhone}
-                                onChange={(e) => setStaffPhone(e.target.value)}
-                            />
-                        </div>
-                        <div className="dp-field">
-                            <label className="dp-label">Role</label>
-                            <select
-                                className="dp-select"
-                                value={staffRole}
-                                onChange={(e) => setStaffRole(e.target.value)}
-                            >
-                                <option value="">Select Role</option>
-                                <option value="receptionist">
-                                    Receptionist
-                                </option>
-                                <option value="assistant">Assistant</option>
-                                <option value="nurse">Nurse</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {isExpired ? (
-                        <div className="dp-warn-banner dp-mb">
-                            <AlertTriangle size={14} />
-                            Your subscription has expired. Upgrade to add staff.
-                        </div>
-                    ) : isLimitReached ? (
-                        <div className="dp-warn-banner dp-mb">
-                            <AlertTriangle size={14} />
-                            Staff limit reached ({staffLimit}). Upgrade your
-                            plan to add more staff.
-                        </div>
-                    ) : null}
-
-                    <button
-                        className="dp-btn dp-btn-primary dp-mb"
-                        onClick={handleAddStaff}
-                        disabled={isLimitReached || isExpired}
-                    >
-                        <UserPlus size={14} /> Add Staff
-                    </button>
-
-                    <div className="dp-divider" />
-
-                    {staffList.length === 0 ? (
-                        <div className="dp-empty">No staff added yet</div>
-                    ) : (
-                        <div className="dp-staff-grid">
-                            {staffList.map((s) => {
-                                const rc =
-                                    ROLE_COLORS[s.role] ||
-                                    ROLE_COLORS.assistant;
-                                return (
-                                    <div
-                                        key={s._id}
-                                        className="dp-staff-card"
-                                        style={{
-                                            opacity: s.isActive ? 1 : 0.5,
-                                            filter: s.isActive
-                                                ? "none"
-                                                : "grayscale(80%)",
-                                            position: "relative",
-                                        }}
-                                    >
-                                        {!s.isActive && (
-                                            <span
-                                                style={{
-                                                    position: "absolute",
-                                                    top: 8,
-                                                    right: 8,
-                                                    fontSize: 10,
-                                                    padding: "2px 7px",
-                                                    borderRadius: 6,
-                                                    background:
-                                                        "rgba(248,113,113,.1)",
-                                                    color: "#f87171",
-                                                    border: "1px solid rgba(248,113,113,.3)",
-                                                }}
-                                            >
-                                                Inactive
-                                            </span>
-                                        )}
-                                        <div className="dp-staff-avatar">
-                                            {s.name?.charAt(0)?.toUpperCase()}
-                                        </div>
-                                        <div className="dp-staff-info">
-                                            <div className="dp-staff-name">
-                                                {s.name}
-                                            </div>
-                                            <div className="dp-staff-phone">
-                                                <Phone size={11} /> {s.phone}
-                                            </div>
-                                            <span
-                                                className="dp-role-badge"
-                                                style={{
-                                                    background: rc.bg,
-                                                    border: `1px solid ${rc.border}`,
-                                                    color: rc.color,
-                                                }}
-                                            >
-                                                {s.role}
-                                            </span>
-                                        </div>
-                                        <div className="dp-staff-actions">
+                <div className="dp-info-grid">
+                    {[
+                        {
+                            label: "Contact",
+                            icon: Phone,
+                            value: (
+                                <>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Email</span>
+                                        <span className="dp-row-value">
+                                            {doctor.email}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Phone</span>
+                                        <span className="dp-row-value">
+                                            {showPhone
+                                                ? doctor.phone || "N/A"
+                                                : doctor.phoneMasked || "N/A"}
+                                        </span>
+                                        {doctor.phone && (
                                             <button
-                                                className="dp-icon-btn dp-icon-edit"
                                                 onClick={() =>
-                                                    openEditStaffModal(s)
+                                                    setShowPhone((p) => !p)
                                                 }
                                             >
-                                                <Pencil size={13} />
-                                            </button>
-                                            <button
-                                                className="dp-icon-btn dp-icon-del"
-                                                onClick={() =>
-                                                    deletestaff(s._id)
-                                                }
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
-                                            <button
-                                                className="dp-icon-btn"
-                                                onClick={() =>
-                                                    toggleStaff(s._id)
-                                                }
-                                                title={
-                                                    s.isActive
-                                                        ? "Deactivate"
-                                                        : "Activate"
-                                                }
-                                            >
-                                                {s.isActive ? (
+                                                {showPhone ? (
                                                     <EyeOff size={13} />
                                                 ) : (
                                                     <Eye size={13} />
                                                 )}
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
-                                );
-                            })}
+                                    <div className="dp-row">
+                                        <span className="dp-key">Appt</span>
+                                        <span className="dp-row-value">
+                                            {showApptPhone
+                                                ? doctor.appointmentPhone ||
+                                                  "N/A"
+                                                : doctor.appointmentPhoneMasked ||
+                                                  "N/A"}
+                                        </span>
+                                        {doctor.appointmentPhone && (
+                                            <button
+                                                onClick={() =>
+                                                    setShowApptPhone((p) => !p)
+                                                }
+                                            >
+                                                {showApptPhone ? (
+                                                    <EyeOff size={13} />
+                                                ) : (
+                                                    <Eye size={13} />
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            ),
+                        },
+                        {
+                            label: "Professional",
+                            icon: Stethoscope,
+                            value: (
+                                <div className="dp-group">
+                                    <div className="dp-row">
+                                        <span className="dp-key">
+                                            Experience
+                                        </span>
+                                        <span>
+                                            {doctor.experience || "N/A"} yrs
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Degree</span>
+                                        <span>
+                                            {doctor.degree?.join(", ") || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Reg No</span>
+                                        <span>{doctor.regNumber || "N/A"}</span>
+                                    </div>
+                                </div>
+                            ),
+                        },
+                        {
+                            label: "Address",
+                            icon: MapPin,
+                            value: (
+                                <div className="dp-group">
+                                    <div className="dp-row">
+                                        <span className="dp-key">Line</span>
+                                        <span>
+                                            {[
+                                                doctor.address?.line1,
+                                                doctor.address?.line2,
+                                                doctor.address?.line3,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(", ") || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">City</span>
+                                        <span>
+                                            {doctor.address?.city || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">State</span>
+                                        <span>
+                                            {doctor.address?.state || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Pincode</span>
+                                        <span>
+                                            {doctor.address?.pincode || "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">Country</span>
+                                        <span>
+                                            {doctor.address?.country || "N/A"}
+                                        </span>
+                                    </div>
+                                </div>
+                            ),
+                        },
+                    ].map((item) => (
+                        <div key={item.label} className="dp-info-item">
+                            <div className="dp-info-label">
+                                <item.icon size={10} />
+                                {item.label}
+                            </div>
+                            <div className="dp-info-value">{item.value}</div>
                         </div>
-                    )}
-                </Section>
+                    ))}
+                </div>
+            </div>
 
-                {/* ── Availability ── */}
-                <Section
-                    icon={TimerIcon}
-                    title="Availability (Timings)"
-                    accent="#a78bfa"
+            {/* ── Staff Management ── */}
+            <Section icon={Users} title="Staff Management" accent="#60a5fa">
+                <div className="dp-grid3 dp-mb">
+                    <div className="dp-field">
+                        <label className="dp-label">Staff Name</label>
+                        <input
+                            className="dp-input"
+                            placeholder="Enter name"
+                            value={staffName}
+                            onChange={(e) => setStaffName(e.target.value)}
+                        />
+                    </div>
+                    <div className="dp-field">
+                        <label className="dp-label">Phone Number</label>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <select
+                                className="dp-input"
+                                style={{ maxWidth: 120 }}
+                                value={staffCountryCode}
+                                onChange={(e) =>
+                                    setStaffCountryCode(e.target.value)
+                                }
+                            >
+                                {countries.map((c) => (
+                                    <option key={c._id} value={c.dialCode}>
+                                        {c.dialCode}
+                                    </option>
+                                ))}
+                            </select>
+                            <input
+                                className="dp-input"
+                                placeholder="Enter phone number"
+                                value={staffPhone}
+                                onChange={(e) =>
+                                    setStaffPhone(
+                                        e.target.value.replace(/\D/g, ""),
+                                    )
+                                }
+                            />
+                        </div>
+                    </div>
+                    <div className="dp-field">
+                        <label className="dp-label">Role</label>
+                        <select
+                            className="dp-select"
+                            value={staffRole}
+                            onChange={(e) => setStaffRole(e.target.value)}
+                        >
+                            <option value="">Select Role</option>
+                            <option value="receptionist">Receptionist</option>
+                            <option value="assistant">Assistant</option>
+                            <option value="nurse">Nurse</option>
+                        </select>
+                    </div>
+                </div>
+
+                {isExpired ? (
+                    <div className="dp-warn-banner dp-mb">
+                        <AlertTriangle size={14} />
+                        Your subscription has expired. Upgrade to add staff.
+                    </div>
+                ) : isLimitReached ? (
+                    <div className="dp-warn-banner dp-mb">
+                        <AlertTriangle size={14} />
+                        Staff limit reached ({staffLimit}). Upgrade your plan to
+                        add more staff.
+                    </div>
+                ) : null}
+
+                <button
+                    className="dp-btn dp-btn-primary dp-mb"
+                    onClick={handleAddStaff}
+                    disabled={isLimitReached || isExpired}
                 >
-                    {availability.length === 0 ? (
-                        <div className="dp-empty">No availability added</div>
-                    ) : (
-                        <div className="dp-avail-grid dp-mb">
-                            {availability.map((dayBlock, index) => (
-                                <div key={index} className="dp-avail-card">
-                                    <div className="dp-avail-day">
+                    <UserPlus size={14} /> Add Staff
+                </button>
+
+                <div className="dp-divider" />
+
+                {staffList.length === 0 ? (
+                    <div className="dp-empty">No staff added yet</div>
+                ) : (
+                    <div className="dp-staff-grid">
+                        {staffList.map((s) => {
+                            const rc =
+                                ROLE_COLORS[s.role] || ROLE_COLORS.assistant;
+                            return (
+                                <div
+                                    key={s._id}
+                                    className="dp-staff-card"
+                                    style={{
+                                        opacity: s.isActive ? 1 : 0.5,
+                                        filter: s.isActive
+                                            ? "none"
+                                            : "grayscale(80%)",
+                                        position: "relative",
+                                    }}
+                                >
+                                    {!s.isActive && (
+                                        <span
+                                            style={{
+                                                position: "absolute",
+                                                top: 8,
+                                                right: 8,
+                                                fontSize: 10,
+                                                padding: "2px 7px",
+                                                borderRadius: 6,
+                                                background:
+                                                    "rgba(248,113,113,.1)",
+                                                color: "#f87171",
+                                                border: "1px solid rgba(248,113,113,.3)",
+                                            }}
+                                        >
+                                            Inactive
+                                        </span>
+                                    )}
+                                    <div className="dp-staff-avatar">
+                                        {s.name?.charAt(0)?.toUpperCase()}
+                                    </div>
+                                    <div className="dp-staff-info">
+                                        <div className="dp-staff-name">
+                                            {s.name}
+                                        </div>
+                                        <div className="dp-staff-phone">
+                                            <Phone size={11} /> {s.phone}
+                                        </div>
+                                        <span
+                                            className="dp-role-badge"
+                                            style={{
+                                                background: rc.bg,
+                                                border: `1px solid ${rc.border}`,
+                                                color: rc.color,
+                                            }}
+                                        >
+                                            {s.role}
+                                        </span>
+                                    </div>
+                                    <div className="dp-staff-actions">
+                                        <button
+                                            className="dp-icon-btn dp-icon-edit"
+                                            onClick={() =>
+                                                openEditStaffModal(s)
+                                            }
+                                        >
+                                            <Pencil size={13} />
+                                        </button>
+                                        <button
+                                            className="dp-icon-btn dp-icon-del"
+                                            onClick={() => deletestaff(s._id)}
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                        <button
+                                            className="dp-icon-btn"
+                                            onClick={() => toggleStaff(s._id)}
+                                            title={
+                                                s.isActive
+                                                    ? "Deactivate"
+                                                    : "Activate"
+                                            }
+                                        >
+                                            {s.isActive ? (
+                                                <EyeOff size={13} />
+                                            ) : (
+                                                <Eye size={13} />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </Section>
+
+            {/* ── Availability ── */}
+            <Section
+                icon={TimerIcon}
+                title="Availability (Timings)"
+                accent="#a78bfa"
+            >
+                {availability.length === 0 ? (
+                    <div className="dp-empty">No availability added</div>
+                ) : (
+                    <div className="dp-avail-grid dp-mb">
+                        {availability.map((dayBlock, index) => (
+                            <div key={index} className="dp-avail-card">
+                                <div className="dp-avail-day">
+                                    {dayBlock.day}
+                                </div>
+                                {dayBlock.slots?.map((slot, i) => (
+                                    <div key={i} className="dp-slot-row">
+                                        <span>
+                                            {formatTime(slot.startTime)} →{" "}
+                                            {formatTime(slot.endTime)}
+                                        </span>
+                                        <span className="dp-slot-duration">
+                                            {slot.slotDuration} min
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <button
+                    className="dp-btn dp-btn-outline"
+                    onClick={() => {
+                        setEditAvailability(
+                            JSON.parse(JSON.stringify(availability)),
+                        );
+                        setSelectedDays([]);
+                        setEditAvailOpen(true);
+                    }}
+                >
+                    <Pencil size={13} /> Edit Availability
+                </button>
+            </Section>
+
+            {/* ── Payment Methods ── */}
+            <Section icon={CreditCard} title="Payment Methods" accent="#34d399">
+                {paymentMethods.length === 0 ? (
+                    <div className="dp-empty">No payment methods added</div>
+                ) : (
+                    <div className="dp-staff-grid dp-mb">
+                        {paymentMethods.map((p, i) => (
+                            <div key={i} className="dp-staff-card">
+                                <div className="dp-staff-info">
+                                    <div className="dp-staff-name">
+                                        {p.label || "Payment"}
+                                    </div>
+                                    <div className="dp-staff-phone">
+                                        {categories.find(
+                                            (c) =>
+                                                c._id?.toString() ===
+                                                p.categoryId?.toString(),
+                                        )?.name || p._categoryName}
+                                        {" - "}
+                                        {subCategories.find(
+                                            (s) =>
+                                                s._id?.toString() ===
+                                                p.subCategoryId?.toString(),
+                                        )?.name || p._subCategoryName}
+                                    </div>
+                                    <span className="dp-role-badge">
+                                        {p.isActive ? "Active" : "Inactive"}
+                                    </span>
+                                </div>
+                                <div className="dp-staff-actions">
+                                    <button
+                                        className="dp-icon-btn"
+                                        onClick={() => {
+                                            const updated = [...paymentMethods];
+                                            updated[i] = {
+                                                ...updated[i],
+                                                isActive: !updated[i].isActive,
+                                            };
+                                            setPaymentMethods(updated);
+                                        }}
+                                    >
+                                        {p.isActive ? (
+                                            <EyeOff size={13} />
+                                        ) : (
+                                            <Eye size={13} />
+                                        )}
+                                    </button>
+                                    <button
+                                        className="dp-icon-btn dp-icon-del"
+                                        onClick={() =>
+                                            setPaymentMethods(
+                                                paymentMethods.filter(
+                                                    (_, idx) => idx !== i,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        <Trash2 size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <button
+                    className="dp-btn dp-btn-outline"
+                    onClick={() => setEditPaymentsOpen(true)}
+                >
+                    <Pencil size={13} /> Edit Payment Methods
+                </button>
+            </Section>
+
+            {/* ── Change Password ── */}
+            <Section icon={Lock} title="Change Password" accent="#fb923c">
+                <div className="dp-grid3 dp-mb">
+                    <PasswordInput
+                        label="Current Password"
+                        placeholder="••••••••"
+                        value={passwordData.currentPassword}
+                        onChange={(e) =>
+                            setPasswordData({
+                                ...passwordData,
+                                currentPassword: e.target.value,
+                            })
+                        }
+                        typeKey="current"
+                        showPasswords={showPasswords}
+                        setShowPasswords={setShowPasswords}
+                    />
+
+                    <div>
+                        <PasswordInput
+                            label="New Password"
+                            placeholder="Min. 8 characters"
+                            value={passwordData.newPassword}
+                            onChange={(e) =>
+                                setPasswordData({
+                                    ...passwordData,
+                                    newPassword: e.target.value,
+                                })
+                            }
+                            typeKey="new"
+                            showPasswords={showPasswords}
+                            setShowPasswords={setShowPasswords}
+                        />
+                        <div style={{ marginTop: 8 }}>
+                            {[
+                                ["length", "Min 8 characters"],
+                                ["uppercase", "Uppercase letter"],
+                                ["lowercase", "Lowercase letter"],
+                                ["number", "Number"],
+                                ["special", "Special character"],
+                            ].map(([key, label]) => (
+                                <div key={key} className="dp-pw-rule">
+                                    <div
+                                        className="dp-pw-rule-dot"
+                                        style={{
+                                            background: passwordRules[key]
+                                                ? "#4ade80"
+                                                : "#1a2540",
+                                        }}
+                                    />
+                                    <span
+                                        style={{
+                                            fontSize: 10,
+                                            color: passwordRules[key]
+                                                ? "#4ade80"
+                                                : "#2e3d5c",
+                                        }}
+                                    >
+                                        {label}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <PasswordInput
+                            label="Confirm Password"
+                            placeholder="Re-enter password"
+                            value={passwordData.confirmPassword}
+                            onChange={(e) =>
+                                setPasswordData({
+                                    ...passwordData,
+                                    confirmPassword: e.target.value,
+                                })
+                            }
+                            typeKey="confirm"
+                            showPasswords={showPasswords}
+                            setShowPasswords={setShowPasswords}
+                        />
+                        {passwordData.confirmPassword && (
+                            <div
+                                style={{
+                                    fontSize: 10,
+                                    color: passwordsMatch
+                                        ? "#4ade80"
+                                        : "#f87171",
+                                    marginTop: 6,
+                                }}
+                            >
+                                {passwordsMatch
+                                    ? "✓ Passwords match"
+                                    : "✗ Do not match"}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                        className="dp-btn dp-btn-danger"
+                        onClick={handleChangePassword}
+                        disabled={
+                            !passwordData.currentPassword ||
+                            !passwordData.newPassword ||
+                            !passwordData.confirmPassword ||
+                            !passwordsMatch ||
+                            !isPasswordValid
+                        }
+                    >
+                        <RefreshCcw size={13} /> Update Password
+                    </button>
+                </div>
+            </Section>
+
+            {/* ══════════════ MODALS ══════════════ */}
+
+            {/* Edit Profile Modal */}
+            {editProfileOpen && (
+                <div
+                    className="dp-modal-bg"
+                    onClick={() => setEditProfileOpen(false)}
+                >
+                    <div
+                        className="dp-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="dp-modal-header">
+                            <div className="dp-modal-title">
+                                Edit <em>Profile</em>
+                            </div>
+                            <button
+                                className="dp-modal-close"
+                                onClick={() => setEditProfileOpen(false)}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="dp-modal-body">
+                            <div className="dp-modal-section-title">
+                                Basic Information
+                            </div>
+                            <div className="dp-grid2 dp-mb">
+                                <div className="dp-field">
+                                    <label className="dp-label">Name</label>
+                                    <input
+                                        className="dp-input"
+                                        name="name"
+                                        value={editData.name}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">
+                                        Medical Center Name
+                                    </label>
+                                    <input
+                                        className="dp-input"
+                                        name="clinicName"
+                                        value={editData.clinicName}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">Phone</label>
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                        <select
+                                            className="dp-select"
+                                            style={{
+                                                width: "auto",
+                                                flexShrink: 0,
+                                                paddingRight: 28,
+                                            }}
+                                            value={
+                                                editData.countryCode || "+91"
+                                            }
+                                            onChange={(e) =>
+                                                setEditData({
+                                                    ...editData,
+                                                    countryCode: e.target.value,
+                                                })
+                                            }
+                                        >
+                                            {countries.map((c) => (
+                                                <option
+                                                    key={c._id}
+                                                    value={c.dialCode}
+                                                >
+                                                    {c.flag} {c.name} (
+                                                    {c.dialCode})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            className="dp-input"
+                                            value={editData.phone}
+                                            onChange={(e) =>
+                                                setEditData({
+                                                    ...editData,
+                                                    phone: e.target.value.replace(
+                                                        /\D/g,
+                                                        "",
+                                                    ),
+                                                })
+                                            }
+                                            placeholder="Enter phone number"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">
+                                        Appointment Phone
+                                    </label>
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        <select
+                                            className="dp-select"
+                                            style={{
+                                                width: "auto",
+                                                flexShrink: 0,
+                                                paddingRight: 28,
+                                            }}
+                                            value={
+                                                editData.countryCode || "+91"
+                                            }
+                                            onChange={(e) =>
+                                                setEditData({
+                                                    ...editData,
+                                                    countryCode: e.target.value,
+                                                })
+                                            }
+                                        >
+                                            {countries.map((c) => (
+                                                <option
+                                                    key={c._id}
+                                                    value={c.dialCode}
+                                                >
+                                                    {c.flag} {c.name} (
+                                                    {c.dialCode})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            className="dp-input"
+                                            name="appointmentphone"
+                                            placeholder="Phone number"
+                                            value={editData.appointmentPhone}
+                                            onChange={(e) =>
+                                                setEditData({
+                                                    ...editData,
+                                                    appointmentPhone:
+                                                        e.target.value.replace(
+                                                            /\D/g,
+                                                            "",
+                                                        ),
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">
+                                        Registration No
+                                    </label>
+                                    <input
+                                        className="dp-input"
+                                        name="regNumber"
+                                        value={editData.regNumber}
+                                        onChange={handleEditChange}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="dp-modal-section-title">
+                                <GraduationCap size={10} /> Qualifications
+                            </div>
+                            {editData.degree.map((deg, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        display: "flex",
+                                        gap: 8,
+                                        marginBottom: 8,
+                                    }}
+                                >
+                                    <input
+                                        className="dp-input"
+                                        placeholder="Enter degree"
+                                        value={deg}
+                                        onChange={(e) =>
+                                            handleDegreeChange(
+                                                index,
+                                                e.target.value,
+                                            )
+                                        }
+                                    />
+                                    <button
+                                        className="dp-icon-btn dp-icon-del"
+                                        onClick={() => removeDegreeField(index)}
+                                        disabled={editData.degree.length === 1}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
+                                onClick={addDegreeField}
+                            >
+                                <Plus size={11} /> Add Degree
+                            </button>
+
+                            <div className="dp-modal-section-title">
+                                <MapPin size={10} /> Medical Center Address
+                            </div>
+                            <div className="dp-field dp-mb">
+                                <input
+                                    className="dp-input"
+                                    name="line1"
+                                    placeholder="Address Line 1"
+                                    value={editData.address.line1}
+                                    onChange={handleAddressChange}
+                                />
+                            </div>
+                            <div className="dp-field dp-mb">
+                                <input
+                                    className="dp-input"
+                                    name="line2"
+                                    placeholder="Address Line 2 (optional)"
+                                    value={editData.address.line2}
+                                    onChange={handleAddressChange}
+                                />
+                            </div>
+                            <div className="dp-field dp-mb">
+                                <input
+                                    className="dp-input"
+                                    name="line3"
+                                    placeholder="Address Line 3 (optional)"
+                                    value={editData.address.line3}
+                                    onChange={handleAddressChange}
+                                />
+                            </div>
+                            <div className="dp-grid3">
+                                <div className="dp-field">
+                                    <label className="dp-label">City</label>
+                                    <input
+                                        className="dp-input"
+                                        name="city"
+                                        value={editData.address.city}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">State</label>
+                                    <input
+                                        className="dp-input"
+                                        name="state"
+                                        value={editData.address.state}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">Pincode</label>
+                                    <input
+                                        className="dp-input"
+                                        name="pincode"
+                                        value={editData.address.pincode}
+                                        onChange={handleAddressChange}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="dp-modal-footer">
+                            <button
+                                className="dp-btn dp-btn-outline"
+                                onClick={() => setEditProfileOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="dp-btn dp-btn-primary"
+                                onClick={handleSaveProfile}
+                            >
+                                <Check size={13} /> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Staff Modal */}
+            {editStaffOpen && (
+                <div
+                    className="dp-modal-bg"
+                    onClick={() => setEditStaffOpen(false)}
+                >
+                    <div
+                        className="dp-modal dp-modal-sm"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="dp-modal-header">
+                            <div className="dp-modal-title">
+                                Edit <em>Staff</em>
+                            </div>
+                            <button
+                                className="dp-modal-close"
+                                onClick={() => setEditStaffOpen(false)}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="dp-modal-body">
+                            <div className="dp-field dp-mb">
+                                <label className="dp-label">Name</label>
+                                <input
+                                    className="dp-input"
+                                    value={editStaffData.name}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            name: e.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <select
+                                    className="dp-input"
+                                    style={{ maxWidth: 120 }}
+                                    value={editStaffData.countryCode}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            countryCode: e.target.value,
+                                        })
+                                    }
+                                >
+                                    {countries.map((c) => (
+                                        <option key={c._id} value={c.dialCode}>
+                                            {c.dialCode}
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    className="dp-input"
+                                    placeholder="Enter phone number"
+                                    value={editStaffData.phone}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            phone: e.target.value.replace(
+                                                /\D/g,
+                                                "",
+                                            ),
+                                        })
+                                    }
+                                />
+                            </div>
+                            <div className="dp-field">
+                                <label className="dp-label">Role</label>
+                                <select
+                                    className="dp-select"
+                                    value={editStaffData.role}
+                                    onChange={(e) =>
+                                        setEditStaffData({
+                                            ...editStaffData,
+                                            role: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="receptionist">
+                                        Receptionist
+                                    </option>
+                                    <option value="assistant">Assistant</option>
+                                    <option value="nurse">Nurse</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="dp-modal-footer">
+                            <button
+                                className="dp-btn dp-btn-outline"
+                                onClick={() => setEditStaffOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="dp-btn dp-btn-primary"
+                                onClick={editstaff}
+                            >
+                                <Check size={13} /> Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Availability Modal */}
+            {editAvailOpen && (
+                <div
+                    className="dp-modal-bg"
+                    onClick={() => setEditAvailOpen(false)}
+                >
+                    <div
+                        className="dp-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="dp-modal-header">
+                            <div className="dp-modal-title">
+                                Edit <em>Availability</em>
+                            </div>
+                            <button
+                                className="dp-modal-close"
+                                onClick={() => setEditAvailOpen(false)}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="dp-modal-body">
+                            <div className="dp-modal-section-title">
+                                Select Days
+                            </div>
+                            <div className="dp-days-row dp-mb">
+                                {[
+                                    "Mon",
+                                    "Tue",
+                                    "Wed",
+                                    "Thu",
+                                    "Fri",
+                                    "Sat",
+                                    "Sun",
+                                ].map((day) => (
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        className={`dp-day-chip ${selectedDays.includes(day) ? "active" : ""}`}
+                                        onClick={() =>
+                                            setSelectedDays((prev) =>
+                                                prev.includes(day)
+                                                    ? prev.filter(
+                                                          (d) => d !== day,
+                                                      )
+                                                    : [...prev, day],
+                                            )
+                                        }
+                                    >
+                                        {day}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="dp-modal-section-title">
+                                Time Slots
+                            </div>
+                            {tempSlots.map((slot, index) => (
+                                <div
+                                    key={index}
+                                    className="dp-slot-edit-row dp-mb"
+                                >
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Start
+                                        </label>
+                                        <input
+                                            type="time"
+                                            className="dp-input"
+                                            value={slot.startTime}
+                                            onChange={(e) => {
+                                                const u = [...tempSlots];
+                                                u[index].startTime =
+                                                    e.target.value;
+                                                setTempSlots(u);
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">End</label>
+                                        <input
+                                            type="time"
+                                            className="dp-input"
+                                            value={slot.endTime}
+                                            onChange={(e) => {
+                                                const u = [...tempSlots];
+                                                u[index].endTime =
+                                                    e.target.value;
+                                                setTempSlots(u);
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="dp-field">
+                                        <label className="dp-label">
+                                            Gap (min)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            className="dp-input"
+                                            value={slot.slotDuration}
+                                            onChange={(e) => {
+                                                const u = [...tempSlots];
+                                                u[index].slotDuration = Number(
+                                                    e.target.value,
+                                                );
+                                                setTempSlots(u);
+                                            }}
+                                        />
+                                    </div>
+                                    <button
+                                        className="dp-icon-btn dp-icon-del"
+                                        style={{ alignSelf: "flex-end" }}
+                                        onClick={() => {
+                                            const u = [...tempSlots];
+                                            u.splice(index, 1);
+                                            setTempSlots(u);
+                                        }}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
+                                onClick={() =>
+                                    setTempSlots([
+                                        ...tempSlots,
+                                        {
+                                            startTime: "10:00",
+                                            endTime: "11:00",
+                                            slotDuration: 15,
+                                        },
+                                    ])
+                                }
+                            >
+                                <Plus size={11} /> Add Slot
+                            </button>
+
+                            <button
+                                className="dp-btn dp-btn-primary dp-mb"
+                                onClick={() => {
+                                    if (selectedDays.length === 0) return;
+                                    let updated = [...editAvailability];
+                                    selectedDays.forEach((day) => {
+                                        const idx = updated.findIndex(
+                                            (d) => d.day === day,
+                                        );
+                                        if (idx !== -1)
+                                            updated[idx].slots = tempSlots;
+                                        else
+                                            updated.push({
+                                                day,
+                                                slots: tempSlots,
+                                            });
+                                    });
+                                    setEditAvailability(updated);
+                                }}
+                            >
+                                <Check size={13} /> Apply to Selected Days
+                            </button>
+
+                            <div className="dp-divider" />
+
+                            <div className="dp-modal-section-title">
+                                Preview
+                            </div>
+                            {editAvailability.map((dayBlock, dayIndex) => (
+                                <div
+                                    key={dayIndex}
+                                    style={{ marginBottom: 12 }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: "#a78bfa",
+                                            letterSpacing: ".08em",
+                                            marginBottom: 4,
+                                        }}
+                                    >
                                         {dayBlock.day}
                                     </div>
-                                    {dayBlock.slots?.map((slot, i) => (
-                                        <div key={i} className="dp-slot-row">
+                                    {dayBlock.slots.map((slot, si) => (
+                                        <div key={si} className="dp-slot-row">
                                             <span>
-                                                {formatTime(slot.startTime)} →{" "}
-                                                {formatTime(slot.endTime)}
+                                                {slot.startTime} →{" "}
+                                                {slot.endTime}
                                             </span>
                                             <span className="dp-slot-duration">
                                                 {slot.slotDuration} min
@@ -1138,1089 +1982,286 @@ export default function DoctorProfile(props) {
                                 </div>
                             ))}
                         </div>
-                    )}
-                    <button
-                        className="dp-btn dp-btn-outline"
-                        onClick={() => {
-                            setEditAvailability(
-                                JSON.parse(JSON.stringify(availability)),
-                            );
-                            setSelectedDays([]);
-                            setEditAvailOpen(true);
-                        }}
-                    >
-                        <Pencil size={13} /> Edit Availability
-                    </button>
-                </Section>
-
-                {/* ── Payment Methods ── */}
-                <Section
-                    icon={CreditCard}
-                    title="Payment Methods"
-                    accent="#34d399"
-                >
-                    {paymentMethods.length === 0 ? (
-                        <div className="dp-empty">No payment methods added</div>
-                    ) : (
-                        <div className="dp-staff-grid dp-mb">
-                            {paymentMethods.map((p, i) => (
-                                <div key={i} className="dp-staff-card">
-                                    <div className="dp-staff-info">
-                                        <div className="dp-staff-name">
-                                            {p.label || "Payment"}
-                                        </div>
-                                        <div className="dp-staff-phone">
-                                            {categories.find(
-                                                (c) =>
-                                                    c._id?.toString() ===
-                                                    p.categoryId?.toString(),
-                                            )?.name || p._categoryName}
-                                            {" - "}
-                                            {subCategories.find(
-                                                (s) =>
-                                                    s._id?.toString() ===
-                                                    p.subCategoryId?.toString(),
-                                            )?.name || p._subCategoryName}
-                                        </div>
-                                        <span className="dp-role-badge">
-                                            {p.isActive ? "Active" : "Inactive"}
-                                        </span>
-                                    </div>
-                                    <div className="dp-staff-actions">
-                                        <button
-                                            className="dp-icon-btn"
-                                            onClick={() => {
-                                                const updated = [
-                                                    ...paymentMethods,
-                                                ];
-                                                updated[i] = {
-                                                    ...updated[i],
-                                                    isActive:
-                                                        !updated[i].isActive,
-                                                };
-                                                setPaymentMethods(updated);
-                                            }}
-                                        >
-                                            {p.isActive ? (
-                                                <EyeOff size={13} />
-                                            ) : (
-                                                <Eye size={13} />
-                                            )}
-                                        </button>
-                                        <button
-                                            className="dp-icon-btn dp-icon-del"
-                                            onClick={() =>
-                                                setPaymentMethods(
-                                                    paymentMethods.filter(
-                                                        (_, idx) => idx !== i,
-                                                    ),
-                                                )
-                                            }
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <button
-                        className="dp-btn dp-btn-outline"
-                        onClick={() => setEditPaymentsOpen(true)}
-                    >
-                        <Pencil size={13} /> Edit Payment Methods
-                    </button>
-                </Section>
-
-                {/* ── Change Password ── */}
-                <Section icon={Lock} title="Change Password" accent="#fb923c">
-                    <div className="dp-grid3 dp-mb">
-                        <PasswordInput
-                            label="Current Password"
-                            placeholder="••••••••"
-                            value={passwordData.currentPassword}
-                            onChange={(e) =>
-                                setPasswordData({
-                                    ...passwordData,
-                                    currentPassword: e.target.value,
-                                })
-                            }
-                            typeKey="current"
-                            showPasswords={showPasswords}
-                            setShowPasswords={setShowPasswords}
-                        />
-
-                        <div>
-                            <PasswordInput
-                                label="New Password"
-                                placeholder="Min. 8 characters"
-                                value={passwordData.newPassword}
-                                onChange={(e) =>
-                                    setPasswordData({
-                                        ...passwordData,
-                                        newPassword: e.target.value,
-                                    })
-                                }
-                                typeKey="new"
-                                showPasswords={showPasswords}
-                                setShowPasswords={setShowPasswords}
-                            />
-                            <div style={{ marginTop: 8 }}>
-                                {[
-                                    ["length", "Min 8 characters"],
-                                    ["uppercase", "Uppercase letter"],
-                                    ["lowercase", "Lowercase letter"],
-                                    ["number", "Number"],
-                                    ["special", "Special character"],
-                                ].map(([key, label]) => (
-                                    <div key={key} className="dp-pw-rule">
-                                        <div
-                                            className="dp-pw-rule-dot"
-                                            style={{
-                                                background: passwordRules[key]
-                                                    ? "#4ade80"
-                                                    : "#1a2540",
-                                            }}
-                                        />
-                                        <span
-                                            style={{
-                                                fontSize: 10,
-                                                color: passwordRules[key]
-                                                    ? "#4ade80"
-                                                    : "#2e3d5c",
-                                            }}
-                                        >
-                                            {label}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <PasswordInput
-                                label="Confirm Password"
-                                placeholder="Re-enter password"
-                                value={passwordData.confirmPassword}
-                                onChange={(e) =>
-                                    setPasswordData({
-                                        ...passwordData,
-                                        confirmPassword: e.target.value,
-                                    })
-                                }
-                                typeKey="confirm"
-                                showPasswords={showPasswords}
-                                setShowPasswords={setShowPasswords}
-                            />
-                            {passwordData.confirmPassword && (
-                                <div
-                                    style={{
-                                        fontSize: 10,
-                                        color: passwordsMatch
-                                            ? "#4ade80"
-                                            : "#f87171",
-                                        marginTop: 6,
-                                    }}
-                                >
-                                    {passwordsMatch
-                                        ? "✓ Passwords match"
-                                        : "✗ Do not match"}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div
-                        style={{ display: "flex", justifyContent: "flex-end" }}
-                    >
-                        <button
-                            className="dp-btn dp-btn-danger"
-                            onClick={handleChangePassword}
-                            disabled={
-                                !passwordData.currentPassword ||
-                                !passwordData.newPassword ||
-                                !passwordData.confirmPassword ||
-                                !passwordsMatch ||
-                                !isPasswordValid
-                            }
-                        >
-                            <RefreshCcw size={13} /> Update Password
-                        </button>
-                    </div>
-                </Section>
-
-                {/* ══════════════ MODALS ══════════════ */}
-
-                {/* Edit Profile Modal */}
-                {editProfileOpen && (
-                    <div
-                        className="dp-modal-bg"
-                        onClick={() => setEditProfileOpen(false)}
-                    >
-                        <div
-                            className="dp-modal"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="dp-modal-header">
-                                <div className="dp-modal-title">
-                                    Edit <em>Profile</em>
-                                </div>
-                                <button
-                                    className="dp-modal-close"
-                                    onClick={() => setEditProfileOpen(false)}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            <div className="dp-modal-body">
-                                <div className="dp-modal-section-title">
-                                    Basic Information
-                                </div>
-                                <div className="dp-grid2 dp-mb">
-                                    <div className="dp-field">
-                                        <label className="dp-label">Name</label>
-                                        <input
-                                            className="dp-input"
-                                            name="name"
-                                            value={editData.name}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            Medical Center Name
-                                        </label>
-                                        <input
-                                            className="dp-input"
-                                            name="clinicName"
-                                            value={editData.clinicName}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            Phone
-                                        </label>
-                                        <div
-                                            style={{ display: "flex", gap: 6 }}
-                                        >
-                                            <select
-                                                className="dp-select"
-                                                style={{
-                                                    width: "auto",
-                                                    flexShrink: 0,
-                                                    paddingRight: 28,
-                                                }}
-                                                value={
-                                                    editData.countryCode ||
-                                                    doctor.address
-                                                        ?.countryCode ||
-                                                    "+91"
-                                                }
-                                                onChange={(e) =>
-                                                    setEditData({
-                                                        ...editData,
-                                                        countryCode:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                            >
-                                                {COUNTRY_CODES.map((c, i) => (
-                                                    <option
-                                                        key={`${c.code}-${i}`}
-                                                        value={c.code}
-                                                    >
-                                                        {c.flag} {c.code}{" "}
-                                                        {c.country}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <input
-                                                className="dp-input"
-                                                name="phone"
-                                                placeholder="Phone number"
-                                                value={editData.phone}
-                                                onChange={(e) =>
-                                                    setEditData({
-                                                        ...editData,
-                                                        phone: e.target.value.replace(
-                                                            /\D/g,
-                                                            "",
-                                                        ),
-                                                    })
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            Appointment Phone
-                                        </label>
-                                        <div
-                                            style={{ display: "flex", gap: 6 }}
-                                        >
-                                            <select
-                                                className="dp-select"
-                                                style={{
-                                                    width: "auto",
-                                                    flexShrink: 0,
-                                                    paddingRight: 28,
-                                                }}
-                                                value={
-                                                    editData.countryCode ||
-                                                    doctor.address
-                                                        ?.countryCode ||
-                                                    "+91"
-                                                }
-                                                onChange={(e) =>
-                                                    setEditData({
-                                                        ...editData,
-                                                        countryCode:
-                                                            e.target.value,
-                                                    })
-                                                }
-                                            >
-                                                {COUNTRY_CODES.map((c, i) => (
-                                                    <option
-                                                        key={`${c.code}-${i}`}
-                                                        value={c.code}
-                                                    >
-                                                        {c.flag} {c.code}{" "}
-                                                        {c.country}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <input
-                                                className="dp-input"
-                                                name="appointmentphone"
-                                                placeholder="Phone number"
-                                                value={
-                                                    editData.appointmentPhone
-                                                }
-                                                onChange={(e) =>
-                                                    setEditData({
-                                                        ...editData,
-                                                        appointmentPhone:
-                                                            e.target.value.replace(
-                                                                /\D/g,
-                                                                "",
-                                                            ),
-                                                    })
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            Registration No
-                                        </label>
-                                        <input
-                                            className="dp-input"
-                                            name="regNumber"
-                                            value={editData.regNumber}
-                                            onChange={handleEditChange}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="dp-modal-section-title">
-                                    <GraduationCap size={10} /> Qualifications
-                                </div>
-                                {editData.degree.map((deg, index) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            display: "flex",
-                                            gap: 8,
-                                            marginBottom: 8,
-                                        }}
-                                    >
-                                        <input
-                                            className="dp-input"
-                                            placeholder="Enter degree"
-                                            value={deg}
-                                            onChange={(e) =>
-                                                handleDegreeChange(
-                                                    index,
-                                                    e.target.value,
-                                                )
-                                            }
-                                        />
-                                        <button
-                                            className="dp-icon-btn dp-icon-del"
-                                            onClick={() =>
-                                                removeDegreeField(index)
-                                            }
-                                            disabled={
-                                                editData.degree.length === 1
-                                            }
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button
-                                    className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
-                                    onClick={addDegreeField}
-                                >
-                                    <Plus size={11} /> Add Degree
-                                </button>
-
-                                <div className="dp-modal-section-title">
-                                    <MapPin size={10} /> Medical Center Address
-                                </div>
-                                <div className="dp-field dp-mb">
-                                    <input
-                                        className="dp-input"
-                                        name="line1"
-                                        placeholder="Address Line 1"
-                                        value={editData.address.line1}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                                <div className="dp-field dp-mb">
-                                    <input
-                                        className="dp-input"
-                                        name="line2"
-                                        placeholder="Address Line 2 (optional)"
-                                        value={editData.address.line2}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                                <div className="dp-field dp-mb">
-                                    <input
-                                        className="dp-input"
-                                        name="line3"
-                                        placeholder="Address Line 3 (optional)"
-                                        value={editData.address.line3}
-                                        onChange={handleAddressChange}
-                                    />
-                                </div>
-                                <div className="dp-grid3">
-                                    <div className="dp-field">
-                                        <label className="dp-label">City</label>
-                                        <input
-                                            className="dp-input"
-                                            name="city"
-                                            value={editData.address.city}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            State
-                                        </label>
-                                        <input
-                                            className="dp-input"
-                                            name="state"
-                                            value={editData.address.state}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-                                    <div className="dp-field">
-                                        <label className="dp-label">
-                                            Pincode
-                                        </label>
-                                        <input
-                                            className="dp-input"
-                                            name="pincode"
-                                            value={editData.address.pincode}
-                                            onChange={handleAddressChange}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="dp-modal-footer">
-                                <button
-                                    className="dp-btn dp-btn-outline"
-                                    onClick={() => setEditProfileOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="dp-btn dp-btn-primary"
-                                    onClick={handleSaveProfile}
-                                >
-                                    <Check size={13} /> Save Changes
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Edit Staff Modal */}
-                {editStaffOpen && (
-                    <div
-                        className="dp-modal-bg"
-                        onClick={() => setEditStaffOpen(false)}
-                    >
-                        <div
-                            className="dp-modal dp-modal-sm"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="dp-modal-header">
-                                <div className="dp-modal-title">
-                                    Edit <em>Staff</em>
-                                </div>
-                                <button
-                                    className="dp-modal-close"
-                                    onClick={() => setEditStaffOpen(false)}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            <div className="dp-modal-body">
-                                <div className="dp-field dp-mb">
-                                    <label className="dp-label">Name</label>
-                                    <input
-                                        className="dp-input"
-                                        value={editStaffData.name}
-                                        onChange={(e) =>
-                                            setEditStaffData({
-                                                ...editStaffData,
-                                                name: e.target.value,
-                                            })
-                                        }
-                                    />
-                                </div>
-                                <div className="dp-field dp-mb">
-                                    <label className="dp-label">Phone</label>
-                                    <input
-                                        className="dp-input"
-                                        value={editStaffData.phone}
-                                        onChange={(e) =>
-                                            setEditStaffData({
-                                                ...editStaffData,
-                                                phone: e.target.value,
-                                            })
-                                        }
-                                    />
-                                </div>
-                                <div className="dp-field">
-                                    <label className="dp-label">Role</label>
-                                    <select
-                                        className="dp-select"
-                                        value={editStaffData.role}
-                                        onChange={(e) =>
-                                            setEditStaffData({
-                                                ...editStaffData,
-                                                role: e.target.value,
-                                            })
-                                        }
-                                    >
-                                        <option value="receptionist">
-                                            Receptionist
-                                        </option>
-                                        <option value="assistant">
-                                            Assistant
-                                        </option>
-                                        <option value="nurse">Nurse</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="dp-modal-footer">
-                                <button
-                                    className="dp-btn dp-btn-outline"
-                                    onClick={() => setEditStaffOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="dp-btn dp-btn-primary"
-                                    onClick={editstaff}
-                                >
-                                    <Check size={13} /> Save
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Edit Availability Modal */}
-                {editAvailOpen && (
-                    <div
-                        className="dp-modal-bg"
-                        onClick={() => setEditAvailOpen(false)}
-                    >
-                        <div
-                            className="dp-modal"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="dp-modal-header">
-                                <div className="dp-modal-title">
-                                    Edit <em>Availability</em>
-                                </div>
-                                <button
-                                    className="dp-modal-close"
-                                    onClick={() => setEditAvailOpen(false)}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            <div className="dp-modal-body">
-                                <div className="dp-modal-section-title">
-                                    Select Days
-                                </div>
-                                <div className="dp-days-row dp-mb">
-                                    {[
-                                        "Mon",
-                                        "Tue",
-                                        "Wed",
-                                        "Thu",
-                                        "Fri",
-                                        "Sat",
-                                        "Sun",
-                                    ].map((day) => (
-                                        <button
-                                            key={day}
-                                            type="button"
-                                            className={`dp-day-chip ${selectedDays.includes(day) ? "active" : ""}`}
-                                            onClick={() =>
-                                                setSelectedDays((prev) =>
-                                                    prev.includes(day)
-                                                        ? prev.filter(
-                                                              (d) => d !== day,
-                                                          )
-                                                        : [...prev, day],
-                                                )
-                                            }
-                                        >
-                                            {day}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="dp-modal-section-title">
-                                    Time Slots
-                                </div>
-                                {tempSlots.map((slot, index) => (
-                                    <div
-                                        key={index}
-                                        className="dp-slot-edit-row dp-mb"
-                                    >
-                                        <div className="dp-field">
-                                            <label className="dp-label">
-                                                Start
-                                            </label>
-                                            <input
-                                                type="time"
-                                                className="dp-input"
-                                                value={slot.startTime}
-                                                onChange={(e) => {
-                                                    const u = [...tempSlots];
-                                                    u[index].startTime =
-                                                        e.target.value;
-                                                    setTempSlots(u);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="dp-field">
-                                            <label className="dp-label">
-                                                End
-                                            </label>
-                                            <input
-                                                type="time"
-                                                className="dp-input"
-                                                value={slot.endTime}
-                                                onChange={(e) => {
-                                                    const u = [...tempSlots];
-                                                    u[index].endTime =
-                                                        e.target.value;
-                                                    setTempSlots(u);
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="dp-field">
-                                            <label className="dp-label">
-                                                Gap (min)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                className="dp-input"
-                                                value={slot.slotDuration}
-                                                onChange={(e) => {
-                                                    const u = [...tempSlots];
-                                                    u[index].slotDuration =
-                                                        Number(e.target.value);
-                                                    setTempSlots(u);
-                                                }}
-                                            />
-                                        </div>
-                                        <button
-                                            className="dp-icon-btn dp-icon-del"
-                                            style={{ alignSelf: "flex-end" }}
-                                            onClick={() => {
-                                                const u = [...tempSlots];
-                                                u.splice(index, 1);
-                                                setTempSlots(u);
-                                            }}
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button
-                                    className="dp-btn dp-btn-outline dp-btn-sm dp-mb"
-                                    onClick={() =>
-                                        setTempSlots([
-                                            ...tempSlots,
+                        <div className="dp-modal-footer">
+                            <button
+                                className="dp-btn dp-btn-outline"
+                                onClick={() => setEditAvailOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="dp-btn dp-btn-primary"
+                                onClick={async () => {
+                                    try {
+                                        const res = await authFetch(
+                                            `${API_BASE_URL}/api/doctor/timing/update_availability`,
                                             {
-                                                startTime: "10:00",
-                                                endTime: "11:00",
-                                                slotDuration: 15,
-                                            },
-                                        ])
-                                    }
-                                >
-                                    <Plus size={11} /> Add Slot
-                                </button>
-
-                                <button
-                                    className="dp-btn dp-btn-primary dp-mb"
-                                    onClick={() => {
-                                        if (selectedDays.length === 0) return;
-                                        let updated = [...editAvailability];
-                                        selectedDays.forEach((day) => {
-                                            const idx = updated.findIndex(
-                                                (d) => d.day === day,
-                                            );
-                                            if (idx !== -1)
-                                                updated[idx].slots = tempSlots;
-                                            else
-                                                updated.push({
-                                                    day,
-                                                    slots: tempSlots,
-                                                });
-                                        });
-                                        setEditAvailability(updated);
-                                    }}
-                                >
-                                    <Check size={13} /> Apply to Selected Days
-                                </button>
-
-                                <div className="dp-divider" />
-
-                                <div className="dp-modal-section-title">
-                                    Preview
-                                </div>
-                                {editAvailability.map((dayBlock, dayIndex) => (
-                                    <div
-                                        key={dayIndex}
-                                        style={{ marginBottom: 12 }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: 11,
-                                                color: "#a78bfa",
-                                                letterSpacing: ".08em",
-                                                marginBottom: 4,
-                                            }}
-                                        >
-                                            {dayBlock.day}
-                                        </div>
-                                        {dayBlock.slots.map((slot, si) => (
-                                            <div
-                                                key={si}
-                                                className="dp-slot-row"
-                                            >
-                                                <span>
-                                                    {slot.startTime} →{" "}
-                                                    {slot.endTime}
-                                                </span>
-                                                <span className="dp-slot-duration">
-                                                    {slot.slotDuration} min
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="dp-modal-footer">
-                                <button
-                                    className="dp-btn dp-btn-outline"
-                                    onClick={() => setEditAvailOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="dp-btn dp-btn-primary"
-                                    onClick={async () => {
-                                        try {
-                                            const res = await authFetch(
-                                                `${API_BASE_URL}/api/doctor/timing/update_availability`,
-                                                {
-                                                    method: "PUT",
-                                                    headers: {
-                                                        "Content-Type":
-                                                            "application/json",
-                                                    },
-                                                    body: JSON.stringify({
-                                                        availability:
-                                                            editAvailability,
-                                                    }),
+                                                method: "PUT",
+                                                headers: {
+                                                    "Content-Type":
+                                                        "application/json",
                                                 },
-                                            );
-                                            const data = await res.json();
-                                            if (data.success) {
-                                                setAvailability(
-                                                    editAvailability,
-                                                );
-                                                setEditAvailOpen(false);
-                                                props.showAlert(
-                                                    "Updated successfully",
-                                                    "success",
-                                                );
-                                            } else
-                                                props.showAlert(
-                                                    "Update failed",
-                                                    "danger",
-                                                );
-                                        } catch {
+                                                body: JSON.stringify({
+                                                    availability:
+                                                        editAvailability,
+                                                }),
+                                            },
+                                        );
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            setAvailability(editAvailability);
+                                            setEditAvailOpen(false);
                                             props.showAlert(
-                                                "Server error",
+                                                "Updated successfully",
+                                                "success",
+                                            );
+                                        } else
+                                            props.showAlert(
+                                                "Update failed",
                                                 "danger",
                                             );
-                                        }
-                                    }}
-                                >
-                                    <Check size={13} /> Save Changes
-                                </button>
-                            </div>
+                                    } catch {
+                                        props.showAlert(
+                                            "Server error",
+                                            "danger",
+                                        );
+                                    }
+                                }}
+                            >
+                                <Check size={13} /> Save Changes
+                            </button>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Edit Payment Methods Modal */}
-                {editPaymentsOpen && (
+            {/* Edit Payment Methods Modal */}
+            {editPaymentsOpen && (
+                <div
+                    className="dp-modal-bg"
+                    onClick={() => setEditPaymentsOpen(false)}
+                >
                     <div
-                        className="dp-modal-bg"
-                        onClick={() => setEditPaymentsOpen(false)}
+                        className="dp-modal"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <div
-                            className="dp-modal"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="dp-modal-header">
-                                <div className="dp-modal-title">
-                                    Edit <em>Payment Methods</em>
-                                </div>
-                                <button
-                                    className="dp-modal-close"
-                                    onClick={() => setEditPaymentsOpen(false)}
-                                >
-                                    <X size={14} />
-                                </button>
+                        <div className="dp-modal-header">
+                            <div className="dp-modal-title">
+                                Edit <em>Payment Methods</em>
                             </div>
-                            <div className="dp-modal-body">
-                                {paymentMethods.length > 0 && (
-                                    <>
-                                        <div className="dp-modal-section-title">
-                                            Existing Methods
-                                        </div>
-                                        {paymentMethods.map((p, i) => (
-                                            <div
-                                                key={i}
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 8,
-                                                    padding: "10px 12px",
-                                                    marginBottom: 8,
-                                                    borderRadius: 10,
-                                                    background:
-                                                        "rgba(255,255,255,.03)",
-                                                    border: "1px solid rgba(255,255,255,.06)",
-                                                    transition:
-                                                        "border-color .15s",
-                                                }}
-                                            >
-                                                <div style={{ flex: 1 }}>
-                                                    <div
-                                                        style={{
-                                                            fontSize: 13,
-                                                            fontWeight: 500,
-                                                        }}
-                                                    >
-                                                        {p.label || "Unnamed"}
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            fontSize: 11,
-                                                            opacity: 0.45,
-                                                            marginTop: 2,
-                                                        }}
-                                                    >
-                                                        {
-                                                            categories.find(
-                                                                (c) =>
-                                                                    c._id?.toString() ===
-                                                                    p.categoryId?.toString(),
-                                                            )?.name
-                                                        }
-                                                        {" → "}
-                                                        {
-                                                            subCategories.find(
-                                                                (s) =>
-                                                                    s._id?.toString() ===
-                                                                    p.subCategoryId?.toString(),
-                                                            )?.name
-                                                        }
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    className="dp-icon-btn"
-                                                    title={
-                                                        p.isActive
-                                                            ? "Deactivate"
-                                                            : "Activate"
-                                                    }
-                                                    onClick={() => {
-                                                        const updated = [
-                                                            ...paymentMethods,
-                                                        ];
-                                                        updated[i] = {
-                                                            ...updated[i],
-                                                            isActive:
-                                                                !updated[i]
-                                                                    .isActive,
-                                                        };
-                                                        setPaymentMethods(
-                                                            updated,
-                                                        );
+                            <button
+                                className="dp-modal-close"
+                                onClick={() => setEditPaymentsOpen(false)}
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        <div className="dp-modal-body">
+                            {paymentMethods.length > 0 && (
+                                <>
+                                    <div className="dp-modal-section-title">
+                                        Existing Methods
+                                    </div>
+                                    {paymentMethods.map((p, i) => (
+                                        <div
+                                            key={i}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 8,
+                                                padding: "10px 12px",
+                                                marginBottom: 8,
+                                                borderRadius: 10,
+                                                background:
+                                                    "rgba(255,255,255,.03)",
+                                                border: "1px solid rgba(255,255,255,.06)",
+                                                transition: "border-color .15s",
+                                            }}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <div
+                                                    style={{
+                                                        fontSize: 13,
+                                                        fontWeight: 500,
                                                     }}
                                                 >
-                                                    {p.isActive ? (
-                                                        <Eye size={13} />
-                                                    ) : (
-                                                        <EyeOff size={13} />
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className="dp-icon-btn dp-icon-del"
-                                                    onClick={() =>
-                                                        setPaymentMethods(
-                                                            paymentMethods.filter(
-                                                                (_, idx) =>
-                                                                    idx !== i,
-                                                            ),
-                                                        )
-                                                    }
+                                                    {p.label || "Unnamed"}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 11,
+                                                        opacity: 0.45,
+                                                        marginTop: 2,
+                                                    }}
                                                 >
-                                                    <Trash2 size={13} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <div className="dp-divider" />
-                                    </>
-                                )}
-                                <div className="dp-modal-section-title">
-                                    Add New Method
-                                </div>
-                                <AddPaymentForm
-                                    categories={categories}
-                                    subCategories={subCategories}
-                                    onAdd={(newMethod) =>
-                                        setPaymentMethods((prev) => [
-                                            ...prev,
-                                            newMethod,
-                                        ])
-                                    }
-                                />
-                            </div>
-                            <div className="dp-modal-footer">
-                                <button
-                                    className="dp-btn dp-btn-outline"
-                                    onClick={() => setEditPaymentsOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="dp-btn dp-btn-primary"
-                                    onClick={async () => {
-                                        try {
-                                            const cleanMethods =
-                                                paymentMethods.map((m) => ({
-                                                    categoryId:
-                                                        m.categoryId?.toString(),
-                                                    subCategoryId:
-                                                        m.subCategoryId?.toString(),
-                                                    label: m.label || "",
-                                                    isActive:
-                                                        m.isActive ?? true,
-                                                }));
-
-                                            const res = await authFetch(
-                                                `${API_BASE_URL}/api/doctor/update_payment_methods`,
-                                                {
-                                                    method: "PUT",
-                                                    headers: {
-                                                        "Content-Type":
-                                                            "application/json",
-                                                    },
-                                                    body: JSON.stringify({
-                                                        paymentMethods:
-                                                            cleanMethods,
-                                                    }),
-                                                },
-                                            );
-                                            const data = await res.json();
-
-                                            if (data.success) {
-                                                const normalized = (
-                                                    data.paymentMethods ||
-                                                    cleanMethods
-                                                ).map((m) => ({
-                                                    ...m,
-                                                    categoryId:
-                                                        m.categoryId?._id?.toString() ||
-                                                        m.categoryId?.toString() ||
-                                                        "",
-                                                    subCategoryId:
-                                                        m.subCategoryId?._id?.toString() ||
-                                                        m.subCategoryId?.toString() ||
-                                                        "",
-                                                    _categoryName:
+                                                    {
                                                         categories.find(
                                                             (c) =>
                                                                 c._id?.toString() ===
-                                                                (m.categoryId?._id?.toString() ||
-                                                                    m.categoryId?.toString()),
-                                                        )?.name || "",
-                                                    _subCategoryName:
+                                                                p.categoryId?.toString(),
+                                                        )?.name
+                                                    }
+                                                    {" → "}
+                                                    {
                                                         subCategories.find(
                                                             (s) =>
                                                                 s._id?.toString() ===
-                                                                (m.subCategoryId?._id?.toString() ||
-                                                                    m.subCategoryId?.toString()),
-                                                        )?.name || "",
-                                                }));
-                                                setPaymentMethods(normalized);
-                                                setEditPaymentsOpen(false);
-                                                props.showAlert(
-                                                    "Updated successfully",
-                                                    "success",
-                                                );
-                                            } else
-                                                props.showAlert(
-                                                    data.error ||
-                                                        "Update failed",
-                                                    "danger",
-                                                );
-                                        } catch (err) {
-                                            console.error(err);
+                                                                p.subCategoryId?.toString(),
+                                                        )?.name
+                                                    }
+                                                </div>
+                                            </div>
+                                            <button
+                                                className="dp-icon-btn"
+                                                title={
+                                                    p.isActive
+                                                        ? "Deactivate"
+                                                        : "Activate"
+                                                }
+                                                onClick={() => {
+                                                    const updated = [
+                                                        ...paymentMethods,
+                                                    ];
+                                                    updated[i] = {
+                                                        ...updated[i],
+                                                        isActive:
+                                                            !updated[i]
+                                                                .isActive,
+                                                    };
+                                                    setPaymentMethods(updated);
+                                                }}
+                                            >
+                                                {p.isActive ? (
+                                                    <Eye size={13} />
+                                                ) : (
+                                                    <EyeOff size={13} />
+                                                )}
+                                            </button>
+                                            <button
+                                                className="dp-icon-btn dp-icon-del"
+                                                onClick={() =>
+                                                    setPaymentMethods(
+                                                        paymentMethods.filter(
+                                                            (_, idx) =>
+                                                                idx !== i,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <div className="dp-divider" />
+                                </>
+                            )}
+                            <div className="dp-modal-section-title">
+                                Add New Method
+                            </div>
+                            <AddPaymentForm
+                                categories={categories}
+                                subCategories={subCategories}
+                                onAdd={(newMethod) =>
+                                    setPaymentMethods((prev) => [
+                                        ...prev,
+                                        newMethod,
+                                    ])
+                                }
+                            />
+                        </div>
+                        <div className="dp-modal-footer">
+                            <button
+                                className="dp-btn dp-btn-outline"
+                                onClick={() => setEditPaymentsOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="dp-btn dp-btn-primary"
+                                onClick={async () => {
+                                    try {
+                                        const cleanMethods = paymentMethods.map(
+                                            (m) => ({
+                                                categoryId:
+                                                    m.categoryId?.toString(),
+                                                subCategoryId:
+                                                    m.subCategoryId?.toString(),
+                                                label: m.label || "",
+                                                isActive: m.isActive ?? true,
+                                            }),
+                                        );
+
+                                        const res = await authFetch(
+                                            `${API_BASE_URL}/api/doctor/update_payment_methods`,
+                                            {
+                                                method: "PUT",
+                                                headers: {
+                                                    "Content-Type":
+                                                        "application/json",
+                                                },
+                                                body: JSON.stringify({
+                                                    paymentMethods:
+                                                        cleanMethods,
+                                                }),
+                                            },
+                                        );
+                                        const data = await res.json();
+
+                                        if (data.success) {
+                                            const normalized = (
+                                                data.paymentMethods ||
+                                                cleanMethods
+                                            ).map((m) => ({
+                                                ...m,
+                                                categoryId:
+                                                    m.categoryId?._id?.toString() ||
+                                                    m.categoryId?.toString() ||
+                                                    "",
+                                                subCategoryId:
+                                                    m.subCategoryId?._id?.toString() ||
+                                                    m.subCategoryId?.toString() ||
+                                                    "",
+                                                _categoryName:
+                                                    categories.find(
+                                                        (c) =>
+                                                            c._id?.toString() ===
+                                                            (m.categoryId?._id?.toString() ||
+                                                                m.categoryId?.toString()),
+                                                    )?.name || "",
+                                                _subCategoryName:
+                                                    subCategories.find(
+                                                        (s) =>
+                                                            s._id?.toString() ===
+                                                            (m.subCategoryId?._id?.toString() ||
+                                                                m.subCategoryId?.toString()),
+                                                    )?.name || "",
+                                            }));
+                                            setPaymentMethods(normalized);
+                                            setEditPaymentsOpen(false);
                                             props.showAlert(
-                                                "Server error",
+                                                "Updated successfully",
+                                                "success",
+                                            );
+                                        } else
+                                            props.showAlert(
+                                                data.error || "Update failed",
                                                 "danger",
                                             );
-                                        }
-                                    }}
-                                >
-                                    <Check size={13} /> Save All
-                                </button>
-                            </div>
+                                    } catch (err) {
+                                        console.error(err);
+                                        props.showAlert(
+                                            "Server error",
+                                            "danger",
+                                        );
+                                    }
+                                }}
+                            >
+                                <Check size={13} /> Save All
+                            </button>
                         </div>
                     </div>
-                )}
-            </div>
-        </>
+                </div>
+            )}
+        </div>
     );
 }

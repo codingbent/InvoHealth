@@ -18,7 +18,7 @@ export default function AdminPayment() {
     // FETCH ALL
     // ============================
     const fetchData = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/admin/all`, {
+        const res = await fetch(`${API_BASE_URL}/api/doctor/all`, {
             headers: {
                 "admin-token": localStorage.getItem("admintoken"),
             },
