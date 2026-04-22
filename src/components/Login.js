@@ -34,7 +34,7 @@ export default function Login(props) {
         return /^\d{7,14}$/.test(identifier.replace(/\D/g, ""));
     };
 
-    const getFullPhone = () => countryCode + identifier.replace(/\D/g, "");
+    // const getFullPhone = () => countryCode + identifier.replace(/\D/g, "");
 
     const loginWithPassword = async () => {
         const res = await fetch(`${API_BASE_URL}/api/doctor/login_doctor`, {
