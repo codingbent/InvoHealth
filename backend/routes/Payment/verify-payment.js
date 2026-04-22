@@ -153,7 +153,11 @@ router.post("/verify-payment", paymentLimiter, fetchuser, async (req, res) => {
                 .json({ success: false, error: "Invalid pricing config" });
 
         const discount = pricing.discount || 0;
-        const order = await razorpay.orders.fetch(razorpay_order_id);
+        let order = null;
+
+        if (razorpay_order_id) {
+            order = await razorpay.orders.fetch(razorpay_order_id);
+        }
 
         // ── Derive billing from Razorpay API (never trust client) ──
         let billing;
@@ -163,13 +167,19 @@ router.post("/verify-payment", paymentLimiter, fetchuser, async (req, res) => {
             );
             const pid = sub.plan_id.toLowerCase();
             billing = pid.includes("year") ? "yearly" : "monthly";
-        } else if (razorpay_order_id) {
+        } else if (razorpay_order_id && order) {
             billing = order.notes?.billing;
-            if (!billing)
+            if (!billing) {
                 return res.status(400).json({
                     success: false,
                     error: "Billing not found in order notes",
                 });
+            }
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: "No valid payment identifier",
+            });
         }
 
         // ── Amount validation (anti-fraud) ──
