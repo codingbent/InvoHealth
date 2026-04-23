@@ -29,9 +29,10 @@ export default function FilterPanel({
 
     const FY_CONFIG = {
         IN: { startMonth: 3, startDay: 1 },
-        US: { startMonth: 0, startDay: 1 },
         UK: { startMonth: 3, startDay: 6 },
         AU: { startMonth: 6, startDay: 1 },
+        NZ: { startMonth: 6, startDay: 1 },
+
         DEFAULT: { startMonth: 0, startDay: 1 },
     };
 
