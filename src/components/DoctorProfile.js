@@ -358,8 +358,6 @@ export default function DoctorProfile(props) {
                 })),
             );
 
-            const isMasked = (val) => val?.includes("•");
-
             setEditData({
                 name: doc.name || "",
                 clinicName: doc.clinicName || "",
