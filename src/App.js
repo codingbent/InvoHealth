@@ -33,6 +33,7 @@ function App() {
     const [services, setServices] = useState([]);
     const [availability, setAvailability] = useState([]);
     const [doctor, setDoctor] = useState(null);
+    const [country,setCountry] =useState(null);
     const [currency, setCurrency] = useState(() => {
         const saved = localStorage.getItem("currency");
         return saved ? JSON.parse(saved) : null;
@@ -73,7 +74,7 @@ function App() {
                         headers: { "auth-token": token },
                     }),
                     fetch(
-                        `${API_BASE_URL}/api/doctor/get_doc`, // ← ADD
+                        `${API_BASE_URL}/api/doctor/get_doc`,
                         { headers: { "auth-token": token } },
                     ),
                 ]);
@@ -127,6 +128,7 @@ function App() {
 
                 if (doctorData.success) {
                     setDoctor(doctorData.doctor);
+                    setCountry(doctorData.doctor.address.countryId)
                 }
             } catch (err) {
                 console.error("App init error:", err);
@@ -153,6 +155,7 @@ function App() {
                                 usage={usage}
                                 services={services}
                                 availability={availability}
+                                country={country}
                             />
                         }
                     />

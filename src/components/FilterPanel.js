@@ -23,8 +23,27 @@ export default function FilterPanel({
     selectedFY,
     setSelectedFY,
     isdashboard = false,
+    country,
 }) {
     const [paymentOptions, setPaymentOptions] = useState([]);
+
+    const FY_CONFIG = {
+        IN: { startMonth: 3, startDay: 1 },
+        US: { startMonth: 0, startDay: 1 },
+        UK: { startMonth: 3, startDay: 6 },
+        AU: { startMonth: 6, startDay: 1 },
+        DEFAULT: { startMonth: 0, startDay: 1 },
+    };
+
+    const getFYLabel = (fy) => {
+        const config = FY_CONFIG[country?.code] || FY_CONFIG.DEFAULT;
+
+        if (config.startMonth === 0) {
+            return `FY ${fy}`;
+        }
+
+        return `FY ${fy}-${String(Number(fy) + 1).slice(-2)}`;
+    };
 
     const formatDate = (date) => {
         const yyyy = date.getFullYear();
@@ -40,8 +59,15 @@ export default function FilterPanel({
 
     const applyFinancialYear = (fy) => {
         if (!fy) return;
-        const start = new Date(Number(fy), 3, 1);
-        const end = new Date(Number(fy) + 1, 2, 31);
+
+        const config = FY_CONFIG[country?.code] || FY_CONFIG.DEFAULT;
+
+        const start = new Date(Number(fy), config.startMonth, config.startDay);
+
+        const end = new Date(start);
+        end.setFullYear(start.getFullYear() + 1);
+        end.setDate(end.getDate() - 1);
+
         setStartDate(formatDate(start));
         setEndDate(formatDate(end));
     };
@@ -389,11 +415,17 @@ export default function FilterPanel({
                                 applyFinancialYear(fy);
                             }}
                         >
-                            <option value="">All Years</option>
-                            <option value="2025">FY 2025-26</option>
-                            <option value="2026">FY 2026-27</option>
-                            <option value="2027">FY 2027-28</option>
-                            <option value="2028">FY 2028-29</option>
+                            <option value="">Select Financial Year</option>
+
+                            {Array.from({ length: 6 }).map((_, i) => {
+                                const year = 2025 + i;
+
+                                return (
+                                    <option key={year} value={year}>
+                                        {getFYLabel(year)}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
@@ -403,7 +435,6 @@ export default function FilterPanel({
                     <button
                         className="fp-reset"
                         onClick={() => {
-                            // window.location.reload();
                             setSelectedPayments([]);
                             setSelectedServices([]);
                             setSelectedGender("");

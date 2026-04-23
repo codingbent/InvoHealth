@@ -111,6 +111,7 @@ const Patient = ({
     doctor,
     services,
     availability,
+    country,
 }) => {
     const [role, setRole] = useState(null);
     //eslint-disable-next-line
@@ -483,6 +484,7 @@ const Patient = ({
                         showAlert={showAlert}
                         currency={currency}
                         openPatientDetails={openPatientDetails}
+                        country={country}
                     />
                 )}
                 {showAppointment && (

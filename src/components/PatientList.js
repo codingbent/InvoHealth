@@ -670,6 +670,7 @@ export default function PatientList(props) {
                     setSelectedFY={setSelectedFY}
                     paymentOptions={paymentOptions}
                     currency={props.currency}
+                    country={props.country}
                 />
 
                 <AppointmentList
