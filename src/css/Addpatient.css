@@ -567,7 +567,6 @@ _________________________________ */
     color: #fca5a5;
 }
 
-
 /* ── react-day-picker navy theme ── */
 .dp-wrapper {
     background: #0d1117;
@@ -672,4 +671,21 @@ _________________________________ */
 .dp-wrapper .rdp-table {
     border-collapse: separate;
     border-spacing: 2px;
+}
+.ap-phone-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.ap-country {
+    width: 130px;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+
+.ap-phone {
+    flex: 1;
+    min-width: 0;
 }

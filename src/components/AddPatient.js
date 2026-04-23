@@ -257,7 +257,7 @@ const AddPatient = ({
 
         if (!/^\d{7,15}$/.test(number)) {
             return showAlert(
-                "Enter a valid phone number (7–15 digits)",
+                "Enter a valid phone number (7-15 digits)",
                 "warning",
             );
         }
@@ -452,19 +452,26 @@ const AddPatient = ({
                         </div>
 
                         <div className="ap-field">
-                            <div style={{ display: "flex", gap: 8 }}>
+                            <label htmlFor="number" className="ap-label">
+                                Phone{" "}
+                                <span className="sg-required">
+                                    <sup>*</sup>
+                                </span>
+                            </label>
+
+                            <div className="ap-phone-group">
+                                {/* COUNTRY */}
                                 <select
-                                    className="ap-input"
-                                    style={{ maxWidth: 200 }}
+                                    className="ap-input ap-country"
                                     value={selectedCountryId || ""}
                                     onChange={(e) =>
                                         setSelectedCountryId(e.target.value)
                                     }
                                 >
-                                    <option value="">Select Country</option>
+                                    <option value="">Country</option>
                                     {countries.map((c) => (
                                         <option key={c._id} value={c._id}>
-                                            {c.flag} {c.name} ({c.dialCode})
+                                            {c.name} ({c.dialCode})
                                         </option>
                                     ))}
                                 </select>
@@ -472,10 +479,10 @@ const AddPatient = ({
                                 {/* PHONE */}
                                 <input
                                     id="number"
-                                    className="ap-input"
+                                    className="ap-input ap-phone"
                                     type="tel"
                                     value={number}
-                                    placeholder="Enter phone number"
+                                    placeholder="Phone number"
                                     onChange={(e) => {
                                         const digits = e.target.value.replace(
                                             /\D/g,
