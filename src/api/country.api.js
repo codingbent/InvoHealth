@@ -1,4 +1,4 @@
-import { authFetch } from "../components/authfetch"; // or normal fetch if public
+import { authFetch } from "../components/authfetch";
 import { API_BASE_URL } from "../components/config";
 
 export const fetchCountries = async () => {
@@ -11,7 +11,11 @@ export const fetchCountries = async () => {
             throw new Error(data.error || "Failed to fetch countries");
         }
 
-        return data.countries;
+        const sorted = [...data.countries].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+        );
+
+        return sorted;
     } catch (err) {
         console.error("fetchCountries error:", err);
         throw err;

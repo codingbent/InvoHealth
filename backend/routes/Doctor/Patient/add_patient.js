@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 const Patient = require("../../../models/Patient");
@@ -13,9 +14,14 @@ const saltRounds = 10;
 router.post(
     "/add_patient",
     fetchuser,
-    requireSubscription, // handles Doc lookup + subscription gate in one place
+    requireSubscription,
     [
         body("name", "Enter Name").notEmpty(),
+        body("countryId")
+            .notEmpty()
+            .withMessage("Country is required")
+            .custom((value) => mongoose.Types.ObjectId.isValid(value))
+            .withMessage("Invalid countryId"),
         body("number").isLength({ min: 8 }),
         body("email")
             .optional({ checkFalsy: true })
@@ -41,11 +47,13 @@ router.post(
             }
 
             const doctorId = req.user.doctorId;
-            const { name, number, email, age, gender } = req.body;
+            const { name, countryId, number, email, age, gender } = req.body;
 
             const cleanName = name.trim();
-            const cleanNumber = number.trim();
+            // sanitize
+            const cleanNumber = number.replace(/\D/g, "");
             const cleanEmail = email?.trim().toLowerCase() || undefined;
+
             const escapeRegex = (str) =>
                 str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -63,6 +71,13 @@ router.post(
 
             // Parallel bcrypt check
             let existingPatient = null;
+
+            if (!countryId) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Country is required",
+                });
+            }
 
             if (candidates.length > 0) {
                 const matches = await Promise.all(
@@ -94,6 +109,7 @@ router.post(
             // Create patient
             const patient = await Patient.create({
                 name: cleanName,
+                country: countryId,
                 numberEncrypted: encryptedNumber,
                 numberHash: hashedNumber,
                 numberLast4: cleanNumber.slice(-4),

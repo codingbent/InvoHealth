@@ -17,12 +17,14 @@ import {
     FileText,
     Eye,
     EyeOff,
+    Mail,
 } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
 import { fetchPaymentMethods } from "../api/payment.api";
 import EditAppointment from "./EditAppointment";
 import EditPatient from "./EditPatient";
 import "../css/Patientdetails.css";
+import { fetchCountries } from "../api/country.api";
 
 export default function PatientDetails({ showAlert, currency, usage }) {
     const navigate = useNavigate();
@@ -46,6 +48,9 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     // ─── Modal state ──────────────────────────────────────────────────────────
     const [editPatientOpen, setEditPatientOpen] = useState(false);
     const [editingVisit, setEditingVisit] = useState(null);
+    const [invoiceDialog, setInvoiceDialog] = useState(null);
+    // eslint-disable-next-line
+    const [countries, setCountries] = useState([]);
 
     const fetchDoctor = useCallback(async () => {
         try {
@@ -105,6 +110,18 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         fetchPaymentMethods()
             .then(setPaymentOptions)
             .catch((err) => console.error("payment methods:", err));
+    }, []);
+
+    useEffect(() => {
+        const loadCountries = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data || []);
+            } catch (err) {
+                console.error("Failed to load countries", err);
+            }
+        };
+        loadCountries();
     }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -199,15 +216,22 @@ export default function PatientDetails({ showAlert, currency, usage }) {
 
     const deleteVisit = async (visit) => {
         if (!window.confirm("Delete this appointment?")) return;
+
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/delete_appointment/${appointmentId}/${visit._id}`,
                 { method: "DELETE" },
             );
+
             const data = await res.json();
+
             if (data.success) {
                 showAlert("Appointment deleted!", "success");
-                fetchData();
+
+                setAppointments((prev) =>
+                    prev.filter((v) => v._id !== visit._id),
+                );
+
             } else {
                 showAlert("Delete failed: " + data.message, "danger");
             }
@@ -217,18 +241,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Invoice generation
-    // ─────────────────────────────────────────────────────────────────────────
-    // ─── Drop-in replacement for PatientDetails.js ───────────────────────────────
-    // Requires: currency prop { symbol: "₹", code: "INR" } passed from App.js
-    // No new API needed — currency is already fetched via /api/doctor/get_currency
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    // jsPDF's built-in Helvetica/Times fonts only support ASCII + Latin-1.
-    // Unicode symbols like ₹ (U+20B9), ₩ (U+20A9) etc. render as garbage or are
-    // dropped entirely. This map converts them to ASCII-safe equivalents FOR PDF
-    // output only — the UI still shows the real symbol from currency.symbol.
     const PDF_SYMBOL_MAP = {
         INR: "Rs.",
         USD: "$",
@@ -268,8 +280,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         OMR: "OMR",
     };
 
-    // Human-readable currency word used in receipt text
-    // e.g. "Received with thanks... the sum of Rupees 20,000 only"
     const CURRENCY_WORD_MAP = {
         INR: "Rupees",
         USD: "Dollars",
@@ -309,35 +319,44 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         OMR: "Riyals",
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    const handleInvoiceClick = (visit) => {
+        const invoiceUsage = usage?.invoices;
+        if (invoiceUsage?.isLimitReached) {
+            showAlert("Invoice download limit reached", "warning");
+            return;
+        }
 
-    const handleInvoiceClick = async (visit) => {
-        try {
+        if (visit.discount && visit.discount > 0) {
+            // Ask about discount first — last-invoice warning handled after
+            setInvoiceDialog({ visit, type: "discount" });
+        } else if (invoiceUsage?.remaining === 1) {
+            setInvoiceDialog({ visit, type: "last" });
+        } else {
+            generateInvoicePDF(visit, true);
+        }
+    };
+
+    const handleDialogConfirm = (choice) => {
+        if (!invoiceDialog) return;
+        const { visit, type } = invoiceDialog;
+        setInvoiceDialog(null);
+
+        if (type === "discount") {
+            const includeDiscount = choice; // true = Yes include, false = No hide
             const invoiceUsage = usage?.invoices;
-
-            if (invoiceUsage?.isLimitReached) {
-                showAlert("Invoice download limit reached", "warning");
-                return;
-            }
-
             if (invoiceUsage?.remaining === 1) {
-                const confirmed = window.confirm(
-                    "This is your LAST invoice download for this plan.\n\nDo you want to continue?",
-                );
-                if (!confirmed) return;
+                // Chain the last-invoice warning after discount choice
+                setInvoiceDialog({ visit, type: "last", includeDiscount });
+            } else {
+                generateInvoicePDF(visit, includeDiscount);
             }
-
-            let includeDiscount = true;
-            if (visit.discount && visit.discount > 0) {
-                includeDiscount = window.confirm(
-                    "This invoice has a discount.\n\nInclude it?",
+        } else if (type === "last") {
+            if (choice) {
+                generateInvoicePDF(
+                    visit,
+                    invoiceDialog.includeDiscount ?? true,
                 );
             }
-
-            generateInvoicePDF(visit, includeDiscount);
-        } catch (err) {
-            console.error(err);
-            showAlert("Failed to generate invoice", "danger");
         }
     };
 
@@ -348,118 +367,157 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         }
 
         try {
-            // ── Currency resolution ──────────────────────────────────────────────
-            // currency prop from App.js: { code: "INR", symbol: "₹" }
-            // pdfSymbol: ASCII-safe for jsPDF (₹ can't render in built-in fonts)
-            // currencyWord: used in receipt text ("Rupees twenty thousand only")
             const code = currency?.code || "INR";
             const pdfSymbol = PDF_SYMBOL_MAP[code] ?? currency?.symbol ?? code;
             const currencyWord = CURRENCY_WORD_MAP[code] ?? code;
 
-            // ── PDF init ─────────────────────────────────────────────────────────
-            const margin = 20;
+            // ── PDF init ──────────────────────────────────────────────────────────
+            const margin = 18;
             const docPdf = new jsPDF();
             const pageWidth = docPdf.internal.pageSize.getWidth();
-            let leftY = 20;
-            let rightY = 20;
 
             const invoiceNumber = visit.invoiceNumber || "N/A";
 
-            // ── Left column: clinic + doctor info ────────────────────────────────
-            docPdf.setFontSize(16);
+            // ── Helper: thin horizontal rule ──────────────────────────────────────
+            const drawLine = (y, r = 180, g = 180, b = 180) => {
+                docPdf.setDrawColor(r, g, b);
+                docPdf.setLineWidth(0.3);
+                docPdf.line(margin, y, pageWidth - margin, y);
+            };
+
+            // ─────────────────────────────────────────────────────────────────────
+            // HEADER BLOCK — two columns, shared top baseline
+            // ─────────────────────────────────────────────────────────────────────
+            let leftY = 18;
+            let rightY = 18;
+
+            // Left: clinic name (prominent)
+            docPdf.setFontSize(13);
             docPdf.setFont(undefined, "bold");
+            docPdf.setTextColor(20, 20, 20);
             docPdf.text(doctor.clinicName || "", margin, leftY);
-            leftY += 10;
-
-            docPdf.setFontSize(14);
-            docPdf.setFont(undefined, "bold");
-            docPdf.text(doctor.name || "", margin, leftY);
-            leftY += 8;
-
-            docPdf.setFontSize(11);
-            docPdf.setFont(undefined, "normal");
-
-            if (doctor.degree?.length) {
-                docPdf.text(doctor.degree.join(", "), margin, leftY);
-                leftY += 6;
-            }
-
-            if (doctor.regNumber) {
-                docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
-                leftY += 6;
-            }
-
-            docPdf.setFont(undefined, "bold");
-            docPdf.text(`Invoice No: INV-${invoiceNumber}`, margin, leftY);
-            leftY += 8;
-
-            docPdf.setFont(undefined, "normal");
-            const patientLine = `Patient: ${details.name} | Age: ${details.age || "N/A"} | Gender: ${details.gender || "N/A"}`;
-            docPdf.text(patientLine, margin, leftY);
             leftY += 6;
 
-            // ── Right column: address + phone + date ─────────────────────────────
-            docPdf.setFontSize(11);
-            docPdf.setFont(undefined, "normal");
+            // Left: doctor name
+            docPdf.setFontSize(10);
+            docPdf.setFont(undefined, "bold");
+            docPdf.setTextColor(40, 40, 40);
+            docPdf.text(doctor.name || "", margin, leftY);
+            leftY += 5;
 
+            // Left: degree + reg (muted, small)
+            docPdf.setFontSize(8.5);
+            docPdf.setFont(undefined, "normal");
+            docPdf.setTextColor(110, 110, 110);
+            if (doctor.degree?.length) {
+                docPdf.text(doctor.degree.join(", "), margin, leftY);
+                leftY += 4.5;
+            }
+            if (doctor.regNumber) {
+                docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
+                leftY += 4.5;
+            }
+
+            // Right: address lines (muted)
+            docPdf.setFontSize(8.5);
+            docPdf.setFont(undefined, "normal");
+            docPdf.setTextColor(110, 110, 110);
             if (doctor.address?.line1) {
                 docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 5;
+                rightY += 4.5;
             }
             if (doctor.address?.line2) {
                 docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 5;
+                rightY += 4.5;
             }
             if (doctor.address?.line3) {
                 docPdf.text(doctor.address.line3, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 5;
+                rightY += 4.5;
             }
             if (doctor.address?.city) {
-                const cityLine = `${doctor.address.city}, ${doctor.address.state} - ${doctor.address.pincode}`;
+                const cityLine = [
+                    doctor.address.city,
+                    doctor.address.state,
+                    doctor.address.pincode,
+                ]
+                    .filter(Boolean)
+                    .join(", ");
                 docPdf.text(cityLine, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 5;
+                rightY += 4.5;
             }
-
-            // phoneMasked is safe (backend masks it). phoneDecrypted only present
-            // if the user clicked "reveal" in the UI — either way it's their own data.
-            const docPhone =
-                doctor.phoneDecrypted ||
-                doctor.phoneMasked ||
-                doctor.phone ||
-                "";
+            const docPhone = doctor.phone || doctor.phoneMasked || "";
             if (docPhone) {
-                docPdf.text(`Phone: ${docPhone}`, pageWidth - margin, rightY, {
+                docPdf.text(`Ph: ${docPhone}`, pageWidth - margin, rightY, {
                     align: "right",
                 });
-                rightY += 5;
+                rightY += 4.5;
             }
 
-            docPdf.text(
-                `Date: ${new Date(visit.date).toLocaleDateString("en-IN")}`,
-                pageWidth - margin,
-                rightY,
-                { align: "right" },
-            );
+            // ── Thick rule under header ───────────────────────────────────────────
+            const afterHeader = Math.max(leftY, rightY) + 5;
+            docPdf.setDrawColor(30, 30, 30);
+            docPdf.setLineWidth(0.6);
+            docPdf.line(margin, afterHeader, pageWidth - margin, afterHeader);
 
-            // ── Billing calculations ─────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────────────────
+            // INVOICE META ROW — invoice no + date on same line
+            // ─────────────────────────────────────────────────────────────────────
+            let y = afterHeader + 7;
+
+            docPdf.setFontSize(9);
+            docPdf.setFont(undefined, "bold");
+            docPdf.setTextColor(30, 30, 30);
+            docPdf.text(`INVOICE  #INV-${invoiceNumber}`, margin, y);
+
+            const dateStr = new Date(visit.date).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            });
+            docPdf.setFont(undefined, "normal");
+            docPdf.setTextColor(110, 110, 110);
+            docPdf.text(`Date: ${dateStr}`, pageWidth - margin, y, {
+                align: "right",
+            });
+            y += 5;
+
+            // ── Patient line ──────────────────────────────────────────────────────
+            docPdf.setFontSize(8.5);
+            docPdf.setFont(undefined, "normal");
+            docPdf.setTextColor(80, 80, 80);
+            const parts = [`Patient: ${details.name}`];
+            if (details.age) parts.push(`Age: ${details.age}`);
+            if (details.gender) parts.push(`Gender: ${details.gender}`);
+            docPdf.text(parts.join("   ·   "), margin, y);
+            y += 3;
+
+            // ── Thin rule under meta ──────────────────────────────────────────────
+            drawLine(y + 3);
+            y += 10;
+
+            // ─────────────────────────────────────────────────────────────────────
+            // BILLING CALCULATIONS
+            // ─────────────────────────────────────────────────────────────────────
             const services = visit.service || [];
             const baseAmount = services.reduce(
                 (sum, s) => sum + Number(s.amount || 0),
                 0,
             );
 
+            // Real discount — always applied regardless of includeDiscount flag
+            const hasDiscount = visit.discount > 0;
             let discountValue = 0;
-            let finalAmt = baseAmount;
+            let realFinalAmt = baseAmount;
 
-            if (includeDiscount && visit.discount > 0) {
+            if (hasDiscount) {
                 discountValue = visit.isPercent
                     ? (baseAmount * visit.discount) / 100
                     : visit.discount;
@@ -467,11 +525,13 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     0,
                     Math.min(discountValue, baseAmount),
                 );
-                finalAmt = baseAmount - discountValue;
+                realFinalAmt = baseAmount - discountValue;
             }
 
-            const collectedAmount = Number(visit.collected ?? finalAmt);
-            const remainingAmount = finalAmt - collectedAmount;
+            const displayAmt = includeDiscount ? realFinalAmt : baseAmount;
+
+            const collectedAmount = Number(visit.collected ?? realFinalAmt);
+            const remainingAmount = realFinalAmt - collectedAmount;
             const paymentStatus =
                 remainingAmount <= 0
                     ? "Paid"
@@ -479,106 +539,196 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                       ? "Partial"
                       : "Unpaid";
 
-            // ── Table rows ───────────────────────────────────────────────────────
-            const tableRows = services.map((s) => [
+            // ─────────────────────────────────────────────────────────────────────
+            // SERVICE TABLE ROWS
+            // ─────────────────────────────────────────────────────────────────────
+            const serviceRows = services.map((s) => [
                 s.name,
                 `${pdfSymbol} ${fmt(s.amount)}`,
             ]);
 
-            tableRows.push(["TOTAL AMOUNT", `${pdfSymbol} ${fmt(finalAmt)}`]);
+            // ─────────────────────────────────────────────────────────────────────
+            // SUMMARY ROWS (separate so they can be styled differently)
+            // ─────────────────────────────────────────────────────────────────────
+            const summaryRows = [];
 
-            if (includeDiscount && visit.discount > 0) {
+            if (includeDiscount && hasDiscount) {
+                summaryRows.push([
+                    "Subtotal",
+                    `${pdfSymbol} ${fmt(baseAmount)}`,
+                ]);
                 const discountLabel = visit.isPercent
                     ? `Discount (${visit.discount}%)`
-                    : `Discount (${pdfSymbol} ${visit.discount})`;
-                tableRows.push([
+                    : `Discount (flat)`;
+                summaryRows.push([
                     discountLabel,
                     `- ${pdfSymbol} ${fmt(discountValue)}`,
                 ]);
             }
 
-            tableRows.push([
+            summaryRows.push([
+                "Total Payable",
+                `${pdfSymbol} ${fmt(displayAmt)}`,
+            ]);
+            summaryRows.push([
                 "Collected",
-                `${pdfSymbol} ${fmt(collectedAmount)}`,
+                `${pdfSymbol} ${fmt(includeDiscount ? collectedAmount : displayAmt)}`,
             ]);
 
-            if (remainingAmount !== 0) {
-                tableRows.push([
-                    "Payable Amount",
+            if (includeDiscount && Math.abs(remainingAmount) > 0) {
+                summaryRows.push([
+                    remainingAmount > 0 ? "Balance Due" : "Advance",
                     `${pdfSymbol} ${fmt(Math.abs(remainingAmount))}`,
                 ]);
             }
 
-            tableRows.push(["Status", paymentStatus]);
+            summaryRows.push(["Status", paymentStatus]);
 
-            // ── Render table ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────────────────
+            // RENDER TABLE
+            // ─────────────────────────────────────────────────────────────────────
             autoTable(docPdf, {
-                startY: leftY + 4,
+                startY: y,
                 head: [["Service", "Amount"]],
-                body: tableRows,
-                theme: "grid",
-                styles: { fontSize: 11, cellPadding: 3 },
+                body: [...serviceRows, ...summaryRows],
+                theme: "plain",
+                styles: {
+                    fontSize: 9.5,
+                    cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
+                    textColor: [50, 50, 50],
+                    lineColor: [220, 220, 220],
+                    lineWidth: 0.2,
+                },
                 headStyles: {
-                    fillColor: [60, 60, 60],
+                    fillColor: [30, 30, 30],
                     textColor: [255, 255, 255],
                     fontStyle: "bold",
+                    fontSize: 9,
+                    cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
                 },
                 columnStyles: {
                     0: { cellWidth: "auto" },
-                    1: { cellWidth: 50, halign: "right" },
+                    1: { cellWidth: 48, halign: "right" },
                 },
                 didParseCell: (data) => {
-                    // Bold the summary rows at the bottom (everything after service rows)
-                    if (data.row.index >= services.length) {
+                    const isSummary = data.row.index >= serviceRows.length;
+                    if (data.section === "body" && isSummary) {
+                        // Summary rows: slightly muted background + bold
+                        data.cell.styles.fillColor = [248, 248, 248];
                         data.cell.styles.fontStyle = "bold";
+                        data.cell.styles.fontSize = 9;
+                        data.cell.styles.textColor = [40, 40, 40];
+                    }
+                    // "Total Payable" row — accent it
+                    const totalIdx =
+                        serviceRows.length +
+                        (includeDiscount && hasDiscount ? 2 : 0);
+                    if (
+                        data.section === "body" &&
+                        data.row.index === totalIdx
+                    ) {
+                        data.cell.styles.fillColor = [30, 30, 30];
+                        data.cell.styles.textColor = [255, 255, 255];
+                        data.cell.styles.fontSize = 10;
+                    }
+                    // "Status" — last row
+                    if (
+                        data.section === "body" &&
+                        data.row.index ===
+                            serviceRows.length + summaryRows.length - 1
+                    ) {
+                        const isCol1 = data.column.index === 1;
+                        if (isCol1) {
+                            data.cell.styles.textColor =
+                                paymentStatus === "Paid"
+                                    ? [22, 101, 52]
+                                    : paymentStatus === "Partial"
+                                      ? [154, 52, 18]
+                                      : [153, 27, 27];
+                        }
                     }
                 },
             });
 
-            // ── Amount in words ──────────────────────────────────────────────────
-            const roundedAmount = Math.round(finalAmt);
-            let y = docPdf.lastAutoTable.finalY + 8;
+            // ─────────────────────────────────────────────────────────────────────
+            // AMOUNT IN WORDS + RECEIPT TEXT
+            // ─────────────────────────────────────────────────────────────────────
+            y = docPdf.lastAutoTable.finalY + 9;
+            drawLine(y - 3);
 
-            // toWords() throws on 0 — guard it
+            const roundedAmount = Math.round(
+                includeDiscount ? realFinalAmt : displayAmt,
+            );
+
+            const displayCollected = includeDiscount
+                ? collectedAmount
+                : displayAmt;
+
+            const receiptText =
+                paymentStatus === "Paid"
+                    ? `Received with thanks from ${details.name} the sum of ${pdfSymbol} ${fmt(displayCollected)} only.`
+                    : paymentStatus === "Partial"
+                      ? `Part payment of ${pdfSymbol} ${fmt(displayCollected)} received from ${details.name}. Balance of ${pdfSymbol} ${fmt(remainingAmount)} is pending.`
+                      : `Total amount of ${pdfSymbol} ${fmt(displayAmt)} is pending from ${details.name}.`;
+
             const amountInWords =
                 roundedAmount > 0
                     ? `${currencyWord} ${toWords(roundedAmount)} Only`
                     : `${currencyWord} Zero Only`;
 
-            docPdf.setFontSize(11);
+            // Capitalise first letter
+            const amountInWordsCapped =
+                amountInWords.charAt(0).toUpperCase() + amountInWords.slice(1);
+
+            docPdf.setFontSize(8.5);
+            docPdf.setTextColor(90, 90, 90);
             docPdf.setFont(undefined, "bold");
-            docPdf.text("Amount in Words:", margin, y);
+            docPdf.text("In Words:", margin, y);
             docPdf.setFont(undefined, "normal");
-            docPdf.text(amountInWords, margin + 42, y);
-            y += 10;
+            docPdf.text(amountInWordsCapped, margin + 22, y, {
+                maxWidth: pageWidth - margin * 2 - 22,
+            });
+            y += 7;
 
-            // ── Receipt text ─────────────────────────────────────────────────────
-            const receiptText =
-                paymentStatus === "Paid"
-                    ? `Received with thanks from ${details.name} the sum of ${currencyWord} ${fmt(collectedAmount)} only`
-                    : paymentStatus === "Partial"
-                      ? `Part payment of ${currencyWord} ${fmt(collectedAmount)} received from ${details.name}. Balance of ${currencyWord} ${fmt(remainingAmount)} is pending.`
-                      : `Total amount of ${currencyWord} ${fmt(finalAmt)} is pending from ${details.name}.`;
-
-            docPdf.setFontSize(11);
-            docPdf.setFont(undefined, "normal");
+            docPdf.setFontSize(8.5);
+            docPdf.setFont(undefined, "italic");
+            docPdf.setTextColor(100, 100, 100);
             docPdf.text(receiptText, margin, y, {
                 maxWidth: pageWidth - margin * 2,
             });
             y += 14;
 
-            // ── Signature ────────────────────────────────────────────────────────
-            docPdf.setFontSize(15);
+            // ─────────────────────────────────────────────────────────────────────
+            // SIGNATURE BLOCK
+            // ─────────────────────────────────────────────────────────────────────
+            drawLine(y - 4);
+
+            // Signature line (right side)
+            docPdf.setDrawColor(120, 120, 120);
+            docPdf.setLineWidth(0.3);
+            const sigLineEnd = pageWidth - margin;
+            const sigLineStart = sigLineEnd - 55;
+            docPdf.line(sigLineStart, y, sigLineEnd, y);
+            y += 4;
+
+            docPdf.setFontSize(9);
             docPdf.setFont(undefined, "bold");
-            docPdf.text(doctor.name, pageWidth - margin, y, { align: "right" });
-            y += 6;
+            docPdf.setTextColor(30, 30, 30);
+            docPdf.text(doctor.name || "", pageWidth - margin, y, {
+                align: "right",
+            });
+            y += 4.5;
 
-            docPdf.setFontSize(12);
+            docPdf.setFontSize(8);
             docPdf.setFont(undefined, "normal");
-            docPdf.text("Signature", pageWidth - margin, y, { align: "right" });
+            docPdf.setTextColor(120, 120, 120);
+            docPdf.text("Authorised Signatory", pageWidth - margin, y, {
+                align: "right",
+            });
 
-            // ── Save ─────────────────────────────────────────────────────────────
-            // Sanitise filename — patient name may have spaces or special chars
+            // ─────────────────────────────────────────────────────────────────────
+            // SAVE
+            // ─────────────────────────────────────────────────────────────────────
             const safeName = (details.name || "patient")
                 .replace(/[^a-zA-Z0-9\s]/g, "")
                 .trim()
@@ -590,6 +740,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
             showAlert("Failed to generate invoice", "danger");
         }
     };
+
     // ─────────────────────────────────────────────────────────────────────────
     // Derived / memoised values
     // ─────────────────────────────────────────────────────────────────────────
@@ -713,7 +864,19 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                         <div className="pd-info-item">
                             <div className="pd-info-label">E-Mail</div>
                             <div className="pd-info-value">
-                                {details?.email || "N/A"}
+                                {details?.email ? (
+                                    <a
+                                        href={`mailto:${details.email}`}
+                                        style={{
+                                            color: "#60a5fa",
+                                            textDecoration: "none",
+                                        }}
+                                    >
+                                        <Mail size={16} /> {details.email}
+                                    </a>
+                                ) : (
+                                    "N/A"
+                                )}
                             </div>
                         </div>
                         <div className="pd-info-item">
@@ -729,7 +892,8 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                     fontSize: 12,
                                 }}
                             >
-                                {displayNumber} <Phone size={11} />
+                                {details.dialCode} {displayNumber}{" "}
+                                <Phone size={11} />
                             </a>
                             {fullNumber === null ? (
                                 <button
@@ -766,11 +930,11 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     <div className="pd-actions">
                         <button
                             className="pd-btn pd-btn-primary"
-                            onClick={() => {
+                            onClick={async () => {
+                                if (fullNumber === null) {
+                                    await fetchFullNumber();
+                                }
                                 setEditPatientOpen(true);
-                                // Fetch the full number so the edit form is
-                                // pre-filled (fire-and-forget)
-                                if (fullNumber === null) fetchFullNumber();
                             }}
                         >
                             <Pencil size={13} /> Edit Patient
@@ -1125,12 +1289,113 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     details={details}
                     fullNumber={fullNumber}
                     showAlert={showAlert}
-                    onClose={() => setEditPatientOpen(false)}
+                    onClose={() => {
+                        setFullNumber(null);
+                        setEditPatientOpen(false);
+                    }}
                     onSaved={() => {
                         setFullNumber(null);
                         fetchData();
                     }}
                 />
+            )}
+            {/* ── Invoice confirm dialog ── */}
+            {invoiceDialog && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.55)",
+                        zIndex: 1000,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                    }}
+                    onClick={() => setInvoiceDialog(null)}
+                >
+                    <div
+                        style={{
+                            background: "var(--color-background-primary)",
+                            border: "0.5px solid var(--color-border-secondary)",
+                            borderRadius: "var(--border-radius-lg)",
+                            padding: "24px 28px",
+                            maxWidth: 360,
+                            width: "90%",
+                            boxSizing: "border-box",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div
+                            style={{
+                                fontSize: 14,
+                                fontWeight: 500,
+                                marginBottom: 8,
+                                color: "var(--color-text-primary)",
+                            }}
+                        >
+                            {invoiceDialog.type === "discount"
+                                ? "Discount on invoice"
+                                : "Last invoice remaining"}
+                        </div>
+                        <div
+                            style={{
+                                fontSize: 13,
+                                color: "var(--color-text-secondary)",
+                                lineHeight: 1.6,
+                                marginBottom: 20,
+                            }}
+                        >
+                            {invoiceDialog.type === "discount"
+                                ? "This appointment has a discount applied. Include it on the invoice?"
+                                : "This is your last invoice download for the current plan. Continue?"}
+                        </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 10,
+                                justifyContent: "flex-end",
+                            }}
+                        >
+                            <button
+                                style={{
+                                    padding: "7px 18px",
+                                    fontSize: 13,
+                                    border: "0.5px solid var(--color-border-secondary)",
+                                    borderRadius: "var(--border-radius-md)",
+                                    background: "none",
+                                    color: "var(--color-text-secondary)",
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                    invoiceDialog.type === "last"
+                                        ? setInvoiceDialog(null)
+                                        : handleDialogConfirm(false);
+                                }}
+                            >
+                                {invoiceDialog.type === "discount"
+                                    ? "No, hide it"
+                                    : "Cancel"}
+                            </button>
+                            <button
+                                style={{
+                                    padding: "7px 18px",
+                                    fontSize: 13,
+                                    border: "none",
+                                    borderRadius: "var(--border-radius-md)",
+                                    background: "var(--color-text-primary)",
+                                    color: "var(--color-background-primary)",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                }}
+                                onClick={() => handleDialogConfirm(true)}
+                            >
+                                {invoiceDialog.type === "discount"
+                                    ? "Yes, include"
+                                    : "Download"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

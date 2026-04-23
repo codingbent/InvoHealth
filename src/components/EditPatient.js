@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Check } from "lucide-react";
 import { authFetch } from "./authfetch";
 import { API_BASE_URL } from "../components/config";
+import { fetchCountries } from "../api/country.api";
 
 const EditPatient = ({
     patientId,
@@ -17,20 +18,36 @@ const EditPatient = ({
         email: "",
         age: "",
         gender: "",
+        countryId: "",
     });
     const [saving, setSaving] = useState(false);
+    const [countries, setCountries] = useState([]);
 
     // Pre-fill form when details or the revealed phone number change
     useEffect(() => {
         if (!details) return;
+
         setPatient({
             name: details.name || "",
             number: fullNumber || "",
+            countryId: details.countryId || details.country?._id || "",
             email: details.email || "",
             age: details.age || "",
             gender: details.gender || "Male",
         });
     }, [details, fullNumber]);
+
+    useEffect(() => {
+        const loadCountries = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data || []);
+            } catch (err) {
+                console.error("Failed to load countries", err);
+            }
+        };
+        loadCountries();
+    }, []);
 
     const handleChange = (e) =>
         setPatient((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -48,8 +65,16 @@ const EditPatient = ({
             showAlert("Gender is required", "warning");
             return;
         }
-        if (patient.number && !/^\d{10}$/.test(patient.number.trim())) {
-            showAlert("Enter a valid 10-digit mobile number", "warning");
+
+        // FIX #5: Align phone regex with backend — 7-15 digits, no leading-zero restriction
+        const cleanNumber = patient.number.trim().replace(/\D/g, "");
+        if (cleanNumber && !/^\d{7,15}$/.test(cleanNumber)) {
+            showAlert("Enter a valid phone number (7-15 digits)", "warning");
+            return;
+        }
+
+        if (!patient.countryId) {
+            showAlert("Select country", "warning");
             return;
         }
 
@@ -57,14 +82,15 @@ const EditPatient = ({
         try {
             const payload = {
                 name: patient.name.trim(),
+                countryId: patient.countryId,
                 age: patient.age,
                 gender: patient.gender,
                 email: patient.email.trim(),
             };
 
-            // Only send number if the user actually typed one
-            if (patient.number && patient.number.trim() !== "") {
-                payload.number = patient.number.trim();
+            // FIX #11: Strip non-digits before sending so backend receives clean number
+            if (cleanNumber !== "") {
+                payload.number = cleanNumber;
             }
 
             const response = await authFetch(
@@ -128,17 +154,83 @@ const EditPatient = ({
                     </div>
 
                     <div className="pd-field">
-                        <label className="pd-label">
-                            Mobile Number
-                        </label>
-                        <input
-                            className="pd-input"
-                            type="text"
-                            name="number"
-                            placeholder="10-digit mobile number"
-                            value={patient.number}
-                            onChange={handleChange}
-                        />
+                        <label className="pd-label">Mobile Number</label>
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                border: "1px solid #1a2540",
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                background: "#080c18",
+                            }}
+                        >
+                            {/* COUNTRY SELECTOR — value = country._id (ObjectId) */}
+                            <select
+                                className="dp-select"
+                                value={patient.countryId || ""}
+                                onChange={(e) =>
+                                    setPatient((prev) => ({
+                                        ...prev,
+                                        countryId: e.target.value,
+                                    }))
+                                }
+                                style={{
+                                    border: "none",
+                                    outline: "none",
+                                    background: "transparent",
+                                    padding: "8px 10px",
+                                    color: "#c5d0e8",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <option value="">Select Country</option>
+                                {countries.map((c) => (
+                                    <option key={c._id} value={c._id}>
+                                        {c.flag} {c.name} ({c.dialCode})
+                                    </option>
+                                ))}
+                            </select>
+                            {/* SEPARATOR */}
+                            <div
+                                style={{
+                                    width: 1,
+                                    height: 24,
+                                    background: "#2e3d5c",
+                                }}
+                            />
+
+                            {/* PHONE INPUT — digits only enforced in input handler */}
+                            <input
+                                className="pd-input"
+                                type="tel"
+                                name="number"
+                                placeholder="Mobile number"
+                                value={patient.number}
+                                onChange={(e) => {
+                                    // Strip non-digits on input so display stays clean
+                                    const digits = e.target.value.replace(
+                                        /\D/g,
+                                        "",
+                                    );
+                                    if (digits.length <= 15) {
+                                        setPatient((prev) => ({
+                                            ...prev,
+                                            number: digits,
+                                        }));
+                                    }
+                                }}
+                                style={{
+                                    border: "none",
+                                    outline: "none",
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    background: "transparent",
+                                    color: "#c5d0e8",
+                                    marginBottom: "0px",
+                                }}
+                            />
+                        </div>
                     </div>
 
                     <div className="pd-field">
@@ -148,6 +240,7 @@ const EditPatient = ({
                             type="email"
                             name="email"
                             value={patient.email}
+                            placeholder="Enter E-mail"
                             onChange={handleChange}
                         />
                     </div>
@@ -192,10 +285,7 @@ const EditPatient = ({
 
                 {/* Footer */}
                 <div className="pd-modal-footer">
-                    <button
-                        className="pd-btn pd-btn-outline"
-                        onClick={onClose}
-                    >
+                    <button className="pd-btn pd-btn-outline" onClick={onClose}>
                         Cancel
                     </button>
                     <button

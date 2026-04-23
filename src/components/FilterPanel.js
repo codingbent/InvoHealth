@@ -172,7 +172,7 @@ export default function FilterPanel({
                                     role="group"
                                     aria-label="Payment Status"
                                 >
-                                    {["Unpaid", "Paid", "Partial"].map(
+                                    {["Paid", "Partial", "Unpaid"].map(
                                         (type) => {
                                             const isActive =
                                                 selectedStatus.includes(type);

@@ -6,7 +6,11 @@ const PatientSchema = new Schema({
         type: String,
         required: true,
     },
-
+    country: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Country",
+        required: true,
+    },
     numberEncrypted: {
         type: String,
         required: false,

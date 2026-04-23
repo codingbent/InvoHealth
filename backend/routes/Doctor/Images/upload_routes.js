@@ -4,17 +4,18 @@ const upload = require("../../../middleware/upload");
 const uploadToCloudinary = require("../../../utils/uploadToCloudinary");
 const fetchuser = require("../../../middleware/fetchuser");
 const Doc = require("../../../models/Doc");
+const Appointment = require("../../../models/Appointment");
 const {
     getPricing,
     invalidatePricingCache,
 } = require("../../../utils/pricingcache");
 const { getSubscriptionStatus } = require("../../../utils/subscription_check");
-
+const cloudinary = require("../../config/cloudinary");
+const requireDoctor = require("../../../middleware/requireDoctor");
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
 const MAX_FILE_SIZE_MB = 2;
 
-router.post("/", fetchuser, upload.single("image"), async (req, res) => {
+router.post("/upload", fetchuser, upload.single("image"), async (req, res) => {
     try {
         // FILE CHECK
         if (!req.file) {
@@ -106,6 +107,124 @@ router.post("/", fetchuser, upload.single("image"), async (req, res) => {
             success: false,
             error: "Upload failed",
         });
+    }
+});
+
+router.delete("/decrement", fetchuser, async (req, res) => {
+    try {
+        const doctor = await Doc.findById(req.user.doctorId);
+        if (!doctor) return res.status(404).json({ success: false });
+
+        // Only decrement if above 0 — never go negative
+        if ((doctor.usage?.imageUploads || 0) > 0) {
+            await Doc.findByIdAndUpdate(req.user.doctorId, {
+                $inc: { "usage.imageUploads": -1 },
+            });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("Image decrement error:", err);
+        return res.status(500).json({ success: false });
+    }
+});
+
+router.delete(
+    "/delete_image/:appointmentId/:visitId",
+    fetchuser,
+    requireDoctor,
+    async (req, res) => {
+        try {
+            const doctorId = req.user.doctorId;
+            const { appointmentId, visitId } = req.params;
+            const appointment = await Appointment.findById(appointmentId);
+
+            if (!appointment) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Appointment not found",
+                });
+            }
+
+            if (appointment.doctor.toString() !== doctorId) {
+                return res.status(403).json({
+                    success: false,
+                    error: "Unauthorized",
+                });
+            }
+            const visit = appointment.visits.id(visitId);
+
+            if (!visit) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Visit not found",
+                });
+            }
+            if (!visit?.image) {
+                return res.status(400).json({
+                    success: false,
+                    error: "No image to delete",
+                });
+            }
+
+            const matches = visit.image.match(
+                /\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i,
+            );
+
+            if (matches?.[1]) {
+                await cloudinary.uploader.destroy(matches[1]);
+            }
+
+            visit.image = undefined;
+            await appointment.save();
+
+            await Doc.findByIdAndUpdate(doctorId, {
+                $inc: { "usage.imageUploads": -1 },
+            });
+
+            return res.json({ success: true });
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json({
+                success: false,
+                error: "Server error",
+            });
+        }
+    },
+);
+
+// DELETE /api/doctor/image/delete-cloudinary
+router.delete("/delete-cloudinary", fetchuser, async (req, res) => {
+    try {
+        const { imageUrl } = req.body;
+        if (!imageUrl)
+            return res
+                .status(400)
+                .json({ success: false, error: "No URL provided" });
+
+        const matches = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+        if (!matches?.[1])
+            return res
+                .status(400)
+                .json({ success: false, error: "Invalid Cloudinary URL" });
+
+        const publicId = matches[1];
+
+        const cloudinary = require("../../../routes/config/cloudinary");
+        await cloudinary.uploader.destroy(publicId);
+
+        // Decrement usage
+        const doc = await Doc.findById(req.user.doctorId);
+        if (doc && (doc.usage?.imageUploads || 0) > 0) {
+            await Doc.findByIdAndUpdate(req.user.doctorId, {
+                $inc: { "usage.imageUploads": -1 },
+            });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("Cloudinary delete error:", err);
+        return res.status(500).json({ success: false, error: "Delete failed" });
     }
 });
 

@@ -31,14 +31,17 @@ const AddPatient = ({
     const [age, setAge] = useState("");
     const [gender, setGender] = useState("Male");
 
+    // ── Country ───────────────────────────────────────────────────────────────
+    // FIX #4: Single declaration of selectedCountryId (removed duplicate useEffect)
+    const [selectedCountryId, setSelectedCountryId] = useState("");
+    const [countries, setCountries] = useState([]);
+
     // ── Services & billing ────────────────────────────────────────────────────
     const [selectedServices, setSelectedServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const [collectFull, setCollectFull] = useState(true);
-    // collectedAmount is what the doctor actually collected
-    // initialised to 0; auto-updated by collectFull logic
     const [collectedAmount, setCollectedAmount] = useState(0);
 
     // ── Appointment ───────────────────────────────────────────────────────────
@@ -48,9 +51,8 @@ const AddPatient = ({
     const [showCalendar, setShowCalendar] = useState(false);
 
     // ── Payment ───────────────────────────────────────────────────────────────
-    // FIX: store the full payment option object so we have both id and name
     const [paymentOptions, setPaymentOptions] = useState([]);
-    const [selectedPaymentId, setSelectedPaymentId] = useState(""); // ObjectId string
+    const [selectedPaymentId, setSelectedPaymentId] = useState("");
 
     // ── Image ─────────────────────────────────────────────────────────────────
     const [imageFile, setImageFile] = useState(null);
@@ -60,10 +62,6 @@ const AddPatient = ({
     // ── UI ────────────────────────────────────────────────────────────────────
     const [showSuccess, setShowSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [countryCode, setCountryCode] = useState(
-        doctor?.dialCode || "+91",
-    );
-    const [countries, setCountries] = useState([]);
 
     const availableServices = services || [];
     const imageUsage = usage?.images || { used: 0, limit: 0 };
@@ -96,11 +94,27 @@ const AddPatient = ({
         load();
     }, [showAlert]);
 
+    // ── Load countries ────────────────────────────────────────────────────────
     useEffect(() => {
-        if (doctor?.address?.dialCode) {
-            setCountryCode(doctor.address.dialCode);
+        const load = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data || []);
+            } catch (err) {
+                console.error("Country fetch failed", err);
+                setCountries([]);
+            }
+        };
+        load();
+    }, []);
+
+    // FIX #4: Single useEffect to prefill country from doctor — not duplicated
+    useEffect(() => {
+        if (doctor?.address?.countryId) {
+            setSelectedCountryId(doctor.address.countryId);
         }
     }, [doctor]);
+
     // ── Auto-select current slot ──────────────────────────────────────────────
     const isToday = useMemo(() => {
         return appointmentDate === new Date().toISOString().slice(0, 10);
@@ -153,21 +167,6 @@ const AddPatient = ({
         }
     }, [currentSlot]);
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await fetchCountries();
-                setCountries(data || []);
-            } catch (err) {
-                console.error("Country fetch failed", err);
-                setCountries([
-                    { dialCode: "+91", _id: "fallback", flag: "🇮🇳" },
-                ]);
-            }
-        };
-        load();
-    }, []);
-
     // ── Billing calculations (all derived, no state) ──────────────────────────
     const serviceTotal = useMemo(
         () =>
@@ -212,7 +211,6 @@ const AddPatient = ({
     // ── Reset ─────────────────────────────────────────────────────────────────
     const resetForm = useCallback(() => {
         setName("");
-        setCountryCode(doctor?.dialCode || "+91");
         setEmail("");
         setAge("");
         setGender("Male");
@@ -226,8 +224,7 @@ const AddPatient = ({
         setSelectedSlot("");
         setImageFile(null);
         setImagePreview("");
-        // Keep date — user probably wants to keep booking for same day
-    }, [doctor]);
+    }, []);
 
     // ── Service handlers ──────────────────────────────────────────────────────
     const handleAddService = useCallback((s) => {
@@ -258,11 +255,13 @@ const AddPatient = ({
         if (selectedServices.length === 0)
             return showAlert("Select at least one service", "warning");
 
-        if (!/^[1-9][0-9]{7,14}$/.test(number)) {
-            return showAlert("Enter valid phone number", "warning");
+        if (!/^\d{7,15}$/.test(number)) {
+            return showAlert(
+                "Enter a valid phone number (7–15 digits)",
+                "warning",
+            );
         }
 
-        // FIX: validate against selectedPaymentId, not a string payment_type
         if (!selectedPaymentId)
             return showAlert("Select payment type", "warning");
 
@@ -271,15 +270,21 @@ const AddPatient = ({
         setLoading(true);
 
         try {
-            const fullPhone = `${countryCode}${number}`;
+            if (!selectedCountryId) {
+                return showAlert("Select country", "warning");
+            }
 
             const patientRes = await addPatient({
                 name,
                 gender,
-                number: fullPhone,
+                countryId: selectedCountryId,
+                number: number.trim(),
                 email,
                 age,
             });
+
+            console.log(patientRes);
+
             if (!patientRes.success) {
                 showAlert(
                     patientRes.message || "Failed to create patient",
@@ -448,18 +453,18 @@ const AddPatient = ({
 
                         <div className="ap-field">
                             <div style={{ display: "flex", gap: 8 }}>
-                                {/* COUNTRY CODE */}
                                 <select
                                     className="ap-input"
-                                    style={{ maxWidth: 120 }}
-                                    value={countryCode}
+                                    style={{ maxWidth: 200 }}
+                                    value={selectedCountryId || ""}
                                     onChange={(e) =>
-                                        setCountryCode(e.target.value)
+                                        setSelectedCountryId(e.target.value)
                                     }
                                 >
+                                    <option value="">Select Country</option>
                                     {countries.map((c) => (
-                                        <option key={c._id} value={c.dialCode}>
-                                            {c.flag} {c.dialCode}
+                                        <option key={c._id} value={c._id}>
+                                            {c.flag} {c.name} ({c.dialCode})
                                         </option>
                                     ))}
                                 </select>

@@ -14,7 +14,10 @@ router.get("/patient_details/:id", fetchuser, async (req, res) => {
             });
         }
 
-        const patient = await Patient.findById(patientId).lean();
+        // POPULATE COUNTRY
+        const patient = await Patient.findById(patientId)
+            .populate("country", "name dialCode")
+            .lean();
 
         if (!patient) {
             return res.status(404).json({
@@ -29,21 +32,25 @@ router.get("/patient_details/:id", fetchuser, async (req, res) => {
         }
 
         let maskedNumber = "";
-
         const needsNumberUpdate = !patient.numberEncrypted;
 
         if (patient.numberLast4) {
             maskedNumber = `******${patient.numberLast4}`;
-        } else if (patient.number) {
-            maskedNumber = `******${patient.number.slice(-4)}`;
         }
 
+        // CLEAN SENSITIVE DATA
         delete patient.number;
         delete patient.numberHash;
         delete patient.numberEncrypted;
 
+        // IMPORTANT FIX
         return res.json({
             ...patient,
+
+            countryId: patient.country?._id || "",
+            countryName: patient.country?.name || "",
+            dialCode: patient.country?.dialCode || "",
+
             numberMasked: maskedNumber,
             needsNumberUpdate,
         });

@@ -199,7 +199,10 @@ export default function DoctorProfile(props) {
     const [staffRole, setStaffRole] = useState("");
     const [subscription, setSubscription] = useState(null);
     const isExpired = subscription?.status === "expired";
-    const [staffCountryCode, setStaffCountryCode] = useState("+91");
+
+    // FIX #9: Initialize staffCountryCode to "" not undefined
+    const [staffCountryId, setStaffCountryId] = useState("");
+
     // eslint-disable-next-line
     const [usage, setUsage] = useState(null);
     // eslint-disable-next-line
@@ -231,15 +234,18 @@ export default function DoctorProfile(props) {
         _id: "",
         name: "",
         phone: "",
-        countryCode: "",
+        countryId: "", // FIX #1/#2: use countryId, not countryCode/dialCode
         role: "",
     });
+
+    // FIX #1/#2: editData now uses countryId (ObjectId string) instead of countryCode (dialCode string).
+    // This fixes the USA/Canada +1 ambiguity and completes the migration.
     const [editData, setEditData] = useState({
         name: "",
         clinicName: "",
         phone: "",
         appointmentPhone: "",
-        countryCode: "+91",
+        countryId: "", // was: countryCode — now stores _id
         regNumber: "",
         degree: [""],
         address: {
@@ -252,10 +258,8 @@ export default function DoctorProfile(props) {
         },
     });
 
-    // selectedCountry drives the payload — derived from editData.countryCode
-    const selectedCountry = countries.find(
-        (c) => c.dialCode === editData.countryCode,
-    );
+    // FIX #1: selectedCountry derived via _id, not dialCode — eliminates +1 USA/Canada bug
+    const selectedCountry = countries.find((c) => c._id === editData.countryId);
 
     const [showPasswords, setShowPasswords] = useState({
         current: false,
@@ -337,7 +341,6 @@ export default function DoctorProfile(props) {
                     .length,
             );
 
-            // FIX: was setPaymentMethods() with no args — now correctly maps the array
             setPaymentMethods(
                 (doc.paymentMethods || []).map((m) => ({
                     categoryId:
@@ -355,33 +358,16 @@ export default function DoctorProfile(props) {
                 })),
             );
 
-            // dialCode comes from the backend get_doc response (e.g. "+1", "+91")
-            const dialCode = doc?.dialCode || "+91";
-
-            // Strip the dial code prefix from the stored full phone so the
-            // input only shows the local number (e.g. "8273427800" not "18273427800")
-            const stripDialCode = (fullPhone = "") => {
-                if (!fullPhone) return "";
-                const dialDigits = dialCode.replace(/\D/g, ""); // "1" from "+1"
-                const phoneDigits = fullPhone.replace(/\D/g, "");
-                if (phoneDigits.startsWith(dialDigits)) {
-                    return phoneDigits.slice(dialDigits.length);
-                }
-                return phoneDigits;
-            };
+            const isMasked = (val) => val?.includes("•");
 
             setEditData({
                 name: doc.name || "",
                 clinicName: doc.clinicName || "",
-                // Show masked placeholder if we only have last4;
-                // otherwise strip dial code so input shows local digits only
-                phone: doc.phoneLast4
-                    ? `••••${doc.phoneLast4}`
-                    : stripDialCode(doc.phone),
-                appointmentPhone: doc.appointmentPhoneLast4
-                    ? `••••${doc.appointmentPhoneLast4}`
-                    : stripDialCode(doc.appointmentPhone),
-                countryCode: dialCode,
+                // Keep masked value as-is; user must clear it to re-enter
+                phone: doc.phone || "",
+                appointmentPhone: doc.appointmentPhone || "",
+                // FIX #1/#2: Store countryId (_id), not dialCode
+                countryId: doc.address?.countryId || "",
                 regNumber: doc.regNumber || "",
                 degree: doc.degree?.length ? doc.degree : [""],
                 address: {
@@ -426,19 +412,18 @@ export default function DoctorProfile(props) {
         }
     }, []);
 
-    // Sync staff country code default to doctor's country after fetch
+    // FIX #9: Sync staff country default to doctor's country using countryId (_id)
     useEffect(() => {
-        if (doctor?.dialCode) {
-            setStaffCountryCode(doctor.dialCode);
-        } else if (doctor?.address?.dialCode) {
-            setStaffCountryCode(doctor.address.dialCode);
+        if (doctor?.address?.countryId) {
+            setStaffCountryId(doctor.address.countryId);
         }
     }, [doctor]);
 
     const handleSaveProfile = async () => {
         try {
+            // FIX #1: selectedCountry is now found by _id — no dialCode ambiguity
             if (!selectedCountry) {
-                props.showAlert("Country not loaded", "danger");
+                props.showAlert("Please select a valid country", "danger");
                 return;
             }
             if (!editData.name?.trim())
@@ -451,7 +436,6 @@ export default function DoctorProfile(props) {
 
             const isMasked = (val) => val?.includes("•");
 
-            // If masked, send null (skip update); otherwise strip non-digits
             const cleanPhone = isMasked(editData.phone)
                 ? null
                 : editData.phone.replace(/\D/g, "");
@@ -462,18 +446,22 @@ export default function DoctorProfile(props) {
 
             if (
                 cleanPhone !== null &&
-                (cleanPhone.length < 8 || cleanPhone.length > 15)
+                (cleanPhone.length < 7 || cleanPhone.length > 15)
             )
-                return props.showAlert("Invalid phone number", "danger");
+                return props.showAlert(
+                    "Invalid phone number (7–15 digits)",
+                    "danger",
+                );
 
             if (
                 cleanAppt !== null &&
                 cleanAppt.length > 0 &&
-                (cleanAppt.length < 8 || cleanAppt.length > 15)
+                (cleanAppt.length < 7 || cleanAppt.length > 15)
             )
-                return props.showAlert("Invalid appointment phone", "danger");
-
-            const dialCode = editData.countryCode || "+91";
+                return props.showAlert(
+                    "Invalid appointment phone (7–15 digits)",
+                    "danger",
+                );
 
             const cleanDegree = Array.isArray(editData.degree)
                 ? editData.degree
@@ -504,17 +492,15 @@ export default function DoctorProfile(props) {
                 regNumber: editData.regNumber?.trim() || "",
                 degree: cleanDegree,
                 experience: editData.experience || "",
-                // Only send phone fields if the user actually changed them
-                // (unmasked and typed a new number)
                 ...(cleanPhone !== null && {
-                    phone: `${dialCode}${cleanPhone}`,
+                    phone: `${cleanPhone}`,
                 }),
                 ...(cleanAppt !== null &&
                     cleanAppt.length > 0 && {
-                        appointmentPhone: `${dialCode}${cleanAppt}`,
+                        appointmentPhone: `${cleanAppt}`,
                     }),
+                // FIX #1/#2: Send countryId (_id) — backend maps to dialCode via Country ref
                 countryId: selectedCountry._id,
-                countryCode: selectedCountry.dialCode,
                 address: cleanAddress,
             };
 
@@ -559,6 +545,17 @@ export default function DoctorProfile(props) {
             props.showAlert("All fields required", "danger");
             return;
         }
+        if (!staffCountryId) {
+            props.showAlert("Select country code for staff phone", "danger");
+            return;
+        }
+
+        // FIX #9: Look up dialCode from the selected countryId to prefix phone number
+        const staffCountry = countries.find((c) => c._id === staffCountryId);
+        if (!staffCountry) {
+            props.showAlert("Invalid country selected", "danger");
+            return;
+        }
 
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/add_staff`,
@@ -567,9 +564,8 @@ export default function DoctorProfile(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: staffName,
-                    // FIX: staffCountryCode already contains "+" (e.g. "+91")
-                    // so do NOT prefix another "+" — was: `+${staffCountryCode}${staffPhone}`
-                    phone: `${staffCountryCode}${staffPhone}`,
+                    // dialCode already contains "+" (e.g. "+91")
+                    phone: `${staffCountry.dialCode}${staffPhone}`,
                     role: staffRole,
                 }),
             },
@@ -661,18 +657,32 @@ export default function DoctorProfile(props) {
     };
 
     const openEditStaffModal = (staff) => {
+        // For edit staff: parse existing phone to extract number portion.
+        // Staff phone is stored as dialCode+number (e.g. "+911234567890").
+        // We find the matching country by dialCode to get its _id.
         const parsed = splitPhone(staff.phone);
+        const matchedCountry = countries.find(
+            (c) => c.dialCode === parsed.countryCode,
+        );
         setEditStaffData({
             _id: staff._id,
             name: staff.name,
             phone: parsed.number,
-            countryCode: parsed.countryCode,
+            // FIX #1/#2: store countryId (_id) not dialCode string
+            countryId: matchedCountry?._id || "",
             role: staff.role,
         });
         setEditStaffOpen(true);
     };
 
     const editstaff = async () => {
+        const staffCountry = countries.find(
+            (c) => c._id === editStaffData.countryId,
+        );
+        if (!staffCountry) {
+            props.showAlert("Please select a valid country", "danger");
+            return;
+        }
         const res = await authFetch(
             `${API_BASE_URL}/api/doctor/staff/edit_staff/${editStaffData._id}`,
             {
@@ -680,7 +690,7 @@ export default function DoctorProfile(props) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: editStaffData.name,
-                    phone: `${editStaffData.countryCode}${editStaffData.phone}`,
+                    phone: `${staffCountry.dialCode}${editStaffData.phone}`,
                     role: editStaffData.role,
                 }),
             },
@@ -876,6 +886,7 @@ export default function DoctorProfile(props) {
                                     <div className="dp-row">
                                         <span className="dp-key">Phone</span>
                                         <span className="dp-row-value">
+                                            {doctor.dialCode}{" "}
                                             {showPhone
                                                 ? doctor.phone || "N/A"
                                                 : doctor.phoneMasked || "N/A"}
@@ -897,6 +908,7 @@ export default function DoctorProfile(props) {
                                     <div className="dp-row">
                                         <span className="dp-key">Appt</span>
                                         <span className="dp-row-value">
+                                            {doctor.dialCode}{" "}
                                             {showApptPhone
                                                 ? doctor.appointmentPhone ||
                                                   "N/A"
@@ -1017,17 +1029,19 @@ export default function DoctorProfile(props) {
                     <div className="dp-field">
                         <label className="dp-label">Phone Number</label>
                         <div style={{ display: "flex", gap: 8 }}>
+                            {/* FIX #9: value = countryId (_id), not dialCode string */}
                             <select
                                 className="dp-input"
-                                style={{ maxWidth: 120 }}
-                                value={staffCountryCode}
+                                style={{ maxWidth: 160 }}
+                                value={staffCountryId}
                                 onChange={(e) =>
-                                    setStaffCountryCode(e.target.value)
+                                    setStaffCountryId(e.target.value)
                                 }
                             >
+                                <option value="">Country</option>
                                 {countries.map((c) => (
-                                    <option key={c._id} value={c.dialCode}>
-                                        {c.dialCode}
+                                    <option key={c._id} value={c._id}>
+                                        {c.flag} {c.dialCode}
                                     </option>
                                 ))}
                             </select>
@@ -1465,20 +1479,21 @@ export default function DoctorProfile(props) {
                                                 flexShrink: 0,
                                                 paddingRight: 28,
                                             }}
-                                            value={
-                                                editData.countryCode || "+91"
-                                            }
+                                            value={editData.countryId || ""}
                                             onChange={(e) =>
                                                 setEditData({
                                                     ...editData,
-                                                    countryCode: e.target.value,
+                                                    countryId: e.target.value,
                                                 })
                                             }
                                         >
+                                            <option value="">
+                                                Select Country
+                                            </option>
                                             {countries.map((c) => (
                                                 <option
                                                     key={c._id}
-                                                    value={c.dialCode}
+                                                    value={c._id}
                                                 >
                                                     {c.flag} {c.name} (
                                                     {c.dialCode})
@@ -1506,6 +1521,7 @@ export default function DoctorProfile(props) {
                                         Appointment Phone
                                     </label>
                                     <div style={{ display: "flex", gap: 6 }}>
+                                        {/* Single shared countryId for both phone fields (same country assumption) */}
                                         <select
                                             className="dp-select"
                                             style={{
@@ -1513,20 +1529,21 @@ export default function DoctorProfile(props) {
                                                 flexShrink: 0,
                                                 paddingRight: 28,
                                             }}
-                                            value={
-                                                editData.countryCode || "+91"
-                                            }
+                                            value={editData.countryId || ""}
                                             onChange={(e) =>
                                                 setEditData({
                                                     ...editData,
-                                                    countryCode: e.target.value,
+                                                    countryId: e.target.value,
                                                 })
                                             }
                                         >
+                                            <option value="">
+                                                Select Country
+                                            </option>
                                             {countries.map((c) => (
                                                 <option
                                                     key={c._id}
-                                                    value={c.dialCode}
+                                                    value={c._id}
                                                 >
                                                     {c.flag} {c.name} (
                                                     {c.dialCode})
@@ -1717,20 +1734,22 @@ export default function DoctorProfile(props) {
                                 />
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
+                                {/* FIX #1/#2: value = countryId (_id) */}
                                 <select
                                     className="dp-input"
-                                    style={{ maxWidth: 120 }}
-                                    value={editStaffData.countryCode}
+                                    style={{ maxWidth: 160 }}
+                                    value={editStaffData.countryId}
                                     onChange={(e) =>
                                         setEditStaffData({
                                             ...editStaffData,
-                                            countryCode: e.target.value,
+                                            countryId: e.target.value,
                                         })
                                     }
                                 >
+                                    <option value="">Country</option>
                                     {countries.map((c) => (
-                                        <option key={c._id} value={c.dialCode}>
-                                            {c.dialCode}
+                                        <option key={c._id} value={c._id}>
+                                            {c.flag} {c.dialCode}
                                         </option>
                                     ))}
                                 </select>

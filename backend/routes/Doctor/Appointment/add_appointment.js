@@ -278,10 +278,6 @@ router.post(
             });
         } catch (err) {
             console.error("Add Appointment Error:", err);
-            // FIX: err.message is no longer sent to the client.
-            // It can contain internal details like DB field names, query structure,
-            // or Mongoose validation messages that reveal implementation internals.
-            // The full error is still logged server-side for debugging.
             return res.status(500).json({
                 success: false,
                 message: "Server error",

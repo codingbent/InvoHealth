@@ -37,6 +37,7 @@ const EditAppointment = ({
     const [collected, setCollected] = useState(0);
     const [isFullPaid, setIsFullPaid] = useState(false);
     const [initialCollected, setInitialCollected] = useState(0);
+    const [imageRemoved, setImageRemoved] = useState(false); // NEW
 
     // ─── Image state ──────────────────────────────────────────────────────────
     const [imageFile, setImageFile] = useState(null);
@@ -328,23 +329,43 @@ const EditAppointment = ({
         setSaving(true);
         try {
             // Upload image first if a new file was selected
-            let imageUrl = imageFile ? null : visit?.image || null;
+            let imageUrl = null;
+
+            // KEEP EXISTING IMAGE ONLY IF NOT REMOVED
+            if (!imageRemoved && imagePreview && !imageFile) {
+                imageUrl = visit?.image || null;
+            }
+
+            // UPLOAD NEW IMAGE
             if (imageFile) {
                 const formData = new FormData();
                 formData.append("image", imageFile);
-                // Use authFetch so the upload is authenticated
+
                 const uploadRes = await authFetch(
                     `${API_BASE_URL}/api/doctor/image/upload`,
                     { method: "POST", body: formData },
                 );
+
                 const uploadData = await uploadRes.json();
+
                 if (!uploadRes.ok) {
                     showAlert("Image upload failed", "danger");
                     return;
                 }
+
                 imageUrl = uploadData.url;
             }
-
+            // DELETE IMAGE ONLY ON SAVE
+            if (imageRemoved && visit?.image) {
+                try {
+                    await authFetch(
+                        `${API_BASE_URL}/api/doctor/image/delete_image/${appointmentId}/${visit._id}`,
+                        { method: "DELETE" },
+                    );
+                } catch (err) {
+                    console.error("Delete failed:", err);
+                }
+            }
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/edit_appointment/${appointmentId}/${visit._id}`,
                 {
@@ -906,8 +927,16 @@ const EditAppointment = ({
                                             type="button"
                                             className="pd-upload-remove"
                                             onClick={() => {
+                                                const confirmDelete =
+                                                    window.confirm(
+                                                        "This image will be permanently deleted after saving. Continue?",
+                                                    );
+
+                                                if (!confirmDelete) return;
+
                                                 setImageFile(null);
                                                 setImagePreview("");
+                                                setImageRemoved(true);
                                             }}
                                         >
                                             ✕ Remove

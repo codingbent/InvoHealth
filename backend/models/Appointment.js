@@ -88,7 +88,7 @@ AppointmentSchema.statics.addVisit = async function (
         collected,
         remaining,
         status,
-        paymentMethodId: paymentMethodId || null, // ✅ FIXED
+        paymentMethodId: paymentMethodId || null,
         invoiceNumber,
     };
 

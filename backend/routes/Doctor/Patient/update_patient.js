@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Patient = require("../../../models/Patient");
+const Country = require("../../../models/Country");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const { encrypt } = require("../../../utils/crypto"); //  add this
@@ -19,6 +20,7 @@ router.put(
         body("name", "Enter Name").optional().notEmpty(),
         body("service").optional(),
         body("number").optional(),
+        body("countryId").optional().isMongoId(),
         body("email")
             .optional({ checkFalsy: true })
             .isEmail()
@@ -41,12 +43,29 @@ router.put(
             }
 
             const doctorId = req.user.doctorId;
-            const { name, service, number, email, amount, age, gender } =
-                req.body;
+            const {
+                name,
+                service,
+                number,
+                countryId,
+                email,
+                amount,
+                age,
+                gender,
+            } = req.body;
 
             //  fetch existing patient (for security + fallback name)
             const existingPatient = await Patient.findById(req.params.id);
 
+            if (countryId) {
+                const exists = await Country.findById(countryId);
+                if (!exists) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Invalid country selected",
+                    });
+                }
+            }
             if (!existingPatient) {
                 return res.status(404).json({ message: "Patient not found" });
             }
@@ -69,9 +88,10 @@ router.put(
             if (amount !== undefined) updateFields.amount = amount;
             if (age !== undefined) updateFields.age = age;
             if (gender) updateFields.gender = gender;
+            if (countryId) updateFields.country = countryId;
 
             if (number) {
-                const cleanNumber = number.trim();
+                const cleanNumber = number.replace(/\D/g, "");
 
                 const alreadyHasSecureNumber =
                     existingPatient.numberEncrypted &&
@@ -92,7 +112,11 @@ router.put(
                     const candidates = await Patient.find({
                         _id: { $ne: req.params.id },
                         doctor: doctorId,
-                        name: { $regex: `^${finalName}$`, $options: "i" },
+                        name: {
+                            $regex: `^${escapeRegex(finalName)}$`,
+                            $options: "i",
+                        },
+                        numberLast4: cleanNumber.slice(-4),
                     });
 
                     for (let p of candidates) {
