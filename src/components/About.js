@@ -13,26 +13,30 @@ import {
     Clock,
     CreditCard,
     Users,
+    TrendingUp,
+    CheckCircle2,
+    AlertCircle,
 } from "lucide-react";
-import "../css/About.css"
+import "../css/About.css";
 
 const features = [
-    { icon: Users, text: "Patient profile management" },
-    { icon: Clock, text: "Appointment scheduling with time slots" },
-    { icon: Database, text: "Appointment & visit history" },
-    { icon: FileBarChart, text: "Upload prescriptions, X-rays & reports" },
-    { icon: CreditCard, text: "Service-based billing system" },
-    { icon: Zap, text: "Discounts (flat & percentage)" },
-    { icon: CreditCard, text: "Partial & full payment support" },
-    { icon: Cpu, text: "Auto payment status tracking" },
-    { icon: FileBarChart, text: "Revenue insights & analytics" },
-    { icon: CreditCard, text: "Multiple payment modes" },
-    { icon: Database, text: "Advanced filters" },
-    { icon: Clock, text: "Day-wise & month-wise income" },
-    { icon: FileBarChart, text: "PDF invoice generation" },
-    { icon: Database, text: "Excel export" },
-    { icon: Smartphone, text: "Fully responsive design" },
-    { icon: ShieldCheck, text: "Hassle-free audit records" },
+    { icon: Users, text: "Patient profile management & visit history" },
+    { icon: Clock, text: "Fast patient lookup by name or phone" },
+    { icon: Database, text: "Full appointment & OPD visit history" },
+    { icon: FileBarChart, text: "Upload prescriptions, X-rays & lab reports" },
+    { icon: CreditCard, text: "Service-based billing with discounts" },
+    { icon: Zap, text: "Flat & percentage discount support" },
+    { icon: CreditCard, text: "Partial & full payment tracking" },
+    { icon: Cpu, text: "Auto payment status — dues tracked automatically" },
+    { icon: TrendingUp, text: "Revenue insights & day/month analytics" },
+    { icon: CreditCard, text: "Multiple payment modes supported" },
+    { icon: Database, text: "Advanced patient & appointment filters" },
+    { icon: Clock, text: "Day-wise & month-wise income reports" },
+    { icon: FileBarChart, text: "PDF invoice generation in 1 click" },
+    { icon: Database, text: "Excel export for CA / accountant" },
+    { icon: Smartphone, text: "Fully responsive — works on any device" },
+    { icon: ShieldCheck, text: "Audit-ready records, always clean" },
+    { icon: Mail, text: "Automatic invoice emails after every appointment" },
 ];
 
 const highlights = [
@@ -44,10 +48,19 @@ const highlights = [
 ];
 
 const stats = [
-    { value: "16+", label: "Core features" },
-    { value: "100%", label: "Responsive" },
+    { value: "Fast", label: "Patient lookup" },
+    { value: "1-click", label: "Revenue reports" },
     { value: "AES", label: "Encryption" },
-    { value: "Live", label: "Analytics" },
+    { value: "Free", label: "Migration" },
+];
+
+const replaces = [
+    { icon: AlertCircle, text: "Excel spreadsheets for patient records" },
+    { icon: AlertCircle, text: "Paper prescriptions lost in files" },
+    { icon: AlertCircle, text: "Manual billing with calculators" },
+    { icon: AlertCircle, text: "WhatsApp / calls for appointment reminders" },
+    { icon: AlertCircle, text: "Partial payments forgotten or missed" },
+    { icon: AlertCircle, text: "Month-end revenue tallied manually" },
 ];
 
 function useScrollReveal(className = "ab-reveal") {
@@ -73,8 +86,6 @@ export default function About() {
 
     return (
         <div className="ab-root">
-
-            {/* Ambient bg grid */}
             <div className="ab-grid-bg" aria-hidden />
             <div className="ab-glow ab-glow-1" aria-hidden />
             <div className="ab-glow ab-glow-2" aria-hidden />
@@ -83,7 +94,7 @@ export default function About() {
             <section className="ab-hero">
                 <div className="ab-badge ab-reveal">
                     <span className="ab-badge-dot" />
-                    Medical Center Management System
+                    Built for small private clinics
                 </div>
 
                 <h1 className="ab-hero-title ab-reveal">
@@ -91,12 +102,11 @@ export default function About() {
                 </h1>
 
                 <p className="ab-hero-sub ab-reveal">
-                    A modern clinic management system built for real medical
-                    centers. Manage patients, appointments, billing, and medical
-                    records — all in one place.
+                    InvoHealth replaces Excel sheets, paper records and manual
+                    billing with a single workflow — from patient check-in to
+                    invoice generation — designed for how clinics actually run.
                 </p>
 
-                {/* Stats row */}
                 <div className="ab-stats ab-reveal">
                     {stats.map((s) => (
                         <div key={s.label} className="ab-stat">
@@ -106,7 +116,6 @@ export default function About() {
                     ))}
                 </div>
 
-                {/* Highlight pills */}
                 <div className="ab-pills ab-reveal">
                     {highlights.map((h) => (
                         <span key={h.label} className="ab-pill">
@@ -119,49 +128,88 @@ export default function About() {
 
             {/* ── Main content ── */}
             <div className="ab-body">
-                {/* Overview + Purpose side by side */}
+                {/* Overview + Who it's for */}
                 <div className="ab-row-2">
                     <div className="ab-card ab-reveal">
                         <div className="ab-card-tag">Overview</div>
                         <h2 className="ab-card-title">What is InvoHealth?</h2>
                         <p className="ab-card-text">
-                            InvoHealth is a modern clinic management and billing
-                            platform designed to streamline daily healthcare
-                            operations. It enables doctors and staff to manage
-                            patient records, schedule appointments with time
-                            slots, upload prescriptions and medical reports, and
-                            handle billing — all in one centralized system.
+                            InvoHealth is a clinic management and billing
+                            platform built specifically for small private
+                            clinics with 1-5 doctors. It handles patient
+                            records, appointment scheduling, prescriptions,
+                            medical report storage and billing — all in one
+                            place.Invoices are automatically generated and sent
+                            to patients after every visit, ensuring records are
+                            always shared and documented.
                         </p>
                         <p className="ab-card-text" style={{ marginTop: 12 }}>
-                            Built with a clinic-first mindset — every feature
-                            exists because a real medical center needed it.
+                            Every feature exists because a real clinic needed
+                            it. Nothing bloated, nothing unnecessary.
                         </p>
                     </div>
 
                     <div className="ab-card ab-reveal">
-                        <div className="ab-card-tag">Purpose</div>
+                        <div className="ab-card-tag">Who it's for</div>
                         <h2 className="ab-card-title">
-                            Built for Real Clinics
+                            Clinics on Excel or Paper
                         </h2>
                         <p className="ab-card-text">
-                            Designed specifically for private medical centers,
-                            InvoHealth reduces manual paperwork and streamlines
-                            day-to-day operations. From patient records and
-                            medical report uploads to billing and appointment
-                            scheduling, it brings efficiency and structure to
-                            real-world clinic workflows.
+                            If your clinic manages patients on spreadsheets,
+                            writes invoices by hand or tracks dues in a notebook
+                            — InvoHealth is built for you. Staff get a single
+                            system that covers check-in, billing and records
+                            without switching between tools.
                         </p>
-                        <div className="ab-notice ab-notice--amber ab-reveal">
+                        <div
+                            className="ab-notice ab-notice--amber ab-reveal"
+                            style={{ marginTop: 16 }}
+                        >
                             <Zap size={13} />
-                            Actively evolving based on real clinic needs.
+                            Actively evolving based on real clinic feedback.
                         </div>
+                    </div>
+                </div>
+
+                {/* What it replaces */}
+                <div className="ab-card ab-card--full ab-reveal">
+                    <div className="ab-card-tag">Replaces</div>
+                    <h2 className="ab-card-title">
+                        What InvoHealth gets rid of
+                    </h2>
+                    <p className="ab-card-text" style={{ marginBottom: 20 }}>
+                        Clinics that switch to InvoHealth stop relying on all of
+                        the following:
+                    </p>
+                    <div className="ab-features">
+                        {replaces.map((r, i) => (
+                            <div
+                                key={r.text}
+                                className="ab-feature ab-reveal"
+                                style={{ transitionDelay: `${i * 0.04}s` }}
+                            >
+                                <span
+                                    className="ab-feature-icon"
+                                    style={{
+                                        color: "#f87171",
+                                        background: "rgba(248,113,113,0.1)",
+                                        border: "1px solid rgba(248,113,113,0.3)",
+                                    }}
+                                >
+                                    <r.icon size={13} />
+                                </span>
+                                <span>{r.text}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Features full width */}
                 <div className="ab-card ab-card--full ab-reveal">
                     <div className="ab-card-tag">Capabilities</div>
-                    <h2 className="ab-card-title">Key Features</h2>
+                    <h2 className="ab-card-title">
+                        Everything inside InvoHealth
+                    </h2>
                     <div className="ab-features">
                         {features.map((f, i) => (
                             <div
@@ -182,17 +230,25 @@ export default function About() {
                 <div className="ab-row-2">
                     <div className="ab-card ab-reveal">
                         <div className="ab-card-tag">Finance</div>
-                        <h2 className="ab-card-title">Billing & Payments</h2>
+                        <h2 className="ab-card-title">
+                            Billing & Revenue Tracking
+                        </h2>
                         <p className="ab-card-text">
-                            Clean financial records for CA review and tax
-                            filing. Supports Indian and international clinics
-                            with region-aware payment processing.
+                            Every invoice, payment and outstanding due is
+                            tracked automatically. Revenue reports are ready in
+                            one click — no more end-of-month tallying. Export to
+                            Excel for your CA with a single button.
                         </p>
                         <ul className="ab-list">
                             <li>Razorpay — India (UPI, cards, net banking)</li>
                             <li>International payment gateway support</li>
-                            <li>Monthly & yearly revenue tracking</li>
-                            <li>Excel export for CA / accountant</li>
+                            <li>GST-ready invoice generation</li>
+                            <li>Excel export for CA / accountant review</li>
+                            <li>Partial dues tracked automatically</li>
+                            <li>
+                                Invoices automatically sent to patients via
+                                email
+                            </li>
                         </ul>
                         <div
                             className="ab-notice ab-notice--blue"
@@ -206,21 +262,55 @@ export default function About() {
 
                     <div className="ab-card ab-reveal">
                         <div className="ab-card-tag">Security</div>
-                        <h2 className="ab-card-title">Access Control</h2>
+                        <h2 className="ab-card-title">
+                            Built-in Access Control
+                        </h2>
                         <p className="ab-card-text">
-                            Advanced security with encrypted sensitive data,
-                            token-based authentication, and role-based access
-                            control. Phone numbers are securely hashed and
-                            encrypted — never stored in plain text. Emails sent
-                            via Gmail API with send-only access; your inbox is
-                            never read or stored.
+                            Sensitive patient data is AES-encrypted and never
+                            stored in plain text. Staff see only what they need.
+                            Doctors get the full picture. Gmail integration uses
+                            send-only API access — your inbox is never read or
+                            stored.
                         </p>
                         <ul className="ab-list" style={{ marginTop: 12 }}>
-                            <li>Token-based authentication (JWT)</li>
+                            <li>JWT token-based authentication</li>
                             <li>Role-based permissions (doctor / staff)</li>
-                            <li>AES-encrypted phone & sensitive data</li>
-                            <li>Gmail API — send-only, no inbox access</li>
+                            <li>
+                                AES-encrypted phone numbers & sensitive data
+                            </li>
+                            <li>Gmail API — send-only, no inbox access ever</li>
                         </ul>
+                        <div
+                            className="ab-notice ab-notice--amber"
+                            style={{ marginTop: 14 }}
+                        >
+                            <CheckCircle2 size={13} />
+                            Audit-ready records — clean data when you need it
+                            most.
+                        </div>
+                    </div>
+                </div>
+
+                {/* Migration promise */}
+                <div className="ab-card ab-card--full ab-reveal">
+                    <div className="ab-card-tag">Getting started</div>
+                    <h2 className="ab-card-title">
+                        Free migration — we do the work
+                    </h2>
+                    <p className="ab-card-text">
+                        Switching from Excel feels like a project. So we handle
+                        it for you. Send us your existing patient list and
+                        service rates in any format — we import everything and
+                        have your clinic live, usually within a day. No data
+                        entry on your end.
+                    </p>
+                    <div
+                        className="ab-notice ab-notice--amber"
+                        style={{ marginTop: 16 }}
+                    >
+                        <CheckCircle2 size={13} />
+                        Free for all new clinics. Contact
+                        invohealth.app@gmail.com to get started.
                     </div>
                 </div>
 
@@ -230,7 +320,8 @@ export default function About() {
                         <div className="ab-card-tag">Support</div>
                         <h2 className="ab-card-title">Contact</h2>
                         <p className="ab-card-text">
-                            Feedback and support enquiries:
+                            Questions, feedback, feature requests, or clinic
+                            setup:
                         </p>
                         <a
                             href="mailto:invohealth.app@gmail.com"
@@ -252,9 +343,10 @@ export default function About() {
                             <span className="ab-dev-name">Abhed Agarwal</span>
                         </p>
                         <p className="ab-card-text" style={{ marginTop: 8 }}>
-                            Focused on building practical, real-world software
-                            solutions that simplify everyday workflows for
-                            healthcare professionals.
+                            Focused on building practical software that
+                            simplifies everyday workflows for healthcare
+                            professionals — tools that actually get used, not
+                            enterprise bloatware.
                         </p>
                     </div>
                 </div>

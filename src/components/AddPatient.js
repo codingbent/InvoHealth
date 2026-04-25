@@ -506,6 +506,17 @@ const AddPatient = ({
                                 placeholder="Enter email (optional)"
                                 onChange={(e) => setEmail(e.target.value)}
                             />
+                            <div
+                                style={{
+                                    fontSize: "11px",
+                                    color: "#9ba9c3",
+                                    marginTop: "6px",
+                                    lineHeight: "1.4",
+                                }}
+                            >
+                                Add email to automatically send invoice after
+                                appointment.
+                            </div>
                         </div>
 
                         {/* ── Services & Billing ── */}

@@ -294,7 +294,7 @@ export default function AddAppointment({ showAlert, currency, usage }) {
     const dateLabel = (d) =>
         !d
             ? "Select date"
-            : new Date(d).toLocaleDateString("en-IN", {
+            : new Date(d + "T00:00:00").toLocaleDateString("en-IN", {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
@@ -458,7 +458,10 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                             mode="single"
                                             selected={
                                                 appointmentDate
-                                                    ? new Date(appointmentDate)
+                                                    ? new Date(
+                                                          appointmentDate +
+                                                              "T00:00:00",
+                                                      )
                                                     : undefined
                                             }
                                             onSelect={(date) => {

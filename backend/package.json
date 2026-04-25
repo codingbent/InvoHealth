@@ -25,6 +25,7 @@
     "multer": "^2.1.1",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemon": "^3.1.11",
+    "puppeteer": "^24.42.0",
     "razorpay": "^2.9.6"
   },
   "engines": {

@@ -454,7 +454,7 @@ export default function Dashboard({ currency, subscription, showAlert }) {
                     <KPI
                         icon={TrendingUp}
                         label="Collected"
-                        value={analytics?.totalCollection}
+                        value={analytics?.totalCollection-analytics?.totalPending}
                         accent="#22c55e"
                         currencySymbol={currency?.symbol || "₹"}
                         animated={animated}
