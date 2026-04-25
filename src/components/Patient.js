@@ -382,21 +382,11 @@ const Patient = ({
                         </p>
 
                         <div className="lp-hero-btns">
-                            <a
-                                href="mailto:invohealth.app@gmail.com?subject=Clinic Setup Demo Request"
-                                className="lp-btn-hero"
-                            >
-                                Book a Free 15-min Clinic Setup Demo{" "}
-                                <ChevronRight size={13} />
-                            </a>
+                            <a className="lp-btn-hero" href="#pricing">Start a Free Trial</a>
                             <Link to="/login" className="lp-btn-ghost">
                                 Log in
                             </Link>
                         </div>
-                        <p className="lp-hero-hint">
-                            Or <a href="#pricing">start a free trial</a> — we
-                            migrate your existing records at no cost.
-                        </p>
                     </section>
 
                     <div className="lp-divider" />
