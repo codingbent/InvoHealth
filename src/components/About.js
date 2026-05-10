@@ -226,7 +226,7 @@ export default function About() {
                     </div>
                 </div>
 
-                {/* <div className="ab-card ab-card--full ab-reveal">
+                <div className="ab-card ab-card--full ab-reveal">
                     <div className="ab-card-tag">Patient Portal</div>
                     <h2 className="ab-card-title">
                         Patients can access records anytime
@@ -273,7 +273,7 @@ export default function About() {
                             </span>
                         </div>
                     </div>
-                </div> */}
+                </div>
 
                 {/* Finance + Security */}
                 <div className="ab-row-2">
