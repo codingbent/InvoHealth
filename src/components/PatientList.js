@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { authFetch } from "./authfetch";
 import FilterPanel from "./FilterPanel";
 import AppointmentList from "./AppointmentList";
@@ -30,7 +32,6 @@ export default function PatientList(props) {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
-    // eslint-disable-next-line
     const [doctor, setDoctor] = useState(null);
     const [page, setPage] = useState(0);
     const [filterOpen, setFilterOpen] = useState(false);
@@ -38,45 +39,22 @@ export default function PatientList(props) {
     const [paymentOptions, setPaymentOptions] = useState([]);
     const limit = 20;
 
-    // ── Clinic timezone — fetched from DB via get_doc ────────────────
-    // get_doc already populates address.countryId with the timezone field.
-    // We just needed to add it to the response (see get_doc.js fix).
-    // e.g. "America/New_York", "Asia/Kolkata", "Europe/London"
     const [clinicTimezone, setClinicTimezone] = useState(null);
+    const [timezoneReady, setTimezoneReady] = useState(false);
 
     useEffect(() => {
-        const fetchTimezone = async () => {
-            try {
-                const res = await authFetch(
-                    `${API_BASE_URL}/api/doctor/get_doc`,
-                );
-                const data = await res.json();
+        authFetch(`${API_BASE_URL}/api/doctor/get_doc`)
+            .then((r) => r.json())
+            .then((data) => {
                 const tz = data?.doctor?.timezone || null;
                 if (tz) setClinicTimezone(tz);
-            } catch (err) {
+            })
+            .catch((err) => {
                 console.error("Failed to fetch clinic timezone:", err);
-                // clinicTimezone stays null → falls back to browser-local parsing
-            }
-        };
-        fetchTimezone();
+            })
+            .finally(() => setTimezoneReady(true)); // always unblock
     }, []);
 
-    /**
-     * parseApptAsUTC
-     * ──────────────
-     * Interprets the stored "YYYY-MM-DD" + "HH:MM" as a moment IN the
-     * clinic's timezone and returns the equivalent UTC Date.
-     *
-     * Example (US clinic, New_York = UTC-4 in summer):
-     *   parseApptAsUTC("2026-05-08", "20:30")
-     *   → fromZonedTime("2026-05-08 20:30", "America/New_York")
-     *   → 2026-05-09T00:30:00Z
-     *
-     *   new Date() when US time is 20:25 → 2026-05-09T00:25:00Z
-     *   00:30Z > 00:25Z  →  UPCOMING ✓
-     *
-     * Device timezone has absolutely zero effect on either value.
-     */
     const parseApptAsUTC = useCallback(
         (date, time = "00:00") => {
             if (!date) return new Date(0);
@@ -91,6 +69,8 @@ export default function PatientList(props) {
         [clinicTimezone],
     );
 
+    const [allFetched, setAllFetched] = useState(false);
+
     const activeFiltersCount =
         (searchTerm?.trim() ? 1 : 0) +
         selectedPayments.length +
@@ -100,6 +80,20 @@ export default function PatientList(props) {
         (startDate || endDate ? 1 : 0) +
         (selectedFY ? 1 : 0);
 
+    const addRowWithFormat = (
+        sheet,
+        label,
+        value,
+        isCurrency = false,
+        bold = false,
+    ) => {
+        const row = sheet.addRow([label, value]);
+        if (bold) row.font = { bold: true };
+        if (isCurrency) row.getCell(2).numFmt = `${currencySymbol}#,##0`;
+        return row;
+    };
+
+    const currencySymbol = props.currency?.symbol || "₹";
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
     useEffect(() => {
@@ -149,6 +143,9 @@ export default function PatientList(props) {
     }, [fetchServices]);
 
     const fetchAppointments = useCallback(async () => {
+        // FIX: stop fetching once we have everything from the server
+        if (allFetched && page > 0) return;
+
         try {
             setLoading(true);
             const params = new URLSearchParams();
@@ -173,15 +170,31 @@ export default function PatientList(props) {
             const data = await res.json();
             const flatData = Array.isArray(data?.data) ? data.data : [];
 
+            const sortAppointments = (arr = []) =>
+                Array.isArray(arr)
+                    ? [...arr].sort(
+                          (a, b) =>
+                              new Date(`${b.date}T${b.time || "00:00"}`) -
+                              new Date(`${a.date}T${a.time || "00:00"}`),
+                      )
+                    : [];
+
             setAppointments((prev = []) => {
                 const merged =
                     page === 0
                         ? flatData
                         : [...(Array.isArray(prev) ? prev : []), ...flatData];
-                return merged;
+                return sortAppointments(merged);
             });
 
-            setTotal(data.total || 0);
+            const serverTotal = data.total || 0;
+            setTotal(serverTotal);
+
+            // FIX: mark done when we've received all server-side records
+            const fetchedSoFar = page * limit + flatData.length;
+            if (fetchedSoFar >= serverTotal) {
+                setAllFetched(true);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -196,14 +209,17 @@ export default function PatientList(props) {
         selectedServices,
         startDate,
         endDate,
+        allFetched,
     ]);
 
     useEffect(() => {
         fetchAppointments();
     }, [fetchAppointments]);
 
+    // FIX: reset allFetched whenever filters change so fresh data loads
     useEffect(() => {
         setPage(0);
+        setAllFetched(false);
     }, [
         debouncedSearch,
         selectedGender,
@@ -218,14 +234,15 @@ export default function PatientList(props) {
     useEffect(() => {
         if (refreshTrigger === 0) return;
         setPage(0);
+        setAllFetched(false);
         setActiveTab("upcoming");
     }, [refreshTrigger]);
 
-    // ── Split into upcoming / history ────────────────────────────────
+    // ── Split appointments into upcoming vs history ──────────────────
     const { upcomingAppointments, historyAppointments } = useMemo(() => {
         const upcoming = [];
         const history = [];
-        const nowUTC = new Date(); // always UTC, no device-timezone effect
+        const nowUTC = new Date();
 
         appointments.forEach((a) => {
             if (!a.date || !a.time) {
@@ -255,7 +272,7 @@ export default function PatientList(props) {
     const activeAppointments =
         activeTab === "upcoming" ? upcomingAppointments : historyAppointments;
 
-    // ── Group by month (clinic timezone labels) ───────────────────────
+    // ── Group whichever tab is active ────────────────────────────────
     const appointmentsByMonth = useMemo(() => {
         const grouped = {};
 
@@ -287,6 +304,38 @@ export default function PatientList(props) {
         return grouped;
     }, [activeAppointments, parseApptAsUTC, clinicTimezone]);
 
+    const applyFilters = (data) =>
+        data.filter((a) => {
+            const searchMatch =
+                a.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                a.number?.includes(debouncedSearch);
+            const paymentMatch =
+                selectedPayments.length === 0 ||
+                selectedPayments.includes(String(a.paymentMethodId));
+            const statusMatch =
+                selectedStatus.length === 0 ||
+                selectedStatus.includes(a.status);
+            const genderMatch = !selectedGender || a.gender === selectedGender;
+            const dateMatch =
+                (!startDate || new Date(a.date) >= new Date(startDate)) &&
+                (!endDate || new Date(a.date) <= new Date(endDate));
+            const serviceMatch =
+                selectedServices.length === 0 ||
+                (a.services || []).some((s) =>
+                    selectedServices.includes(
+                        typeof s === "object" ? s.name : s,
+                    ),
+                );
+            return (
+                searchMatch &&
+                paymentMatch &&
+                statusMatch &&
+                genderMatch &&
+                dateMatch &&
+                serviceMatch
+            );
+        });
+
     const getPaymentLabel = (a) => {
         const match = paymentOptions.find(
             (p) => String(p.id) === String(a.paymentMethodId),
@@ -298,17 +347,21 @@ export default function PatientList(props) {
         return label?.split(" ")[0];
     };
 
-    const emailExcel = async () => {
+    const downloadExcel = async () => {
         try {
             const checkRes = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/check_export_limit`,
             );
             const check = await checkRes.json();
-            if (!checkRes.ok || !check.success) {
+            if (!checkRes.ok) {
                 props.showAlert(
-                    check.error || "Failed to send Excel",
-                    "danger",
+                    check.error || "Failed to export Excel",
+                    checkRes.status === 403 ? "danger" : "danger",
                 );
+                return;
+            }
+            if (!check.success) {
+                props.showAlert(check.error, "danger");
                 return;
             }
             if (check.remaining === 1) {
@@ -317,48 +370,288 @@ export default function PatientList(props) {
                 );
                 if (!confirmExport) return;
             }
-            props.showAlert("Sending Excel to your email...", "warning");
             const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/email_export`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        filters: {
-                            search: debouncedSearch,
-                            gender: selectedGender,
-                            payments: selectedPayments,
-                            status: selectedStatus,
-                            services: selectedServices,
-                            startDate,
-                            endDate,
-                        },
-                    }),
-                },
+                `${API_BASE_URL}/api/doctor/appointment/export_appointments`,
             );
             const result = await res.json();
             if (!res.ok) {
                 props.showAlert(
-                    result.error || "Failed to send Excel",
+                    result.error || "Failed to export Excel",
                     "danger",
                 );
                 return;
             }
-            props.showAlert(
-                "Excel report sent successfully to your email",
-                "success",
-            );
+            const filteredForExport = applyFilters(result.data);
+            if (!filteredForExport.length) {
+                props.showAlert("No data to export", "warning");
+                return;
+            }
+            exportToExcel(filteredForExport);
         } catch (err) {
             console.error(err);
-            if (err.message === "Excel export limit reached") {
-                props.showAlert(
-                    "Excel export limit reached for your current plan",
-                    "danger",
-                );
-                return;
-            }
-            props.showAlert(err.message || "Something went wrong", "danger");
+            props.showAlert("Something went wrong", "danger");
         }
+    };
+
+    const exportToExcel = async (data) => {
+        if (!data.length) return;
+
+        const sorted = [...data].sort(
+            (a, b) => new Date(b.date) - new Date(a.date),
+        );
+
+        const fromDate = new Date(
+            sorted[sorted.length - 1].date,
+        ).toLocaleDateString("en-IN");
+
+        const toDate = new Date(sorted[0].date).toLocaleDateString("en-IN");
+
+        const formatDiscount = (discount, isPercent) => {
+            if (!discount) return "";
+            return isPercent ? `${discount}%` : `${currencySymbol}${discount}`;
+        };
+
+        let totalRevenue = 0,
+            totalCollected = 0,
+            totalPending = 0,
+            totalDiscount = 0;
+
+        let paidCount = 0,
+            partialCount = 0,
+            unpaidCount = 0;
+
+        const paymentSummary = {};
+
+        sorted.forEach((a) => {
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? 0);
+            const remaining = Number(a.remaining ?? billed - collected);
+            const discount = Number(a.discount ?? 0);
+
+            totalRevenue += billed;
+            totalCollected += collected;
+            totalPending += remaining > 0 ? remaining : 0;
+            totalDiscount += discount;
+
+            if (remaining <= 0) paidCount++;
+            else if (collected > 0) partialCount++;
+            else unpaidCount++;
+
+            const key = getPaymentLabel(a) || "Unknown";
+            paymentSummary[key] = (paymentSummary[key] || 0) + collected;
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = "InvoHealth";
+        workbook.created = new Date();
+
+        const sheet = workbook.addWorksheet("Visit Records");
+
+        const titleRow = sheet.addRow(["INVOHEALTH — MEDICAL CENTER RECORDS"]);
+        titleRow.font = { bold: true, size: 13 };
+
+        sheet.addRow([`Doctor:`, doctor || ""]).font = { bold: true };
+        sheet.addRow(["Period:", `${fromDate} → ${toDate}`]);
+        sheet.addRow(["Generated:", new Date().toLocaleDateString("en-IN")]);
+        sheet.addRow([]);
+
+        sheet.addRow(["FINANCIAL SUMMARY"]).font = { bold: true, size: 11 };
+
+        addRowWithFormat(sheet, "Total Billed", totalRevenue, true, true);
+        addRowWithFormat(sheet, "Total Collected", totalCollected, true, true);
+        addRowWithFormat(sheet, "Total Pending", totalPending, true, true);
+        addRowWithFormat(
+            sheet,
+            "Total Discounts Given",
+            totalDiscount,
+            true,
+            true,
+        );
+
+        sheet.addRow([]);
+
+        sheet.addRow(["VISIT SUMMARY"]).font = { bold: true, size: 11 };
+        sheet.addRow(["Total Visits", sorted.length]);
+
+        addRowWithFormat(sheet, "Paid", paidCount);
+        addRowWithFormat(sheet, "Partial", partialCount);
+        addRowWithFormat(sheet, "Unpaid", unpaidCount);
+
+        sheet.addRow([]);
+
+        sheet.addRow(["COLLECTION BY PAYMENT MODE"]).font = {
+            bold: true,
+            size: 11,
+        };
+
+        Object.entries(paymentSummary)
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([type, amount]) => {
+                const pct =
+                    totalCollected > 0
+                        ? ((amount / totalCollected) * 100).toFixed(1)
+                        : "0.0";
+
+                const row = sheet.addRow([type, amount, `${pct}%`]);
+                row.getCell(2).numFmt = `${currencySymbol}#,##0`;
+            });
+
+        sheet.addRow([]);
+        sheet.addRow(["DETAILED RECORDS"]).font = { bold: true, size: 11 };
+        sheet.addRow([]);
+
+        let currentDay = null,
+            dayCollectedTotal = 0,
+            dayBilledTotal = 0;
+
+        sorted.forEach((a, index) => {
+            const day = new Date(a.date).toISOString().split("T")[0];
+
+            const billed = Number(a.amount ?? 0);
+            const collected = Number(a.collected ?? billed);
+            const remaining = billed - collected;
+            const discount = Number(a.discount ?? 0);
+
+            const discountDisplay = formatDiscount(discount, a.isPercent);
+
+            const status =
+                remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
+
+            if (day !== currentDay) {
+                if (currentDay !== null) {
+                    const totalRow = sheet.addRow([
+                        "",
+                        "",
+                        "",
+                        "",
+                        "DAY TOTAL →",
+                        dayBilledTotal,
+                        dayCollectedTotal,
+                        dayBilledTotal - dayCollectedTotal,
+                    ]);
+
+                    totalRow.font = { bold: true };
+
+                    [6, 7, 8].forEach((c) => {
+                        totalRow.getCell(c).numFmt = `${currencySymbol}#,##0`;
+                    });
+
+                    sheet.addRow([]);
+                }
+
+                currentDay = day;
+                dayCollectedTotal = 0;
+                dayBilledTotal = 0;
+
+                sheet.addRow([
+                    new Date(day).toLocaleDateString("en-IN", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                    }),
+                ]).font = { bold: true, size: 11 };
+
+                const headerRow = sheet.addRow([
+                    "Patient",
+                    "Age",
+                    "Gender",
+                    "Services",
+                    "Payment Mode",
+                    "Billed",
+                    "Collected",
+                    "Pending",
+                    "Discount",
+                    "Status",
+                    "Invoice No",
+                ]);
+
+                headerRow.font = { bold: true };
+
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: "pattern",
+                        pattern: "solid",
+                        fgColor: { argb: "FF1E293B" },
+                    };
+                    cell.font = { bold: true, color: { argb: "FFE2E8F0" } };
+                });
+            }
+
+            dayCollectedTotal += collected;
+            dayBilledTotal += billed;
+
+            const row = sheet.addRow([
+                a.name,
+                a.age || "",
+                a.gender || "",
+                (a.services || [])
+                    .map((s) => (typeof s === "object" ? s.name : s))
+                    .join(", "),
+                getPaymentLabel(a),
+                billed,
+                collected,
+                remaining > 0 ? remaining : 0,
+                discountDisplay,
+                status,
+                a.invoiceNumber || "",
+            ]);
+
+            row.getCell(6).numFmt = `${currencySymbol}#,##0`;
+            row.getCell(7).numFmt = `${currencySymbol}#,##0`;
+            row.getCell(8).numFmt = `${currencySymbol}#,##0`;
+
+            const statusColors = {
+                Paid: "FF22C55E",
+                Partial: "FFF59E0B",
+                Unpaid: "FFEF4444",
+            };
+
+            row.getCell(10).font = {
+                color: { argb: statusColors[status] || "FFCCCCCC" },
+                bold: true,
+            };
+
+            if (index === sorted.length - 1) {
+                const lastTotalRow = sheet.addRow([
+                    "",
+                    "",
+                    "",
+                    "",
+                    "DAY TOTAL →",
+                    dayBilledTotal,
+                    dayCollectedTotal,
+                    dayBilledTotal - dayCollectedTotal,
+                ]);
+
+                lastTotalRow.font = { bold: true };
+
+                [6, 7, 8].forEach((c) => {
+                    lastTotalRow.getCell(c).numFmt = `${currencySymbol}#,##0`;
+                });
+            }
+        });
+
+        sheet.columns = [
+            { width: 22 },
+            { width: 8 },
+            { width: 10 },
+            { width: 35 },
+            { width: 16 },
+            { width: 14 },
+            { width: 14 },
+            { width: 14 },
+            { width: 14 },
+            { width: 12 },
+            { width: 14 },
+        ];
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        saveAs(
+            new Blob([buffer]),
+            `invohealth-records-${toDate.replace(/\//g, "-")}.xlsx`,
+        );
     };
 
     const monthTotal = useMemo(() => {
@@ -378,7 +671,21 @@ export default function PatientList(props) {
         return totals;
     }, [appointmentsByMonth]);
 
-    const IncreaseLimit = () => setPage((prev) => prev + 1);
+    // FIX: IncreaseLimit only increments if we haven't fetched everything yet
+    const IncreaseLimit = useCallback(() => {
+        if (!allFetched && !loading) {
+            setPage((prev) => prev + 1);
+        }
+    }, [allFetched, loading]);
+
+    // FIX: effectiveTotal hides the sentinel on the upcoming tab once allFetched,
+    // so the IntersectionObserver never fires again when upcoming is empty
+    const effectiveTotal = useMemo(() => {
+        if (activeTab === "upcoming") {
+            return allFetched ? upcomingAppointments.length : total;
+        }
+        return total;
+    }, [activeTab, allFetched, upcomingAppointments.length, total]);
 
     return (
         <>
@@ -403,10 +710,10 @@ export default function PatientList(props) {
                         {localStorage.getItem("role") === "doctor" && (
                             <button
                                 className="pl-btn pl-btn-excel"
-                                onClick={emailExcel}
+                                onClick={downloadExcel}
                             >
                                 <FileSpreadsheet size={14} />
-                                Mail Excel
+                                Export Excel
                             </button>
                         )}
                     </div>
@@ -470,7 +777,7 @@ export default function PatientList(props) {
                     navigate={navigate}
                     monthTotal={monthTotal}
                     appointments={activeAppointments}
-                    total={total}
+                    total={effectiveTotal}
                     IncreaseLimit={IncreaseLimit}
                     loading={loading}
                     categoryColor={categoryColor}
