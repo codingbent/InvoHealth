@@ -424,6 +424,14 @@ export default function PatientList(props) {
             return isPercent ? `${discount}%` : `${currencySymbol}${discount}`;
         };
 
+        // ── helper: resolve flat discount amount ─────────────────────────
+        const resolveDiscount = (a) => {
+            const billed = Number(a.amount ?? 0);
+            const discount = Number(a.discount ?? 0);
+            if (!discount) return 0;
+            return a.isPercent ? (billed * discount) / 100 : discount;
+        };
+
         let totalRevenue = 0,
             totalCollected = 0,
             totalPending = 0,
@@ -436,13 +444,14 @@ export default function PatientList(props) {
         sorted.forEach((a) => {
             const billed = Number(a.amount ?? 0);
             const collected = Number(a.collected ?? 0);
-            const remaining = Number(a.remaining ?? billed - collected);
-            const discount = Number(a.discount ?? 0);
+            const discountAmt = resolveDiscount(a);
+            const finalPayable = billed - discountAmt;
+            const remaining = Math.max(finalPayable - collected, 0);
 
-            totalRevenue += billed;
+            totalRevenue += finalPayable;
             totalCollected += collected;
-            totalPending += remaining > 0 ? remaining : 0;
-            totalDiscount += discount;
+            totalPending += remaining;
+            totalDiscount += discountAmt;
 
             if (remaining <= 0) paidCount++;
             else if (collected > 0) partialCount++;
@@ -510,9 +519,13 @@ export default function PatientList(props) {
             const day = new Date(a.date).toISOString().split("T")[0];
             const billed = Number(a.amount ?? 0);
             const collected = Number(a.collected ?? billed);
-            const remaining = billed - collected;
-            const discount = Number(a.discount ?? 0);
-            const discountDisplay = formatDiscount(discount, a.isPercent);
+            const discountAmt = resolveDiscount(a);
+            const finalPayable = billed - discountAmt;
+            const remaining = Math.max(finalPayable - collected, 0);
+            const discountDisplay = formatDiscount(
+                Number(a.discount ?? 0),
+                a.isPercent,
+            );
             const status =
                 remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 
@@ -573,7 +586,7 @@ export default function PatientList(props) {
             }
 
             dayCollectedTotal += collected;
-            dayBilledTotal += billed;
+            dayBilledTotal += finalPayable;
 
             const row = sheet.addRow([
                 a.name,
@@ -583,9 +596,9 @@ export default function PatientList(props) {
                     .map((s) => (typeof s === "object" ? s.name : s))
                     .join(", "),
                 getPaymentLabel(a),
-                billed,
+                finalPayable,
                 collected,
-                remaining > 0 ? remaining : 0,
+                remaining,
                 discountDisplay,
                 status,
                 a.invoiceNumber || "",
@@ -643,7 +656,6 @@ export default function PatientList(props) {
             `invohealth-records-${toDate.replace(/\//g, "-")}.xlsx`,
         );
     };
-
     // ── Badge label helper ───────────────────────────────────────────
     // Shows loaded count (e.g. "20+") while more pages remain,
     // and the exact count (e.g. "38") once all records are fetched.
