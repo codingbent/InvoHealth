@@ -21,29 +21,40 @@ export default function AppointmentList({
     const isFetchingRef = useRef(false);
 
     useEffect(() => {
+        if (appointments.length >= total) return;
+
         const observer = new IntersectionObserver(
             (entries) => {
                 const firstEntry = entries[0];
+
                 if (
                     firstEntry.isIntersecting &&
                     !loading &&
                     !isFetchingRef.current
                 ) {
                     isFetchingRef.current = true;
+
                     IncreaseLimit();
+
                     setTimeout(() => {
                         isFetchingRef.current = false;
-                    }, 1000);
+                    }, 800);
                 }
             },
-            { threshold: 1 },
+            {
+                threshold: 0.2,
+                rootMargin: "300px",
+            },
         );
+
         const current = loadMoreRef.current;
+
         if (current) observer.observe(current);
+
         return () => {
-            if (current) observer.unobserve(current);
+            observer.disconnect();
         };
-    }, [loading, IncreaseLimit]);
+    }, [appointments.length, total, loading, IncreaseLimit]);
 
     const role = localStorage.getItem("role");
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
@@ -142,7 +153,7 @@ export default function AppointmentList({
                 </div>
             ))}
 
-            {appointments.length < total && (
+            {loading || appointments.length < total ? (
                 <div ref={loadMoreRef} className="al-load-more">
                     {loading && (
                         <>
@@ -152,7 +163,7 @@ export default function AppointmentList({
                         </>
                     )}
                 </div>
-            )}
+            ) : null}
         </>
     );
 }
