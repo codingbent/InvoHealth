@@ -27,6 +27,7 @@ app.set("trust proxy", 1);
 
 const allowedOrigins = [
   "https://invohealth.vercel.app",
+  "https://invohealth-patient.vercel.app",
   "http://localhost:3000",
   "http://localhost:3001",
 ];
