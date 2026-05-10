@@ -7,6 +7,7 @@
     "dev": "nodemon app.js"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
@@ -35,6 +36,8 @@
     "puppeteer": "^24.42.0",
     "razorpay": "^2.9.6",
     "redis": "^5.12.1",
+    "resend": "^6.12.3",
+    "sib-api-v3-sdk": "^8.5.0",
     "streamifier": "^0.1.1"
   },
   "engines": {

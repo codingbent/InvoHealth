@@ -1,8 +1,4 @@
-import {
-    useState,
-    useEffect,
-    //  useRef
-} from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { authFetch } from "./authfetch";
 import {
@@ -14,8 +10,8 @@ import {
     Calendar,
     EyeOff,
     Eye,
-    // Mail,
-    // ShieldCheck,
+    Mail,
+    ShieldCheck,
     ChevronRight,
     ChevronLeft,
     Globe,
@@ -200,25 +196,25 @@ function Step1({ data, onChange, onNext, showAlert }) {
         number: false,
         special: false,
     });
-    // const [otpSent, setOtpSent] = useState(false);
-    // const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    // const [emailVerified, setEmailVerified] = useState(
-    //     data.emailVerified || false,
-    // );
-    // const [otpError, setOtpError] = useState("");
-    // const [sendingOtp, setSendingOtp] = useState(false);
-    // const [cooldown, setCooldown] = useState(0);
-    // const otpRefs = useRef([]);
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [emailVerified, setEmailVerified] = useState(
+        data.emailVerified || false,
+    );
+    const [otpError, setOtpError] = useState("");
+    const [sendingOtp, setSendingOtp] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
+    const otpRefs = useRef([]);
     const [alert, setAlert] = useState(null);
     const [errors, setErrors] = useState({});
 
-    // useEffect(() => {
-    //     if (cooldown <= 0) return;
-    //     const timer = setInterval(() => {
-    //         setCooldown((prev) => prev - 1);
-    //     }, 1000);
-    //     return () => clearInterval(timer);
-    // }, [cooldown]);
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const timer = setInterval(() => {
+            setCooldown((prev) => prev - 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [cooldown]);
 
     const handlePwChange = (e) => {
         onChange(e);
@@ -235,91 +231,91 @@ function Step1({ data, onChange, onNext, showAlert }) {
     const passwordsMatch =
         data.password && data.cpassword && data.password === data.cpassword;
 
-    // const sendOtp = async () => {
-    //     if (cooldown > 0) return;
-    //     if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    //         setErrors((e) => ({ ...e, email: "Enter a valid email address" }));
-    //         return;
-    //     }
-    //     try {
-    //         setSendingOtp(true);
-    //         setOtpError("");
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/api/doctor/signup_send_otp`,
-    //             {
-    //                 method: "POST",
-    //                 headers: { "Content-Type": "application/json" },
-    //                 body: JSON.stringify({ email: data.email }),
-    //             },
-    //         );
-    //         const result = await res.json();
-    //         if (!res.ok) {
-    //             setErrors((e) => ({
-    //                 ...e,
-    //                 email: result.error || "Email already registered",
-    //             }));
-    //             return;
-    //         }
-    //         setOtpSent(true);
-    //         setOtp(["", "", "", "", "", ""]);
-    //         setCooldown(60);
-    //         showAlert("OTP sent to " + data.email, "success");
-    //     } catch (err) {
-    //         setOtpError("Failed to send OTP. Try again.");
-    //     } finally {
-    //         setSendingOtp(false);
-    //     }
-    // };
+    const sendOtp = async () => {
+        if (cooldown > 0) return;
+        if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+            setErrors((e) => ({ ...e, email: "Enter a valid email address" }));
+            return;
+        }
+        try {
+            setSendingOtp(true);
+            setOtpError("");
+            const res = await fetch(
+                `${API_BASE_URL}/api/doctor/signup_send_otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: data.email }),
+                },
+            );
+            const result = await res.json();
+            if (!res.ok) {
+                setErrors((e) => ({
+                    ...e,
+                    email: result.error || "Email already registered",
+                }));
+                return;
+            }
+            setOtpSent(true);
+            setOtp(["", "", "", "", "", ""]);
+            setCooldown(60);
+            showAlert("OTP sent to " + data.email, "success");
+        } catch (err) {
+            setOtpError("Failed to send OTP. Try again.");
+        } finally {
+            setSendingOtp(false);
+        }
+    };
 
-    // const verifyOtp = async () => {
-    //     const entered = otp.join("");
-    //     if (entered.length !== 6) {
-    //         setOtpError("Enter the complete 6-digit code");
-    //         return;
-    //     }
-    //     try {
-    //         setOtpError("");
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/api/doctor/signup_verify_otp`,
-    //             {
-    //                 method: "POST",
-    //                 headers: { "Content-Type": "application/json" },
-    //                 body: JSON.stringify({ email: data.email, otp: entered }),
-    //             },
-    //         );
-    //         const json = await res.json();
-    //         if (!res.ok) throw new Error("Failed");
-    //         if (json.success) {
-    //             setEmailVerified(true);
-    //             setOtpSent(false);
-    //             onChange({ target: { name: "emailVerified", value: true } });
-    //             showAlert("Email verified successfully!", "success");
-    //         } else {
-    //             setOtpError(json.message || "Incorrect code");
-    //         }
-    //     } catch (err) {
-    //         setOtpError("Verification failed. Try again.");
-    //     }
-    // };
+    const verifyOtp = async () => {
+        const entered = otp.join("");
+        if (entered.length !== 6) {
+            setOtpError("Enter the complete 6-digit code");
+            return;
+        }
+        try {
+            setOtpError("");
+            const res = await fetch(
+                `${API_BASE_URL}/api/doctor/signup_verify_otp`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: data.email, otp: entered }),
+                },
+            );
+            const json = await res.json();
+            if (!res.ok) throw new Error("Failed");
+            if (json.success) {
+                setEmailVerified(true);
+                setOtpSent(false);
+                onChange({ target: { name: "emailVerified", value: true } });
+                showAlert("Email verified successfully!", "success");
+            } else {
+                setOtpError(json.message || "Incorrect code");
+            }
+        } catch (err) {
+            setOtpError("Verification failed. Try again.");
+        }
+    };
 
-    // const handleOtpInput = (i, val) => {
-    //     val = val.replace(/\D/g, "").slice(0, 1);
-    //     const next = [...otp];
-    //     next[i] = val;
-    //     setOtp(next);
-    //     if (val && i < 5) otpRefs.current[i + 1]?.focus();
-    // };
-    // const handleOtpKeyDown = (i, e) => {
-    //     if (e.key === "Backspace" && !otp[i] && i > 0)
-    //         otpRefs.current[i - 1]?.focus();
-    // };
+    const handleOtpInput = (i, val) => {
+        val = val.replace(/\D/g, "").slice(0, 1);
+        const next = [...otp];
+        next[i] = val;
+        setOtp(next);
+        if (val && i < 5) otpRefs.current[i + 1]?.focus();
+    };
+    const handleOtpKeyDown = (i, e) => {
+        if (e.key === "Backspace" && !otp[i] && i > 0)
+            otpRefs.current[i - 1]?.focus();
+    };
 
     const validate = () => {
         const errs = {};
         if (!data.name.trim()) errs.name = "Full name is required";
         if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
             errs.email = "Valid email is required";
-        // if (!emailVerified) errs.email = "Please verify your email first";
+        if (!emailVerified) errs.email = "Please verify your email first";
         if (!Object.values(pwChecks).every(Boolean))
             errs.password = "Password does not meet all requirements";
         if (!passwordsMatch) errs.cpassword = "Passwords do not match";
@@ -369,7 +365,7 @@ function Step1({ data, onChange, onNext, showAlert }) {
             </div>
 
             {/* ── EMAIL VERIFICATION BOX (disabled) ──────────────────────── */}
-            {/* {!emailVerified && (
+            {!emailVerified && (
                 <div className="sg-verify-box">
                     <div className="sg-verify-title">
                         <Mail size={13} /> Email Verification Required
@@ -450,12 +446,12 @@ function Step1({ data, onChange, onNext, showAlert }) {
                         </>
                     )}
                 </div>
-            )} */}
-            {/* {emailVerified && (
+            )}
+            {emailVerified && (
                 <div className="sg-verified-badge">
                     <Check size={13} /> Email verified
                 </div>
-            )} */}
+            )}
 
             <div className="sg-section">
                 <div className="sg-section-line" />

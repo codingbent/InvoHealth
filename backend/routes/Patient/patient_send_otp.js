@@ -54,6 +54,10 @@ const buildOtpEmail = (otp, patientName) => `<!DOCTYPE html>
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:#f0ede8;font-family:sans-serif;padding:40px 16px 60px}
   .wrapper{max-width:520px;margin:0 auto}
+  .brand{text-align:center;margin-bottom:24px}
+  .brand img{height:44px;object-fit:contain}
+  .brand-name{font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-.5px;margin-top:8px}
+  .brand-name em{font-style:italic;color:#2d59b8}
   .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.07)}
   .hero{background:#0f1923;padding:44px 44px 36px}
   .hero-eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#4a8c7a;margin-bottom:12px}
@@ -77,8 +81,16 @@ const buildOtpEmail = (otp, patientName) => `<!DOCTYPE html>
 </head>
 <body>
 <div class="wrapper">
+
+  <!-- Brand header -->
+  
+
   <div class="card">
-    <div class="hero">
+    <div class="hero"><div class="brand">
+    <!-- Replace the src below with your actual logo URL -->
+    <img src="https://invohealth.vercel.app/logo.jpg" alt="InvoHealth logo" />
+    <div class="brand-name">Invo<em>Health</em></div>
+  </div>
       <div class="hero-eyebrow">Patient Portal</div>
       <h1 class="hero-title">Your login<br><em>verification code</em></h1>
       <p class="hero-sub">Use the code below to sign in to your InvoHealth patient portal.</p>
@@ -96,6 +108,7 @@ const buildOtpEmail = (otp, patientName) => `<!DOCTYPE html>
       </div>
       <div class="warning-note">&#9888; InvoHealth will <strong>never</strong> ask for this code via phone or chat. Do not share it with anyone.</div>
     </div>
+    <p class="legal">If you didn't request this code, you can safely ignore this email.</p>
     <div class="bottom">
       <div style="display:flex;gap:16px">
         <a href="https://invohealth.vercel.app/terms">Terms</a>
@@ -104,7 +117,6 @@ const buildOtpEmail = (otp, patientName) => `<!DOCTYPE html>
       <span class="bottom-copy">&copy; 2026 InvoHealth</span>
     </div>
   </div>
-  <p class="legal">If you didn't request this code, you can safely ignore this email.</p>
 </div>
 </body>
 </html>`;
