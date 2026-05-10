@@ -308,6 +308,44 @@ router.post(
             const createdVisit =
                 appointment.visits[appointment.visits.length - 1];
 
+            // ── SEND APPOINTMENT EMAIL (fire and forget) ─────────────────
+            if (patient.email) {
+                const currencyCode = docData.subscription?.currency || "";
+                const currencySymbol = currencySymbolMap[currencyCode] || "";
+
+                const locale = docData.address?.countryCode
+                    ? `en-${docData.address.countryCode}`
+                    : "en-IN";
+
+                const formattedDate = createdVisit.date
+                    ? new Intl.DateTimeFormat("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                      }).format(new Date(createdVisit.date))
+                    : "—";
+
+                const formattedTime = createdVisit.time || "—";
+
+                transporter
+                    .sendMail({
+                        to: patient.email,
+                        subject: "Appointment Confirmed - InvoHealth",
+                        html: buildAppointmentEmail({
+                            patient,
+                            doctor: docData,
+                            formattedDate,
+                            formattedTime,
+                        }),
+                    })
+                    .catch((err) =>
+                        console.error(
+                            "[APPOINTMENT EMAIL ERROR]:",
+                            err.message,
+                        ),
+                    );
+            }
+
             return res.status(201).json({
                 success: true,
                 message: "Appointment added successfully",
