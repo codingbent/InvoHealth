@@ -40,6 +40,7 @@ export default function PatientList(props) {
     const limit = 20;
 
     const [clinicTimezone, setClinicTimezone] = useState(null);
+    // eslint-disable-next-line
     const [timezoneReady, setTimezoneReady] = useState(false);
 
     useEffect(() => {
