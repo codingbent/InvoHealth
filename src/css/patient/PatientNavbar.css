@@ -1,0 +1,542 @@
+/* ── PatientNavbar.css ───────────────────────────────────────────────────────
+   Every rule appears ONCE. No overrides at the bottom.
+   ─────────────────────────────────────────────────────────────────────────── */
+@import "../../css/App.css";
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap");
+
+/* ── Variables ───────────────────────────────────────────────────────────── */
+:root {
+    --pnav-bg: #0b1220;
+    --pnav-border: #1a2540;
+    --pnav-height: 60px;
+    --pnav-accent: #2563eb;
+    --pnav-accent-dim: #1d4ed8;
+    --pnav-accent-glow: rgba(37, 99, 235, 0.25);
+    --pnav-text: #f0f4ff;
+    --pnav-text-muted: #6b7280;
+    --pnav-surface-1: #111827;
+    --pnav-surface-2: #1f2937;
+    --pnav-surface-h: #1a2540;
+    --pnav-danger: #f87171;
+    --pnav-danger-bg: #2d1515;
+    --pnav-radius-sm: 7px;
+    --pnav-radius-md: 10px;
+    --pnav-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --pnav-ease: 0.15s ease;
+    --pnav-font: "DM Sans", sans-serif;
+    --pnav-mono: "DM Mono", monospace;
+}
+
+/* ── Shell ───────────────────────────────────────────────────────────────── */
+.pnav {
+    height: var(--pnav-height);
+    background: rgba(5,8,18, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Inner max-width wrapper */
+.pnav-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+/* Left cluster: brand + links */
+.pnav-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Right cluster: profile + hamburger */
+.pnav__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Brand ───────────────────────────────────────────────────────────────── */
+.pnav__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--pnav-text);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.pnav__brand-mark {
+    width: 32px;
+    height: 32px;
+    background: rgba(77, 124, 246, 0.1);
+    border: 1px solid rgba(77, 124, 246, 0.22);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: #60a5fa;
+    position: relative;
+    overflow: hidden;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.pnav__brand:hover .pnav__brand-mark {
+    box-shadow: 0 0 0 4px var(--pnav-accent-glow);
+    transform: scale(1.05);
+}
+
+.pnav__brand-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: #dde6f5;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.pnav__brand-text em {
+    font-style: normal;
+    color: #4d7cf6;
+    font-weight: 700;
+}
+
+/* ── Desktop nav links ───────────────────────────────────────────────────── */
+.pnav__links {
+    display: none; /* shown at 641px+ */
+    align-items: center;
+    gap: 2px;
+}
+
+/* Shared link style — used by NavLink AND the switch button */
+.pnav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--pnav-text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--pnav-font);
+    transition:
+        color var(--pnav-ease),
+        background var(--pnav-ease);
+    white-space: nowrap;
+}
+
+.pnav__link:hover {
+    color: #e5e7eb;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.pnav__link--active {
+    color: #93c5fd;
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.28);
+}
+
+/* ── Chevron ─────────────────────────────────────────────────────────────── */
+.pnav__chevron {
+    color: var(--pnav-text-muted);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+.pnav__chevron--open {
+    transform: rotate(180deg);
+}
+
+/* ── Profile button ──────────────────────────────────────────────────────── */
+.pnav__profile {
+    position: relative;
+}
+
+.pnav__profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 5px 10px 5px 5px;
+    cursor: pointer;
+    font-family: var(--pnav-font);
+    transition:
+        background var(--pnav-ease),
+        border-color var(--pnav-ease);
+}
+.pnav__profile-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────────────── */
+.pnav__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--pnav-accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--pnav-mono);
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+}
+
+/* Larger avatar variant — used in mobile drawer */
+.pnav__avatar--lg {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.pnav__patient-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pnav-text);
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: none; /* shown at 641px+ */
+}
+
+/* ── Shared dropdown base ─────────────────────────────────────────────────── */
+.pnav__dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    background: var(--pnav-surface-1);
+    border: 1px solid var(--pnav-border);
+    border-radius: var(--pnav-radius-md);
+    overflow: hidden;
+    box-shadow: var(--pnav-shadow);
+    z-index: 200;
+    animation: pnavDropIn 0.15s ease forwards;
+}
+
+@keyframes pnavDropIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Profile dropdown — right-aligned, wider ─────────────────────────────── */
+.pnav__profile-dropdown {
+    right: 0;
+    min-width: 210px;
+}
+
+.pnav__switch-dropdown {
+    right: auto;
+    min-width: 190px;
+}
+
+.pnav__dropdown-header {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--pnav-border);
+}
+
+.pnav__dropdown-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pnav-text);
+    margin-bottom: 2px;
+}
+
+.pnav__dropdown-email {
+    display: block;
+    font-size: 11px;
+    color: var(--pnav-text-muted);
+    font-family: var(--pnav-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Dropdown items ──────────────────────────────────────────────────────── */
+/* FIX: was defined TWICE — bottom definition added justify-content:           */
+/* space-between which broke the icon+label row layout.                        */
+.pnav__dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    font-family: var(--pnav-font);
+    font-size: 14px;
+    color: #d1d5db;
+    cursor: pointer;
+    text-align: left;
+    transition:
+        background var(--pnav-ease),
+        color var(--pnav-ease);
+}
+.pnav__dropdown-item:hover {
+    background: var(--pnav-surface-2);
+    color: var(--pnav-text);
+}
+.pnav__dropdown-item--active {
+    color: #93c5fd;
+    background: rgba(37, 99, 235, 0.1);
+}
+.pnav__dropdown-item--danger {
+    color: var(--pnav-danger);
+}
+.pnav__dropdown-item--danger:hover {
+    background: var(--pnav-danger-bg);
+    color: var(--pnav-danger);
+}
+
+.pnav__dropdown-divider {
+    border: none;
+    border-top: 1px solid var(--pnav-border);
+    margin: 2px 0;
+}
+
+.pnav__item-icon {
+    display: flex;
+    align-items: center;
+    opacity: 0.65;
+    flex-shrink: 0;
+}
+
+/* ── Switch-specific elements inside dropdown ────────────────────────────── */
+.pnav__switch-btn {
+    gap: 6px;
+}
+
+.pnav__switch-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: var(--pnav-accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--pnav-mono);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.pnav__switch-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pnav__switch-check {
+    margin-left: auto;
+    color: #4ade80;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* ── Hamburger ───────────────────────────────────────────────────────────── */
+.pnav__hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid var(--pnav-border);
+    border-radius: var(--pnav-radius-sm);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.pnav__ham-bar {
+    display: block;
+    width: 16px;
+    height: 1.5px;
+    background: var(--pnav-text-muted);
+    border-radius: 2px;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease,
+        width 0.2s ease;
+}
+
+.pnav__hamburger--open .pnav__ham-bar:nth-child(1) {
+    transform: translateY(6.5px) rotate(45deg);
+}
+.pnav__hamburger--open .pnav__ham-bar:nth-child(2) {
+    opacity: 0;
+    width: 0;
+}
+.pnav__hamburger--open .pnav__ham-bar:nth-child(3) {
+    transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* ── Mobile drawer ───────────────────────────────────────────────────────── */
+.pnav__mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--pnav-bg);
+    border-bottom: 1px solid var(--pnav-border);
+    padding: 10px 14px 16px;
+    animation: pnavSlideDown 0.18s ease forwards;
+}
+
+@keyframes pnavSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pnav__mobile-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 12px;
+}
+.pnav__mobile-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.pnav__mobile-user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--pnav-text);
+}
+.pnav__mobile-user-email {
+    font-size: 11px;
+    color: var(--pnav-text-muted);
+    font-family: var(--pnav-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pnav__mobile-divider {
+    border: none;
+    border-top: 1px solid var(--pnav-border);
+    margin: 4px 0;
+}
+
+.pnav__mobile-switch-label {
+    font-size: 11px;
+    color: var(--pnav-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 8px 12px 4px;
+}
+
+.pnav__mobile-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--pnav-radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pnav-text-muted);
+    text-decoration: none;
+    transition:
+        color var(--pnav-ease),
+        background var(--pnav-ease);
+}
+.pnav__mobile-link:hover,
+.pnav__mobile-link--active {
+    color: var(--pnav-text);
+    background: var(--pnav-surface-h);
+}
+
+.pnav__mobile-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--pnav-radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--pnav-text-muted);
+    background: transparent;
+    border: none;
+    font-family: var(--pnav-font);
+    cursor: pointer;
+    text-align: left;
+    transition:
+        color var(--pnav-ease),
+        background var(--pnav-ease);
+}
+.pnav__mobile-action:hover {
+    color: var(--pnav-text);
+    background: var(--pnav-surface-h);
+}
+.pnav__mobile-action--active {
+    color: #93c5fd;
+}
+.pnav__mobile-action--danger {
+    color: var(--pnav-danger);
+}
+.pnav__mobile-action--danger:hover {
+    background: var(--pnav-danger-bg);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (min-width: 641px) {
+    .pnav__links {
+        display: flex;
+    }
+    .pnav__patient-name {
+        display: block;
+    }
+    .pnav__hamburger {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .pnav__profile {
+        display: none;
+    }
+}

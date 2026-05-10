@@ -1,58 +1,73 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Appointment = require("../../../models/Appointment");
 const Patient = require("../../../models/Patient");
-var fetchuser = require("../../../middleware/fetchuser");
+const fetchuser = require("../../../middleware/fetchuser");
 
 router.get("/patient_record/:patientId", fetchuser, async (req, res) => {
     try {
-        const doctorId = req.user.doctorId;
+        const doctorId = req.user.doctorId?.toString();
+        const patientId = req.params.patientId;
 
-        const appointment = await Appointment.findOne({
-            patient: req.params.patientId,
-            doctor: doctorId,
-        }).lean();
+        //  Validate ID
+        if (!mongoose.Types.ObjectId.isValid(patientId)) {
+            return res.status(400).json({ message: "Invalid patient ID" });
+        }
 
-        const patient = await Patient.findById(req.params.patientId).lean();
+        //  Fetch both in parallel (faster)
+        const [appointment, patient] = await Promise.all([
+            Appointment.findOne({
+                patient: patientId,
+                doctor: doctorId,
+            }).lean(),
+
+            Patient.findById(patientId)
+                .select("-number -numberHash -numberEncrypted")
+                .lean(),
+        ]);
 
         if (!patient) {
             return res.status(404).json({ message: "Patient not found" });
         }
 
-        //  SECURITY: ensure doctor owns patient
-        if (patient.doctor.toString() !== doctorId) {
+        //  SUPPORT BOTH OLD + NEW SCHEMA
+        const isAuthorized =
+            (Array.isArray(patient.doctors) &&
+                patient.doctors.some((d) => d.toString() === doctorId)) ||
+            (patient.doctor && patient.doctor.toString() === doctorId);
+
+        if (!isAuthorized) {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
-        //  Mask number (clean + future-proof)
+        //  Safe masked number
         const maskedNumber = patient.numberLast4
             ? `******${patient.numberLast4}`
-            : patient.number
-              ? `******${patient.number.slice(-4)}`
-              : "";
+            : "";
 
-        //  Remove sensitive fields (VERY IMPORTANT)
-        delete patient.number;
-        delete patient.numberHash;
-        delete patient.numberEncrypted;
+        //  Base patient object (consistent shape ALWAYS)
+        const patientSafe = {
+            name: patient.name || "",
+            age: patient.age ?? null,
+            gender: patient.gender || "",
+            numberMasked: maskedNumber,
+        };
 
+        //  No appointment case
         if (!appointment) {
             return res.json({
                 appointmentId: null,
                 visits: [],
-                patient: {
-                    name: patient.name,
-                    numberMasked: maskedNumber,
-                    age: patient.age,
-                    gender: patient.gender,
-                },
+                patient: patientSafe,
             });
         }
 
-        // Normalize visits
-        appointment.visits = appointment.visits
+        //  Normalize visits (safe)
+        const normalizedVisits = (appointment.visits || [])
             .map((visit) => {
-                const collected = Number(visit.collected);
+                const collected = Number(visit.collected ?? 0);
+                const amount = Number(visit.amount ?? 0);
 
                 if (
                     visit.collected === undefined ||
@@ -60,7 +75,7 @@ router.get("/patient_record/:patientId", fetchuser, async (req, res) => {
                 ) {
                     return {
                         ...visit,
-                        collected: visit.amount,
+                        collected: amount,
                         remaining: 0,
                         status: "Paid",
                     };
@@ -70,19 +85,14 @@ router.get("/patient_record/:patientId", fetchuser, async (req, res) => {
             })
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        res.json({
+        return res.json({
             appointmentId: appointment._id,
-            visits: appointment.visits,
-            patient: {
-                name: patient.name,
-                numberMasked: maskedNumber,
-                age: patient.age,
-                gender: patient.gender,
-            },
+            visits: normalizedVisits,
+            patient: patientSafe,
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Server error" });
+        console.error("patient_record error:", err);
+        return res.status(500).json({ message: "Server error" });
     }
 });
 

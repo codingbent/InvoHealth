@@ -49,7 +49,7 @@ ____________________________________ */
     );
 }
 .ad-table {
-    width: stretch;
+    width: 100%;
     border-collapse: collapse;
     font-size: 11px;
 }

@@ -1,7 +1,3 @@
-// models/Doc.js
-
-"use strict";
-
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
@@ -29,7 +25,7 @@ const SubscriptionSchema = new Schema(
                 "trial",
                 "pending",
                 "failed",
-                "none"
+                "none",
             ],
             default: "none",
         },
@@ -155,6 +151,15 @@ const DocSchema = new Schema(
         regNumber: { type: String, required: true },
         experience: { type: Number, required: true },
         degree: { type: [String], required: true },
+        specialization: {
+            type: [String],
+            default: [],
+        },
+
+        doctorType: {
+            type: [String],
+            default: [],
+        },
 
         role: { type: String, default: "doctor", enum: ["doctor"] },
         staff: [{ type: Schema.Types.ObjectId, ref: "Staff" }],

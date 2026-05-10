@@ -39,7 +39,6 @@ export default function Navbar(props) {
 
     const handleLogout = async () => {
         localStorage.clear();
-        document.body.classList.add("dark-theme");
         showAlert("Logged out successfully", "success");
         navigate("/");
     };

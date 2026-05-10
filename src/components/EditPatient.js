@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { X, Check } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { X, Check, CalendarArrowDown } from "lucide-react";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import { authFetch } from "./authfetch";
 import { API_BASE_URL } from "../components/config";
 import { fetchCountries } from "../api/country.api";
@@ -16,11 +18,12 @@ const EditPatient = ({
         name: "",
         number: "",
         email: "",
-        age: "",
+        dob: "",
         gender: "",
         countryId: "",
     });
     const [saving, setSaving] = useState(false);
+    const [showDobPicker, setShowDobPicker] = useState(false);
     const [countries, setCountries] = useState([]);
 
     // Pre-fill form when details or the revealed phone number change
@@ -32,7 +35,10 @@ const EditPatient = ({
             number: fullNumber || "",
             countryId: details.countryId || details.country?._id || "",
             email: details.email || "",
-            age: details.age || "",
+            dob:
+                details.dob && !isNaN(new Date(details.dob).getTime())
+                    ? new Date(details.dob).toISOString().split("T")[0]
+                    : "",
             gender: details.gender || "Male",
         });
     }, [details, fullNumber]);
@@ -49,47 +55,117 @@ const EditPatient = ({
         loadCountries();
     }, []);
 
+    const computedAge = useMemo(() => {
+        if (!patient.dob) return null;
+
+        const today = new Date();
+
+        const birth = new Date(`${patient.dob}T00:00:00`);
+
+        if (isNaN(birth.getTime())) return null;
+
+        let age = today.getFullYear() - birth.getFullYear();
+
+        const monthDiff = today.getMonth() - birth.getMonth();
+
+        if (
+            monthDiff < 0 ||
+            (monthDiff === 0 && today.getDate() < birth.getDate())
+        ) {
+            age--;
+        }
+
+        return age >= 0 ? age : null;
+    }, [patient.dob]);
+
     const handleChange = (e) =>
         setPatient((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
     const handleSave = async () => {
-        if (!patient.name.trim()) {
+        // ── VALIDATION ─────────────────────────────────────────
+
+        const name = patient.name.trim();
+        const email = patient.email.trim();
+        const cleanNumber = patient.number.trim().replace(/\D/g, "");
+
+        // Name
+        if (!name) {
             showAlert("Name is required", "warning");
             return;
         }
-        if (!patient.age) {
-            showAlert("Age is required", "warning");
+        if (name.length < 2 || name.length > 60) {
+            showAlert("Name must be 2–60 characters", "warning");
             return;
         }
+        if (/[<>]/.test(name)) {
+            showAlert("Invalid characters in name", "warning");
+            return;
+        }
+
+        if (!patient.dob) {
+            showAlert("Date of birth is required", "warning");
+            return;
+        }
+
+        const birthDate = new Date(patient.dob);
+
+        if (isNaN(birthDate.getTime())) {
+            showAlert("Invalid DOB", "warning");
+            return;
+        }
+
+        if (birthDate > new Date()) {
+            showAlert("DOB cannot be future date", "warning");
+            return;
+        }
+
+        // Gender
         if (!patient.gender) {
             showAlert("Gender is required", "warning");
             return;
         }
 
-        // FIX #5: Align phone regex with backend — 7-15 digits, no leading-zero restriction
-        const cleanNumber = patient.number.trim().replace(/\D/g, "");
-        if (cleanNumber && !/^\d{7,15}$/.test(cleanNumber)) {
-            showAlert("Enter a valid phone number (7-15 digits)", "warning");
-            return;
-        }
-
+        // Country
         if (!patient.countryId) {
             showAlert("Select country", "warning");
             return;
         }
 
+        // Phone (optional but strict if provided)
+        if (cleanNumber) {
+            if (!/^\d{7,15}$/.test(cleanNumber)) {
+                showAlert("Enter valid phone number (7-15 digits)", "warning");
+                return;
+            }
+        }
+
+        // Email (optional but strict if provided)
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+            if (!emailRegex.test(email)) {
+                showAlert("Enter valid email address", "warning");
+                return;
+            }
+
+            if (email.length > 254) {
+                showAlert("Email too long", "warning");
+                return;
+            }
+        }
+
         setSaving(true);
+
         try {
             const payload = {
                 name: patient.name.trim(),
                 countryId: patient.countryId,
-                age: patient.age,
+                dob: patient.dob,
                 gender: patient.gender,
                 email: patient.email.trim(),
             };
 
-            // FIX #11: Strip non-digits before sending so backend receives clean number
-            if (cleanNumber !== "") {
+            if (cleanNumber) {
                 payload.number = cleanNumber;
             }
 
@@ -102,18 +178,27 @@ const EditPatient = ({
                 },
             );
 
-            const result = await response.json();
+            // SAFE PARSE
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error("Invalid server response");
+            }
 
-            if (response.ok) {
-                showAlert("Patient updated successfully", "success");
+            if (response.ok && result.success) {
+                showAlert("Patient updated", "success");
                 onSaved?.();
                 onClose?.();
             } else {
-                showAlert(result.message || "Update failed", "danger");
+                showAlert(
+                    result.error || result.message || "Update failed",
+                    "danger",
+                );
             }
         } catch (err) {
-            console.error(err);
-            showAlert("Server error. Please try again.", "danger");
+            console.error("UPDATE ERROR:", err);
+            showAlert("Server not responding", "danger");
         } finally {
             setSaving(false);
         }
@@ -247,20 +332,125 @@ const EditPatient = ({
 
                     <div className="pd-field">
                         <label className="pd-label">
-                            Age
+                            Date of Birth
                             <span className="sg-required">
                                 <sup>*</sup>
                             </span>
                         </label>
-                        <input
-                            className="pd-input"
-                            type="number"
-                            name="age"
-                            min={0}
-                            max={150}
-                            value={patient.age}
-                            onChange={handleChange}
-                        />
+
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "center",
+                            }}
+                        >
+                            <div style={{ flex: 1, position: "relative" }}>
+                                <button
+                                    type="button"
+                                    className="pd-input"
+                                    onClick={() => setShowDobPicker((p) => !p)}
+                                    style={{
+                                        width: "100%",
+                                        textAlign: "left",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        marginBottom: 0,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            color: patient.dob
+                                                ? "#c5d0e8"
+                                                : "#6b7fa8",
+                                        }}
+                                    >
+                                        {patient.dob
+                                            ? new Date(
+                                                  `${patient.dob}T00:00:00`,
+                                              ).toLocaleDateString(undefined, {
+                                                  day: "numeric",
+                                                  month: "short",
+                                                  year: "numeric",
+                                              })
+                                            : "Select DOB"}
+                                    </span>
+
+                                    <CalendarArrowDown
+                                        size={16}
+                                        style={{ color: "#3a4a6b" }}
+                                    />
+                                </button>
+
+                                {showDobPicker && (
+                                    <div
+                                        className="dp-wrapper"
+                                        style={{
+                                            position: "absolute",
+                                            top: "calc(100% + 6px)",
+                                            left: 0,
+                                            zIndex: 999,
+                                        }}
+                                    >
+                                        <DayPicker
+                                            mode="single"
+                                            captionLayout="dropdown"
+                                            fromYear={1900}
+                                            toYear={new Date().getFullYear()}
+                                            selected={
+                                                patient.dob
+                                                    ? new Date(
+                                                          `${patient.dob}T00:00:00`,
+                                                      )
+                                                    : undefined
+                                            }
+                                            onSelect={(date) => {
+                                                if (!date) return;
+
+                                                const localDate = [
+                                                    date.getFullYear(),
+                                                    String(
+                                                        date.getMonth() + 1,
+                                                    ).padStart(2, "0"),
+                                                    String(
+                                                        date.getDate(),
+                                                    ).padStart(2, "0"),
+                                                ].join("-");
+
+                                                setPatient((prev) => ({
+                                                    ...prev,
+                                                    dob: localDate,
+                                                }));
+
+                                                setShowDobPicker(false);
+                                            }}
+                                            disabled={(date) =>
+                                                date > new Date()
+                                            }
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {computedAge !== null && (
+                                <div
+                                    style={{
+                                        padding: "8px 10px",
+                                        borderRadius: 8,
+                                        background: "#111827",
+                                        border: "1px solid #243041",
+                                        color: "#c5d0e8",
+                                        fontSize: 12,
+                                        whiteSpace: "nowrap",
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {computedAge} yrs
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="pd-field">

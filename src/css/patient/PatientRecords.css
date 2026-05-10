@@ -1,0 +1,355 @@
+@import "../../css/App.css";
+
+/* ── Root ───────────────────────────────────────── */
+/* .pr-root {
+    min-height: 100vh;
+    padding: 80px 20px 60px;
+    max-width: 1000px;
+    margin: 0 auto;
+    color: #c5d0e8;
+    font-family: "DM Sans", system-ui, sans-serif;
+} */
+
+/* ── Title ─────────────────────────────────────── */
+.pr-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e8edf8;
+    margin-bottom: 28px;
+    letter-spacing: -0.02em;
+}
+
+/* ── Loading / Empty ───────────────────────────── */
+.pr-loading,
+.pr-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7fa8;
+    font-size: 14px;
+}
+
+/* ── List ──────────────────────────────────────── */
+.pr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── Card ─────────────────────────────────────── */
+.pr-card {
+    background: rgba(13, 17, 23, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 18px 20px;
+    transition:
+        border-color 0.25s,
+        transform 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.pr-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(77, 124, 246, 0.25),
+        transparent
+    );
+}
+
+.pr-card:hover {
+    border-color: rgba(77, 124, 246, 0.2);
+    transform: translateY(-2px);
+}
+
+/* ── Row ───────────────────────────────────────── */
+.pr-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.pr-label {
+    color: #6b7fa8;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ── Status Badge ─────────────────────────────── */
+.pr-status {
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.pr-status--paid {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    border-color: rgba(74, 222, 128, 0.25);
+}
+
+.pr-status--partial {
+    color: #fb923c;
+    background: rgba(251, 146, 60, 0.1);
+    border-color: rgba(251, 146, 60, 0.25);
+}
+
+.pr-status--unpaid {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.25);
+}
+
+/* ── Services Chips ───────────────────────────── */
+.pr-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.pr-chip {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: rgba(77, 124, 246, 0.08);
+    border: 1px solid rgba(77, 124, 246, 0.2);
+    color: #93c5fd;
+}
+
+/* ── Divider ─────────────────────────────────── */
+.pr-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 10px 0;
+}
+
+/* ── Card Header ───────────────────────── */
+.pr-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Doctor name */
+.pr-doctor {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+/* Date */
+.pr-date {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* ── Images Container ───────────────────── */
+.pr-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
+}
+
+/* ── Image FIX (this solves your issue) ─── */
+.pr-img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover; /* keeps image clean */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition:
+        transform 0.2s,
+        border-color 0.2s;
+}
+
+.pr-img:hover {
+    transform: scale(1.04);
+    border-color: rgba(77, 124, 246, 0.4);
+}
+
+/* ── PDF Card ───────────────────────────── */
+.pr-pdf {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    border-radius: 10px;
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+    color: #f87171;
+    font-size: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.pr-pdf:hover {
+    transform: scale(1.04);
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 600px) {
+    .pr-card {
+        padding: 14px 14px;
+    }
+
+    .pr-title {
+        font-size: 22px;
+    }
+
+    .pr-row {
+        font-size: 12px;
+    }
+}
+
+/* ── Group Container ───────────────── */
+.pr-group {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* Header */
+.pr-group-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+    transition: background 0.2s;
+}
+
+.pr-group-header:hover {
+    background: rgba(77, 124, 246, 0.08);
+}
+
+.pr-group-name {
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.pr-group-count {
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* Body */
+.pr-group-body {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+}
+
+/* Image Card */
+.pr-image-card {
+    position: relative;
+}
+
+/* Date overlay */
+.pr-date-overlay {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    z-index: 2;
+}
+
+/* Image */
+.pr-img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+/* PDF */
+.pr-pdf {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 110px;
+    border-radius: 10px;
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: #f87171;
+    font-size: 18px;
+}
+
+.pr-group-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* ── Lightbox Background ── */
+.pr-lightbox-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(6px);
+}
+
+/* ── Image ── */
+.pr-lightbox-img {
+    max-width: 90%;
+    max-height: 85%;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Close button ── */
+.pr-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: white;
+    font-size: 18px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ── Date overlay ── */
+.pr-lightbox-date {
+    position: absolute;
+    bottom: 20px;
+    color: #cbd5f5;
+    font-size: 12px;
+}
+
+/* ── Mobile accordion feel ───────────────── */
+@media (max-width: 600px) {
+    .pr-group-body {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pr-group-header {
+        padding: 12px;
+    }
+}

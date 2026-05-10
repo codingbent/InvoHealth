@@ -47,7 +47,7 @@ export default function Profile(props) {
                     }
                     .pf-loader-bar {
                         height: 100%;
-                        width: stretch;
+                        width: 100%;
                         background: linear-gradient(90deg, #4d7cf6, #60a5fa);
                         border-radius: 99px;
                         transform-origin: left;
@@ -57,7 +57,7 @@ export default function Profile(props) {
                         display: flex;
                         flex-direction: column;
                         gap: 12px;
-                        width: stretch;
+                        width: 100%;
                         max-width: 680px;
                     }
                     .pf-skel {

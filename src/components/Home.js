@@ -9,6 +9,7 @@ export default function Home(props) {
         services,
         availability,
         country,
+        name,
     } = props;
 
     return (
@@ -21,6 +22,7 @@ export default function Home(props) {
                 services={services}
                 availability={availability}
                 country={country}
+                name={name}
             />
         </>
     );

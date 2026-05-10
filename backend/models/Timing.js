@@ -8,7 +8,7 @@ const slotSchema = new Schema({
 });
 
 const dayAvailabilitySchema = new Schema({
-    day: {
+    day: {  
         type: String,
         enum: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         required: true,

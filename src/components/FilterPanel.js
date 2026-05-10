@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toZonedTime } from "date-fns-tz";
 import "../css/Filterpanel.css";
 import { fetchPaymentMethods } from "../api/payment.api";
 
@@ -24,6 +25,7 @@ export default function FilterPanel({
     setSelectedFY,
     isdashboard = false,
     country,
+    clinicTimezone = null, // ← NEW: IANA timezone string e.g. "America/New_York"
 }) {
     const [paymentOptions, setPaymentOptions] = useState([]);
 
@@ -32,18 +34,20 @@ export default function FilterPanel({
         UK: { startMonth: 3, startDay: 6 },
         AU: { startMonth: 6, startDay: 1 },
         NZ: { startMonth: 6, startDay: 1 },
-
         DEFAULT: { startMonth: 0, startDay: 1 },
     };
 
     const getFYLabel = (fy) => {
         const config = FY_CONFIG[country?.code] || FY_CONFIG.DEFAULT;
-
-        if (config.startMonth === 0) {
-            return `FY ${fy}`;
-        }
-
+        if (config.startMonth === 0) return `FY ${fy}`;
         return `FY ${fy}-${String(Number(fy) + 1).slice(-2)}`;
+    };
+
+    const getClinicToday = () => {
+        if (clinicTimezone) {
+            return toZonedTime(new Date(), clinicTimezone);
+        }
+        return new Date();
     };
 
     const formatDate = (date) => {
@@ -53,38 +57,38 @@ export default function FilterPanel({
         return `${yyyy}-${mm}-${dd}`;
     };
 
+    // ── Quick filter date builders — all use clinic timezone ─────────
     const getTodayRange = () => {
-        const today = new Date();
-        return { start: formatDate(today), end: formatDate(today) };
-    };
-
-    const applyFinancialYear = (fy) => {
-        if (!fy) return;
-
-        const config = FY_CONFIG[country?.code] || FY_CONFIG.DEFAULT;
-
-        const start = new Date(Number(fy), config.startMonth, config.startDay);
-
-        const end = new Date(start);
-        end.setFullYear(start.getFullYear() + 1);
-        end.setDate(end.getDate() - 1);
-
-        setStartDate(formatDate(start));
-        setEndDate(formatDate(end));
+        const today = getClinicToday();
+        const s = formatDate(today);
+        return { start: s, end: s };
     };
 
     const getLast30DaysRange = () => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(end.getDate() - 30);
+        const end = getClinicToday();
+        const start = toZonedTime(
+            new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
+            clinicTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        );
         return { start: formatDate(start), end: formatDate(end) };
     };
 
     const getThisMonthRange = () => {
-        const now = new Date();
+        const now = getClinicToday();
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         return { start: formatDate(start), end: formatDate(end) };
+    };
+
+    const applyFinancialYear = (fy) => {
+        if (!fy) return;
+        const config = FY_CONFIG[country?.code] || FY_CONFIG.DEFAULT;
+        const start = new Date(Number(fy), config.startMonth, config.startDay);
+        const end = new Date(start);
+        end.setFullYear(start.getFullYear() + 1);
+        end.setDate(end.getDate() - 1);
+        setStartDate(formatDate(start));
+        setEndDate(formatDate(end));
     };
 
     useEffect(() => {
@@ -101,14 +105,11 @@ export default function FilterPanel({
 
     return (
         <>
-            {/* Backdrop */}
             {open && (
                 <div className="fp-backdrop" onClick={() => setOpen(false)} />
             )}
 
-            {/* Panel */}
             <div className={`fp-panel ${open ? "open" : ""}`}>
-                {/* Header */}
                 <div className="fp-header">
                     <div className="fp-header-left">
                         <div className="fp-title">
@@ -120,9 +121,7 @@ export default function FilterPanel({
                     </button>
                 </div>
 
-                {/* Body */}
                 <div className="fp-body">
-                    {/* Search */}
                     {!isdashboard && (
                         <div className="fp-section">
                             <label htmlFor="search" className="fp-label">
@@ -140,11 +139,9 @@ export default function FilterPanel({
                         </div>
                     )}
 
-                    {/* Payment Method */}
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Payment Method</legend>
-
                             <div
                                 className="fp-chips"
                                 role="group"
@@ -155,7 +152,6 @@ export default function FilterPanel({
                                         const label = `${p.subCategoryName}`;
                                         const isActive =
                                             selectedPayments.includes(p.id);
-
                                         return (
                                             <button
                                                 key={p.id}
@@ -186,14 +182,12 @@ export default function FilterPanel({
                         </fieldset>
                     </div>
 
-                    {/* Payment Status */}
                     {!isdashboard && (
                         <div className="fp-section">
                             <fieldset className="fp-fieldset">
                                 <legend className="fp-label">
                                     Payment Status
                                 </legend>
-
                                 <div
                                     className="fp-chips"
                                     role="group"
@@ -203,7 +197,6 @@ export default function FilterPanel({
                                         (type) => {
                                             const isActive =
                                                 selectedStatus.includes(type);
-
                                             return (
                                                 <button
                                                     key={type}
@@ -237,7 +230,6 @@ export default function FilterPanel({
                         </div>
                     )}
 
-                    {/* Gender */}
                     <div className="fp-section">
                         <label htmlFor="gender" className="fp-label">
                             Gender
@@ -258,54 +250,54 @@ export default function FilterPanel({
 
                     <div className="fp-divider" />
 
-                    {/* Services */}
-                    <div className="fp-section">
-                        <fieldset className="fp-fieldset">
-                            <legend className="fp-label">Services</legend>
+                    {!isdashboard && (
+                        <div className="fp-section">
+                            <fieldset className="fp-fieldset">
+                                <legend className="fp-label">Services</legend>
+                                <div
+                                    className="fp-chips"
+                                    role="group"
+                                    aria-label="Services"
+                                >
+                                    {allServices.map((s) => {
+                                        const active =
+                                            selectedServices.includes(s);
+                                        return (
+                                            <button
+                                                key={s}
+                                                type="button"
+                                                role="checkbox"
+                                                aria-checked={active}
+                                                aria-label={`Service ${s}`}
+                                                name="services"
+                                                className={`fp-chip ${active ? "active" : ""}`}
+                                                onClick={() =>
+                                                    setSelectedServices(
+                                                        active
+                                                            ? selectedServices.filter(
+                                                                  (x) =>
+                                                                      x !== s,
+                                                              )
+                                                            : [
+                                                                  ...selectedServices,
+                                                                  s,
+                                                              ],
+                                                    )
+                                                }
+                                            >
+                                                {s}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </fieldset>
+                        </div>
+                    )}
 
-                            <div
-                                className="fp-chips"
-                                role="group"
-                                aria-label="Services"
-                            >
-                                {allServices.map((s) => {
-                                    const active = selectedServices.includes(s);
-
-                                    return (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            role="checkbox"
-                                            aria-checked={active}
-                                            aria-label={`Service ${s}`}
-                                            name="services"
-                                            className={`fp-chip ${active ? "active" : ""}`}
-                                            onClick={() =>
-                                                setSelectedServices(
-                                                    active
-                                                        ? selectedServices.filter(
-                                                              (x) => x !== s,
-                                                          )
-                                                        : [
-                                                              ...selectedServices,
-                                                              s,
-                                                          ],
-                                                )
-                                            }
-                                        >
-                                            {s}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </fieldset>
-                    </div>
-
-                    {/* Quick Filters */}
+                    {/* Quick Filters — dates computed in clinic timezone */}
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Quick Filters</legend>
-
                             <div
                                 className="fp-chips"
                                 role="group"
@@ -325,7 +317,6 @@ export default function FilterPanel({
                                 >
                                     Today
                                 </button>
-
                                 <button
                                     type="button"
                                     name="quickFilter"
@@ -341,7 +332,6 @@ export default function FilterPanel({
                                 >
                                     This Month
                                 </button>
-
                                 <button
                                     type="button"
                                     name="quickFilter"
@@ -361,11 +351,9 @@ export default function FilterPanel({
                         </fieldset>
                     </div>
 
-                    {/* Date Range */}
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Date Range</legend>
-
                             <div className="fp-date-row">
                                 <input
                                     id="start-date"
@@ -380,7 +368,6 @@ export default function FilterPanel({
                                         setStartDate(e.target.value);
                                     }}
                                 />
-
                                 <input
                                     id="end-date"
                                     name="endDate"
@@ -398,12 +385,10 @@ export default function FilterPanel({
                         </fieldset>
                     </div>
 
-                    {/* Financial Year */}
                     <div className="fp-section">
                         <label htmlFor="financial-year" className="fp-label">
                             Financial Year
                         </label>
-
                         <select
                             id="financial-year"
                             name="financialYear"
@@ -417,10 +402,8 @@ export default function FilterPanel({
                             }}
                         >
                             <option value="">Select Financial Year</option>
-
                             {Array.from({ length: 6 }).map((_, i) => {
                                 const year = 2025 + i;
-
                                 return (
                                     <option key={year} value={year}>
                                         {getFYLabel(year)}
@@ -431,11 +414,11 @@ export default function FilterPanel({
                     </div>
                 </div>
 
-                {/* Footer — Reset */}
                 <div className="fp-footer">
                     <button
                         className="fp-reset"
                         onClick={() => {
+                            if (setSearchTerm) setSearchTerm("");
                             setSelectedPayments([]);
                             setSelectedServices([]);
                             setSelectedGender("");

@@ -25,6 +25,7 @@ const PatientSchema = new Schema({
     email: {
         type: String,
         required: false,
+        sparse: true,
     },
     amount: {
         type: Number,
@@ -37,6 +38,11 @@ const PatientSchema = new Schema({
     isPercent: {
         type: Boolean,
         default: false,
+    },
+    dob: {
+        type: String,
+        match: /^\d{4}-\d{2}-\d{2}$/,
+        required: true,
     },
     age: {
         type: Number,
@@ -51,12 +57,17 @@ const PatientSchema = new Schema({
         type: Date,
         default: Date.now,
     },
-    doctor: {
-        type: Schema.Types.ObjectId,
-        ref: "Doc",
-        required: true,
-    },
+    doctors: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "Doc",
+        },
+    ],
 });
-PatientSchema.index({ doctor: 1, name: 1 });
+
+PatientSchema.index({ doctors: 1, name: 1 });
+
+PatientSchema.index({ numberHash: 1, name: 1, email: 1 });
+
 const Patient = mongoose.model("Patient", PatientSchema);
 module.exports = Patient;

@@ -313,7 +313,7 @@ ____________________________________ */
     border: 1px solid #161d2e;
 }
 .apr-table {
-    width: stretch;
+    width: 100%;
     border-collapse: collapse;
     font-size: 12px;
 }

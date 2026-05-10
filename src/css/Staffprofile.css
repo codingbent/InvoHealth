@@ -221,7 +221,7 @@
     cursor: pointer;
     background: none;
     border: none;
-    width: stretch;
+    width: 100%;
     transition: background 0.15s;
 }
 .sfp-section-hdr:hover {
@@ -272,18 +272,19 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    margin-top: 1%;
 }
 .sfp-label {
     font-size: 9px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #2a374f;
+    color: var(--text-secondary);
 }
 .sfp-input-wrap {
     position: relative;
 }
 .sfp-input {
-    width: stretch;
+    width: 100%;
     background: #07090f;
     border: 1px solid #192035;
     border-radius: 9px;
@@ -297,7 +298,7 @@
     box-sizing: border-box;
 }
 .sfp-input::placeholder {
-    color: #1e2b40;
+    color: var(--text-muted);
 }
 .sfp-input:focus {
     border-color: rgba(77, 124, 246, 0.45);
@@ -407,7 +408,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: stretch;
+    width: 100%;
     padding: 12px;
     background: rgba(248, 113, 113, 0.06);
     border: 1px solid rgba(248, 113, 113, 0.2);
@@ -450,7 +451,7 @@
     border: 1px solid rgba(248, 113, 113, 0.2);
     border-radius: 18px;
     padding: 28px;
-    width: stretch;
+    width: 100%;
     max-width: 380px;
     box-shadow:
         0 40px 100px rgba(0, 0, 0, 0.7),
@@ -513,6 +514,148 @@
     background-size: 600px 100%;
     animation: sfp-shimmer 1.5s infinite linear;
     border-radius: 8px;
+}
+
+/* ── Staff Phone ───────────────────────────── */
+
+.sfp-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #8ea4d2;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.sfp-phone-number {
+    color: #8ea4d2;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sfp-phone-eye {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid #24314f;
+    background: rgba(77, 124, 246, 0.06);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #7fa8ff;
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.15s ease,
+        color 0.2s ease;
+
+    flex-shrink: 0;
+}
+
+.sfp-phone-eye:hover {
+    background: rgba(77, 124, 246, 0.12);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #9ec2ff;
+    transform: translateY(-1px);
+}
+
+.sfp-phone-eye:active {
+    transform: scale(0.96);
+}
+
+.sfp-phone-eye svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* ── Password checks ───────────────────── */
+
+.sfp-pw-checks {
+    margin-top: 10px;
+    margin-bottom: 18px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.sfp-pw-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+.sfp-pw-check span {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.sfp-pw-check.pass {
+    color: #4ade80;
+}
+
+.sfp-pw-check.pass span {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.sfp-pw-check.fail {
+    color: #f87171;
+}
+
+.sfp-pw-check.fail span {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.15);
+}
+.sfp-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #0b1120;
+}
+
+.sfp-eye:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* mobile */
+@media (max-width: 640px) {
+    .sfp-profile-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sfp-meta-item {
+        width: 100%;
+        justify-content: start;
+        margin-top: 10px;
+    }
+    .sfp-field {
+        margin-top: 5%;
+    }
 }
 
 @media (max-width: 640px) {

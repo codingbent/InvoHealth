@@ -14,7 +14,11 @@ const AppointmentSchema = new Schema({
     },
     visits: [
         {
-            date: { type: Date, default: Date.now },
+            date: {
+                type: String,
+                required: true,
+                match: /^\d{4}-\d{2}-\d{2}$/,
+            },
             time: { type: String },
 
             service: [
@@ -45,10 +49,14 @@ const AppointmentSchema = new Schema({
 
             invoiceNumber: { type: Number, default: 1 },
 
-            image: {
-                type: String,
-                default: "",
-            },
+            images: [
+                {
+                    url: { type: String },
+                    type: { type: String },
+                    public_id: { type: String },
+                    resource_type: { type: String },
+                },
+            ],
         },
     ],
 });
@@ -62,11 +70,12 @@ AppointmentSchema.statics.addVisit = async function (
     invoiceNumber,
     date,
     collectedInput,
+    files = [],
 ) {
-    let visitDate = new Date();
-    if (date && !isNaN(Date.parse(date))) {
-        visitDate = new Date(date);
-    }
+    const visitDate =
+        typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)
+            ? date
+            : new Date().toLocaleDateString("en-CA");
 
     const finalAmount = Number(amount) || 0;
 
@@ -90,6 +99,14 @@ AppointmentSchema.statics.addVisit = async function (
         status,
         paymentMethodId: paymentMethodId || null,
         invoiceNumber,
+        images: files.map((f) => ({
+            url: f.url,
+            type: f.type,
+            public_id: f.public_id,
+            resource_type:
+                f.resource_type ||
+                (f.type === "application/pdf" ? "raw" : "image"),
+        })),
     };
 
     return await this.findOneAndUpdate(
@@ -103,6 +120,8 @@ AppointmentSchema.statics.addVisit = async function (
 };
 
 AppointmentSchema.index({ doctor: 1, "visits.paymentMethodId": 1 });
+AppointmentSchema.index({ patient: 1, doctor: 1 }, { unique: true });
+AppointmentSchema.index({ doctor: 1, "visits.date": 1, "visits.time": 1 });
 
 const Appointment = mongoose.model("Appointment", AppointmentSchema);
 module.exports = Appointment;

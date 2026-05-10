@@ -16,7 +16,7 @@ const fetchuser = async (req, res, next) => {
     }
 
     try {
-        const data = jwt.verify(token, JWT_SECRET);
+        const data = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
 
         if (!data.user) {
             return res.status(401).json({

@@ -1,0 +1,743 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PatientLogin.css  —  shared by PatientLogin.js AND PatientSignup.js
+   Import this file from both components.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+    --pln-bg: #080e1a;
+    --pln-surface: #0d1526;
+    --pln-card: #0f172a;
+    --pln-border: #1a2744;
+    --pln-border-hi: #2563eb;
+    --pln-blue: #3b82f6;
+    --pln-blue-dim: #1d4ed8;
+    --pln-text: #e2e8f0;
+    --pln-muted: #64748b;
+    --pln-faint: #1e293b;
+}
+
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.pln-root {
+    background: var(--pln-bg);
+    min-height: 100vh;
+    color: var(--pln-text);
+    overflow-x: hidden;
+    position: relative;
+    font-family:
+        "DM Sans",
+        -apple-system,
+        sans-serif;
+}
+
+/* Dot-grid */
+.pln-bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #1e3a5f22 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Blue glow blob */
+.pln-bg-glow {
+    position: fixed;
+    top: -120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 500px;
+    background: radial-gradient(
+        ellipse at center,
+        #1d4ed820 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ── Split layout ────────────────────────────────────────────────────────── */
+.pln-layout {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── LEFT panel ──────────────────────────────────────────────────────────── */
+.pln-left {
+    display: none; /* hidden on mobile — right panel fills full screen */
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px 56px;
+    flex: 1;
+    max-width: 52%;
+    border-right: 1px solid var(--pln-border);
+}
+
+/* Pill */
+.pln-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid #1e3a5f;
+    background: #0d1e3a;
+    font-size: 12px;
+    font-weight: 500;
+    color: #60a5fa;
+    margin-bottom: 28px;
+    letter-spacing: 0.4px;
+    width: fit-content;
+}
+
+.pln-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e99;
+    animation: plPulse 2s ease-in-out infinite;
+}
+
+@keyframes plPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(0.8);
+    }
+}
+
+/* Headline */
+.pln-headline {
+    font-size: clamp(28px, 3.5vw, 46px);
+    font-weight: 700;
+    line-height: 1.15;
+    color: #f1f5f9;
+    margin: 0 0 16px;
+    letter-spacing: -0.4px;
+}
+
+.pln-headline-accent {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.pln-sub {
+    font-size: 15px;
+    color: var(--pln-muted);
+    line-height: 1.7;
+    margin: 0 0 28px;
+    max-width: 400px;
+}
+
+/* Trust row */
+.pln-trust {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 36px;
+}
+
+.pln-trust-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--pln-muted);
+}
+
+.pln-trust-icon {
+    font-size: 13px;
+}
+
+.pln-trust-sep {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--pln-border);
+}
+
+/* Feature list */
+.pln-feat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.pln-feat-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.pln-feat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.pln-feat-dot--blue {
+    background: #3b82f6;
+    box-shadow: 0 0 8px #3b82f644;
+}
+.pln-feat-dot--teal {
+    background: #14b8a6;
+    box-shadow: 0 0 8px #14b8a644;
+}
+.pln-feat-dot--purple {
+    background: #8b5cf6;
+    box-shadow: 0 0 8px #8b5cf644;
+}
+
+.pln-feat-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 3px;
+}
+
+.pln-feat-desc {
+    font-size: 12.5px;
+    color: var(--pln-muted);
+    line-height: 1.6;
+}
+
+/* ── RIGHT panel ─────────────────────────────────────────────────────────── */
+.pln-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    min-height: 100vh;
+}
+
+.pln-form-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--pln-card);
+    border: 1px solid var(--pln-border);
+    border-radius: 20px;
+    padding: 32px 28px;
+}
+
+/* Mobile brand mark (hidden on desktop — left panel shows brand) */
+.pln-form-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.pln-brand-icon {
+    font-size: 20px;
+}
+
+.pln-brand-text em {
+    font-style: italic;
+    color: #60a5fa;
+}
+
+/* Form headings */
+.pln-form-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin: 0 0 8px;
+    letter-spacing: -0.2px;
+}
+
+.pln-form-sub {
+    font-size: 13px;
+    color: var(--pln-muted);
+    line-height: 1.65;
+    margin: 0 0 24px;
+}
+
+/* Form */
+.pln-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pln-field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 14px;
+}
+
+.pln-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+}
+
+.pln-input {
+    padding: 11px 13px;
+    border-radius: 9px;
+    border: 1px solid var(--pln-border);
+    background: #080e1a;
+    color: var(--pln-text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+    width: 100%;
+}
+
+.pln-input:focus {
+    border-color: var(--pln-border-hi);
+    box-shadow: 0 0 0 3px #2563eb1a;
+}
+
+.pln-input--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--pln-faint);
+}
+
+/* OTP input — large centered digits */
+.pln-input-otp {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 10px;
+    text-align: center;
+    padding: 14px 13px;
+}
+
+/* Submit button */
+.pln-btn-submit {
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    background: var(--pln-blue-dim);
+    color: #fff;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+        background 0.15s,
+        transform 0.1s;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+}
+
+.pln-btn-submit:hover:not(:disabled) {
+    background: var(--pln-blue);
+    transform: translateY(-1px);
+}
+
+.pln-btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Back / secondary button */
+.pln-btn-back {
+    width: 100%;
+    padding: 11px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pln-muted);
+    border: 1px solid var(--pln-border);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    margin-top: 8px;
+}
+
+.pln-btn-back:hover {
+    background: var(--pln-faint);
+    color: var(--pln-text);
+}
+
+/* Spinner */
+.pln-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: plSpin 0.7s linear infinite;
+    display: inline-block;
+}
+
+@keyframes plSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Footer / link */
+.pln-form-footer {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--pln-muted);
+}
+
+.pln-form-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.pln-form-link:hover {
+    text-decoration: underline;
+}
+
+.pln-form-hint {
+    margin-top: 14px;
+    font-size: 11.5px;
+    color: #475569;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ── Signup-specific ─────────────────────────────────────────────────────── */
+
+/* Step indicator */
+.ps-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 24px;
+}
+
+.ps-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.ps-step-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--pln-border);
+    background: var(--pln-faint);
+    color: var(--pln-muted);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition:
+        border-color 0.2s,
+        background 0.2s,
+        color 0.2s;
+}
+
+.ps-step.active .ps-step-dot {
+    border-color: var(--pln-blue);
+    background: #1d4ed820;
+    color: #93c5fd;
+}
+
+.ps-step.done .ps-step-dot {
+    border-color: #22c55e;
+    background: #052e16;
+    color: #4ade80;
+}
+
+.ps-step-label {
+    font-size: 12px;
+    color: var(--pln-muted);
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+
+.ps-step.active .ps-step-label {
+    color: #93c5fd;
+}
+.ps-step.done .ps-step-label {
+    color: #4ade80;
+}
+
+.ps-step-line {
+    flex: 0 0 24px;
+    height: 1px;
+    background: var(--pln-border);
+    margin: 0 4px;
+}
+
+/* Phone row */
+.ps-phone-row {
+    display: flex;
+    gap: 8px;
+}
+
+.ps-dial-select {
+    width: 130px;
+    flex-shrink: 0;
+    padding: 11px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--pln-border);
+    background: #080e1a;
+    color: var(--pln-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.ps-dial-select:focus {
+    border-color: var(--pln-border-hi);
+    box-shadow: 0 0 0 3px #2563eb1a;
+}
+
+.ps-phone-input {
+    flex: 1;
+}
+
+/* Age + gender side by side */
+.ps-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* Resend button */
+.ps-resend-btn {
+    background: none;
+    border: none;
+    color: #60a5fa;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 6px 0;
+    margin-top: 4px;
+    text-align: center;
+    transition: opacity 0.15s;
+}
+
+.ps-resend-btn:hover:not(:disabled) {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+.ps-resend-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+/* Tablet 768px+ — show side-by-side */
+@media (min-width: 768px) {
+    .pln-layout {
+        flex-direction: row;
+        min-height: 100vh;
+    }
+
+    .pln-left {
+        display: flex;
+    }
+
+    .pln-right {
+        max-width: 48%;
+        min-height: 100vh;
+        padding: 40px 36px;
+    }
+
+    .pln-form-brand {
+        display: none; /* brand is now on left panel */
+    }
+}
+
+/* ── FLOATING MOCKUP ─────────────────────────────────────────────────────── */
+.pln-mockup {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    flex-shrink: 0;
+    margin-top: 20px;
+}
+
+.pln-mock-card {
+    background: var(--pln-card);
+    border: 1px solid var(--pln-border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+    animation: plFloat 4s ease-in-out infinite;
+}
+
+@keyframes plFloat {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.pln-mock-card-back {
+    position: absolute;
+    inset: 0;
+    top: 14px;
+    left: 14px;
+    right: -14px;
+    background: #0d1526;
+    border: 1px solid var(--pln-border);
+    border-radius: 16px;
+    z-index: 1;
+}
+
+.pln-mock-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.pln-mock-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #1e40af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.pln-mock-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 2px;
+}
+
+.pln-mock-spec {
+    font-size: 11px;
+    color: var(--pln-muted);
+}
+
+.pln-mock-badge {
+    margin-left: auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #052e16;
+    color: #4ade80;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #14532d;
+}
+
+.pln-mock-divider {
+    height: 1px;
+    background: var(--pln-border);
+    margin: 12px 0;
+}
+
+.pln-mock-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.pln-mock-label {
+    font-size: 12px;
+    color: var(--pln-muted);
+}
+
+.pln-mock-val {
+    font-size: 12px;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.pln-mock-inv {
+    color: #93c5fd;
+}
+
+.pln-mock-paid {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4ade80;
+    background: #052e1633;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid #14532d44;
+}
+
+.pln-mock-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #60a5fa;
+    cursor: default;
+}
+
+/* Desktop 1100px+ */
+@media (min-width: 1100px) {
+    .pln-left {
+        padding: 72px 64px;
+    }
+    .pln-right {
+        padding: 48px 56px;
+    }
+
+    .pln-form-card {
+        max-width: 460px;
+        padding: 40px 36px;
+    }
+}
+
+/* Small mobile 360px and below */
+@media (max-width: 380px) {
+    .pln-form-card {
+        padding: 24px 18px;
+    }
+    .pln-input-otp {
+        letter-spacing: 6px;
+        font-size: 20px;
+    }
+    .ps-row-2 {
+        grid-template-columns: 1fr;
+    }
+    .ps-dial-select {
+        width: 110px;
+    }
+}

@@ -1,6 +1,7 @@
 @import "./App.css";
+
 /* ___________________________________
-        Apppointment List 
+        Appointment List 
 ______________________________________ */
 
 .al-month-header {
@@ -10,17 +11,20 @@ ______________________________________ */
     margin-bottom: 14px;
     margin-top: 8px;
 }
+
 .al-month-left {
     display: flex;
     align-items: center;
     gap: 12px;
     flex: 1;
 }
+
 .al-month-line {
     height: 1px;
     background: linear-gradient(90deg, #131929, transparent);
     flex: 1;
 }
+
 .al-month-name {
     font-size: 10px;
     letter-spacing: 0.18em;
@@ -28,6 +32,7 @@ ______________________________________ */
     color: var(--text-muted);
     white-space: nowrap;
 }
+
 .al-month-total {
     display: flex;
     align-items: center;
@@ -38,9 +43,12 @@ ______________________________________ */
     margin-left: 14px;
     flex-shrink: 0;
 }
+
 .al-month-block {
     margin-bottom: 28px;
 }
+
+/* Load more */
 .al-load-more {
     height: 40px;
     display: flex;
@@ -48,6 +56,8 @@ ______________________________________ */
     justify-content: center;
     gap: 6px;
 }
+
+/* Loading animation */
 .al-loading-dot {
     width: 5px;
     height: 5px;
@@ -56,12 +66,15 @@ ______________________________________ */
     animation: al-pulse 1.2s ease-in-out infinite;
     display: inline-block;
 }
+
 .al-loading-dot:nth-child(2) {
     animation-delay: 0.2s;
 }
+
 .al-loading-dot:nth-child(3) {
     animation-delay: 0.4s;
 }
+
 @keyframes al-pulse {
     0%,
     80%,
@@ -74,6 +87,7 @@ ______________________________________ */
         opacity: 1;
     }
 }
+
 .al-empty {
     text-align: center;
     padding: 40px 20px;
@@ -81,6 +95,7 @@ ______________________________________ */
     color: #2e3d5c;
     letter-spacing: 0.08em;
 }
+
 .al-empty-icon {
     font-size: 28px;
     margin-bottom: 10px;

@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                background: #f3f4f6;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Arial, sans-serif;
+                color: #111827;
+            }
+
+            .page {
+                width: 794px;
+                min-height: 1123px;
+                margin: 0 auto;
+                background: #fff;
+                padding: 48px 52px;
+                position: relative;
+            }
+
+            /* watermark */
+            .page::after {
+                content: "INVOHEALTH";
+                position: absolute;
+                top: 45%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-20deg);
+                font-size: 72px;
+                font-weight: 800;
+                color: rgba(17, 24, 39, 0.035);
+            }
+
+            /* header */
+            .header {
+                display: flex;
+                justify-content: space-between;
+                padding-bottom: 24px;
+                border-bottom: 2px solid #111827;
+            }
+
+            /* invoice meta */
+            .invoice-meta {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 22px;
+            }
+
+            /* ===== TABLE FIXED ===== */
+            .invoice-table {
+                width: 100%;
+                border-collapse: collapse; /* FIX */
+                border-spacing: 0; /* FIX */
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                overflow: hidden;
+            }
+
+            /* cells */
+            .invoice-table th,
+            .invoice-table td {
+                padding: 16px 20px;
+                font-size: 14px;
+                border: 1px solid #e5e7eb;
+            }
+
+            /* header style */
+            .invoice-table thead th {
+                background: #f9fafb;
+                font-weight: 700;
+            }
+
+            /* alignment */
+            .invoice-table th:last-child,
+            .invoice-table td:last-child {
+                text-align: right;
+            }
+
+            /* remove outer duplicate borders */
+            .invoice-table tr:first-child th {
+                border-top: none;
+            }
+
+            .invoice-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .invoice-table th:first-child,
+            .invoice-table td:first-child {
+                border-left: none;
+            }
+
+            .invoice-table th:last-child,
+            .invoice-table td:last-child {
+                border-right: none;
+            }
+
+            /* highlight rows */
+            .summary-row td {
+                font-weight: 700;
+            }
+
+            .detail-row td {
+                font-weight: 600;
+            }
+
+            .balance-row td {
+                background: #fff !important;
+            }
+
+            /* footer */
+            .footer {
+                margin-top: 28px;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 16px;
+                font-size: 13px;
+                color: #6b7280;
+            }
+
+            /* signature */
+            .signature {
+                text-align: right;
+                margin-top: 60px;
+                font-weight: 700;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="page">
+            <div class="header">
+                <div>
+                    <div style="font-weight: 800; font-size: 24px">
+                        ${data.clinic.name}
+                    </div>
+                    <div style="font-size: 14px; color: #4b5563">
+                        <strong style="font-size: 16px"
+                            >${data.doctor.name}</strong
+                        ><br />
+                        ${data.doctor.qualification}<br />
+                        Reg No: ${data.doctor.regNo}
+                    </div>
+                </div>
+
+                <div style="text-align: right; font-size: 13px; color: #4b5563">
+                    ${addrParts.join("<br />")}
+                </div>
+            </div>
+
+            <div class="invoice-meta">
+                <div>
+                    <strong>Invoice #INV-${data.invoice.invoiceNumber}</strong>
+                </div>
+                <div>${data.invoice.date}</div>
+            </div>
+
+            <div
+                style="
+                    margin: 18px 0;
+                    border-bottom: 1px solid #e5e7eb;
+                    padding-bottom: 12px;
+                "
+            >
+                Patient: ${data.patient.name}
+            </div>
+
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    ${servicesRows} ${data.invoice.discount &&
+                    data.invoice.discount > 0 ? `
+                    <tr class="detail-row">
+                        <td>Discount</td>
+                        <td>
+                            - ${currency} ${formatMoney(data.invoice.discount)}
+                        </td>
+                    </tr>
+                    ` : ""}
+
+                    <tr class="summary-row">
+                        <td>Total Payable</td>
+                        <td>${currency} ${formatMoney(data.invoice.total)}</td>
+                    </tr>
+
+                    <tr class="detail-row">
+                        <td>Collected</td>
+                        <td>
+                            ${currency} ${formatMoney(data.invoice.collected)}
+                        </td>
+                    </tr>
+
+                    ${balanceRow}
+
+                    <tr>
+                        <td>Status</td>
+                        <td>${data.invoice.status}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <div>
+                    <strong>In Words:</strong> ${data.invoice.amountInWords}
+                </div>
+                <div>${receiptLine}</div>
+            </div>
+
+            <!-- Authorized Signatory -->
+            <div class="signature">
+                <div>${data.doctor.name}</div>
+                <div
+                    style="
+                        font-weight: 400;
+                        font-size: 12px;
+                        color: #6b7280;
+                        margin-top: 4px;
+                    "
+                >
+                    Authorised Signatory
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

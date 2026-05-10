@@ -1,9 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { authFetch } from "./authfetch";
-import { toWords } from "number-to-words";
 import {
     Pencil,
     Trash2,
@@ -25,12 +22,21 @@ import EditAppointment from "./EditAppointment";
 import EditPatient from "./EditPatient";
 import "../css/Patientdetails.css";
 import { fetchCountries } from "../api/country.api";
+import generateInvoicePDF from "./utils/generateInvoice";
+import { fetchServices } from "../api/service.api";
 
-export default function PatientDetails({ showAlert, currency, usage }) {
+export default function PatientDetails({
+    showAlert,
+    currency,
+    usage,
+    categoryName,
+    subCategoryName,
+    country,
+}) {
     const navigate = useNavigate();
     const { id } = useParams();
 
-    // ─── Patient / appointment data ───────────────────────────────────────────
+    // ─── Patient / appointment data ────────────────────────────────────────────
     const [details, setDetails] = useState(null);
     const [appointmentId, setAppointmentId] = useState(null);
     const [appointments, setAppointments] = useState([]);
@@ -38,14 +44,14 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     const [paymentOptions, setPaymentOptions] = useState([]);
     const [doctor, setDoctor] = useState(null);
 
-    // ─── UI state ─────────────────────────────────────────────────────────────
+    // ─── UI state ──────────────────────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
     const [recordView, setRecordView] = useState("history");
     const [lightboxImg, setLightboxImg] = useState(null);
-    const [fullNumber, setFullNumber] = useState(null); // null = hidden, string = revealed
+    const [fullNumber, setFullNumber] = useState(null);
 
-    // ─── Modal state ──────────────────────────────────────────────────────────
+    // ─── Modal state ───────────────────────────────────────────────────────────
     const [editPatientOpen, setEditPatientOpen] = useState(false);
     const [editingVisit, setEditingVisit] = useState(null);
     const [invoiceDialog, setInvoiceDialog] = useState(null);
@@ -57,20 +63,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
             const res = await authFetch(`${API_BASE_URL}/api/doctor/get_doc`);
             const data = await res.json();
             if (data.success) setDoctor(data.doctor);
-        } catch (err) {
-            console.error(err);
-        }
-    }, []);
-
-    const fetchServices = useCallback(async () => {
-        try {
-            const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/services/fetchall_services`,
-            );
-            const data = await res.json();
-            setAvailableServices(
-                Array.isArray(data) ? data : data.services || [],
-            );
         } catch (err) {
             console.error(err);
         }
@@ -92,20 +84,20 @@ export default function PatientDetails({ showAlert, currency, usage }) {
             setDetails(patientData);
             setAppointmentId(appointmentsData.appointmentId);
             setAppointments(appointmentsData.visits || []);
-            await fetchServices();
+            const servicesData = await fetchServices();
+            setAvailableServices(servicesData || []);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [id, fetchServices]);
+    }, [id]);
 
     useEffect(() => {
         fetchData();
         fetchDoctor();
     }, [fetchData, fetchDoctor]);
 
-    // Payment options (for rendering labels in the table)
     useEffect(() => {
         fetchPaymentMethods()
             .then(setPaymentOptions)
@@ -128,10 +120,10 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
+    const locale = country?.code ? `en-${country.code}` : undefined;
+
     const fmt = (v) =>
-        new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
-            v,
-        );
+        new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(v);
 
     const formatTime = (time) => {
         if (!time) return "";
@@ -157,15 +149,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         return "Other";
     };
 
-    const visitStatus = (visit) => {
-        const col = Number(visit.collected ?? 0);
-        const tot = Number(visit.amount ?? 0);
-        const rem = tot - col;
-        if (rem <= 0) return "Paid";
-        if (col > 0) return "Partial";
-        return "Unpaid";
-    };
-
     const fetchFullNumber = async () => {
         try {
             const res = await authFetch(
@@ -181,11 +164,10 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     // ─────────────────────────────────────────────────────────────────────────
     // Patient delete
     // ─────────────────────────────────────────────────────────────────────────
-
     const handleDeletePatient = async () => {
         if (
             !window.confirm(
-                `Are you sure you want to delete "${details?.name}"?\nThis will remove all related appointments.`,
+                `Remove "${details?.name}" from your patients?\n\nThis will delete only your records and appointments.`,
             )
         )
             return;
@@ -197,11 +179,10 @@ export default function PatientDetails({ showAlert, currency, usage }) {
             );
             const data = await res.json();
             if (data.success) {
-                showAlert("Patient deleted successfully", "success");
+                showAlert("Patient removed successfully", "success");
                 navigate("/");
-            } else {
+            } else
                 showAlert(data.message || "Failed to delete patient", "danger");
-            }
         } catch (err) {
             console.error(err);
             showAlert("Server error", "danger");
@@ -213,25 +194,19 @@ export default function PatientDetails({ showAlert, currency, usage }) {
     // ─────────────────────────────────────────────────────────────────────────
     // Appointment delete
     // ─────────────────────────────────────────────────────────────────────────
-
     const deleteVisit = async (visit) => {
         if (!window.confirm("Delete this appointment?")) return;
-
         try {
             const res = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/delete_appointment/${appointmentId}/${visit._id}`,
                 { method: "DELETE" },
             );
-
             const data = await res.json();
-
             if (data.success) {
                 showAlert("Appointment deleted!", "success");
-
                 setAppointments((prev) =>
                     prev.filter((v) => v._id !== visit._id),
                 );
-
             } else {
                 showAlert("Delete failed: " + data.message, "danger");
             }
@@ -241,98 +216,18 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         }
     };
 
-    const PDF_SYMBOL_MAP = {
-        INR: "Rs.",
-        USD: "$",
-        GBP: "GBP",
-        EUR: "EUR",
-        CAD: "CAD",
-        AUD: "AUD",
-        SGD: "SGD",
-        AED: "AED",
-        JPY: "JPY",
-        CNY: "CNY",
-        CHF: "CHF",
-        MYR: "MYR",
-        THB: "THB",
-        IDR: "IDR",
-        PHP: "PHP",
-        VND: "VND",
-        KRW: "KRW",
-        BDT: "BDT",
-        PKR: "PKR",
-        LKR: "LKR",
-        NPR: "NPR",
-        NZD: "NZD",
-        ZAR: "ZAR",
-        NGN: "NGN",
-        KES: "KES",
-        GHS: "GHS",
-        EGP: "EGP",
-        BRL: "BRL",
-        MXN: "MXN",
-        ARS: "ARS",
-        TRY: "TRY",
-        SAR: "SAR",
-        QAR: "QAR",
-        KWD: "KWD",
-        BHD: "BHD",
-        OMR: "OMR",
-    };
-
-    const CURRENCY_WORD_MAP = {
-        INR: "Rupees",
-        USD: "Dollars",
-        GBP: "Pounds",
-        EUR: "Euros",
-        CAD: "Canadian Dollars",
-        AUD: "Australian Dollars",
-        SGD: "Singapore Dollars",
-        AED: "Dirhams",
-        JPY: "Yen",
-        CNY: "Yuan",
-        CHF: "Swiss Francs",
-        MYR: "Ringgit",
-        THB: "Baht",
-        IDR: "Rupiah",
-        PHP: "Pesos",
-        VND: "Dong",
-        KRW: "Won",
-        BDT: "Taka",
-        PKR: "Rupees",
-        LKR: "Rupees",
-        NPR: "Rupees",
-        NZD: "New Zealand Dollars",
-        ZAR: "Rand",
-        NGN: "Naira",
-        KES: "Shillings",
-        GHS: "Cedis",
-        EGP: "Pounds",
-        BRL: "Reais",
-        MXN: "Pesos",
-        ARS: "Pesos",
-        TRY: "Lira",
-        SAR: "Riyals",
-        QAR: "Riyals",
-        KWD: "Dinars",
-        BHD: "Dinars",
-        OMR: "Riyals",
-    };
-
     const handleInvoiceClick = (visit) => {
         const invoiceUsage = usage?.invoices;
         if (invoiceUsage?.isLimitReached) {
             showAlert("Invoice download limit reached", "warning");
             return;
         }
-
         if (visit.discount && visit.discount > 0) {
-            // Ask about discount first — last-invoice warning handled after
             setInvoiceDialog({ visit, type: "discount" });
         } else if (invoiceUsage?.remaining === 1) {
             setInvoiceDialog({ visit, type: "last" });
         } else {
-            generateInvoicePDF(visit, true);
+            generateInvoicePDF(visit, true, doctor, details, showAlert);
         }
     };
 
@@ -340,410 +235,31 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         if (!invoiceDialog) return;
         const { visit, type } = invoiceDialog;
         setInvoiceDialog(null);
-
         if (type === "discount") {
-            const includeDiscount = choice; // true = Yes include, false = No hide
+            const includeDiscount = choice;
             const invoiceUsage = usage?.invoices;
             if (invoiceUsage?.remaining === 1) {
-                // Chain the last-invoice warning after discount choice
                 setInvoiceDialog({ visit, type: "last", includeDiscount });
             } else {
-                generateInvoicePDF(visit, includeDiscount);
+                generateInvoicePDF(
+                    visit,
+                    includeDiscount,
+                    doctor,
+                    details,
+                    showAlert,
+                );
             }
         } else if (type === "last") {
-            if (choice) {
+            if (choice)
                 generateInvoicePDF(
                     visit,
                     invoiceDialog.includeDiscount ?? true,
+                    doctor,
+                    details,
+                    showAlert,
                 );
-            }
         }
     };
-
-    const generateInvoicePDF = (visit, includeDiscount) => {
-        if (!doctor) {
-            showAlert("Doctor details not loaded yet!", "warning");
-            return;
-        }
-
-        try {
-            const code = currency?.code || "INR";
-            const pdfSymbol = PDF_SYMBOL_MAP[code] ?? currency?.symbol ?? code;
-            const currencyWord = CURRENCY_WORD_MAP[code] ?? code;
-
-            // ── PDF init ──────────────────────────────────────────────────────────
-            const margin = 18;
-            const docPdf = new jsPDF();
-            const pageWidth = docPdf.internal.pageSize.getWidth();
-
-            const invoiceNumber = visit.invoiceNumber || "N/A";
-
-            // ── Helper: thin horizontal rule ──────────────────────────────────────
-            const drawLine = (y, r = 180, g = 180, b = 180) => {
-                docPdf.setDrawColor(r, g, b);
-                docPdf.setLineWidth(0.3);
-                docPdf.line(margin, y, pageWidth - margin, y);
-            };
-
-            // ─────────────────────────────────────────────────────────────────────
-            // HEADER BLOCK — two columns, shared top baseline
-            // ─────────────────────────────────────────────────────────────────────
-            let leftY = 18;
-            let rightY = 18;
-
-            // Left: clinic name (prominent)
-            docPdf.setFontSize(13);
-            docPdf.setFont(undefined, "bold");
-            docPdf.setTextColor(20, 20, 20);
-            docPdf.text(doctor.clinicName || "", margin, leftY);
-            leftY += 6;
-
-            // Left: doctor name
-            docPdf.setFontSize(10);
-            docPdf.setFont(undefined, "bold");
-            docPdf.setTextColor(40, 40, 40);
-            docPdf.text(doctor.name || "", margin, leftY);
-            leftY += 5;
-
-            // Left: degree + reg (muted, small)
-            docPdf.setFontSize(8.5);
-            docPdf.setFont(undefined, "normal");
-            docPdf.setTextColor(110, 110, 110);
-            if (doctor.degree?.length) {
-                docPdf.text(doctor.degree.join(", "), margin, leftY);
-                leftY += 4.5;
-            }
-            if (doctor.regNumber) {
-                docPdf.text(`Reg No: ${doctor.regNumber}`, margin, leftY);
-                leftY += 4.5;
-            }
-
-            // Right: address lines (muted)
-            docPdf.setFontSize(8.5);
-            docPdf.setFont(undefined, "normal");
-            docPdf.setTextColor(110, 110, 110);
-            if (doctor.address?.line1) {
-                docPdf.text(doctor.address.line1, pageWidth - margin, rightY, {
-                    align: "right",
-                });
-                rightY += 4.5;
-            }
-            if (doctor.address?.line2) {
-                docPdf.text(doctor.address.line2, pageWidth - margin, rightY, {
-                    align: "right",
-                });
-                rightY += 4.5;
-            }
-            if (doctor.address?.line3) {
-                docPdf.text(doctor.address.line3, pageWidth - margin, rightY, {
-                    align: "right",
-                });
-                rightY += 4.5;
-            }
-            if (doctor.address?.city) {
-                const cityLine = [
-                    doctor.address.city,
-                    doctor.address.state,
-                    doctor.address.pincode,
-                ]
-                    .filter(Boolean)
-                    .join(", ");
-                docPdf.text(cityLine, pageWidth - margin, rightY, {
-                    align: "right",
-                });
-                rightY += 4.5;
-            }
-            const docPhone = doctor.phone || doctor.phoneMasked || "";
-            if (docPhone) {
-                docPdf.text(`Ph: ${docPhone}`, pageWidth - margin, rightY, {
-                    align: "right",
-                });
-                rightY += 4.5;
-            }
-
-            // ── Thick rule under header ───────────────────────────────────────────
-            const afterHeader = Math.max(leftY, rightY) + 5;
-            docPdf.setDrawColor(30, 30, 30);
-            docPdf.setLineWidth(0.6);
-            docPdf.line(margin, afterHeader, pageWidth - margin, afterHeader);
-
-            // ─────────────────────────────────────────────────────────────────────
-            // INVOICE META ROW — invoice no + date on same line
-            // ─────────────────────────────────────────────────────────────────────
-            let y = afterHeader + 7;
-
-            docPdf.setFontSize(9);
-            docPdf.setFont(undefined, "bold");
-            docPdf.setTextColor(30, 30, 30);
-            docPdf.text(`INVOICE  #INV-${invoiceNumber}`, margin, y);
-
-            const dateStr = new Date(visit.date).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-            });
-            docPdf.setFont(undefined, "normal");
-            docPdf.setTextColor(110, 110, 110);
-            docPdf.text(`Date: ${dateStr}`, pageWidth - margin, y, {
-                align: "right",
-            });
-            y += 5;
-
-            // ── Patient line ──────────────────────────────────────────────────────
-            docPdf.setFontSize(8.5);
-            docPdf.setFont(undefined, "normal");
-            docPdf.setTextColor(80, 80, 80);
-            const parts = [`Patient: ${details.name}`];
-            if (details.age) parts.push(`Age: ${details.age}`);
-            if (details.gender) parts.push(`Gender: ${details.gender}`);
-            docPdf.text(parts.join("   ·   "), margin, y);
-            y += 3;
-
-            // ── Thin rule under meta ──────────────────────────────────────────────
-            drawLine(y + 3);
-            y += 10;
-
-            // ─────────────────────────────────────────────────────────────────────
-            // BILLING CALCULATIONS
-            // ─────────────────────────────────────────────────────────────────────
-            const services = visit.service || [];
-            const baseAmount = services.reduce(
-                (sum, s) => sum + Number(s.amount || 0),
-                0,
-            );
-
-            // Real discount — always applied regardless of includeDiscount flag
-            const hasDiscount = visit.discount > 0;
-            let discountValue = 0;
-            let realFinalAmt = baseAmount;
-
-            if (hasDiscount) {
-                discountValue = visit.isPercent
-                    ? (baseAmount * visit.discount) / 100
-                    : visit.discount;
-                discountValue = Math.max(
-                    0,
-                    Math.min(discountValue, baseAmount),
-                );
-                realFinalAmt = baseAmount - discountValue;
-            }
-
-            const displayAmt = includeDiscount ? realFinalAmt : baseAmount;
-
-            const collectedAmount = Number(visit.collected ?? realFinalAmt);
-            const remainingAmount = realFinalAmt - collectedAmount;
-            const paymentStatus =
-                remainingAmount <= 0
-                    ? "Paid"
-                    : collectedAmount > 0
-                      ? "Partial"
-                      : "Unpaid";
-
-            // ─────────────────────────────────────────────────────────────────────
-            // SERVICE TABLE ROWS
-            // ─────────────────────────────────────────────────────────────────────
-            const serviceRows = services.map((s) => [
-                s.name,
-                `${pdfSymbol} ${fmt(s.amount)}`,
-            ]);
-
-            // ─────────────────────────────────────────────────────────────────────
-            // SUMMARY ROWS (separate so they can be styled differently)
-            // ─────────────────────────────────────────────────────────────────────
-            const summaryRows = [];
-
-            if (includeDiscount && hasDiscount) {
-                summaryRows.push([
-                    "Subtotal",
-                    `${pdfSymbol} ${fmt(baseAmount)}`,
-                ]);
-                const discountLabel = visit.isPercent
-                    ? `Discount (${visit.discount}%)`
-                    : `Discount (flat)`;
-                summaryRows.push([
-                    discountLabel,
-                    `- ${pdfSymbol} ${fmt(discountValue)}`,
-                ]);
-            }
-
-            summaryRows.push([
-                "Total Payable",
-                `${pdfSymbol} ${fmt(displayAmt)}`,
-            ]);
-            summaryRows.push([
-                "Collected",
-                `${pdfSymbol} ${fmt(includeDiscount ? collectedAmount : displayAmt)}`,
-            ]);
-
-            if (includeDiscount && Math.abs(remainingAmount) > 0) {
-                summaryRows.push([
-                    remainingAmount > 0 ? "Balance Due" : "Advance",
-                    `${pdfSymbol} ${fmt(Math.abs(remainingAmount))}`,
-                ]);
-            }
-
-            summaryRows.push(["Status", paymentStatus]);
-
-            // ─────────────────────────────────────────────────────────────────────
-            // RENDER TABLE
-            // ─────────────────────────────────────────────────────────────────────
-            autoTable(docPdf, {
-                startY: y,
-                head: [["Service", "Amount"]],
-                body: [...serviceRows, ...summaryRows],
-                theme: "plain",
-                styles: {
-                    fontSize: 9.5,
-                    cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
-                    textColor: [50, 50, 50],
-                    lineColor: [220, 220, 220],
-                    lineWidth: 0.2,
-                },
-                headStyles: {
-                    fillColor: [30, 30, 30],
-                    textColor: [255, 255, 255],
-                    fontStyle: "bold",
-                    fontSize: 9,
-                    cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
-                },
-                columnStyles: {
-                    0: { cellWidth: "auto" },
-                    1: { cellWidth: 48, halign: "right" },
-                },
-                didParseCell: (data) => {
-                    const isSummary = data.row.index >= serviceRows.length;
-                    if (data.section === "body" && isSummary) {
-                        // Summary rows: slightly muted background + bold
-                        data.cell.styles.fillColor = [248, 248, 248];
-                        data.cell.styles.fontStyle = "bold";
-                        data.cell.styles.fontSize = 9;
-                        data.cell.styles.textColor = [40, 40, 40];
-                    }
-                    // "Total Payable" row — accent it
-                    const totalIdx =
-                        serviceRows.length +
-                        (includeDiscount && hasDiscount ? 2 : 0);
-                    if (
-                        data.section === "body" &&
-                        data.row.index === totalIdx
-                    ) {
-                        data.cell.styles.fillColor = [30, 30, 30];
-                        data.cell.styles.textColor = [255, 255, 255];
-                        data.cell.styles.fontSize = 10;
-                    }
-                    // "Status" — last row
-                    if (
-                        data.section === "body" &&
-                        data.row.index ===
-                            serviceRows.length + summaryRows.length - 1
-                    ) {
-                        const isCol1 = data.column.index === 1;
-                        if (isCol1) {
-                            data.cell.styles.textColor =
-                                paymentStatus === "Paid"
-                                    ? [22, 101, 52]
-                                    : paymentStatus === "Partial"
-                                      ? [154, 52, 18]
-                                      : [153, 27, 27];
-                        }
-                    }
-                },
-            });
-
-            // ─────────────────────────────────────────────────────────────────────
-            // AMOUNT IN WORDS + RECEIPT TEXT
-            // ─────────────────────────────────────────────────────────────────────
-            y = docPdf.lastAutoTable.finalY + 9;
-            drawLine(y - 3);
-
-            const roundedAmount = Math.round(
-                includeDiscount ? realFinalAmt : displayAmt,
-            );
-
-            const displayCollected = includeDiscount
-                ? collectedAmount
-                : displayAmt;
-
-            const receiptText =
-                paymentStatus === "Paid"
-                    ? `Received with thanks from ${details.name} the sum of ${pdfSymbol} ${fmt(displayCollected)} only.`
-                    : paymentStatus === "Partial"
-                      ? `Part payment of ${pdfSymbol} ${fmt(displayCollected)} received from ${details.name}. Balance of ${pdfSymbol} ${fmt(remainingAmount)} is pending.`
-                      : `Total amount of ${pdfSymbol} ${fmt(displayAmt)} is pending from ${details.name}.`;
-
-            const amountInWords =
-                roundedAmount > 0
-                    ? `${currencyWord} ${toWords(roundedAmount)} Only`
-                    : `${currencyWord} Zero Only`;
-
-            // Capitalise first letter
-            const amountInWordsCapped =
-                amountInWords.charAt(0).toUpperCase() + amountInWords.slice(1);
-
-            docPdf.setFontSize(8.5);
-            docPdf.setTextColor(90, 90, 90);
-            docPdf.setFont(undefined, "bold");
-            docPdf.text("In Words:", margin, y);
-            docPdf.setFont(undefined, "normal");
-            docPdf.text(amountInWordsCapped, margin + 22, y, {
-                maxWidth: pageWidth - margin * 2 - 22,
-            });
-            y += 7;
-
-            docPdf.setFontSize(8.5);
-            docPdf.setFont(undefined, "italic");
-            docPdf.setTextColor(100, 100, 100);
-            docPdf.text(receiptText, margin, y, {
-                maxWidth: pageWidth - margin * 2,
-            });
-            y += 14;
-
-            // ─────────────────────────────────────────────────────────────────────
-            // SIGNATURE BLOCK
-            // ─────────────────────────────────────────────────────────────────────
-            drawLine(y - 4);
-
-            // Signature line (right side)
-            docPdf.setDrawColor(120, 120, 120);
-            docPdf.setLineWidth(0.3);
-            const sigLineEnd = pageWidth - margin;
-            const sigLineStart = sigLineEnd - 55;
-            docPdf.line(sigLineStart, y, sigLineEnd, y);
-            y += 4;
-
-            docPdf.setFontSize(9);
-            docPdf.setFont(undefined, "bold");
-            docPdf.setTextColor(30, 30, 30);
-            docPdf.text(doctor.name || "", pageWidth - margin, y, {
-                align: "right",
-            });
-            y += 4.5;
-
-            docPdf.setFontSize(8);
-            docPdf.setFont(undefined, "normal");
-            docPdf.setTextColor(120, 120, 120);
-            docPdf.text("Authorised Signatory", pageWidth - margin, y, {
-                align: "right",
-            });
-
-            // ─────────────────────────────────────────────────────────────────────
-            // SAVE
-            // ─────────────────────────────────────────────────────────────────────
-            const safeName = (details.name || "patient")
-                .replace(/[^a-zA-Z0-9\s]/g, "")
-                .trim()
-                .replace(/\s+/g, "_");
-
-            docPdf.save(`Invoice_${safeName}_INV${invoiceNumber}.pdf`);
-        } catch (err) {
-            console.error(err);
-            showAlert("Failed to generate invoice", "danger");
-        }
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Derived / memoised values
-    // ─────────────────────────────────────────────────────────────────────────
 
     const displayNumber =
         fullNumber ||
@@ -760,25 +276,67 @@ export default function PatientDetails({ showAlert, currency, usage }) {
         [appointments],
     );
 
+    // PatientDetails.js — line ~291
     const appointmentsForView = useMemo(
         () =>
             sortedAppointments.map((v) => ({
                 ...v,
-                formattedDate: new Date(v.date).toLocaleDateString("en-IN"),
+                formattedDate: new Date(v.date).toLocaleDateString(locale, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                }),
             })),
-        [sortedAppointments],
+        [sortedAppointments, locale],
     );
 
-    const patientImages = useMemo(
-        () =>
-            appointments
-                .filter((v) => v.image && v.image !== "")
-                .map((v) => ({
-                    url: v.image,
-                    date: new Date(v.date).toLocaleDateString("en-IN"),
-                })),
-        [appointments],
-    );
+    const downloadFile = async (url, filename) => {
+        const token = localStorage.getItem("patient_token");
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    "auth-token": token,
+                },
+            });
+            const blob = await res.blob();
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error("Download failed:", err);
+            window.open(url, "_blank");
+        }
+    };
+
+    const formatDate = (date) => {
+        if (!date) return "";
+        return new Date(date).toLocaleDateString(locale, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
+    const patientImages = useMemo(() => {
+        return appointments.flatMap((visit) => {
+            const arr =
+                Array.isArray(visit.images) && visit.images.length > 0
+                    ? visit.images
+                    : visit.image
+                      ? [{ url: visit.image, type: "image" }]
+                      : [];
+
+            return arr.map((img) => ({
+                url: img.url || img,
+                type: img.type || "image",
+                date: visit.date, // keep raw date
+            }));
+        });
+    }, [appointments]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Render
@@ -831,7 +389,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     <ChevronLeft size={14} /> Back
                 </button>
 
-                {/* ── Patient card ── */}
+                {/* Patient card */}
                 <div className="pd-card">
                     <div className="pd-patient-header">
                         <div className="pd-patient-left">
@@ -852,7 +410,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                         <div className="pd-info-item">
                             <div className="pd-info-label">Age</div>
                             <div className="pd-info-value">
-                                {details?.age || "N/A"}
+                                {details?.age ?? "N/A"}
                             </div>
                         </div>
                         <div className="pd-info-item">
@@ -892,7 +450,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                     fontSize: 12,
                                 }}
                             >
-                                {details.dialCode} {displayNumber}{" "}
+                                {details?.dialCode} {displayNumber}{" "}
                                 <Phone size={11} />
                             </a>
                             {fullNumber === null ? (
@@ -931,9 +489,8 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                         <button
                             className="pd-btn pd-btn-primary"
                             onClick={async () => {
-                                if (fullNumber === null) {
+                                if (fullNumber === null)
                                     await fetchFullNumber();
-                                }
                                 setEditPatientOpen(true);
                             }}
                         >
@@ -958,7 +515,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     </div>
                 </div>
 
-                {/* ── History / images card ── */}
+                {/* History / images card */}
                 <div className="pd-card">
                     <div className="pd-switch">
                         <button
@@ -971,11 +528,22 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                             className={`pd-switch-btn${recordView === "images" ? " active" : ""}`}
                             onClick={() => setRecordView("images")}
                         >
-                            Patient Records
+                            Patient Records{" "}
+                            {patientImages.length > 0 && (
+                                <span
+                                    style={{
+                                        marginLeft: 4,
+                                        fontSize: 10,
+                                        color: "#60a5fa",
+                                    }}
+                                >
+                                    ({patientImages.length})
+                                </span>
+                            )}
                         </button>
                     </div>
 
-                    {/* ── History view ── */}
+                    {/* History view */}
                     {recordView === "history" ? (
                         appointmentsForView.length === 0 ? (
                             <div className="pd-gallery-empty">
@@ -997,7 +565,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                     </thead>
                                     <tbody>
                                         {appointmentsForView.map((visit) => {
-                                            const status = visitStatus(visit);
                                             return (
                                                 <tr key={visit._id}>
                                                     <td>
@@ -1009,14 +576,51 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                                             .join(", ")}
                                                     </td>
                                                     <td>
-                                                        {currency?.symbol}{" "}
-                                                        {fmt(visit.amount ?? 0)}
+                                                        {Number(
+                                                            visit.remaining,
+                                                        ) <= 0 ? (
+                                                            <div className="pd-visit-amount">
+                                                                {
+                                                                    currency?.symbol
+                                                                }
+                                                                {fmt(
+                                                                    visit.collected ??
+                                                                        0,
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="pd-visit-amount">
+                                                                {
+                                                                    currency?.symbol
+                                                                }
+                                                                {fmt(
+                                                                    visit.collected ??
+                                                                        0,
+                                                                )}
+                                                                <span className="pd-amount-separator">
+                                                                    of
+                                                                </span>
+                                                                {
+                                                                    currency?.symbol
+                                                                }
+                                                                {fmt(
+                                                                    Number(
+                                                                        visit.collected ??
+                                                                            0,
+                                                                    ) +
+                                                                        Number(
+                                                                            visit.remaining ??
+                                                                                0,
+                                                                        ),
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td>
                                                         <span
-                                                            className={`pl-status ${statusClass(status)}`}
+                                                            className={`pl-status ${statusClass(visit.status)}`}
                                                         >
-                                                            {status}
+                                                            {visit.status}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -1127,25 +731,55 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                                             textAlign: "right",
                                                         }}
                                                     >
-                                                        <div className="pd-visit-amount">
-                                                            {currency?.symbol}
-                                                            {fmt(
-                                                                visit.amount ??
-                                                                    0,
-                                                            )}
-                                                        </div>
-                                                        {col < tot && (
-                                                            <div className="pd-visit-sub">
-                                                                Collected{" "}
+                                                        {Number(
+                                                            visit.remaining,
+                                                        ) <= 0 ? (
+                                                            <div className="pd-visit-amount">
                                                                 {
                                                                     currency?.symbol
                                                                 }
                                                                 {fmt(
-                                                                    visit.collected ||
+                                                                    visit.collected ??
                                                                         0,
                                                                 )}
                                                             </div>
+                                                        ) : (
+                                                            <div className="pd-visit-amount">
+                                                                {
+                                                                    currency?.symbol
+                                                                }
+                                                                {fmt(
+                                                                    visit.collected ??
+                                                                        0,
+                                                                )}
+                                                                <span className="pd-amount-separator">
+                                                                    of
+                                                                </span>
+                                                                {
+                                                                    currency?.symbol
+                                                                }
+                                                                {fmt(
+                                                                    Number(
+                                                                        visit.collected ??
+                                                                            0,
+                                                                    ) +
+                                                                        Number(
+                                                                            visit.remaining ??
+                                                                                0,
+                                                                        ),
+                                                                )}
+                                                            </div>
                                                         )}
+
+                                                        <span
+                                                            className={`pl-status ${statusClass(s)}`}
+                                                            style={{
+                                                                marginTop:
+                                                                    "10px",
+                                                            }}
+                                                        >
+                                                            {s}
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="pd-visit-footer">
@@ -1164,11 +798,6 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                                                             {getPaymentLabel(
                                                                 visit,
                                                             )}
-                                                        </span>
-                                                        <span
-                                                            className={`pl-status ${statusClass(s)}`}
-                                                        >
-                                                            {s}
                                                         </span>
                                                     </div>
                                                     <div className="pd-visit-actions">
@@ -1216,30 +845,87 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                             </>
                         )
                     ) : (
-                        /* ── Image view ── */
                         <>
                             {patientImages.length === 0 ? (
                                 <div className="pd-gallery-empty">
                                     <ImageIcon
                                         size={14}
                                         style={{ opacity: 0.3 }}
-                                    />
+                                    />{" "}
                                     No records available
                                 </div>
                             ) : (
                                 <div className="pd-image-grid">
-                                    {patientImages.map((img, i) => (
-                                        <div
-                                            key={i}
-                                            className="pd-image-item"
-                                            onClick={() => setLightboxImg(img)}
-                                        >
-                                            <img src={img.url} alt="record" />
-                                            <div className="pd-image-overlay">
-                                                {img.date}
+                                    {patientImages.map((img, idx) => {
+                                        const isPDF =
+                                            img?.type === "application/pdf" ||
+                                            img?.url?.includes("/raw/upload") ||
+                                            img?.url
+                                                ?.toLowerCase()
+                                                .endsWith(".pdf");
+
+                                        const displayDate = formatDate(
+                                            img.date,
+                                        );
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className="pd-image-card"
+                                                onClick={() => {
+                                                    if (isPDF) {
+                                                        downloadFile(
+                                                            img.url,
+                                                            `${details.name}.pdf`,
+                                                        );
+                                                    } else {
+                                                        setLightboxImg({
+                                                            url: img.url,
+                                                            type:
+                                                                img.type ||
+                                                                "image",
+                                                            idx: idx,
+                                                            date: formatDate(
+                                                                img.date,
+                                                            ),
+                                                            allImgs:
+                                                                patientImages.filter(
+                                                                    (i) => {
+                                                                        const isPDFCheck =
+                                                                            i?.type ===
+                                                                                "application/pdf" ||
+                                                                            i?.url?.includes(
+                                                                                "/raw/upload",
+                                                                            ) ||
+                                                                            i?.url
+                                                                                ?.toLowerCase()
+                                                                                .endsWith(
+                                                                                    ".pdf",
+                                                                                );
+                                                                        return !isPDFCheck; // only images
+                                                                    },
+                                                                ),
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                {isPDF ? (
+                                                    <div className="pd-pdf-content">
+                                                        📄
+                                                        <span className="pd-file-label">
+                                                            PDF
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <img src={img.url} alt="" />
+                                                )}
+
+                                                <div className="pd-image-date">
+                                                    {displayDate}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>
@@ -1247,33 +933,109 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 </div>
             </div>
 
-            {/* ── Lightbox ── */}
-            {lightboxImg && (
-                <div
-                    className="pd-lightbox-bg"
-                    onClick={() => setLightboxImg(null)}
-                >
-                    <button
-                        className="pd-lightbox-close"
-                        onClick={() => setLightboxImg(null)}
-                    >
-                        <X size={15} />
-                    </button>
-                    <img
-                        className="pd-lightbox-img"
-                        src={lightboxImg.url}
-                        alt="patient record"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="pd-lightbox-date">{lightboxImg.date}</div>
-                </div>
-            )}
+            {lightboxImg &&
+                (() => {
+                    const { allImgs, idx } = lightboxImg;
+                    const hasPrev = allImgs && idx > 0;
+                    const hasNext = allImgs && idx < allImgs.length - 1;
+                    return (
+                        <div
+                            className="pd-lightbox-bg"
+                            onClick={() => setLightboxImg(null)}
+                        >
+                            <button
+                                className="pd-lightbox-close"
+                                onClick={() => setLightboxImg(null)}
+                            >
+                                <X size={15} />
+                            </button>
+                            {hasPrev && (
+                                <button
+                                    className="pd-lightbox-nav pd-lightbox-nav--prev"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLightboxImg((p) => ({
+                                            ...p,
+                                            url:
+                                                allImgs[idx - 1].url ||
+                                                allImgs[idx - 1],
+                                            type:
+                                                allImgs[idx - 1].type ||
+                                                "image",
+                                            idx: idx - 1,
+                                        }));
+                                    }}
+                                >
+                                    ‹
+                                </button>
+                            )}
+                            {lightboxImg.type === "application/pdf" ? (
+                                <div
+                                    style={{
+                                        color: "white",
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    <p>PDF file</p>
+                                    <button
+                                        onClick={() =>
+                                            downloadFile(lightboxImg.url)
+                                        }
+                                        style={{
+                                            padding: "8px 14px",
+                                            background: "#2563eb",
+                                            border: "none",
+                                            borderRadius: 6,
+                                            color: "white",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Download PDF
+                                    </button>
+                                </div>
+                            ) : (
+                                <img
+                                    className="pd-lightbox-img"
+                                    src={lightboxImg.url}
+                                    alt="patient record"
+                                />
+                            )}
+                            {hasNext && (
+                                <button
+                                    className="pd-lightbox-nav pd-lightbox-nav--next"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLightboxImg((p) => ({
+                                            ...p,
+                                            url:
+                                                allImgs[idx + 1].url ||
+                                                allImgs[idx + 1],
+                                            type:
+                                                allImgs[idx + 1].type ||
+                                                "image",
+                                            idx: idx + 1,
+                                        }));
+                                    }}
+                                >
+                                    ›
+                                </button>
+                            )}
+                            <div className="pd-lightbox-date">
+                                {lightboxImg.date}
+                                {allImgs &&
+                                    allImgs.length > 1 &&
+                                    ` · ${idx + 1}/${allImgs.length}`}
+                            </div>
+                        </div>
+                    );
+                })()}
 
-            {/* ── Edit Appointment modal ── */}
+            {/* Edit Appointment modal */}
             {editingVisit && (
                 <EditAppointment
                     showAlert={showAlert}
                     currency={currency}
+                    usage={usage}
                     appointmentId={editingVisit.appointmentId}
                     visit={editingVisit.visit}
                     availableServices={availableServices}
@@ -1282,7 +1044,7 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                 />
             )}
 
-            {/* ── Edit Patient modal ── */}
+            {/* Edit Patient modal */}
             {editPatientOpen && (
                 <EditPatient
                     patientId={id}
@@ -1299,7 +1061,8 @@ export default function PatientDetails({ showAlert, currency, usage }) {
                     }}
                 />
             )}
-            {/* ── Invoice confirm dialog ── */}
+
+            {/* Invoice confirm dialog */}
             {invoiceDialog && (
                 <div
                     style={{

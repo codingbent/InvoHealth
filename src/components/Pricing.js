@@ -186,7 +186,15 @@ export default function Pricing() {
     }, []);
 
     useEffect(() => {
-        if (countries.length && !country) setCountry(countries[0].code);
+        if (!countries.length || country) return;
+
+        const us = countries.find((c) => c.code === "US");
+
+        if (us) {
+            setCountry(us.code);
+        } else {
+            setCountry(countries[0].code);
+        }
     }, [countries, country]);
 
     // ─────────────────────────────────────────────────────────────────────────

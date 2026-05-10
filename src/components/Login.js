@@ -1,24 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { authFetch } from "./authfetch";
+import { authFetch, AuthError, SubscriptionError } from "./authfetch";
 import { Stethoscope, Users, LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
+import { fetchCountries } from "../api/country.api";
 import "../css/Login.css";
 
-const COUNTRY_CODES = [
-    { code: "+91", flag: "🇮🇳", country: "India", min: 10, max: 10 },
-    { code: "+1", flag: "🇺🇸", country: "USA", min: 10, max: 10 },
-    { code: "+44", flag: "🇬🇧", country: "UK", min: 10, max: 10 },
-    { code: "+49", flag: "🇩🇪", country: "Germany", min: 10, max: 11 },
-    { code: "+1", flag: "🇨🇦", country: "Canada", min: 10, max: 10 },
-    { code: "+45", flag: "🇩🇰", country: "Denmark", min: 8, max: 8 },
-];
 export default function Login(props) {
     const navigate = useNavigate();
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [loginAs, setLoginAs] = useState("doctor");
-    const [countryCode, setCountryCode] = useState("+91");
+    const [countryCode, setCountryCode] = useState("");
+    const [countries, setCountries] = useState([]);
     const [showInvalid, setShowInvalid] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -27,6 +21,23 @@ export default function Login(props) {
         setIdentifier("");
         setShowInvalid(false);
     };
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await fetchCountries();
+                setCountries(data);
+
+                // Default to India's dial code
+                const india = data.find((c) => c.dialCode === "+91");
+                if (india) setCountryCode(india.dialCode);
+            } catch {
+                setCountries([{ dialCode: "+91", code: "IN", flag: "🇮🇳" }]); // fallback
+            }
+        };
+
+        load();
+    }, []);
 
     const validate = () => {
         if (loginAs === "doctor")
@@ -59,34 +70,65 @@ export default function Login(props) {
     };
 
     const staffLogin = async () => {
-        const phoneWithCode = countryCode + identifier.replace(/\D/g, "");
-        const phoneWithoutCode = identifier.replace(/\D/g, "");
+        try {
+            const cleanPhone = identifier.replace(/\D/g, "").replace(/^0+/, "");
 
-        const res = await authFetch(`${API_BASE_URL}/api/staff/login_staff`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                phone: phoneWithCode,
-                phoneFallback: phoneWithoutCode,
-                password,
-            }),
-        });
-        if (!res) {
-            props.showAlert("Session expired. Login again.", "danger");
-            return;
-        }
-        const data = await res.json();
-        if (data.firstLogin) {
-            navigate(`/set-staff-password?token=${data.setupToken}`);
-            return;
-        }
-        if (data.success) {
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("name", data.name);
-            localStorage.setItem("role", data.role);
-            window.location.href = "/";
-        } else {
-            props.showAlert(data?.error || "Login failed", "danger");
+            if (!cleanPhone || !password) {
+                props.showAlert("Enter phone and password", "danger");
+                return;
+            }
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/staff/login_staff`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        phone: cleanPhone,
+                        dialCode: countryCode,
+                        password,
+                    }),
+                },
+            );
+
+            const data = await res.json();
+
+            // FIRST LOGIN
+            if (data.firstLogin) {
+                navigate(`/set-staff-password?token=${data.setupToken}`);
+                return;
+            }
+
+            // SUCCESS
+            if (data.success) {
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("name", data.name);
+                localStorage.setItem("role", "staff");
+                localStorage.setItem("staffRole", data.role);
+                window.location.href = "/";
+            }
+        } catch (err) {
+            console.error("Staff login error:", err);
+
+            // AUTH ERRORS
+            if (err instanceof AuthError) {
+                props.showAlert(err.message || "Session expired", "danger");
+                return;
+            }
+
+            // SUBSCRIPTION
+            if (err instanceof SubscriptionError) {
+                props.showAlert(err.message, "warning");
+                return;
+            }
+
+            // NORMAL API ERRORS
+            if (err instanceof Error) {
+                props.showAlert(err.message || "Login failed", "danger");
+                return;
+            }
+
+            // UNKNOWN
+            props.showAlert("Something went wrong. Try again.", "danger");
         }
     };
 
@@ -151,9 +193,9 @@ export default function Login(props) {
                                         setCountryCode(e.target.value)
                                     }
                                 >
-                                    {COUNTRY_CODES.map((c) => (
-                                        <option key={c.code} value={c.code}>
-                                            {c.flag} {c.code}
+                                    {countries.map((c) => (
+                                        <option key={c.code} value={c.dialCode}>
+                                            {c.flag} {c.dialCode}
                                         </option>
                                     ))}
                                 </select>
@@ -190,7 +232,7 @@ export default function Login(props) {
                         {loginAs === "staff" && (
                             <div className="lg-hint">
                                 First time logging in? Just enter your number
-                                and password to continue.
+                                and password as 123456 to continue.
                             </div>
                         )}
                     </div>

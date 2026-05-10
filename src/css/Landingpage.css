@@ -9,7 +9,7 @@ _____________________________ */
     min-height: 100vh;
     color: #c5d0e8;
     overflow-x: hidden;
-    width: stretch;
+    width: 100%;
     position: relative;
 }
 
@@ -110,7 +110,7 @@ _____________________________ */
     padding: 50px 24px 50px;
     position: relative;
     overflow: hidden;
-    width: stretch;
+    width: 100%;
     box-sizing: border-box;
     z-index: 1;
 }
@@ -206,13 +206,13 @@ _____________________________ */
 .lp-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, #131929, transparent);
-    width: stretch;
+    width: 100%;
 }
 
 /* ── Features ── */
 .lp-features {
     padding: 40px 48px;
-    width: stretch;
+    width: 100%;
     box-sizing: border-box;
     position: relative;
     z-index: 1;
@@ -346,7 +346,7 @@ _____________________________ */
     text-align: center;
     padding: 80px 24px;
     position: relative;
-    width: stretch;
+    width: 100%;
     box-sizing: border-box;
     z-index: 1;
 }
@@ -392,7 +392,7 @@ _____________________________ */
     font-size: 10px;
     color: #1e2d4a;
     letter-spacing: 0.07em;
-    width: stretch;
+    width: 100%;
     box-sizing: border-box;
     position: relative;
     z-index: 1;

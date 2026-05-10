@@ -1,13 +1,37 @@
 const cloudinary = require("../routes/config/cloudinary");
+const streamifier = require("streamifier");
 
-const uploadToCloudinary = (fileBuffer) => {
+const uploadToCloudinary = (fileBuffer, mimetype) => {
     return new Promise((resolve, reject) => {
-        cloudinary.uploader
-            .upload_stream({ folder: "invohealth" }, (error, result) => {
-                if (error) return reject(error);
+        const isPDF = mimetype === "application/pdf";
+
+        const uploadOptions = {
+            resource_type: isPDF ? "raw" : "image",
+            folder: isPDF ? "invohealth/pdfs" : "invohealth/images",
+            use_filename: true,
+            unique_filename: true,
+            type: "upload",
+        };
+
+        const stream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error, result) => {
+                if (error) {
+                    console.error("Cloudinary error:", error);
+                    return reject(error);
+                }
                 resolve(result);
-            })
-            .end(fileBuffer);
+            },
+        );
+
+        const bufferStream = streamifier.createReadStream(fileBuffer);
+
+        bufferStream.on("error", (err) => {
+            console.error("Stream error:", err);
+            reject(err);
+        });
+
+        bufferStream.pipe(stream);
     });
 };
 

@@ -1,0 +1,16 @@
+name: Ping Backend (Smart Schedule)
+
+on:
+  schedule:
+    # 10 AM – 3 PM IST (UTC: 4:30–9:30 → rounded)
+    - cron: "*/14 4-9 * * *"
+
+    # 6 PM – 9 PM IST (UTC: 12:30–15:30 → rounded)
+    - cron: "*/14 12-15 * * *"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API
+        run: curl -s https://gmsc-backend.onrender.com/api/health

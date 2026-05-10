@@ -119,7 +119,7 @@ ______________________________ */
 
 .adm-input,
 .adm-select {
-    width: stretch;
+    width: 100%;
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;
@@ -175,7 +175,7 @@ ______________________________ */
     background: #4d7cf6;
     color: #fff;
     box-shadow: 0 4px 14px rgba(77, 124, 246, 0.25);
-    width: stretch;
+    width: 100%;
     justify-content: center;
 }
 

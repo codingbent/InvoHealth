@@ -44,7 +44,7 @@ export const authFetch = async (url, options = {}) => {
             code === "INVALID_TOKEN" ||
             code === "NO_TOKEN"
         ) {
-            localStorage.clear();
+            ["token", "name", "role", "plan"].forEach(k => localStorage.removeItem(k));
             window.location.href = "/login";
             throw new AuthError(code, "Session expired. Redirecting to login.");
         }
@@ -55,13 +55,10 @@ export const authFetch = async (url, options = {}) => {
 
     // ── 403: subscription expired or access denied ───────────────────────────
     if (res.status === 403) {
-        let data = null;
-        try {
-            data = await res.json();
-        } catch {}
-
-        const message = data?.message || data?.error || "Access denied";
-        throw new SubscriptionError(message);
+        const data = await res.json().catch(() => ({}));
+        if (data?.error === "SUBSCRIPTION_EXPIRED")
+            throw new SubscriptionError(data.message);
+        throw new Error(data?.error || data?.message || "Access denied");
     }
 
     // ── Any other non-ok response ────────────────────────────────────────────

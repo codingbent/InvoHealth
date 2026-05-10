@@ -1,64 +1,118 @@
 const express = require("express");
 const router = express.Router();
-const Appointment = require("../../../models/Appointment");
-var fetchuser = require("../../../middleware/fetchuser");
 const mongoose = require("mongoose");
+
+const Appointment = require("../../../models/Appointment");
+const Slot = require("../../../models/Slot");
+const fetchuser = require("../../../middleware/fetchuser");
 const requireSubscription = require("../../../middleware/requiresubscription");
+
+// ── Image validation ──────────────────────────────────────────────────────────
+const CLOUDINARY_BASE =
+    process.env.CLOUDINARY_BASE_URL || "https://res.cloudinary.com/";
+
+const VALID_RESOURCE_TYPES = new Set(["image", "raw"]);
+
+function validateImageObject(img, index) {
+    if (!img || typeof img !== "object" || Array.isArray(img)) {
+        throw new Error(`images[${index}]: must be an object`);
+    }
+    if (typeof img.url !== "string" || !img.url.startsWith(CLOUDINARY_BASE)) {
+        throw new Error(
+            `images[${index}].url: must be a Cloudinary URL starting with ${CLOUDINARY_BASE}`,
+        );
+    }
+    if (typeof img.public_id !== "string" || !img.public_id.trim()) {
+        throw new Error(
+            `images[${index}].public_id: must be a non-empty string`,
+        );
+    }
+    if (!VALID_RESOURCE_TYPES.has(img.resource_type)) {
+        throw new Error(
+            `images[${index}].resource_type: must be "image" or "raw"`,
+        );
+    }
+    return {
+        url: img.url.trim(),
+        public_id: img.public_id.trim(),
+        resource_type: img.resource_type,
+        ...(typeof img.type === "string" && img.type.trim()
+            ? { type: img.type.trim() }
+            : {}),
+    };
+}
 
 router.put(
     "/edit_appointment/:appointmentId/:visitId",
     fetchuser,
     requireSubscription,
     async (req, res) => {
+        const session = await mongoose.startSession();
+
         try {
             const { appointmentId, visitId } = req.params;
+
+            const doctorId =
+                req.user.role === "doctor" ? req.user.id : req.user.doctorId;
+
             const {
                 date,
                 time,
                 service,
-                payment_type,
                 paymentMethodId,
                 discount,
                 isPercent,
                 collected,
-                image,
+                images,
             } = req.body;
 
-            // Validation
-            if (!date || !Array.isArray(service) || service.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Date and at least one service are required",
-                });
+            if (date !== undefined && date !== null) {
+                if (
+                    typeof date !== "string" ||
+                    !/^\d{4}-\d{2}-\d{2}$/.test(date)
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Invalid date format. Expected YYYY-MM-DD",
+                    });
+                }
             }
 
-            if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
-                return res
-                    .status(400)
-                    .json({ message: "Invalid appointment ID" });
+            // ── Validate images before touching the DB ────────────────────────
+            let validatedImages;
+            if (images !== undefined) {
+                if (!Array.isArray(images)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "images must be an array",
+                    });
+                }
+                try {
+                    validatedImages = images.map((img, i) =>
+                        validateImageObject(img, i),
+                    );
+                } catch (err) {
+                    return res.status(400).json({
+                        success: false,
+                        message: err.message,
+                    });
+                }
             }
 
-            //  TIME VALIDATION
-            if (time && !/^\d{2}:\d{2}$/.test(time)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid time format",
-                });
-            }
-            // Find appointment
             const appointment = await Appointment.findOne({
                 _id: appointmentId,
-                doctor: req.user.doctorId,
+                doctor: doctorId,
             });
 
             if (!appointment) {
                 return res.status(404).json({
                     success: false,
-                    message: "Appointment not found or unauthorized",
+                    message: "Appointment not found",
                 });
             }
-            // Find visit
+
             const visit = appointment.visits.id(visitId);
+
             if (!visit) {
                 return res.status(404).json({
                     success: false,
@@ -66,137 +120,176 @@ router.put(
                 });
             }
 
-            let conflict = null;
+            // Capture old slot values before any mutation so the transaction
+            // body can release them correctly.
+            const oldSlotDate = visit.date;
+            const oldSlotTime = visit.time;
 
-            if (time) {
-                const selectedDateStr = new Date(date).toDateString();
+            const slotIsChanging =
+                (date !== undefined && date !== visit.date) ||
+                (time !== undefined && time !== visit.time);
 
-                conflict = appointment.visits.find(
-                    (v) =>
-                        v._id.toString() !== visitId &&
-                        v.time &&
-                        v.time === time &&
-                        new Date(v.date).toDateString() === selectedDateStr,
-                );
+            const newSlotDate = date !== undefined ? date : visit.date;
+            const newSlotTime = time !== undefined ? time : visit.time;
+
+            // ── SERVICE VALIDATION (outside transaction — pure computation) ────
+            let normalizedServices = visit.service;
+
+            if (service !== undefined) {
+                if (!Array.isArray(service) || service.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Service must be a non-empty array",
+                    });
+                }
+
+                try {
+                    normalizedServices = service.map((s, index) => {
+                        if (!s || typeof s !== "object") {
+                            throw new Error(
+                                `Invalid service at index ${index}`,
+                            );
+                        }
+                        const name =
+                            typeof s.name === "string" ? s.name.trim() : "";
+                        if (!name) {
+                            throw new Error(
+                                `Service name required at index ${index}`,
+                            );
+                        }
+                        if (/[<>]/.test(name)) {
+                            throw new Error(
+                                `Invalid characters in service name`,
+                            );
+                        }
+                        const amount = Number(s.amount);
+                        if (!Number.isFinite(amount)) {
+                            throw new Error(`Invalid amount at index ${index}`);
+                        }
+                        if (amount < 0) {
+                            throw new Error(`Negative amount not allowed`);
+                        }
+                        if (amount > 1_000_000) {
+                            throw new Error(`Amount too large`);
+                        }
+                        return { id: s.id || undefined, name, amount };
+                    });
+                } catch (err) {
+                    return res.status(400).json({
+                        success: false,
+                        message: err.message,
+                    });
+                }
             }
 
-            if (conflict) {
-                return res.status(400).json({
-                    success: false,
-                    message: "This time slot is already booked",
-                });
-            }
-
-            if (time) {
-                const [hours, minutes] = time.split(":").map(Number);
-                const fullDate = new Date(date);
-                fullDate.setHours(hours, minutes, 0, 0);
-
-                visit.date = fullDate;
-                visit.time = time;
-            } else {
-                visit.date = new Date(date);
-            }
-
-            // Normalize services
-            visit.service = service.map((s) => ({
-                id: s.id || null,
-                name: s.name,
-                amount: Number(s.amount) || 0,
-            }));
-
-            // Compute service total
-            const serviceTotal = visit.service.reduce(
-                (sum, s) => sum + s.amount,
+            // ── TOTAL & BILLING CALCULATION (pure, outside transaction) ────────
+            const total = (normalizedServices || []).reduce(
+                (sum, s) => sum + (s.amount || 0),
                 0,
             );
 
-            // Discount calculation
-            const disc = Number(discount) || 0;
-            const percentFlag = Boolean(isPercent);
+            let safeDiscount = Number(discount ?? visit.discount ?? 0);
+            const safeIsPercent =
+                isPercent !== undefined ? isPercent : visit.isPercent;
 
-            let discountValue = 0;
-            if (disc > 0) {
-                discountValue = percentFlag
-                    ? serviceTotal * (disc / 100)
-                    : disc;
-            }
-
-            if (discountValue > serviceTotal) discountValue = serviceTotal;
-            if (discountValue < 0) discountValue = 0;
-
-            // Final amount
-            const finalAmount = serviceTotal - discountValue;
-
-            // Recalculate payment logic (USE FRONTEND VALUE)
-            let collectedAmount;
-
-            if (collected !== undefined) {
-                collectedAmount = Number(collected);
-            } else {
-                collectedAmount = visit.collected || 0;
-            }
-
-            if (collectedAmount < 0) collectedAmount = 0;
-            if (collectedAmount > finalAmount) {
+            if (!Number.isFinite(safeDiscount) || safeDiscount < 0) {
                 return res.status(400).json({
                     success: false,
-                    message: "Collected amount exceeds final amount.",
+                    message: "Invalid discount value",
                 });
             }
+            if (safeIsPercent && safeDiscount > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Percentage discount cannot exceed 100%",
+                });
+            }
+            if (!safeIsPercent) {
+                safeDiscount = Math.min(safeDiscount, total);
+            }
 
-            const remainingAmount = finalAmount - collectedAmount;
+            let discountValue = 0;
+            if (safeDiscount > 0) {
+                discountValue = safeIsPercent
+                    ? total * (safeDiscount / 100)
+                    : safeDiscount;
+            }
 
-            const status =
-                remainingAmount === 0
+            const finalAmount = Math.max(total - discountValue, 0);
+
+            let finalCollected = Number(collected);
+            if (!Number.isFinite(finalCollected) || finalCollected < 0) {
+                finalCollected = 0;
+            }
+            if (finalCollected > finalAmount) finalCollected = finalAmount;
+
+            const finalRemaining = Math.max(finalAmount - finalCollected, 0);
+            const finalStatus =
+                finalRemaining === 0
                     ? "Paid"
-                    : collectedAmount > 0
+                    : finalCollected > 0
                       ? "Partial"
                       : "Unpaid";
 
-            // Update visit fields
-            visit.amount = finalAmount;
-            visit.discount = disc;
-            visit.isPercent = percentFlag;
-            visit.collected = collectedAmount;
-            visit.remaining = remainingAmount;
-            visit.status = status;
+            await session.withTransaction(async () => {
+                if (slotIsChanging && newSlotTime) {
+                    try {
+                        await Slot.swap(
+                            doctorId,
+                            { date: oldSlotDate, time: oldSlotTime },
+                            { date: newSlotDate, time: newSlotTime },
+                            session,
+                        );
+                    } catch (swapErr) {
+                        if (swapErr.code === 11000) {
+                            const slotConflict = new Error("SLOT_CONFLICT");
+                            slotConflict.code = "SLOT_CONFLICT";
+                            throw slotConflict;
+                        }
+                        throw swapErr;
+                    }
+                }
 
-            // ===== PAYMENT HANDLING =====
+                // 2. Apply all field mutations to the visit subdocument.
+                if (date !== undefined) visit.date = date;
+                if (time !== undefined) visit.time = time;
+                if (paymentMethodId !== undefined)
+                    visit.paymentMethodId = paymentMethodId;
+                if (validatedImages !== undefined)
+                    visit.images = validatedImages;
+                if (service !== undefined) visit.service = normalizedServices;
 
-            // New system
-            if (paymentMethodId) {
-                visit.paymentMethodId = paymentMethodId;
-                visit.payment_type = undefined; // clean old
-            }
+                visit.discount = safeDiscount;
+                visit.isPercent = safeIsPercent;
+                visit.amount = total;
+                visit.collected = finalCollected;
+                visit.remaining = finalRemaining;
+                visit.status = finalStatus;
 
-            // Old system fallback
-            else if (
-                payment_type &&
-                ["Cash", "Card", "SBI", "ICICI", "HDFC", "Other"].includes(
-                    payment_type,
-                )
-            ) {
-                visit.payment_type = payment_type;
-            }
-
-            if (image !== undefined && image !== null) {
-                visit.image = image;
-            }
-            // Save
-            await appointment.save();
+                await appointment.save({ session });
+            });
 
             return res.json({
                 success: true,
-                message: "Invoice updated successfully",
+                message: "Appointment updated",
                 visit,
             });
         } catch (err) {
-            console.error("Edit invoice error:", err);
-            res.status(500).json({
+            // SLOT_CONFLICT is a clean 409 — not a 500.
+            if (err.code === "SLOT_CONFLICT" || err.code === 11000) {
+                return res.status(409).json({
+                    success: false,
+                    message: "That time slot is already booked",
+                });
+            }
+
+            console.error("❌ EDIT ERROR:", err);
+            return res.status(500).json({
                 success: false,
                 message: "Server error",
             });
+        } finally {
+            session.endSession();
         }
     },
 );

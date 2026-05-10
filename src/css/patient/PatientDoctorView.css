@@ -1,0 +1,441 @@
+@import "../../css/App.css";
+
+/* ─────────────────────────────────────────
+   BASE
+───────────────────────────────────────── */
+.pdv-page {
+    background: #0a0d14;
+    min-height: 100vh;
+    color: #e5e7eb;
+    padding: 20px 16px;
+}
+
+.pdv-inner {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+/* ─────────────────────────────────────────
+   BACK
+───────────────────────────────────────── */
+.pdv-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.pdv-back-btn:hover {
+    color: #d1d5db;
+}
+
+/* ─────────────────────────────────────────
+   DOCTOR CARD
+───────────────────────────────────────── */
+.pdv-doctor-card {
+    background: linear-gradient(145deg, #0f172a, #0b1220);
+    border: 1px solid #1f2937;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.pdv-doc-header {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.pdv-doc-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: white;
+}
+
+.pdv-doc-name {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.pdv-doc-spec {
+    font-size: 12px;
+    color: #9ca3af;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.pdv-doc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.pdv-doc-grid span {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.pdv-doc-grid p {
+    font-size: 13px;
+    margin: 2px 0 0;
+}
+
+.pdv-phone-link {
+    color: #60a5fa;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+.pdv-phone-link:hover {
+    text-decoration: underline;
+}
+
+/* ─────────────────────────────────────────
+   PILLS
+───────────────────────────────────────── */
+.pdv-pills {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.pdv-pill {
+    flex: 1;
+    background: linear-gradient(145deg, #111827, #0b1220);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid #1f2937;
+}
+
+.pdv-pill div {
+    font-size: 20px;
+    font-weight: 700;
+    color: #93c5fd;
+}
+
+.pdv-pill span {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+/* ─────────────────────────────────────────
+   TABS
+───────────────────────────────────────── */
+.pdv-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.pdv-tabs button {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid #1f2937;
+    background: #0f172a;
+    color: #3b65b8;
+    cursor: pointer;
+}
+
+.pdv-tabs .active {
+    background: #2062b8;
+    color: #cee5ff;
+}
+
+/* ─────────────────────────────────────────
+   TABLE WRAP
+───────────────────────────────────────── */
+.pdv-table-wrap {
+    display: block;
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid #1f2937;
+    background: #0f172a;
+}
+
+/* ─────────────────────────────────────────
+   TABLE BASE
+───────────────────────────────────────── */
+.pdv-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+/* ─────────────────────────────────────────
+   HEADER
+───────────────────────────────────────── */
+.pdv-table thead {
+    background: #111827;
+}
+
+.pdv-table th {
+    text-align: left;
+    font-size: 11px;
+    padding: 12px 14px;
+    color: #9ca3af;
+    font-weight: 500;
+    border-bottom: 1px solid #1f2937;
+}
+
+/* ─────────────────────────────────────────
+   ROWS
+───────────────────────────────────────── */
+.pdv-table tbody tr {
+    border-bottom: 1px solid #1f2937;
+    transition: all 0.2s ease;
+}
+
+.pdv-table tbody tr:hover {
+    background: #0b1220;
+}
+
+/* zebra subtle */
+.pdv-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+/* ─────────────────────────────────────────
+   CELLS
+───────────────────────────────────────── */
+.pdv-table td {
+    padding: 14px;
+    font-size: 13px;
+    color: #e5e7eb;
+    vertical-align: middle;
+}
+
+/* amount highlight */
+.pdv-table td:nth-child(3) {
+    font-weight: 600;
+    color: #93c5fd;
+}
+
+/* ─────────────────────────────────────────
+   STATUS BADGE
+───────────────────────────────────────── */
+.pdv-table td:nth-child(4) {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ─────────────────────────────────────────
+   ACTIONS
+───────────────────────────────────────── */
+.pdv-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.pdv-actions button {
+    background: #111827;
+    border: 1px solid #1f2937;
+    padding: 7px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: all 0.2s ease;
+}
+
+.pdv-actions button:hover {
+    background: #1e293b;
+    color: #60a5fa;
+    transform: translateY(-1px);
+}
+
+/* icon size consistency */
+.pdv-actions svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* ─────────────────────────────────────────
+   SCROLLBAR (optional clean)
+───────────────────────────────────────── */
+.pdv-table-wrap::-webkit-scrollbar {
+    height: 6px;
+}
+
+.pdv-table-wrap::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 10px;
+}
+
+/* ─────────────────────────────────────────
+   MOBILE CARD (FINAL FIXED)
+───────────────────────────────────────── */
+.pdv-card {
+    background: linear-gradient(145deg, #0f172a, #0b1220);
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* press effect */
+.pdv-card:active {
+    transform: scale(0.98);
+}
+
+/* ─────────────────────────────────────────
+   TOP ROW
+───────────────────────────────────────── */
+.pdv-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 8px;
+}
+
+/* ─────────────────────────────────────────
+   SERVICE TEXT (FIXED SMALLER)
+───────────────────────────────────────── */
+.pdv-card-service {
+    font-size: 11px;
+    color: #6b7fa8;
+    margin: 8px 0;
+}
+
+/* ─────────────────────────────────────────
+   BOTTOM ROW
+───────────────────────────────────────── */
+.pdv-card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+/* amount */
+.pdv-card-bottom span {
+    font-size: 15px; /* 🔥 slightly reduced */
+    font-weight: 700;
+    color: #4ade80;
+}
+
+/* ─────────────────────────────────────────
+   ACTION BUTTONS
+───────────────────────────────────────── */
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.actions button {
+    background: #111827;
+    border: 1px solid #1f2937;
+    padding: 7px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: all 0.2s ease;
+}
+
+.actions button:hover {
+    background: #1e293b;
+    color: #60a5fa;
+}
+
+.actions svg {
+    width: 14px;
+    height: 14px;
+}
+/* ─────────────────────────────────────────
+   STATUS BADGE (IMPROVED)
+───────────────────────────────────────── */
+.status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: 70px;
+}
+
+/* COLORS */
+.status.paid {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+.status.partial {
+    background: rgba(251, 146, 60, 0.15);
+    color: #fb923c;
+}
+
+.status.unpaid {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+}
+/* ─────────────────────────────────────────
+   EMPTY
+───────────────────────────────────────── */
+.pdv-empty {
+    text-align: center;
+    padding: 30px;
+    color: #6b7280;
+}
+
+/* ─────────────────────────────────────────
+   LOADING
+───────────────────────────────────────── */
+.pdv-loading {
+    text-align: center;
+    padding: 40px;
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────── */
+
+/* MOBILE */
+@media (max-width: 640px) {
+    .pdv-doc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pdv-table-wrap {
+        display: none;
+    }
+}
+
+/* DESKTOP */
+@media (min-width: 641px) {
+    .pdv-card {
+        display: none;
+    }
+}
+
+.book-btn {
+    margin-left: auto;
+    background: #2563eb;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}

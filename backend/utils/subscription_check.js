@@ -12,7 +12,7 @@ const checkSubscription = async (doctor) => {
 
     let updated = false;
 
-    // EXPIRED
+    // EXPIRED: past expiry date and not already marked expired.
     if (expiry <= today && doctor.subscription.status !== "expired") {
         doctor.subscription.status = "expired";
         doctor.usage = {
@@ -24,12 +24,13 @@ const checkSubscription = async (doctor) => {
         updated = true;
     }
 
-    // ACTIVE (IMPORTANT FIX)
-    if (
+    const canAutoRevive =
         expiry > today &&
         doctor.subscription.status !== "active" &&
-        doctor.subscription.status !== "cancelled"
-    ) {
+        doctor.subscription.status !== "cancelled" &&
+        doctor.subscription.status !== "failed";
+
+    if (canAutoRevive) {
         doctor.subscription.status = "active";
         updated = true;
     }
@@ -41,6 +42,9 @@ const checkSubscription = async (doctor) => {
 
 const getSubscriptionStatus = (subscription) => {
     if (!subscription?.expiryDate) return "free";
+    if (subscription.status === "cancelled") return "cancelled";
+    if (subscription.status === "failed") return "failed";
+
     const today = normalizeDate(new Date());
     const expiry = normalizeDate(subscription.expiryDate);
     return expiry <= today ? "expired" : "active";

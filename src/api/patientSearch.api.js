@@ -5,5 +5,12 @@ export const searchPatients = async (query) => {
     const res = await authFetch(
         `${API_BASE_URL}/api/doctor/patient/search_patient?q=${encodeURIComponent(query)}`,
     );
-    return res.json();
+
+    if (!res.ok) {
+        console.error("Search failed:", res.status);
+        return [];
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
 };

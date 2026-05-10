@@ -7,23 +7,41 @@ import {
     CalendarDays,
     CreditCard,
     CheckCircle,
+    ImageIcon,
 } from "lucide-react";
 import SlotPicker from "./Slotpicker";
 import { DayPicker } from "react-day-picker";
 import { fetchPaymentMethods } from "../api/payment.api";
-// eslint-disable-next-line
-import { uploadImageAPI } from "../api/upload.api";
 import { addAppointment } from "../api/appointment.api";
 import { useSlots } from "../hooks/useSlots";
 import { fetchAvailability } from "../api/availability.api";
 import { fetchServices } from "../api/service.api";
 import { searchPatients } from "../api/patientSearch.api";
-import SuccessOverlay from "./SuccessOverlay";
+// import SuccessOverlay from "./SuccessOverlay";
 import { getTodayLocal } from "./utils/dateutils";
-// import "../css/Fxsuccess.css";
 import "../css/Addappointment.css";
 
-export default function AddAppointment({ showAlert, currency, usage }) {
+const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+];
+const MAX_IMAGES = 10;
+
+export default function AddAppointment({
+    showAlert,
+    currency,
+    usage,
+    country,
+    onAppointmentAdded,
+    closePanel,
+}) {
+    // Derive display locale from the doctor's country code ("IN" → "en-IN").
+    // Falls back to the browser's locale when country hasn't loaded yet.
+    const locale = country?.code ? `en-${country.code}` : undefined;
+
     const [searchText, setSearchText] = useState("");
     const [patients, setPatients] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
@@ -31,7 +49,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
     const [allServices, setAllServices] = useState([]);
     const [services, setServices] = useState([]);
     const [serviceAmounts, setServiceAmounts] = useState({});
-    // eslint-disable-next-line
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [appointmentDate, setAppointmentDate] = useState(getTodayLocal());
     const [paymentOptions, setPaymentOptions] = useState([]);
@@ -40,31 +57,49 @@ export default function AddAppointment({ showAlert, currency, usage }) {
     const [discount, setDiscount] = useState(0);
     const [isPercent, setIsPercent] = useState(false);
     const [availability, setAvailability] = useState([]);
+    // eslint-disable-next-line
     const [showSuccess, setShowSuccess] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState("");
     const [openSection, setOpenSection] = useState("Morning");
-    const [image, setImage] = useState(null);
+    const [showCalendar, setShowCalendar] = useState(false);
+
+    // ── Multi-image state ───────────────────────────────────────────────────
+    // Each item: { file: File, preview: string }
+    const [imageFiles, setImageFiles] = useState([]);
+
     const [total, setTotal] = useState(0);
     const [finalAmount, setFinalAmount] = useState(0);
-    const [showCalendar, setShowCalendar] = useState(false);
-    const isImageLimitReached = usage?.images?.isLimitReached;
+    const isZeroAmountAppointment = services.length > 0 && finalAmount <= 0;
 
     const fileInputRef = useRef(null);
-    const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
+    const fmt = (v) =>
+        new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(v);
     const discountValue = Math.min(
         isPercent ? (total * discount) / 100 : discount,
         total,
     );
 
-    const { timeSlots, bookedSlots, groupedSlots } = useSlots(
-        availability,
-        appointmentDate,
-        true,
-    );
+    const {
+        timeSlots = [],
+        bookedSlots = [],
+        groupedSlots = {},
+        bookedSlotsReady = false,
+        refetchBookedSlots = () => {},
+    } = useSlots(availability, appointmentDate, true) || {};
 
     const selectedPayment = paymentOptions.find(
         (p) => String(p.id) === String(selectedPaymentId),
     );
+
+    const isImageLimitReached = usage?.images?.isLimitReached;
+    const subscriptionExpired = usage?.subscriptionExpired === true;
+    const imagesUsed = usage?.images?.used || 0;
+    const imagesLimit = usage?.images?.limit ?? 0;
+    const localUsed = imagesUsed + imageFiles.length;
+    const isLocalLimitReached =
+        subscriptionExpired ||
+        isImageLimitReached ||
+        (imagesLimit !== -1 && localUsed >= imagesLimit);
 
     const isToday = useMemo(() => {
         const today = new Date().toISOString().slice(0, 10);
@@ -107,7 +142,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
 
     const handleRemoveService = useCallback((id) => {
         setServices((prev) => prev.filter((s) => s._id !== id));
-
         setServiceAmounts((prev) => {
             const copy = { ...prev };
             delete copy[id];
@@ -144,9 +178,13 @@ export default function AddAppointment({ showAlert, currency, usage }) {
         return null;
     }, [timeSlots, currentSlot, bookedSlots]);
 
+    const hasAutoSelected = useRef(false);
     useEffect(() => {
-        if (currentSlot) setSelectedSlot(currentSlot);
-    }, [currentSlot]);
+        if (bookedSlotsReady && currentSlot && !hasAutoSelected.current) {
+            setSelectedSlot(currentSlot);
+            hasAutoSelected.current = true;
+        }
+    }, [currentSlot, bookedSlotsReady]);
 
     useEffect(() => {
         const load = async () => {
@@ -199,14 +237,26 @@ export default function AddAppointment({ showAlert, currency, usage }) {
         setFinalAmount(t - dv);
     }, [services, serviceAmounts, discount, isPercent]);
 
+    useEffect(() => {
+        setDiscount((prev) => {
+            let value = Number(prev) || 0;
+            if (value < 0) value = 0;
+            if (isPercent) {
+                return Math.min(value, 100);
+            }
+            return Math.min(value, total);
+        });
+    }, [total, isPercent]);
+
     const selectPatient = (p) => {
         setSelectedPatient(p);
         setSearchText("");
         setPatients([]);
+        hasAutoSelected.current = false;
     };
     const changeServiceAmount = (id, value) =>
         setServiceAmounts((prev) => ({ ...prev, [id]: Number(value) }));
-    // eslint-disable-next-line
+
     const resetForm = () => {
         setSelectedPatient(null);
         setServices([]);
@@ -215,27 +265,123 @@ export default function AddAppointment({ showAlert, currency, usage }) {
         setIsPercent(false);
         setSelectedPaymentId("");
         setAppointmentDate(new Date().toISOString().slice(0, 10));
+        setImageFiles([]);
+        setManualOverride(false);
     };
 
     useEffect(() => {
         if (!manualOverride) setCollected(finalAmount);
     }, [manualOverride, finalAmount]);
 
+    // ── Image handlers ──────────────────────────────────────────────────────
+
+    const handleImageChange = (e) => {
+        const newFiles = Array.from(e.target.files || []);
+        if (!newFiles.length) return;
+
+        if (subscriptionExpired) {
+            showAlert(
+                "Your subscription has expired. Renew to upload files.",
+                "warning",
+            );
+            e.target.value = "";
+            return;
+        }
+        if (isImageLimitReached) {
+            showAlert(`Image limit reached. Upgrade plan.`, "warning");
+            e.target.value = "";
+            return;
+        }
+
+        const errors = [];
+        const valid = [];
+
+        for (const file of newFiles) {
+            const isPDF = file.type === "application/pdf";
+
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                errors.push(`${file.name}: only images or PDFs allowed`);
+                continue;
+            }
+
+            const maxSize = isPDF
+                ? 2 * 1024 * 1024 // keep this
+                : 2 * 1024 * 1024;
+
+            if (file.size > maxSize) {
+                errors.push(
+                    `${file.name}: exceeds ${isPDF ? "2MB (PDF)" : "2MB (image)"}`,
+                );
+                continue;
+            }
+
+            valid.push(file);
+        }
+
+        if (errors.length) showAlert(errors.join("; "), "warning");
+
+        if (!valid.length) return;
+
+        // Check slots
+        const slotsLeft =
+            imagesLimit === -1
+                ? MAX_IMAGES - imageFiles.length
+                : Math.min(
+                      imagesLimit - imagesUsed - imageFiles.length,
+                      MAX_IMAGES - imageFiles.length,
+                  );
+
+        if (valid.length > slotsLeft) {
+            showAlert(
+                `Only ${slotsLeft} more image(s) allowed on your plan`,
+                "warning",
+            );
+            valid.splice(slotsLeft);
+        }
+
+        const toAdd = valid.map((file) => ({
+            file,
+            preview: file.type.startsWith("image/")
+                ? URL.createObjectURL(file)
+                : null,
+        }));
+
+        setImageFiles((prev) => [...prev, ...toAdd]);
+
+        // Reset input so the same file can be picked again
+        e.target.value = "";
+    };
+
+    const handleRemoveImage = (index) => {
+        setImageFiles((prev) => {
+            const updated = [...prev];
+            URL.revokeObjectURL(updated[index].preview);
+            updated.splice(index, 1);
+            return updated;
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (isSubmitting) return;
 
         if (!selectedPatient) {
             showAlert("Please select a patient", "warning");
             return;
         }
-
         if (services.length === 0) {
             showAlert("Select at least one service", "warning");
             return;
         }
+        if (finalAmount <= 0) {
+            const confirmed = window.confirm(
+                `This appointment has ${currency?.symbol || ""}0 billing. Continue?`,
+            );
 
+            if (!confirmed) {
+                return;
+            }
+        }
         if (!selectedPayment) {
             showAlert("Select Payment Method", "warning");
             return;
@@ -245,7 +391,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
 
         try {
             const formData = new FormData();
-
             formData.append("patientId", selectedPatient._id);
             formData.append("amount", finalAmount);
             formData.append("collected", collected);
@@ -255,7 +400,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
             formData.append("time", selectedSlot);
             formData.append("discount", discount);
             formData.append("isPercent", isPercent);
-
             formData.append(
                 "services",
                 JSON.stringify(
@@ -266,20 +410,22 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                     })),
                 ),
             );
-
-            if (selectedPayment) {
+            if (selectedPayment)
                 formData.append("paymentMethodId", selectedPayment.id);
-            }
 
-            if (image) {
-                formData.append("image", image);
+            // Append all images under the "images" key
+            for (const { file } of imageFiles) {
+                formData.append("images", file);
             }
 
             await addAppointment(formData);
-            setShowSuccess(true);
+            refetchBookedSlots();
+            showAlert(`Appointment Added`, "success");
             resetForm();
+            if (onAppointmentAdded) onAppointmentAdded();
+            if (closePanel) setTimeout(closePanel, 800);
         } catch (err) {
-            showAlert("Server error", "danger");
+            showAlert(err.message || "Server error", "danger");
         } finally {
             setIsSubmitting(false);
         }
@@ -294,33 +440,16 @@ export default function AddAppointment({ showAlert, currency, usage }) {
     const dateLabel = (d) =>
         !d
             ? "Select date"
-            : new Date(d + "T00:00:00").toLocaleDateString("en-IN", {
+            : new Date(d + "T00:00:00").toLocaleDateString(locale, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
               });
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // validation
-        if (!file.type.startsWith("image/")) {
-            showAlert("Only images allowed", "warning");
-            return;
-        }
-
-        if (file.size > 2 * 1024 * 1024) {
-            showAlert("Max 2MB allowed", "warning");
-            return;
-        }
-
-        setImage(file);
-    };
 
     return (
         <>
             <div className="aa-root">
-                <SuccessOverlay
+                {/* <SuccessOverlay
                     visible={showSuccess}
                     onDone={() => {
                         setShowSuccess(false);
@@ -330,7 +459,7 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                     sub="Record created"
                     variant="green"
                     duration={1800}
-                />
+                /> */}
                 <div className="aa-header">
                     <div className="aa-header-icon">
                         <Plus size={16} />
@@ -402,6 +531,7 @@ export default function AddAppointment({ showAlert, currency, usage }) {
 
                     {selectedPatient && (
                         <form onSubmit={handleSubmit}>
+                            {/* ── Schedule ── */}
                             <div className="aa-section">
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
@@ -410,7 +540,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                 <div className="aa-section-line" />
                             </div>
 
-                            {/* Date toggle */}
                             <div className="aa-mb">
                                 <label className="aa-label">
                                     <CalendarDays
@@ -510,6 +639,7 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                 />
                             </div>
 
+                            {/* ── Billing ── */}
                             {services.length > 0 && (
                                 <>
                                     <div className="aa-section">
@@ -552,13 +682,27 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                         <input
                                             type="number"
                                             className="aa-input"
+                                            min={0}
+                                            max={isPercent ? 100 : total}
                                             placeholder="0"
                                             value={discount}
-                                            onChange={(e) =>
-                                                setDiscount(
-                                                    Number(e.target.value),
-                                                )
-                                            }
+                                            onChange={(e) => {
+                                                let value =
+                                                    Number(e.target.value) || 0;
+                                                if (value < 0) value = 0;
+                                                if (isPercent) {
+                                                    value = Math.min(
+                                                        value,
+                                                        100,
+                                                    );
+                                                } else {
+                                                    value = Math.min(
+                                                        value,
+                                                        total,
+                                                    );
+                                                }
+                                                setDiscount(value);
+                                            }}
                                             style={{ flex: 1 }}
                                         />
                                         <label
@@ -567,11 +711,25 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                             <input
                                                 type="checkbox"
                                                 checked={isPercent}
-                                                onChange={(e) =>
-                                                    setIsPercent(
-                                                        e.target.checked,
-                                                    )
-                                                }
+                                                onChange={(e) => {
+                                                    const checked =
+                                                        e.target.checked;
+                                                    setIsPercent(checked);
+                                                    setDiscount((prev) => {
+                                                        let value =
+                                                            Number(prev) || 0;
+                                                        if (checked) {
+                                                            return Math.min(
+                                                                value,
+                                                                100,
+                                                            );
+                                                        }
+                                                        return Math.min(
+                                                            value,
+                                                            total,
+                                                        );
+                                                    });
+                                                }}
                                             />{" "}
                                             % Percent
                                         </label>
@@ -603,6 +761,13 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                                 {fmt(finalAmount)}
                                             </span>
                                         </div>
+                                        {isZeroAmountAppointment && (
+                                            <div className="aa-zero-warning">
+                                                ⚠️ This appointment will be
+                                                saved with {currency.symbol}0
+                                                billing.
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="aa-mb">
                                         <label className="aa-label">
@@ -641,6 +806,7 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                 </>
                             )}
 
+                            {/* ── Payment ── */}
                             <div className="aa-section">
                                 <div className="aa-section-line" />
                                 <span className="aa-section-title">
@@ -670,7 +836,6 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                     }
                                 >
                                     <option value="">Select Payment</option>
-
                                     {paymentOptions.map((p) => (
                                         <option key={p.id} value={p.id}>
                                             {p.subCategoryName
@@ -681,106 +846,193 @@ export default function AddAppointment({ showAlert, currency, usage }) {
                                 </select>
                             </div>
 
+                            {/* ── Images ── */}
+                            <div className="aa-section">
+                                <div className="aa-section-line" />
+                                <span className="aa-section-title">Images</span>
+                                <div className="aa-section-line" />
+                            </div>
                             <div className="aa-mb">
-                                <label className="aa-label">
-                                    Upload Image
-                                    <span
-                                        style={{
-                                            color: "#2e3d5c",
-                                            fontWeight: 400,
-                                            marginLeft: 6,
-                                            fontSize: 9,
-                                        }}
-                                    >
-                                        — max 2 MB
-                                    </span>
-                                </label>
-                                <span
+                                <div
                                     style={{
-                                        fontSize: 10,
-                                        color: "#6b7fa8",
-                                        marginLeft: 8,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        marginBottom: 8,
                                     }}
                                 >
-                                    ({usage?.images?.used || 0}/
-                                    {usage?.images?.limit === -1
-                                        ? "∞"
-                                        : usage?.images?.limit}
-                                    )
-                                </span>
+                                    <label
+                                        className="aa-label"
+                                        style={{ margin: 0 }}
+                                    >
+                                        <ImageIcon
+                                            size={11}
+                                            style={{
+                                                display: "inline",
+                                                marginRight: 5,
+                                            }}
+                                        />
+                                        Upload Images / PDF
+                                        <span
+                                            style={{
+                                                color: "#2e3d5c",
+                                                fontWeight: 400,
+                                                marginLeft: 6,
+                                                fontSize: 9,
+                                            }}
+                                        >
+                                            — max 2MB
+                                        </span>
+                                    </label>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 6,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                fontSize: 10,
+                                                color: isLocalLimitReached
+                                                    ? "#f87171"
+                                                    : "#6b7fa8",
+                                            }}
+                                        >
+                                            {imagesLimit === -1
+                                                ? `${localUsed}/∞`
+                                                : `${localUsed}/${imagesLimit}`}{" "}
+                                            used
+                                        </span>
+                                        {subscriptionExpired && (
+                                            <span
+                                                style={{
+                                                    fontSize: 9,
+                                                    background: "#f871711a",
+                                                    border: "1px solid #f8717140",
+                                                    color: "#f87171",
+                                                    borderRadius: 4,
+                                                    padding: "1px 5px",
+                                                }}
+                                            >
+                                                Expired
+                                            </span>
+                                        )}
+                                        {!subscriptionExpired &&
+                                            isLocalLimitReached && (
+                                                <span
+                                                    style={{
+                                                        fontSize: 9,
+                                                        background: "#f871711a",
+                                                        border: "1px solid #f8717140",
+                                                        color: "#f87171",
+                                                        borderRadius: 4,
+                                                        padding: "1px 5px",
+                                                    }}
+                                                >
+                                                    Limit Reached
+                                                </span>
+                                            )}
+                                    </div>
+                                </div>
+
+                                {/* Hidden file input */}
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/*,application/pdf"
+                                    multiple
                                     style={{ display: "none" }}
-                                    disabled={isImageLimitReached}
-                                    onChange={(e) => {
-                                        if (isImageLimitReached) {
+                                    onChange={handleImageChange}
+                                />
+
+                                {/* Add button */}
+                                <button
+                                    type="button"
+                                    className="aa-upload-btn"
+                                    onClick={() => {
+                                        if (subscriptionExpired) {
                                             showAlert(
-                                                "Image limit reached 🚫",
+                                                "Your subscription has expired. Renew to upload files.",
                                                 "warning",
                                             );
                                             return;
                                         }
-                                        handleImageChange(e);
+                                        if (isLocalLimitReached) {
+                                            showAlert(
+                                                `Image upload limit reached (${localUsed}/${imagesLimit === -1 ? "∞" : imagesLimit}). Upgrade your plan to upload more.`,
+                                                "warning",
+                                            );
+                                            return;
+                                        }
+                                        fileInputRef.current?.click();
                                     }}
-                                />
-
-                                <div className="aa-upload-btns">
-                                    <button
-                                        type="button"
-                                        className="aa-upload-btn"
-                                        disabled={isImageLimitReached}
-                                        style={{
-                                            opacity: isImageLimitReached
-                                                ? 0.5
-                                                : 1,
-                                            cursor: isImageLimitReached
-                                                ? "not-allowed"
-                                                : "pointer",
-                                        }}
-                                        onClick={() => {
-                                            if (isImageLimitReached) {
-                                                showAlert(
-                                                    `Image limit reached (${usage?.images?.used}/${usage?.images?.limit}). Upgrade plan 🚀`,
-                                                    "warning",
-                                                );
-                                                return;
-                                            }
-
-                                            fileInputRef.current?.click();
-                                        }}
-                                    >
-                                        <span className="aa-upload-btn-icon">
-                                            ↑
-                                        </span>{" "}
-                                        Upload File
-                                    </button>
-                                </div>
-
-                                {image && (
-                                    <div className="aa-upload-preview">
-                                        <img
-                                            src={URL.createObjectURL(image)}
-                                            alt="preview"
-                                            className="aa-preview-img"
-                                        />
-                                        <div className="aa-preview-info">
-                                            <div className="aa-preview-name">
-                                                {image.name}
-                                            </div>
-                                            <div className="aa-preview-size">
-                                                {(image.size / 1024).toFixed(0)}{" "}
-                                                KB
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="aa-preview-remove"
-                                            onClick={() => setImage(null)}
+                                >
+                                    <span className="aa-upload-btn-icon">
+                                        +
+                                    </span>{" "}
+                                    Attach Files
+                                    {imageFiles.length > 0 && (
+                                        <span
+                                            style={{
+                                                marginLeft: 6,
+                                                fontSize: 9,
+                                                color: "#60a5fa",
+                                            }}
                                         >
-                                            ✕
-                                        </button>
+                                            ({imageFiles.length} selected)
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Preview grid */}
+                                {imageFiles.length > 0 && (
+                                    <div className="aa-images-grid">
+                                        {imageFiles.map(
+                                            ({ file, preview }, idx) => (
+                                                <div
+                                                    className="aa-preview-card"
+                                                    key={idx}
+                                                >
+                                                    {/* Image OR PDF */}
+                                                    {file.type ===
+                                                    "application/pdf" ? (
+                                                        <div className="aa-pdf-preview">
+                                                            📄
+                                                            <span className="aa-preview-name">
+                                                                {file.name}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <img
+                                                            src={preview}
+                                                            alt={file.name}
+                                                            className="aa-preview-img"
+                                                        />
+                                                    )}
+
+                                                    {/* Overlay */}
+                                                    <div className="aa-preview-overlay">
+                                                        <span className="aa-preview-name">
+                                                            {file.name}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Remove */}
+                                                    <button
+                                                        type="button"
+                                                        className="aa-preview-remove"
+                                                        onClick={() =>
+                                                            handleRemoveImage(
+                                                                idx,
+                                                            )
+                                                        }
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ),
+                                        )}
                                     </div>
                                 )}
                             </div>

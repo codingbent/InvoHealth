@@ -2,10 +2,14 @@ const express = require("express");
 const router = express.Router();
 const Doc = require("../../../models/Doc");
 const fetchuser = require("../../../middleware/fetchuser");
-const { getPricing,invalidatePricingCache } = require("../../../utils/pricingcache");
+const {
+    getPricing,
+    invalidatePricingCache,
+} = require("../../../utils/pricingcache");
+const requireSubscription = require("../../../middleware/requiresubscription");
+const { getSubscriptionStatus } = require("../../../utils/subscription_check");
 
-
-router.get("/get_usage", fetchuser, async (req, res) => {
+router.get("/get_usage", fetchuser, requireSubscription, async (req, res) => {
     try {
         const doctor = await Doc.findById(req.user.doctorId);
 
@@ -15,6 +19,9 @@ router.get("/get_usage", fetchuser, async (req, res) => {
                 error: "Doctor not found",
             });
         }
+
+        const subStatus = getSubscriptionStatus(doctor.subscription);
+        const subscriptionExpired = subStatus !== "active";
 
         const pricing = await getPricing();
 
@@ -63,10 +70,12 @@ router.get("/get_usage", fetchuser, async (req, res) => {
         return res.json({
             success: true,
             plan,
+            subscriptionExpired,
             usage: {
                 images: formatUsage(usage.images),
                 invoices: formatUsage(usage.invoices),
                 exports: formatUsage(usage.exports),
+                subscriptionExpired,
             },
         });
     } catch (err) {

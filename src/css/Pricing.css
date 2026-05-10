@@ -80,7 +80,7 @@ ____________________ */
     background: #0d1117;
     border: 1px solid #161d2e;
     border-radius: 18px;
-    width: stretch;
+    width: 100%;
     max-width: 480px;
     max-height: 90vh;
     overflow-y: auto;
@@ -203,7 +203,7 @@ ____________________ */
     margin-bottom: 6px;
 }
 .pr-intl-input {
-    width: stretch;
+    width: 100%;
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;
@@ -219,7 +219,7 @@ ____________________ */
     box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
 }
 .pr-intl-action-btn {
-    width: stretch;
+    width: 100%;
     padding: 10px;
     border-radius: 8px;
     background: #4d7cf6;

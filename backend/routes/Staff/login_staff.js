@@ -1,100 +1,228 @@
 const express = require("express");
 const router = express.Router();
-const Staff = require("../../models/Staff");
 const bcrypt = require("bcryptjs");
-var jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const Staff = require("../../models/Staff");
 const JWT_SECRET = process.env.JWT_SECRET;
-const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
+const { createLimiter } = require("../../middleware/ratelimiter");
 
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 min
-    max: 10, // max 10 requests
-    message: {
-        success: false,
-        error: "Too many attempts. Try again later.",
-    },
-});
+// BCRYPT SALT ROUNDS — must stay consistent with add_staff.js
+const PHONE_SALT_ROUNDS = 10;
 
-router.post("/login_staff", loginLimiter, async (req, res) => {
-    try {
-        const { phone, phoneFallback, password } = req.body;
+router.post(
+    "/login_staff",
+    createLimiter({ max: 5, windowMs: 30 * 60 * 1000 }),
+    async (req, res) => {
+        try {
+            const { phone, dialCode, password } = req.body;
 
-        // Try with country code first, then without, then raw digits
-        let staff = await Staff.findOne({ phone });
+            if (!phone || !password || !dialCode) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid credentials",
+                });
+            }
 
-        if (!staff && phoneFallback) {
-            staff = await Staff.findOne({ phone: phoneFallback });
-        }
+            const cleanPhone = String(phone)
+                .replace(/\D/g, "")
+                .replace(/^0+/, "");
 
-        // Also try searching by just the last 10 digits as fallback
-        if (!staff) {
-            const digits = phone.replace(/\D/g, "");
-            staff = await Staff.findOne({
-                phone: { $regex: digits + "$" },
-            });
-        }
+            if (cleanPhone.length < 6 || cleanPhone.length > 15) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid credentials",
+                });
+            }
 
-        if (!staff) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid credentials",
-            });
-        }
+            const normalizedDialCode = String(dialCode).trim();
+            const last4 = cleanPhone.slice(-4);
 
-        if (staff.isDeleted) {
-            return res.status(403).json({
-                success: false,
-                error: "You no longer have access. Contact your doctor.",
-            });
-        }
+            // ── PHONE LOOKUP: phoneLast4 prefilter + compare ──
+            //
+            // bcrypt is not deterministic — we cannot do a direct equality
+            // lookup on the stored hash. Instead we prefilter by phoneLast4
+            // (indexed) then compare the stored hash against the supplied phone.
+            //
+            // MIGRATION FALLBACK: existing staff were hashed with SHA-256.
+            // We detect those records (bcrypt hashes always start with "$2"),
+            // compare via SHA-256 as a one-time fallback, and immediately
+            // re-hash with bcrypt so next login uses the secure path.
+            // No staff records are blocked, no manual migration script needed.
+            const candidates = await Staff.find({
+                phoneLast4: last4,
+                isDeleted: false,
+            })
+                .populate("countryId", "dialCode")
+                .select(
+                    "+phoneHash +password isActive isDeleted role doctorId name countryId",
+                );
 
-        if (!staff.isActive) {
-            return res.status(403).json({
-                success: false,
-                error: "You no longer have access. Contact your doctor.",
-            });
-        }
+            let staff = null;
+            let needsRehash = false;
 
-        if (!staff.password) {
-            const setupToken = jwt.sign(
-                { staffId: staff._id, purpose: "set_password" },
-                JWT_SECRET,
-                { expiresIn: "15m" },
-            );
-            return res.json({ success: true, firstLogin: true, setupToken });
-        }
+            for (const candidate of candidates) {
+                if (!candidate.phoneHash) continue;
 
-        const match = await bcrypt.compare(password, staff.password);
-        if (!match) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid password",
-            });
-        }
+                const isBcrypt = candidate.phoneHash.startsWith("$2");
 
-        const token = jwt.sign(
-            {
-                user: {
-                    id: staff._id,
-                    role: "staff",
-                    staffRole: staff.role,
-                    doctorId: staff.doctorId,
+                let phoneMatches = false;
+
+                if (isBcrypt) {
+                    // Secure path: bcrypt compare
+                    phoneMatches = await bcrypt.compare(
+                        cleanPhone,
+                        candidate.phoneHash,
+                    );
+                } else {
+                    // Legacy path: SHA-256 compare — mark for upgrade
+                    const legacyHash = crypto
+                        .createHash("sha256")
+                        .update(cleanPhone)
+                        .digest("hex");
+
+                    phoneMatches = legacyHash === candidate.phoneHash;
+
+                    if (phoneMatches) needsRehash = true;
+                }
+
+                if (phoneMatches) {
+                    staff = candidate;
+                    break;
+                }
+            }
+
+            // Generic error — do not reveal whether the phone exists
+            if (!staff) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid credentials",
+                });
+            }
+
+            // ── DIAL CODE CHECK ───────────────────────────────
+            const storedDialCode = staff.countryId?.dialCode || "";
+
+            if (storedDialCode !== normalizedDialCode) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid credentials",
+                });
+            }
+
+            // ── ACTIVE / DELETED CHECK ────────────────────────
+            if (!staff.isActive || staff.isDeleted) {
+                return res.status(403).json({
+                    success: false,
+                    error: "You no longer have access. Contact your doctor.",
+                });
+            }
+
+            // ── FIRST LOGIN: no password set yet ─────────────
+            if (!staff.password) {
+                // If phone hash needs upgrading, do it now before returning
+                if (needsRehash) {
+                    const { encrypt } = require("../../utils/crypto");
+                    const newHash = await bcrypt.hash(
+                        cleanPhone,
+                        PHONE_SALT_ROUNDS,
+                    );
+                    const encrypted = encrypt(cleanPhone);
+                    Staff.findByIdAndUpdate(staff._id, {
+                        phoneHash: newHash,
+                        phoneEncrypted: encrypted,
+                    }).catch((e) =>
+                        console.error(
+                            "[staff login] phone rehash failed:",
+                            e.message,
+                        ),
+                    );
+                }
+
+                const setupToken = jwt.sign(
+                    {
+                        staffId: staff._id,
+                        purpose: "set_password",
+                    },
+                    JWT_SECRET,
+                    {
+                        expiresIn: "15m",
+                        algorithm: "HS256",
+                    },
+                );
+
+                return res.json({
+                    success: true,
+                    firstLogin: true,
+                    setupToken,
+                });
+            }
+
+            // ── PASSWORD CHECK ────────────────────────────────
+            const match = await bcrypt.compare(password, staff.password);
+
+            if (!match) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid credentials",
+                });
+            }
+
+            // ── TRANSPARENT PHONE HASH UPGRADE ───────────────
+            // If the phone was stored with SHA-256, upgrade to bcrypt silently
+            // on this successful login. Fire-and-forget — login is not blocked
+            // if the update fails (it will retry on next login).
+            if (needsRehash) {
+                const { encrypt } = require("../../utils/crypto");
+                bcrypt
+                    .hash(cleanPhone, PHONE_SALT_ROUNDS)
+                    .then((newHash) => {
+                        const encrypted = encrypt(cleanPhone);
+                        return Staff.findByIdAndUpdate(staff._id, {
+                            phoneHash: newHash,
+                            phoneEncrypted: encrypted,
+                        });
+                    })
+                    .catch((e) =>
+                        console.error(
+                            "[staff login] phone rehash failed:",
+                            e.message,
+                        ),
+                    );
+            }
+
+            // ── ISSUE JWT ─────────────────────────────────────
+            const token = jwt.sign(
+                {
+                    user: {
+                        id: staff._id,
+                        role: "staff",
+                        staffRole: staff.role,
+                        doctorId: staff.doctorId,
+                    },
                 },
-            },
-            JWT_SECRET,
-            { expiresIn: "1d" },
-        );
+                JWT_SECRET,
+                {
+                    expiresIn: "1d",
+                    algorithm: "HS256",
+                },
+            );
 
-        return res.json({
-            success: true,
-            token,
-            role: staff.role,
-            name: staff.name,
-        });
-    } catch (err) {
-        console.error("login_staff error:", err);
-        res.status(500).json({ success: false, error: "Server error" });
-    }
-});
+            return res.json({
+                success: true,
+                token,
+                role: staff.role,
+                name: staff.name,
+            });
+        } catch (err) {
+            console.error("login_staff error:", err);
+
+            return res.status(500).json({
+                success: false,
+                error: "Server error",
+            });
+        }
+    },
+);
 
 module.exports = router;

@@ -51,6 +51,12 @@ const EditService = ({ showAlert, onClose, currency }) => {
             showAlert("Please select a service", "warning");
             return;
         }
+        const parsedAmount = Number(amount);
+
+        if (amount !== "" && (isNaN(parsedAmount) || parsedAmount < 0)) {
+            showAlert("Amount cannot be negative", "warning");
+            return;
+        }
         setLoading(true);
         try {
             const res = await authFetch(
@@ -162,7 +168,16 @@ const EditService = ({ showAlert, onClose, currency }) => {
                             className="es-input"
                             placeholder="Amount"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "") {
+                                    setAmount("");
+                                    return;
+                                }
+                                const num = Number(value);
+                                if (num < 0) return;
+                                setAmount(value);
+                            }}
                             min="0"
                             disabled={!selectedService}
                         />

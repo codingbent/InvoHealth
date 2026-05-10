@@ -3,285 +3,338 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const Appointment = require("../../../models/Appointment");
 const fetchuser = require("../../../middleware/fetchuser");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
-router.get("/fetchall_appointments", fetchuser, async (req, res) => {
-    try {
-        const {
-            limit = 20,
-            skip = 0,
-            search = "",
-            gender,
-            payments,
-            status,
-            services,
-            startDate,
-            endDate,
-        } = req.query;
+// Maximum number of service names allowed in a single filter request.
+// Prevents CPU spikes from oversized $in arrays.
+const MAX_SERVICE_FILTER_ENTRIES = 50;
 
-        const VALID_STATUS = ["Unpaid", "Paid", "Partial"];
-        const VALID_GENDER = ["male", "female"];
-        const escapeRegex = (s = "") =>
-            s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Maximum character length for a single service name in the filter.
+const MAX_SERVICE_NAME_LENGTH = 200;
 
-        const parsedLimit = Math.min(parseInt(limit) || 20, 100);
-        const parsedSkip = parseInt(skip) || 0;
+router.get(
+    "/fetchall_appointments",
+    fetchuser,
+    requireSubscription,
+    async (req, res) => {
+        try {
+            const {
+                limit = 20,
+                skip = 0,
+                search = "",
+                gender,
+                payments,
+                status,
+                services,
+                startDate,
+                endDate,
+            } = req.query;
 
-        // FIX: safeSearch was used in the pipeline below but never defined.
-        // escapeRegex was also declared but never called on the search param.
-        const safeSearch = search?.trim() ? escapeRegex(search.trim()) : "";
+            const VALID_STATUS = ["Unpaid", "Paid", "Partial"];
+            const VALID_GENDER = ["male", "female"];
+            const escapeRegex = (s = "") =>
+                s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-        const doctorId =
-            req.user.role === "doctor" ? req.user.id : req.user.doctorId;
+            const parsedLimit = Math.min(parseInt(limit) || 20, 100);
+            const parsedSkip = parseInt(skip) || 0;
 
-        const matchStage = {
-            doctor: new mongoose.Types.ObjectId(doctorId),
-        };
+            const safeSearch = search?.trim() ? escapeRegex(search.trim()) : "";
 
-        const visitMatch = {};
+            const doctorId =
+                req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
-        // DATE FILTER
-        const isValidDate = (d) => !isNaN(new Date(d).getTime());
+            const matchStage = {
+                doctor: new mongoose.Types.ObjectId(doctorId),
+            };
 
-        const genderLower = gender?.toLowerCase();
+            const visitMatch = {};
 
-        if (startDate || endDate) {
-            visitMatch["visits.date"] = {};
+            // DATE FILTER
+            // DATE FILTER
+            const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 
-            if (startDate) {
-                if (!isValidDate(startDate)) {
+            const genderLower = gender?.toLowerCase();
+
+            if (startDate || endDate) {
+                visitMatch["visits.date"] = {};
+
+                if (startDate) {
+                    if (!isValidDate(startDate)) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Invalid startDate",
+                        });
+                    }
+
+                    visitMatch["visits.date"].$gte = startDate;
+                }
+
+                if (endDate) {
+                    if (!isValidDate(endDate)) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Invalid endDate",
+                        });
+                    }
+
+                    visitMatch["visits.date"].$lte = endDate;
+                }
+            }
+
+            // PAYMENT FILTER
+            if (payments) {
+                const ids = payments.split(",");
+
+                const validIds = ids.filter((id) =>
+                    mongoose.Types.ObjectId.isValid(id),
+                );
+
+                if (!validIds.length) {
                     return res.status(400).json({
                         success: false,
-                        error: "Invalid startDate",
+                        error: "Invalid payment IDs",
                     });
                 }
-                visitMatch["visits.date"].$gte = new Date(startDate);
+
+                visitMatch["visits.paymentMethodId"] = {
+                    $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
+                };
             }
 
-            if (endDate) {
-                if (!isValidDate(endDate)) {
+            // STATUS FILTER
+            if (status) {
+                const statusArray = status.split(",");
+
+                const invalid = statusArray.filter(
+                    (s) => !VALID_STATUS.includes(s),
+                );
+
+                if (invalid.length) {
                     return res.status(400).json({
                         success: false,
-                        error: "Invalid endDate",
+                        error: "Invalid status filter",
                     });
                 }
 
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                visitMatch["visits.date"].$lte = end;
-            }
-        }
-
-        // PAYMENT FILTER
-        if (payments) {
-            const ids = payments.split(",");
-
-            const validIds = ids.filter((id) =>
-                mongoose.Types.ObjectId.isValid(id),
-            );
-
-            if (!validIds.length) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Invalid payment IDs",
-                });
+                visitMatch["visits.status"] = { $in: statusArray };
             }
 
-            visitMatch["visits.paymentMethodId"] = {
-                $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
-            };
-        }
+            // SERVICE FILTER
+            if (services) {
+                const rawList = services.split(",");
 
-        // STATUS FILTER
-        if (status) {
-            const statusArray = status.split(",");
+                // FIX 1: Cap the number of entries to prevent oversized $in
+                // arrays that spike MongoDB CPU with no rate-limit backstop.
+                if (rawList.length > MAX_SERVICE_FILTER_ENTRIES) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Service filter exceeds maximum of ${MAX_SERVICE_FILTER_ENTRIES} entries`,
+                    });
+                }
 
-            const invalid = statusArray.filter(
-                (s) => !VALID_STATUS.includes(s),
-            );
+                // FIX 2: Validate every entry is a plain string of reasonable
+                // length. URL-encoded objects (e.g. "[Object]") or excessively
+                // long strings are rejected before they reach the DB.
+                const serviceList = [];
+                for (const entry of rawList) {
+                    if (typeof entry !== "string") {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Service filter entries must be strings",
+                        });
+                    }
 
-            if (invalid.length) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Invalid status filter",
-                });
+                    const trimmed = entry.trim();
+
+                    if (trimmed.length === 0) continue; // skip blank entries
+
+                    if (trimmed.length > MAX_SERVICE_NAME_LENGTH) {
+                        return res.status(400).json({
+                            success: false,
+                            error: `Service name too long (max ${MAX_SERVICE_NAME_LENGTH} characters)`,
+                        });
+                    }
+
+                    serviceList.push(trimmed);
+                }
+
+                if (serviceList.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Service filter contains no valid entries",
+                    });
+                }
+
+                visitMatch["visits.service"] = {
+                    $elemMatch: {
+                        name: { $in: serviceList },
+                    },
+                };
             }
 
-            visitMatch["visits.status"] = { $in: statusArray };
-        }
-
-        // SERVICE FILTER
-        if (services) {
-            const serviceList = services.split(",");
-
-            visitMatch["visits.service"] = {
-                $elemMatch: {
-                    name: { $in: serviceList },
-                },
-            };
-        }
-
-        if (gender) {
-            if (!VALID_GENDER.includes(genderLower)) {
-                return res.status(400).json({ error: "Invalid gender filter" });
+            if (gender) {
+                if (!VALID_GENDER.includes(genderLower)) {
+                    return res
+                        .status(400)
+                        .json({ error: "Invalid gender filter" });
+                }
             }
 
-            // visitMatch["patient.gender"] = genderLower;
+            const pipeline = [
+                { $match: matchStage },
 
-            // pipeline.push({
-            //     $match: { "patient.gender": gender },
-            // });
-        }
-
-        const pipeline = [
-            { $match: matchStage },
-
-            // FETCH DOCTOR ONCE
-            {
-                $lookup: {
-                    from: "docs",
-                    localField: "doctor",
-                    foreignField: "_id",
-                    as: "doc",
-                },
-            },
-            { $unwind: "$doc" },
-
-            // FETCH PATIENT
-            {
-                $lookup: {
-                    from: "patients",
-                    localField: "patient",
-                    foreignField: "_id",
-                    as: "patient",
-                },
-            },
-            { $unwind: "$patient" },
-
-            // NOW UNWIND VISITS
-            { $unwind: "$visits" },
-
-            ...(Object.keys(visitMatch).length ? [{ $match: visitMatch }] : []),
-
-            ...(safeSearch
-                ? [
-                      {
-                          $match: {
-                              "patient.name": {
-                                  $regex: safeSearch,
-                                  $options: "i",
-                              },
-                          },
-                      },
-                  ]
-                : []),
-
-            ...(gender
-                ? [
-                      {
-                          $match: {
-                              "patient.gender": {
-                                  $regex: `^${gender}$`,
-                                  $options: "i",
-                              },
-                          },
-                      },
-                  ]
-                : []),
-
-            // USE ALREADY FETCHED DOC
-            {
-                $addFields: {
-                    paymentMethod: {
-                        $arrayElemAt: [
-                            {
-                                $filter: {
-                                    input: "$doc.paymentMethods",
-                                    as: "pm",
-                                    cond: {
-                                        $eq: [
-                                            "$$pm._id",
-                                            "$visits.paymentMethodId",
-                                        ],
-                                    },
-                                },
-                            },
-                            0,
-                        ],
+                // FETCH DOCTOR ONCE
+                {
+                    $lookup: {
+                        from: "docs",
+                        localField: "doctor",
+                        foreignField: "_id",
+                        as: "doc",
                     },
                 },
-            },
+                { $unwind: "$doc" },
 
-            {
-                $lookup: {
-                    from: "paymentcategories",
-                    localField: "paymentMethod.categoryId",
-                    foreignField: "_id",
-                    as: "category",
+                // FETCH PATIENT
+                {
+                    $lookup: {
+                        from: "patients",
+                        localField: "patient",
+                        foreignField: "_id",
+                        as: "patient",
+                    },
                 },
-            },
-            {
-                $lookup: {
-                    from: "paymentsubcategories",
-                    localField: "paymentMethod.subCategoryId",
-                    foreignField: "_id",
-                    as: "subCategory",
-                },
-            },
+                { $unwind: "$patient" },
 
-            {
-                $addFields: {
-                    categoryName: { $arrayElemAt: ["$category.name", 0] },
-                    subCategoryName: { $arrayElemAt: ["$subCategory.name", 0] },
-                },
-            },
+                // NOW UNWIND VISITS
+                { $unwind: "$visits" },
 
-            {
-                $facet: {
-                    data: [
-                        { $sort: { "visits.date": -1, "visits.time": -1 } },
-                        { $skip: parsedSkip },
-                        { $limit: parsedLimit },
-                        {
-                            $project: {
-                                patientId: "$patient._id",
-                                name: "$patient.name",
-                                gender: "$patient.gender",
-                                date: "$visits.date",
-                                time: "$visits.time",
-                                categoryName: 1,
-                                subCategoryName: 1,
-                                paymentMethodId: "$visits.paymentMethodId",
-                                amount: "$visits.amount",
-                                collected: "$visits.collected",
-                                remaining: "$visits.remaining",
-                                status: "$visits.status",
-                                services: "$visits.service",
-                                invoiceNumber: "$visits.invoiceNumber",
-                            },
+                ...(Object.keys(visitMatch).length
+                    ? [{ $match: visitMatch }]
+                    : []),
+
+                ...(safeSearch
+                    ? [
+                          {
+                              $match: {
+                                  "patient.name": {
+                                      $regex: safeSearch,
+                                      $options: "i",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+
+                ...(gender
+                    ? [
+                          {
+                              $match: {
+                                  "patient.gender": {
+                                      $regex: `^${gender}$`,
+                                      $options: "i",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+
+                // USE ALREADY FETCHED DOC
+                {
+                    $addFields: {
+                        paymentMethod: {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$doc.paymentMethods",
+                                        as: "pm",
+                                        cond: {
+                                            $eq: [
+                                                "$$pm._id",
+                                                "$visits.paymentMethodId",
+                                            ],
+                                        },
+                                    },
+                                },
+                                0,
+                            ],
                         },
-                    ],
-                    totalCount: [{ $count: "count" }],
+                    },
                 },
-            },
-        ];
 
-        const result = await Appointment.aggregate(pipeline);
+                {
+                    $lookup: {
+                        from: "paymentcategories",
+                        localField: "paymentMethod.categoryId",
+                        foreignField: "_id",
+                        as: "category",
+                    },
+                },
+                {
+                    $lookup: {
+                        from: "paymentsubcategories",
+                        localField: "paymentMethod.subCategoryId",
+                        foreignField: "_id",
+                        as: "subCategory",
+                    },
+                },
 
-        const data = result?.[0]?.data || [];
-        const total = result?.[0]?.totalCount?.[0]?.count || 0;
+                {
+                    $addFields: {
+                        categoryName: { $arrayElemAt: ["$category.name", 0] },
+                        subCategoryName: {
+                            $arrayElemAt: ["$subCategory.name", 0],
+                        },
+                    },
+                },
 
-        return res.json({
-            success: true,
-            data,
-            total,
-        });
-    } catch (err) {
-        console.error("fetchallappointments error:", err);
-        return res.status(500).json({
-            success: false,
-            error: "Server error",
-        });
-    }
-});
+                {
+                    $facet: {
+                        data: [
+                            { $sort: { "visits.date": -1, "visits.time": -1 } },
+                            { $skip: parsedSkip },
+                            { $limit: parsedLimit },
+                            {
+                                $project: {
+                                    patientId: "$patient._id",
+                                    name: "$patient.name",
+                                    gender: "$patient.gender",
+                                    date: "$visits.date",
+                                    time: "$visits.time",
+                                    categoryName: 1,
+                                    subCategoryName: 1,
+                                    paymentMethodId: "$visits.paymentMethodId",
+                                    amount: "$visits.amount",
+                                    collected: "$visits.collected",
+                                    remaining: "$visits.remaining",
+                                    status: "$visits.status",
+                                    services: "$visits.service",
+                                    invoiceNumber: "$visits.invoiceNumber",
+                                },
+                            },
+                        ],
+                        totalCount: [{ $count: "count" }],
+                    },
+                },
+            ];
+
+            const result = await Appointment.aggregate(pipeline);
+
+            const data = result?.[0]?.data || [];
+            const total = result?.[0]?.totalCount?.[0]?.count || 0;
+
+            return res.json({
+                success: true,
+                data,
+                total,
+            });
+        } catch (err) {
+            console.error("fetchallappointments error:", err);
+            return res.status(500).json({
+                success: false,
+                error: "Server error",
+            });
+        }
+    },
+);
 
 module.exports = router;

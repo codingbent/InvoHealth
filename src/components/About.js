@@ -136,10 +136,10 @@ export default function About() {
                         <p className="ab-card-text">
                             InvoHealth is a clinic management and billing
                             platform built specifically for small private
-                            clinics with 1-5 doctors. It handles patient
+                            clinics / medical centers. It handles patient
                             records, appointment scheduling, prescriptions,
                             medical report storage and billing — all in one
-                            place.Invoices are automatically generated and sent
+                            place. Invoices are automatically generated and sent
                             to patients after every visit, ensuring records are
                             always shared and documented.
                         </p>
@@ -223,6 +223,55 @@ export default function About() {
                                 <span>{f.text}</span>
                             </div>
                         ))}
+                    </div>
+                </div>
+
+                <div className="ab-card ab-card--full ab-reveal">
+                    <div className="ab-card-tag">Patient Portal</div>
+                    <h2 className="ab-card-title">
+                        Patients can access records anytime
+                    </h2>
+
+                    <p className="ab-card-text">
+                        Patients receive secure access to invoices,
+                        prescriptions, uploaded reports and appointment history
+                        through the patient portal. Clinics can digitally share
+                        records instead of relying on WhatsApp documents or
+                        printed files.
+                    </p>
+
+                    <div className="ab-features">
+                        <div className="ab-feature">
+                            <span className="ab-feature-icon">
+                                <FileBarChart size={13} />
+                            </span>
+                            <span>View invoices & prescriptions online</span>
+                        </div>
+
+                        <div className="ab-feature">
+                            <span className="ab-feature-icon">
+                                <Database size={13} />
+                            </span>
+                            <span>Access uploaded reports & PDFs securely</span>
+                        </div>
+
+                        <div className="ab-feature">
+                            <span className="ab-feature-icon">
+                                <Mail size={13} />
+                            </span>
+                            <span>
+                                Email-based record sharing & notifications
+                            </span>
+                        </div>
+
+                        <div className="ab-feature">
+                            <span className="ab-feature-icon">
+                                <ShieldCheck size={13} />
+                            </span>
+                            <span>
+                                Patient records stay linked to their account
+                            </span>
+                        </div>
                     </div>
                 </div>
 

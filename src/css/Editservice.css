@@ -10,7 +10,7 @@ ____________________________ */
     overflow: hidden;
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
     position: relative;
-    width: stretch;
+    width: 100%;
     color: #c5d0e8;
 }
 .es-modal::before {
@@ -95,7 +95,7 @@ ____________________________ */
 }
 .es-select,
 .es-input {
-    width: stretch;
+    width: 100%;
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;

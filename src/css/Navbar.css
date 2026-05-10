@@ -518,7 +518,7 @@
 }
 
 .nb-drop-item {
-    width: stretch;
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -671,7 +671,7 @@
     padding: 11px 14px;
     font-size: 13px;
     border-radius: 9px;
-    width: stretch;
+    width: 100%;
 }
 
 .nb-mobile-divider {
@@ -696,7 +696,7 @@
         background 0.18s,
         border-color 0.18s;
     font-family: "DM Sans", system-ui, sans-serif;
-    width: stretch;
+    width: 100%;
     margin-top: 2px;
 }
 

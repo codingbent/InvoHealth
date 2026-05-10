@@ -1,130 +1,277 @@
 const express = require("express");
 const router = express.Router();
+
 const upload = require("../../../middleware/upload");
 const uploadToCloudinary = require("../../../utils/uploadToCloudinary");
 const fetchuser = require("../../../middleware/fetchuser");
+const requireDoctor = require("../../../middleware/requireDoctor");
 const Doc = require("../../../models/Doc");
 const Appointment = require("../../../models/Appointment");
-const {
-    getPricing,
-    invalidatePricingCache,
-} = require("../../../utils/pricingcache");
+const { getPricing } = require("../../../utils/pricingcache");
 const { getSubscriptionStatus } = require("../../../utils/subscription_check");
 const cloudinary = require("../../config/cloudinary");
-const requireDoctor = require("../../../middleware/requireDoctor");
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_FILE_SIZE_MB = 2;
+const requireSubscription = require("../../../middleware/requiresubscription");
+const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+];
+const MAX_IMG_MB = 2;
+const MAX_PDF_MB = 2;
 
-router.post("/upload", fetchuser, upload.single("image"), async (req, res) => {
-    try {
-        // FILE CHECK
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                error: "No file uploaded",
-            });
-        }
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
-        // MIME TYPE VALIDATION
-        if (!ALLOWED_TYPES.includes(req.file.mimetype)) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid file type",
-            });
-        }
+const extractPublicId = (url) => {
+    if (!url || typeof url !== "string") return null;
+    const m = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+$/i);
+    return m?.[1] ?? null;
+};
 
-        // SIZE VALIDATION (extra safety)
-        const fileSizeMB = req.file.size / (1024 * 1024);
-        if (fileSizeMB > MAX_FILE_SIZE_MB) {
-            return res.status(400).json({
-                success: false,
-                error: `File too large (max ${MAX_FILE_SIZE_MB}MB)`,
-            });
-        }
+const getMaxSizeMB = (mimetype) =>
+    mimetype === "application/pdf" ? MAX_PDF_MB : MAX_IMG_MB;
 
-        // FETCH DOCTOR
-        const doctor = await Doc.findById(req.user.doctorId);
+/** Validate MIME type and file size; return error string or null. */
+const validateFile = (file) => {
+    if (!ALLOWED_TYPES.includes(file.mimetype))
+        return `Invalid file type: ${file.originalname}`;
+    const limitMB = getMaxSizeMB(file.mimetype);
+    if (file.size / (1024 * 1024) > limitMB)
+        return `File too large (max ${limitMB}MB): ${file.originalname}`;
+    return null;
+};
 
-        if (!doctor) {
-            return res.status(404).json({
-                success: false,
-                error: "Doctor not found",
-            });
-        }
+/** Read doctor + pricing in one go and validate subscription. */
+const getDoctorAndLimits = async (doctorId) => {
+    const doctor = await Doc.findById(doctorId);
+    if (!doctor) return { error: "Doctor not found", status: 404 };
 
-        const status = getSubscriptionStatus(doctor.subscription);
-        if (status !== "active") {
-            return res
-                .status(403)
-                .json({ success: false, error: "Subscription expired" });
-        }
+    const subStatus = getSubscriptionStatus(doctor.subscription);
+    if (subStatus !== "active")
+        return { error: "Subscription expired", status: 403 };
 
-        // GET PRICING
-        const pricing = await getPricing();
-        const plan = doctor.subscription?.plan?.toLowerCase() || "starter";
+    const pricing = await getPricing();
+    if (!pricing) return { error: "Pricing config unavailable", status: 500 };
 
-        const limit = pricing?.[plan]?.imageLimit ?? 0;
-        const currentUsage = doctor.usage?.imageUploads || 0;
+    const plan = doctor.subscription?.plan?.toLowerCase() || "starter";
+    const limit = pricing[plan]?.imageLimit ?? 0;
 
-        // LIMIT CHECK
-        if (limit !== -1 && currentUsage >= limit) {
-            return res.status(403).json({
-                success: false,
-                error: "Image upload limit reached",
-            });
-        }
+    return { doctor, limit };
+};
 
-        // ATOMIC USAGE INCREMENT (RACE SAFE)
-        const updatedDoc = await Doc.findOneAndUpdate(
-            {
-                _id: req.user.doctorId,
-                ...(limit !== -1 && {
-                    "usage.imageUploads": { $lt: limit },
-                }),
+/** Atomically increment usage. Returns false if limit would be exceeded. */
+const incrementUsage = async (doctorId, count, limit) => {
+    const query = {
+        _id: doctorId,
+        ...(limit !== -1 && { "usage.imageUploads": { $lte: limit - count } }),
+    };
+    const updated = await Doc.findOneAndUpdate(
+        query,
+        { $inc: { "usage.imageUploads": count } },
+        { new: true },
+    );
+    return updated !== null;
+};
+
+/** Atomically decrement usage, never below 0. */
+const decrementUsage = async (doctorId, count) =>
+    Doc.updateOne({ _id: doctorId }, [
+        {
+            $set: {
+                "usage.imageUploads": {
+                    $max: [{ $subtract: ["$usage.imageUploads", count] }, 0],
+                },
             },
-            { $inc: { "usage.imageUploads": 1 } },
-            { new: true },
-        );
+        },
+    ]);
 
-        if (!updatedDoc) {
-            return res.status(403).json({
-                success: false,
-                error: "Image upload limit reached",
+/** Add fl_attachment transformation for PDFs so browsers download, not display. */
+const applyPdfTransform = (url, mimetype) =>
+    mimetype === "application/pdf"
+        ? url.replace("/upload/", "/upload/fl_attachment/")
+        : url;
+
+// ─── POST /upload  (single file) ──────────────────────────────────────────
+router.post(
+    "/upload",
+    fetchuser,
+    requireSubscription,
+    upload.single("image"),
+    async (req, res) => {
+        try {
+            if (!req.file)
+                return res
+                    .status(400)
+                    .json({ success: false, error: "No file uploaded" });
+
+            const fileError = validateFile(req.file);
+            if (fileError)
+                return res
+                    .status(400)
+                    .json({ success: false, error: fileError });
+
+            const result = await getDoctorAndLimits(req.user.doctorId);
+            if (result.error)
+                return res
+                    .status(result.status)
+                    .json({ success: false, error: result.error });
+
+            const { limit } = result;
+            const ok = await incrementUsage(req.user.doctorId, 1, limit);
+            if (!ok)
+                return res.status(403).json({
+                    success: false,
+                    error: "Image upload limit reached",
+                });
+
+            let cloudResult;
+            try {
+                cloudResult = await uploadToCloudinary(
+                    req.file.buffer,
+                    req.file.mimetype,
+                );
+            } catch (err) {
+                await decrementUsage(req.user.doctorId, 1); // roll back
+                console.error("[upload] Cloudinary error:", err);
+                return res
+                    .status(502)
+                    .json({ success: false, error: "Upload failed" });
+            }
+
+            return res.status(200).json({
+                success: true,
+                url: applyPdfTransform(
+                    cloudResult.secure_url,
+                    req.file.mimetype,
+                ),
+                public_id: cloudResult.public_id,
+                type: req.file.mimetype,
             });
+        } catch (err) {
+            console.error("[upload]", err);
+            return res
+                .status(500)
+                .json({ success: false, error: "Upload failed" });
         }
+    },
+);
 
-        // UPLOAD TO CLOUDINARY
-        const result = await uploadToCloudinary(req.file.buffer);
+// ─── POST /upload-multi  (up to 10 files) ─────────────────────────────────
+router.post(
+    "/upload-multi",
+    fetchuser,
+    requireSubscription,
+    upload.array("images", 10),
+    async (req, res) => {
+        try {
+            const files = req.files || [];
+            if (!files.length)
+                return res
+                    .status(400)
+                    .json({ success: false, error: "No files uploaded" });
 
-        return res.status(200).json({
-            success: true,
-            url: result.secure_url,
-            public_id: result.public_id,
-        });
-    } catch (error) {
-        console.error("IMAGE UPLOAD ERROR:", error);
-        return res.status(500).json({
-            success: false,
-            error: "Upload failed",
-        });
+            // Validate all files before touching the DB
+            for (const file of files) {
+                const err = validateFile(file);
+                if (err)
+                    return res.status(400).json({ success: false, error: err });
+            }
+
+            const result = await getDoctorAndLimits(req.user.doctorId);
+            if (result.error)
+                return res
+                    .status(result.status)
+                    .json({ success: false, error: result.error });
+
+            const { limit } = result;
+            const uploadCount = files.length;
+
+            const ok = await incrementUsage(
+                req.user.doctorId,
+                uploadCount,
+                limit,
+            );
+            if (!ok)
+                return res.status(403).json({
+                    success: false,
+                    error: "Image upload limit reached",
+                });
+
+            // BUG FIX: was using Promise.all (throws on first failure) and had
+            // a dead catch block because allSettled never rejects.
+            // Now: allSettled + partial rollback of both Cloudinary and usage counter.
+            const settled = await Promise.allSettled(
+                files.map((f) => uploadToCloudinary(f.buffer, f.mimetype)),
+            );
+
+            const successful = settled
+                .map((r, i) =>
+                    r.status === "fulfilled"
+                        ? { result: r.value, file: files[i] }
+                        : null,
+                )
+                .filter(Boolean);
+
+            const failCount = settled.length - successful.length;
+
+            if (failCount > 0) {
+                console.error(
+                    `[upload-multi] ${failCount}/${uploadCount} uploads failed`,
+                );
+
+                // Roll back: delete successful Cloudinary assets + decrement usage
+                await Promise.allSettled(
+                    successful.map(({ result: r }) =>
+                        cloudinary.uploader.destroy(r.public_id),
+                    ),
+                );
+                await decrementUsage(req.user.doctorId, uploadCount); // full rollback
+
+                return res.status(502).json({
+                    success: false,
+                    error: `${failCount} file(s) failed to upload. No files were saved.`,
+                });
+            }
+
+            // BUG FIX: original code referenced `result` and `req.file` which don't
+            // exist in an array-upload route — removed those four dead lines entirely.
+            return res.status(200).json({
+                success: true,
+                images: successful.map(({ result: r, file: f }) => ({
+                    url: applyPdfTransform(r.secure_url, f.mimetype),
+                    public_id: r.public_id,
+                    type: f.mimetype,
+                })),
+            });
+        } catch (err) {
+            console.error("[upload-multi]", err);
+            return res
+                .status(500)
+                .json({ success: false, error: "Upload failed" });
+        }
+    },
+);
+
+// ─── DELETE /decrement  (single, atomic) ──────────────────────────────────
+router.delete("/decrement", fetchuser, async (req, res) => {
+    try {
+        await decrementUsage(req.user.doctorId, 1);
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("[decrement]", err);
+        return res.status(500).json({ success: false });
     }
 });
 
-router.delete("/decrement", fetchuser, async (req, res) => {
+// ─── DELETE /decrement-multi  (batch, atomic) ─────────────────────────────
+router.delete("/decrement-multi", fetchuser, async (req, res) => {
     try {
-        const doctor = await Doc.findById(req.user.doctorId);
-        if (!doctor) return res.status(404).json({ success: false });
-
-        // Only decrement if above 0 — never go negative
-        if ((doctor.usage?.imageUploads || 0) > 0) {
-            await Doc.findByIdAndUpdate(req.user.doctorId, {
-                $inc: { "usage.imageUploads": -1 },
-            });
-        }
-
+        const count = Math.max(Number(req.body?.count) || 1, 1);
+        await decrementUsage(req.user.doctorId, count);
         return res.json({ success: true });
     } catch (err) {
-        console.error("Image decrement error:", err);
+        console.error("[decrement-multi]", err);
         return res.status(500).json({ success: false });
     }
 });
@@ -137,63 +284,127 @@ router.delete(
         try {
             const doctorId = req.user.doctorId;
             const { appointmentId, visitId } = req.params;
+            const { imageUrl } = req.body;
+
             const appointment = await Appointment.findById(appointmentId);
+            if (!appointment)
+                return res
+                    .status(404)
+                    .json({ success: false, error: "Appointment not found" });
+            if (appointment.doctor.toString() !== doctorId)
+                return res
+                    .status(403)
+                    .json({ success: false, error: "Unauthorized" });
 
-            if (!appointment) {
-                return res.status(404).json({
-                    success: false,
-                    error: "Appointment not found",
-                });
-            }
-
-            if (appointment.doctor.toString() !== doctorId) {
-                return res.status(403).json({
-                    success: false,
-                    error: "Unauthorized",
-                });
-            }
             const visit = appointment.visits.id(visitId);
+            if (!visit)
+                return res
+                    .status(404)
+                    .json({ success: false, error: "Visit not found" });
 
-            if (!visit) {
-                return res.status(404).json({
-                    success: false,
-                    error: "Visit not found",
-                });
-            }
-            if (!visit?.image) {
-                return res.status(400).json({
-                    success: false,
-                    error: "No image to delete",
-                });
-            }
-
-            const matches = visit.image.match(
-                /\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i,
-            );
-
-            if (matches?.[1]) {
-                await cloudinary.uploader.destroy(matches[1]);
+            // ── Migrate legacy field into images[] on first touch ──────────
+            // BUG FIX: original compared string against [{url,type}] objects,
+            // so includes() always returned false → duplicate entries every call.
+            // Schema is now [String] so this comparison is correct.
+            if (visit.image && !visit.images.includes(visit.image)) {
+                visit.images.push(visit.image);
+                visit.image = "";
             }
 
-            visit.image = undefined;
+            let decrementBy = 0;
+
+            if (imageUrl) {
+                const imageObj = visit.images.find((img) =>
+                    typeof img === "string"
+                        ? img === imageUrl
+                        : img.url === imageUrl,
+                );
+
+                // Extract public_id
+                const publicId =
+                    typeof imageObj === "string"
+                        ? extractPublicId(imageObj)
+                        : imageObj?.public_id || extractPublicId(imageUrl);
+
+                // Detect resource type (PDF vs Image)
+                const isPDF =
+                    (typeof imageObj === "object" &&
+                        (imageObj?.type === "application/pdf" ||
+                            imageObj?.resource_type === "raw")) ||
+                    imageUrl.toLowerCase().endsWith(".pdf") ||
+                    imageUrl.includes("/raw/upload");
+
+                const resourceType = isPDF ? "raw" : "image";
+                // Delete from Cloudinary
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId, {
+                            resource_type: resourceType,
+                            invalidate: true,
+                        });
+                    } catch (e) {
+                        console.error("[delete_image] Cloudinary error:", e);
+                    }
+                }
+
+                // Remove from DB (supports both formats)
+                visit.images = visit.images.filter((img) =>
+                    typeof img === "string"
+                        ? img !== imageUrl
+                        : img.url !== imageUrl,
+                );
+
+                // Clean legacy field
+                if (visit.image === imageUrl) visit.image = "";
+
+                decrementBy = 1;
+            } else {
+                // ── Delete ALL images on this visit ────────────────────────
+                const allObjects = [...visit.images];
+                await Promise.allSettled(
+                    allObjects.map((img) => {
+                        const pid =
+                            img.public_id || extractPublicId(img.url || img);
+                        const rt =
+                            typeof img === "object" &&
+                            img.type === "application/pdf"
+                                ? "raw"
+                                : (img.url || img)
+                                        .toLowerCase()
+                                        .endsWith(".pdf")
+                                  ? "raw"
+                                  : "image";
+                        return pid
+                            ? cloudinary.uploader.destroy(pid, {
+                                  resource_type: rt,
+                              })
+                            : Promise.resolve(null);
+                    }),
+                );
+                decrementBy = allObjects.length;
+                visit.images = [];
+                visit.image = "";
+            }
+
             await appointment.save();
 
-            await Doc.findByIdAndUpdate(doctorId, {
-                $inc: { "usage.imageUploads": -1 },
-            });
+            if (decrementBy > 0) {
+                await decrementUsage(doctorId, decrementBy);
+            }
 
             return res.json({ success: true });
         } catch (err) {
-            console.error(err);
-            return res.status(500).json({
-                success: false,
-                error: "Server error",
-            });
+            console.error("[delete_image]", err);
+            return res
+                .status(500)
+                .json({ success: false, error: "Server error" });
         }
     },
 );
 
-// DELETE /api/doctor/image/delete-cloudinary
+// ─── DELETE /delete-cloudinary  ───────────────────────────────────────────
+// Deletes a Cloudinary asset by URL.
+// SECURITY FIX: verifies ownership before deleting.
 router.delete("/delete-cloudinary", fetchuser, async (req, res) => {
     try {
         const { imageUrl } = req.body;
@@ -202,28 +413,34 @@ router.delete("/delete-cloudinary", fetchuser, async (req, res) => {
                 .status(400)
                 .json({ success: false, error: "No URL provided" });
 
-        const matches = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
-        if (!matches?.[1])
+        const publicId = extractPublicId(imageUrl);
+        if (!publicId)
             return res
                 .status(400)
                 .json({ success: false, error: "Invalid Cloudinary URL" });
 
-        const publicId = matches[1];
-
-        const cloudinary = require("../../../routes/config/cloudinary");
-        await cloudinary.uploader.destroy(publicId);
-
-        // Decrement usage
-        const doc = await Doc.findById(req.user.doctorId);
-        if (doc && (doc.usage?.imageUploads || 0) > 0) {
-            await Doc.findByIdAndUpdate(req.user.doctorId, {
-                $inc: { "usage.imageUploads": -1 },
+        const ownsAsset = await Appointment.exists({
+            doctor: req.user.doctorId,
+            $or: [{ "visits.image": imageUrl }, { "visits.images": imageUrl }],
+        });
+        if (!ownsAsset)
+            return res.status(403).json({
+                success: false,
+                error: "Asset does not belong to you",
             });
-        }
+
+        const isPDF = imageUrl.toLowerCase().endsWith(".pdf");
+
+        const del = await cloudinary.uploader.destroy(publicId, {
+            resource_type: isPDF ? "raw" : "image",
+            invalidate: true,
+        });
+
+        await decrementUsage(req.user.doctorId, 1);
 
         return res.json({ success: true });
     } catch (err) {
-        console.error("Cloudinary delete error:", err);
+        console.error("[delete-cloudinary]", err);
         return res.status(500).json({ success: false, error: "Delete failed" });
     }
 });

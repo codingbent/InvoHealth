@@ -291,7 +291,7 @@ ____________________  */
 }
 
 .tut-video-frame {
-    width: stretch;
+    width: 100%;
     max-width: 860px;
     aspect-ratio: 16/9;
     border-radius: 12px;
@@ -303,14 +303,14 @@ ____________________  */
 }
 
 .tut-video-frame iframe {
-    width: stretch;
+    width: 100%;
     height: 100%;
     border: none;
     display: block;
 }
 
 .tut-video-placeholder {
-    width: stretch;
+    width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;

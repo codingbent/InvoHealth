@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useLocation } from "react-router-dom";
@@ -17,10 +17,8 @@ import {
     X,
     ShieldCheck,
     BarChart3,
-    CalendarDays,
     Folder,
     CreditCard,
-    ChevronRight,
     User,
     Mail,
     Globe,
@@ -35,7 +33,6 @@ import {
     Bone,
     Eye,
     Heart,
-    MoveRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Pricing from "./Pricing";
@@ -71,7 +68,7 @@ const SPECIALTIES = [
 // ── Switching economics ────────────────────────────────────────────────────
 const ECONOMICS = [
     {
-        metric: "2–3 hrs",
+        metric: "2-3 hrs",
         label: "back in your day",
         desc: "Front desk stops manually billing, filing and chasing dues. That time goes back to patients.",
         color: "#34d399",
@@ -147,15 +144,15 @@ const FEATURES = [
         border: "rgba(167,139,250,0.3)",
         glow: "rgba(167,139,250,0.6)",
     },
-    {
-        name: "Fewer Missed Follow-ups",
-        desc: "Appointment reminders go out automatically via Gmail. Patients show up. Staff stop making manual reminder calls.",
-        icon: <CalendarDays size={18} />,
-        color: "#38bdf8",
-        bg: "rgba(56,189,248,0.1)",
-        border: "rgba(56,189,248,0.3)",
-        glow: "rgba(56,189,248,0.6)",
-    },
+    // {
+    //     name: "Fewer Missed Follow-ups",
+    //     desc: "Appointment reminders go out automatically via Gmail. Patients show up. Staff stop making manual reminder calls.",
+    //     icon: <CalendarDays size={18} />,
+    //     color: "#38bdf8",
+    //     bg: "rgba(56,189,248,0.1)",
+    //     border: "rgba(56,189,248,0.3)",
+    //     glow: "rgba(56,189,248,0.6)",
+    // },
     {
         name: "No More Forgotten Dues",
         desc: "Every unpaid balance is tracked automatically. Staff see open dues at a glance — no more chasing patients.",
@@ -246,6 +243,20 @@ const PAIN_POINTS = [
     },
 ];
 
+const Modal = ({ isOpen, onClose, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="modal-backdrop" onClick={onClose}>
+            <div
+                className="modal-container"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {children}
+            </div>
+        </div>
+    );
+};
+
 const Patient = ({
     showAlert,
     currency,
@@ -265,21 +276,29 @@ const Patient = ({
     const [showPatientModal, setShowPatientModal] = useState(false);
     const [showServiceModal, setShowServiceModal] = useState(false);
     const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+    const [appointmentRefreshKey, setAppointmentRefreshKey] = useState(0);
+    const handleAppointmentAdded = useCallback(() => {
+        setAppointmentRefreshKey((k) => k + 1);
+    }, []);
     // eslint-disable-next-line
     const [subscription, setSubscription] = useState(null);
 
-    const Modal = ({ isOpen, onClose, children }) => {
-        if (!isOpen) return null;
-        return (
-            <div className="modal-backdrop" onClick={onClose}>
-                <div
-                    className="modal-container"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {children}
-                </div>
-            </div>
-        );
+    const categoryColor = {
+        Cash: "pl-tag pl-cash",
+        Bank: "pl-tag pl-bank",
+        Card: "pl-tag pl-card",
+        UPI: "pl-tag pl-upi",
+        Wallet: "pl-tag pl-wallet",
+        Online: "pl-tag pl-online",
+        Default: "pl-tag pl-other",
+    };
+    const subCategoryColor = {
+        SBI: "pl-tag pl-sbi",
+        ICICI: "pl-tag pl-icici",
+        HDFC: "pl-tag pl-hdfc",
+        GPay: "pl-tag pl-gpay",
+        PhonePe: "pl-tag pl-phonepe",
+        Paytm: "pl-tag pl-paytm",
     };
 
     const location = useLocation();
@@ -382,7 +401,9 @@ const Patient = ({
                         </p>
 
                         <div className="lp-hero-btns">
-                            <a className="lp-btn-hero" href="#pricing">Start a Free Trial</a>
+                            <a className="lp-btn-hero" href="#pricing">
+                                Start a Free Trial
+                            </a>
                             <Link to="/login" className="lp-btn-ghost">
                                 Log in
                             </Link>
@@ -450,7 +471,7 @@ const Patient = ({
                     <div className="lp-divider" />
 
                     {/* ── Migration promise ── */}
-                    <section className="lp-migration-section">
+                    {/* <section className="lp-migration-section">
                         <div className="lp-migration-inner">
                             <div className="lp-migration-badge">
                                 <CheckCircle2 size={13} /> Free Migration
@@ -515,9 +536,9 @@ const Patient = ({
                                 </a>
                             </div>
                         </div>
-                    </section>
+                    </section> */}
 
-                    <div className="lp-divider" />
+                    {/* <div className="lp-divider" /> */}
 
                     {/* ── Switching economics ── */}
                     <section className="lp-economics-section">
@@ -931,6 +952,7 @@ const Patient = ({
                 onClose={() => setShowPatientModal(false)}
             >
                 <AddPatient
+                    key="add-patient-stable"
                     showAlert={showAlert}
                     showModal={showPatientModal}
                     setShowModal={setShowPatientModal}
@@ -939,6 +961,7 @@ const Patient = ({
                     doctor={doctor}
                     services={services}
                     availability={availability}
+                    country={country}
                 />
             </Modal>
             <Modal
@@ -969,6 +992,7 @@ const Patient = ({
                         currency={currency}
                         openPatientDetails={openPatientDetails}
                         country={country}
+                        refreshTrigger={appointmentRefreshKey}
                     />
                 )}
                 {showAppointment && (
@@ -979,6 +1003,9 @@ const Patient = ({
                             usage={usage}
                             services={services}
                             availability={availability}
+                            country={country}
+                            onAppointmentAdded={handleAppointmentAdded}
+                            closePanel={closeAppointment}
                         />
                         <button
                             className="app-close-btn"
@@ -997,6 +1024,8 @@ const Patient = ({
                             services={services}
                             availability={availability}
                             onClose={closePatientDetails}
+                            categoryColor={categoryColor}
+                            subCategoryColor={subCategoryColor}
                         />
                     </div>
                 )}

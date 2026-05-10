@@ -11,32 +11,38 @@ const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
 const { encrypt } = require("../../utils/crypto");
-const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
-
-const signupLimiter = rateLimit({
-    windowMs: 30 * 60 * 1000,
-    max: 5,
-    keyGenerator: (req) => req.body.identifier || ipKeyGenerator(req),
-});
+const { createLimiter } = require("../../middleware/ratelimiter");
+const toStringArray = (value) => {
+    if (!value) return [];
+    if (Array.isArray(value))
+        return [...new Set(value.map(String).filter(Boolean))];
+    const s = String(value).trim();
+    return s ? [s] : [];
+};
 
 router.post(
     "/create_doctor",
-    signupLimiter,
+    createLimiter({ max: 5 }),
     [
-        body("name").isLength({ min: 3 }),
-        body("email").isEmail(),
+        body("name").isLength({ min: 3 }).trim().escape(),
+        body("email").isEmail().normalizeEmail(),
         body("password").isLength({ min: 8 }).matches(/[A-Z]/).matches(/[0-9]/),
-        body("clinicName").notEmpty(),
+        body("clinicName").notEmpty().trim().escape(),
         body("phone").isLength({ min: 8 }),
         body("appointmentPhone").isLength({ min: 8 }),
-        body("address.line1").notEmpty(),
-        body("address.city").notEmpty(),
-        body("address.state").notEmpty(),
+        body("address.line1").notEmpty().trim().escape(),
+        body("address.city").notEmpty().trim().escape(),
+        body("address.state").notEmpty().trim().escape(),
         body("address.countryId").notEmpty(),
         body("address.countryCode").notEmpty(),
         body("address.pincode").isLength({ min: 4 }),
         body("experience").notEmpty().isNumeric(),
         body("degree").isArray({ min: 1 }),
+        body("regNumber")
+            .notEmpty()
+            .trim()
+            .escape()
+            .withMessage("Registration number is required"),
     ],
     async (req, res) => {
         if (!JWT_SECRET) {
@@ -49,15 +55,17 @@ router.post(
             return res.status(400).json({ success, errors: errors.array() });
         }
 
-        const country = await Country.findById(req.body.address.countryId);
-        if (!country) {
-            return res.status(400).json({
-                success: false,
-                error: "Invalid country",
-            });
-        }
-
         try {
+            // FIX: Country lookup moved inside try/catch so a DB error is caught
+            // instead of producing an unhandled rejection.
+            const country = await Country.findById(req.body.address.countryId);
+            if (!country) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid country",
+                });
+            }
+
             const normalizePhone = (phone) =>
                 phone ? phone.replace(/\D/g, "") : "";
 
@@ -96,8 +104,10 @@ router.post(
                 });
             }
 
+            const email = req.body.email.toLowerCase().trim();
+
             // Duplicate email check
-            let doc = await Doc.findOne({ email: req.body.email });
+            let doc = await Doc.findOne({ email });
             if (doc) {
                 return res.status(400).json({
                     success: false,
@@ -111,7 +121,6 @@ router.post(
                 Array.isArray(req.body.paymentMethods) &&
                 req.body.paymentMethods.length > 0
             ) {
-                // Collect all unique IDs from the submission
                 const submittedCategoryIds = [
                     ...new Set(
                         req.body.paymentMethods.map((p) =>
@@ -159,14 +168,9 @@ router.post(
                     const catId = p.categoryId?.toString();
                     const subId = p.subCategoryId?.toString();
 
-                    // Skip entries with missing IDs
                     if (!catId || !subId) continue;
-
-                    // Category must exist and be active
                     if (!validCategoryIdSet.has(catId)) continue;
 
-                    // SubCategory must exist, be active, AND belong to the submitted category
-                    // This prevents mixing a valid subId with a wrong categoryId
                     const subCatParent = validSubCategoryMap.get(subId);
                     if (!subCatParent || subCatParent !== catId) continue;
 
@@ -181,7 +185,6 @@ router.post(
                     });
                 }
             }
-            // ──────────────────────────────────────────────────────────────────
 
             const phoneHash = await bcrypt.hash(cleanPhone, 10);
             const phoneEncrypted = encrypt(cleanPhone);
@@ -205,23 +208,23 @@ router.post(
                 ? [...new Set(req.body.degree)]
                 : [req.body.degree];
 
-            const email = req.body.email.toLowerCase().trim();
+            const specialization = toStringArray(req.body.specialization);
+            const doctorType = toStringArray(req.body.doctorType);
 
             doc = await Doc.create({
                 name: req.body.name,
-                email: email,
+                email,
                 password: hashedPassword,
                 clinicName: req.body.clinicName,
 
-                phoneEncrypted: phoneEncrypted,
-                phoneHash: phoneHash,
+                phoneEncrypted,
+                phoneHash,
                 phoneLast4: cleanPhone.slice(-4),
 
-                appointmentPhoneEncrypted: appointmentPhoneEncrypted,
-                appointmentPhoneHash: appointmentPhoneHash,
-                appointmentPhoneLast4: appointmentPhoneLast4,
+                appointmentPhoneEncrypted,
+                appointmentPhoneHash,
+                appointmentPhoneLast4,
 
-                // FIX: Only DB-verified payment methods are stored
                 paymentMethods: validatedPaymentMethods,
 
                 address: {
@@ -232,6 +235,9 @@ router.post(
                 regNumber: req.body.regNumber || "",
                 experience: Number(req.body.experience),
                 degree: degrees,
+                specialization,
+                doctorType,
+
                 role: "doctor",
 
                 subscription: {

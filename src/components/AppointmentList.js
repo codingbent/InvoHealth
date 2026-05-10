@@ -15,6 +15,7 @@ export default function AppointmentList({
     currency,
     getPaymentLabel,
     paymentOptions,
+    activeTab,
 }) {
     const loadMoreRef = useRef(null);
     const isFetchingRef = useRef(false);
@@ -95,12 +96,17 @@ export default function AppointmentList({
             </div>
         );
     }
+
     return (
         <>
             {!loading && appointments.length === 0 && (
                 <div className="al-empty">
-                    <div className="al-empty-icon">◎</div>
-                    No records match the selected filters
+                    <div className="al-empty-icon">
+                        {activeTab === "upcoming" ? "◷" : "◎"}
+                    </div>
+                    {activeTab === "upcoming"
+                        ? "No upcoming appointments scheduled"
+                        : "No records match the selected filters"}
                 </div>
             )}
 
@@ -130,6 +136,7 @@ export default function AppointmentList({
                             subCategoryColor={subCategoryColor}
                             paymentOptions={paymentOptions}
                             getPaymentLabel={getPaymentLabel}
+                            isUpcoming={activeTab === "upcoming"}
                         />
                     ))}
                 </div>

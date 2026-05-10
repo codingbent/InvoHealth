@@ -6,8 +6,10 @@
 .pnp.js
 .env
 generateHash.js
+migration.js
 # testing
 /coverage
+/.geminiignore
 
 # production
 /build

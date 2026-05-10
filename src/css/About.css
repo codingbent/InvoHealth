@@ -431,7 +431,7 @@
         padding: 60px 20px 48px;
     }
     .ab-stats {
-        max-width: stretch;
+        max-width: 100%;
     }
 }
 @media (max-width: 400px) {

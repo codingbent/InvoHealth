@@ -11,6 +11,8 @@
 /Appointment mail.json
 # testing
 /coverage
+/.geminiignore
+
 
 # production
 /build

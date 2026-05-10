@@ -61,6 +61,8 @@ function Section({ icon: Icon, title, accent = "#fb923c", children }) {
 
 export default function StaffProfile(props) {
     const [staff, setStaff] = useState(null);
+    const [revealedPhone, setRevealedPhone] = useState(null); // FIX: lazy, not on load
+    const [showPhone, setShowPhone] = useState(false);
     const [passwordData, setPasswordData] = useState({
         currentPassword: "",
         newPassword: "",
@@ -76,7 +78,63 @@ export default function StaffProfile(props) {
     const fetchStaff = async () => {
         const res = await authFetch(`${API_BASE_URL}/api/staff/staff_profile`);
         const data = await res.json();
-        if (data.success) setStaff(data.staff);
+        if (data.success) {
+            setStaff(data.staff);
+        }
+    };
+
+    // FIX: Reveal phone on demand — fetch decrypted number only when eye is clicked
+    const handleRevealPhone = async () => {
+        if (showPhone) {
+            // toggle off — clear revealed data from memory
+            setShowPhone(false);
+            setRevealedPhone(null);
+            return;
+        }
+
+        try {
+            // if we already fetched it this session, reuse
+            if (revealedPhone) {
+                setShowPhone(true);
+                return;
+            }
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/staff/reveal_phone`,
+            );
+            const data = await res.json();
+
+            if (data.success) {
+                setRevealedPhone(data.phone);
+                setShowPhone(true);
+            } else {
+                props.showAlert(
+                    data.error || "Failed to reveal phone",
+                    "danger",
+                );
+            }
+        } catch (err) {
+            console.error(err);
+            props.showAlert("Failed to reveal phone", "danger");
+        }
+    };
+
+    const [pwChecks, setPwChecks] = useState({
+        length: false,
+        upper: false,
+        lower: false,
+        number: false,
+        special: false,
+    });
+
+    const validatePassword = (val) => {
+        setPwChecks({
+            length: val.length >= 8,
+            upper: /[A-Z]/.test(val),
+            lower: /[a-z]/.test(val),
+            number: /[0-9]/.test(val),
+            special: /[^A-Za-z0-9]/.test(val),
+        });
     };
 
     useEffect(() => {
@@ -106,38 +164,78 @@ export default function StaffProfile(props) {
     };
 
     const handleChangePassword = async () => {
-        const { currentPassword, newPassword, confirmPassword } = passwordData;
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            props.showAlert("All fields required", "danger");
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            props.showAlert("Passwords do not match", "danger");
-            return;
-        }
+        try {
+            const { currentPassword, newPassword, confirmPassword } =
+                passwordData;
 
-        const res = await authFetch(
-            `${API_BASE_URL}/api/staff/change_password`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ currentPassword, newPassword }),
-            },
-        );
-        const data = await res.json();
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                props.showAlert("All fields required", "danger");
+                return;
+            }
 
-        if (data.success) {
-            props.showAlert("Password updated", "success");
-            setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-            });
-        } else
+            if (newPassword !== confirmPassword) {
+                props.showAlert("Passwords do not match", "danger");
+                return;
+            }
+
+            if (!Object.values(pwChecks).every(Boolean)) {
+                props.showAlert(
+                    "Password must contain uppercase, lowercase, number and special character",
+                    "danger",
+                );
+                return;
+            }
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/staff/change_password`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword,
+                    }),
+                },
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                props.showAlert("Password updated", "success");
+
+                setPwChecks({
+                    length: false,
+                    upper: false,
+                    lower: false,
+                    number: false,
+                    special: false,
+                });
+
+                setPasswordData({
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                });
+
+                setShow({
+                    current: false,
+                    new: false,
+                    confirm: false,
+                });
+            } else {
+                props.showAlert(
+                    data.error || "Server Error try again later",
+                    "danger",
+                );
+            }
+        } catch (err) {
             props.showAlert(
-                data.error || "Server Error try again later",
+                err.message || "Server Error try again later",
                 "danger",
             );
+        }
     };
 
     const passwordsMatch =
@@ -146,259 +244,367 @@ export default function StaffProfile(props) {
     /* ── Loading ── */
     if (!staff) {
         return (
-            <>
-                <div className="sfp-root">
+            <div className="sfp-root">
+                <div
+                    className="sfp-skel"
+                    style={{
+                        height: 14,
+                        width: 80,
+                        marginBottom: 8,
+                        borderRadius: 4,
+                    }}
+                />
+                <div
+                    className="sfp-skel"
+                    style={{
+                        height: 26,
+                        width: 180,
+                        marginBottom: 28,
+                        borderRadius: 6,
+                    }}
+                />
+                <div className="sfp-card">
                     <div
-                        className="sfp-skel"
                         style={{
-                            height: 14,
-                            width: 80,
-                            marginBottom: 8,
-                            borderRadius: 4,
+                            display: "flex",
+                            gap: 18,
+                            alignItems: "center",
                         }}
-                    />
-                    <div
-                        className="sfp-skel"
-                        style={{
-                            height: 26,
-                            width: 180,
-                            marginBottom: 28,
-                            borderRadius: 6,
-                        }}
-                    />
-                    <div className="sfp-card">
+                    >
                         <div
+                            className="sfp-skel"
                             style={{
-                                display: "flex",
-                                gap: 18,
-                                alignItems: "center",
+                                width: 52,
+                                height: 52,
+                                borderRadius: 14,
+                                flexShrink: 0,
                             }}
-                        >
+                        />
+                        <div style={{ flex: 1 }}>
                             <div
                                 className="sfp-skel"
                                 style={{
-                                    width: 52,
-                                    height: 52,
-                                    borderRadius: 14,
-                                    flexShrink: 0,
+                                    height: 14,
+                                    width: "40%",
+                                    marginBottom: 10,
+                                    borderRadius: 5,
                                 }}
                             />
-                            <div style={{ flex: 1 }}>
-                                <div
-                                    className="sfp-skel"
-                                    style={{
-                                        height: 14,
-                                        width: "40%",
-                                        marginBottom: 10,
-                                        borderRadius: 5,
-                                    }}
-                                />
-                                <div
-                                    className="sfp-skel"
-                                    style={{
-                                        height: 9,
-                                        width: "20%",
-                                        borderRadius: 4,
-                                    }}
-                                />
-                            </div>
+                            <div
+                                className="sfp-skel"
+                                style={{
+                                    height: 9,
+                                    width: "20%",
+                                    borderRadius: 4,
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
-            </>
+            </div>
         );
     }
 
     const rc = ROLE_COLORS[staff.role?.toLowerCase()] || ROLE_COLORS.assistant;
 
     return (
-        <>
-            <div className="sfp-root">
-                <div className="sfp-eyebrow">My Account</div>
-                <div className="sfp-page-title">
-                    Staff <em>Profile</em>
-                </div>
+        <div className="sfp-root">
+            <div className="sfp-eyebrow">My Account</div>
+            <div className="sfp-page-title">
+                Staff <em>Profile</em>
+            </div>
 
-                {/* ── Profile Card ── */}
-                <div className="sfp-card">
-                    <div className="sfp-profile-row">
-                        <div className="sfp-left">
-                            <div className="sfp-avatar">
-                                {staff.name?.charAt(0)?.toUpperCase()}
-                            </div>
-                            <div>
-                                <div className="sfp-name">{staff.name}</div>
-                                <span
-                                    className="sfp-role-badge"
-                                    style={{
-                                        background: rc.bg,
-                                        borderColor: rc.border,
-                                        color: rc.color,
-                                    }}
-                                >
-                                    <ShieldCheck size={9} /> {staff.role}
-                                </span>
-                            </div>
+            {/* ── Profile Card ── */}
+            <div className="sfp-card">
+                <div className="sfp-profile-row">
+                    <div className="sfp-left">
+                        <div className="sfp-avatar">
+                            {staff.name?.charAt(0)?.toUpperCase()}
                         </div>
-                        <div className="sfp-meta">
-                            <div className="sfp-meta-item">
-                                <Phone size={11} />
-                                <span>{staff.phone}</span>
-                            </div>
+                        <div>
+                            <div className="sfp-name">{staff.name}</div>
+                            <span
+                                className="sfp-role-badge"
+                                style={{
+                                    background: rc.bg,
+                                    borderColor: rc.border,
+                                    color: rc.color,
+                                }}
+                            >
+                                <ShieldCheck size={9} /> {staff.role}
+                            </span>
                         </div>
                     </div>
-                </div>
 
-                {/* ── Change Password ── */}
-                <Section icon={Lock} title="Change Password" accent="#fb923c">
-                    <div className="sfp-grid">
-                        {[
-                            {
-                                key: "currentPassword",
-                                label: "Current Password",
-                                placeholder: "••••••••",
-                                showKey: "current",
-                            },
-                            {
-                                key: "newPassword",
-                                label: "New Password",
-                                placeholder: "Min. 6 characters",
-                                showKey: "new",
-                            },
-                            {
-                                key: "confirmPassword",
-                                label: "Confirm Password",
-                                placeholder: "Re-enter password",
-                                showKey: "confirm",
-                            },
-                        ].map(({ key, label, placeholder, showKey }) => (
-                            <div key={key} className="sfp-field">
-                                <label className="sfp-label">{label}</label>
-                                <div className="sfp-input-wrap">
-                                    <input
-                                        type={
-                                            show[showKey] ? "text" : "password"
-                                        }
-                                        className="sfp-input"
-                                        placeholder={placeholder}
-                                        value={passwordData[key]}
-                                        onChange={(e) =>
-                                            setPasswordData({
-                                                ...passwordData,
-                                                [key]: e.target.value,
-                                            })
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="sfp-eye"
-                                        onClick={() =>
-                                            setShow((p) => ({
-                                                ...p,
-                                                [showKey]: !p[showKey],
-                                            }))
-                                        }
-                                    >
-                                        {show[showKey] ? (
-                                            <EyeOff size={14} />
-                                        ) : (
-                                            <Eye size={14} />
-                                        )}
-                                    </button>
-                                </div>
-                                {key === "confirmPassword" &&
-                                    passwordData.confirmPassword && (
-                                        <div
-                                            className="sfp-pw-hint"
-                                            style={{
-                                                color: passwordsMatch
-                                                    ? "#4ade80"
-                                                    : "#f87171",
-                                            }}
-                                        >
-                                            {passwordsMatch
-                                                ? "✓ Passwords match"
-                                                : "✗ Do not match"}
-                                        </div>
-                                    )}
-                            </div>
-                        ))}
-                    </div>
-                    <div
-                        style={{ display: "flex", justifyContent: "flex-end" }}
-                    >
+                    <div className="sfp-meta-item">
+                        <Phone size={11} />
+                        <span className="sfp-phone-number">
+                            {showPhone && revealedPhone ? (
+                                <>
+                                    {staff.country?.dialCode || "+1"}{" "}
+                                    {revealedPhone}
+                                </>
+                            ) : (
+                                <>
+                                    {staff.country?.dialCode || "+1"} ••••••
+                                    {staff.phoneLast4 || ""}
+                                </>
+                            )}
+                        </span>
                         <button
-                            className="sfp-btn sfp-btn-danger"
-                            onClick={handleChangePassword}
-                            disabled={
-                                !passwordData.currentPassword ||
-                                !passwordData.newPassword ||
-                                !passwordData.confirmPassword ||
-                                !passwordsMatch
-                            }
+                            type="button"
+                            className="sfp-phone-eye"
+                            onClick={handleRevealPhone}
                         >
-                            <RefreshCcw size={13} /> Update Password
+                            {showPhone ? (
+                                <EyeOff size={14} />
+                            ) : (
+                                <Eye size={14} />
+                            )}
                         </button>
                     </div>
-                </Section>
+                </div>
+            </div>
 
-                {/* ── Danger Zone ── */}
-                <div className="sfp-danger-zone">
-                    <div className="sfp-danger-title">
-                        <AlertTriangle size={10} /> Danger Zone
-                    </div>
-                    <button
-                        className="sfp-leave-btn"
-                        onClick={() => setConfirmOpen(true)}
-                    >
-                        <LogOut size={14} /> Leave Doctor
-                    </button>
-                    <div className="sfp-leave-desc">
-                        You will lose access to all patients, appointments and
-                        data immediately.
+            {/* ── Change Password ── */}
+            <Section icon={Lock} title="Change Password" accent="#fb923c">
+                <div className="sfp-field">
+                    <label className="sfp-label">Current Password</label>
+
+                    <div className="sfp-input-wrap">
+                        <input
+                            type={show.current ? "text" : "password"}
+                            className="sfp-input"
+                            placeholder="••••••••"
+                            value={passwordData.currentPassword}
+                            onChange={(e) => {
+                                const value = e.target.value;
+
+                                setPasswordData((prev) => ({
+                                    ...prev,
+                                    currentPassword: value,
+
+                                    ...(value.trim() === ""
+                                        ? {
+                                              newPassword: "",
+                                              confirmPassword: "",
+                                          }
+                                        : {}),
+                                }));
+
+                                if (value.trim() === "") {
+                                    setPwChecks({
+                                        length: false,
+                                        upper: false,
+                                        lower: false,
+                                        number: false,
+                                        special: false,
+                                    });
+                                }
+                            }}
+                        />
+
+                        <button
+                            type="button"
+                            className="sfp-eye"
+                            onClick={() =>
+                                setShow((p) => ({
+                                    ...p,
+                                    current: !p.current,
+                                }))
+                            }
+                        >
+                            {show.current ? (
+                                <EyeOff size={14} />
+                            ) : (
+                                <Eye size={14} />
+                            )}
+                        </button>
                     </div>
                 </div>
 
-                {/* ── Confirm Modal ── */}
-                {confirmOpen && (
-                    <div
-                        className="sfp-modal-bg"
-                        onClick={() => setConfirmOpen(false)}
-                    >
-                        <div
-                            className="sfp-modal"
-                            onClick={(e) => e.stopPropagation()}
+                <div className="sfp-field">
+                    <label className="sfp-label">New Password</label>
+
+                    <div className="sfp-input-wrap">
+                        <input
+                            type={show.new ? "text" : "password"}
+                            className="sfp-input"
+                            placeholder="Min. 8 characters"
+                            disabled={!passwordData.currentPassword}
+                            value={passwordData.newPassword}
+                            onChange={(e) => {
+                                const value = e.target.value;
+
+                                setPasswordData((prev) => ({
+                                    ...prev,
+                                    newPassword: value,
+
+                                    ...(value.trim() === ""
+                                        ? { confirmPassword: "" }
+                                        : {}),
+                                }));
+
+                                validatePassword(value);
+                            }}
+                        />
+
+                        <button
+                            type="button"
+                            className="sfp-eye"
+                            disabled={!passwordData.currentPassword}
+                            onClick={() =>
+                                setShow((p) => ({ ...p, new: !p.new }))
+                            }
                         >
-                            <div className="sfp-modal-icon">
-                                <AlertTriangle size={20} />
-                            </div>
-                            <div className="sfp-modal-title">Leave Doctor?</div>
-                            <div className="sfp-modal-desc">
-                                You will lose all access to this clinic
-                                immediately. This action{" "}
-                                <strong style={{ color: "#f87171" }}>
-                                    cannot be undone
-                                </strong>
-                                .
-                            </div>
-                            <div className="sfp-modal-actions">
-                                <button
-                                    className="sfp-btn sfp-btn-outline"
-                                    onClick={() => setConfirmOpen(false)}
-                                >
-                                    <X size={13} /> Cancel
-                                </button>
-                                <button
-                                    className="sfp-btn sfp-btn-danger"
-                                    onClick={handleLeaveDoctor}
-                                >
-                                    <LogOut size={13} /> Leave
-                                </button>
-                            </div>
+                            {show.new ? (
+                                <EyeOff size={14} />
+                            ) : (
+                                <Eye size={14} />
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="sfp-field">
+                    <label className="sfp-label">Confirm Password</label>
+
+                    <div className="sfp-input-wrap">
+                        <input
+                            type={show.confirm ? "text" : "password"}
+                            className="sfp-input"
+                            placeholder="Re-enter password"
+                            disabled={!passwordData.newPassword}
+                            value={passwordData.confirmPassword}
+                            onChange={(e) =>
+                                setPasswordData((prev) => ({
+                                    ...prev,
+                                    confirmPassword: e.target.value,
+                                }))
+                            }
+                        />
+
+                        <button
+                            type="button"
+                            className="sfp-eye"
+                            disabled={!passwordData.newPassword}
+                            onClick={() =>
+                                setShow((p) => ({
+                                    ...p,
+                                    confirm: !p.confirm,
+                                }))
+                            }
+                        >
+                            {show.confirm ? (
+                                <EyeOff size={14} />
+                            ) : (
+                                <Eye size={14} />
+                            )}
+                        </button>
+                    </div>
+
+                    {passwordData.confirmPassword && (
+                        <div
+                            className="sfp-pw-hint"
+                            style={{
+                                color: passwordsMatch ? "#4ade80" : "#f87171",
+                            }}
+                        >
+                            {passwordsMatch
+                                ? "✓ Passwords match"
+                                : "✗ Do not match"}
+                        </div>
+                    )}
+                </div>
+
+                <div className="sfp-pw-checks">
+                    <div
+                        className={`sfp-pw-check ${pwChecks.length ? "pass" : "fail"}`}
+                    >
+                        <span>{pwChecks.length ? "✓" : "✗"}</span>
+                        Min 8 characters
+                    </div>
+                    <div
+                        className={`sfp-pw-check ${pwChecks.upper ? "pass" : "fail"}`}
+                    >
+                        <span>{pwChecks.upper ? "✓" : "✗"}</span>
+                        Uppercase letter
+                    </div>
+                    <div
+                        className={`sfp-pw-check ${pwChecks.lower ? "pass" : "fail"}`}
+                    >
+                        <span>{pwChecks.lower ? "✓" : "✗"}</span>
+                        Lowercase letter
+                    </div>
+                    <div
+                        className={`sfp-pw-check ${pwChecks.number ? "pass" : "fail"}`}
+                    >
+                        <span>{pwChecks.number ? "✓" : "✗"}</span>
+                        Number
+                    </div>
+                    <div
+                        className={`sfp-pw-check ${pwChecks.special ? "pass" : "fail"}`}
+                    >
+                        <span>{pwChecks.special ? "✓" : "✗"}</span>
+                        Special character
+                    </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                        className="sfp-btn sfp-btn-danger"
+                        onClick={handleChangePassword}
+                        disabled={
+                            !passwordData.currentPassword ||
+                            !passwordData.newPassword ||
+                            !passwordData.confirmPassword ||
+                            !passwordsMatch
+                        }
+                    >
+                        <RefreshCcw size={13} /> Update Password
+                    </button>
+                </div>
+            </Section>
+
+            {/* ── Confirm Modal ── */}
+            {confirmOpen && (
+                <div
+                    className="sfp-modal-bg"
+                    onClick={() => setConfirmOpen(false)}
+                >
+                    <div
+                        className="sfp-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sfp-modal-icon">
+                            <AlertTriangle size={20} />
+                        </div>
+                        <div className="sfp-modal-title">Leave Doctor?</div>
+                        <div className="sfp-modal-desc">
+                            You will lose all access to this clinic immediately.
+                            This action{" "}
+                            <strong style={{ color: "#f87171" }}>
+                                cannot be undone
+                            </strong>
+                            .
+                        </div>
+                        <div className="sfp-modal-actions">
+                            <button
+                                className="sfp-btn sfp-btn-outline"
+                                onClick={() => setConfirmOpen(false)}
+                            >
+                                <X size={13} /> Cancel
+                            </button>
+                            <button
+                                className="sfp-btn sfp-btn-danger"
+                                onClick={handleLeaveDoctor}
+                            >
+                                <LogOut size={13} /> Leave
+                            </button>
                         </div>
                     </div>
-                )}
-            </div>
-        </>
+                </div>
+            )}
+        </div>
     );
 }

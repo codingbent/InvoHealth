@@ -11,6 +11,7 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,
 });
+
 // Allowed + Forbidden fields
 const ALLOWED_FIELDS = [
     "name",
@@ -18,12 +19,22 @@ const ALLOWED_FIELDS = [
     "regNumber",
     "degree",
     "experience",
+    "specialization",
+    "doctorType",
 ];
 
 const FORBIDDEN_FIELDS = ["password", "role", "subscription", "usage"];
 
-// Basic validator (can replace with Joi/Zod later)
+// Basic validator
 const isValidString = (val) => typeof val === "string" && val.trim().length > 0;
+
+const escHtml = (s) =>
+    String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
 
 // Reusable phone processor
 const processPhone = async (value, existingHash, fieldPrefix) => {
@@ -44,7 +55,7 @@ const processPhone = async (value, existingHash, fieldPrefix) => {
         [`${fieldPrefix}Hash`]: await bcrypt.hash(clean, 10),
         [`${fieldPrefix}Encrypted`]: encrypt(clean),
         [`${fieldPrefix}Last4`]: clean.slice(-4),
-        [`${fieldPrefix}`]: "", // for unset
+        [`${fieldPrefix}`]: "",
     };
 };
 
@@ -80,21 +91,43 @@ router.put(
             const { phone, appointmentPhone, countryCode, address, ...rest } =
                 req.body;
 
+            // Fields that end up in email HTML — escape them
+            const HTML_FIELDS = new Set(["name", "clinicName", "regNumber"]);
+
             // Allowlist fields only
             ALLOWED_FIELDS.forEach((key) => {
-                if (key === "degree" && Array.isArray(rest.degree)) {
-                    updateFields.degree = rest.degree
-                        .filter((d) => typeof d === "string" && d.trim() !== "")
-                        .map((d) => d.trim());
+                if (key === "degree") {
+                    // handled separately below — skip here
+                    return;
+                }
+
+                if (
+                    (key === "specialization" || key === "doctorType") &&
+                    Array.isArray(rest[key])
+                ) {
+                    updateFields[key] = rest[key]
+                        .filter((v) => typeof v === "string" && v.trim() !== "")
+                        .map((v) => escHtml(v.trim()));
                 } else if (
                     rest[key] !== undefined &&
                     isValidString(rest[key])
                 ) {
                     if (existingDoc[key] !== rest[key]) {
-                        updateFields[key] = rest[key].trim();
+                        const val = rest[key].trim();
+                        updateFields[key] = HTML_FIELDS.has(key)
+                            ? escHtml(val)
+                            : val;
                     }
                 }
             });
+
+            // Degree — processed once only (removed duplicate)
+            if (Array.isArray(rest.degree)) {
+                updateFields.degree = rest.degree
+                    .filter((d) => typeof d === "string" && d.trim() !== "")
+                    .map((d) => escHtml(d.trim()));
+            }
+
             // Address
             const allowedAddressFields = [
                 "line1",
@@ -112,16 +145,11 @@ router.put(
             ) {
                 allowedAddressFields.forEach((key) => {
                     if (isValidString(address[key])) {
-                        updateFields[`address.${key}`] = address[key].trim();
+                        updateFields[`address.${key}`] = escHtml(
+                            address[key].trim(),
+                        );
                     }
                 });
-            }
-
-            // Degree (separate)
-            if (Array.isArray(rest.degree)) {
-                updateFields.degree = rest.degree
-                    .filter((d) => typeof d === "string" && d.trim() !== "")
-                    .map((d) => d.trim());
             }
 
             if (countryCode && isValidString(countryCode)) {
@@ -183,6 +211,8 @@ router.put(
                 regNumber: updated.regNumber,
                 degree: updated.degree,
                 experience: updated.experience,
+                specialization: updated.specialization,
+                doctorType: updated.doctorType,
                 phoneLast4: updated.phoneLast4,
                 appointmentPhoneLast4: updated.appointmentPhoneLast4,
                 address: updated.address,

@@ -11,7 +11,9 @@ module.exports = function (req, res, next) {
     }
 
     try {
-        const data = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
+        const data = jwt.verify(token, process.env.ADMIN_JWT_SECRET, {
+            algorithms: ["HS256"],
+        });
 
         // CRITICAL: enforce token type
         if (!data.user || data.user.tokenType !== "admin") {

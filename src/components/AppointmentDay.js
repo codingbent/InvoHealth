@@ -97,11 +97,19 @@ const AppointmentDay = memo(function AppointmentDay({
             {/* Day header */}
             <div className="pl-day-header">
                 <div className="pl-day-date">
-                    {new Date(day).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                    })}
+                    {(() => {
+                        const [y, m, d] = day.split("-");
+
+                        return new Date(
+                            Number(y),
+                            Number(m) - 1,
+                            Number(d),
+                        ).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                        });
+                    })()}
                 </div>
                 {localStorage.getItem("role") === "doctor" && (
                     <div className="pl-day-total">
@@ -171,7 +179,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                             {a.status === "Paid" ? (
                                                 <div className="pl-amount-main">
                                                     {currency?.symbol}{" "}
-                                                    {fmt(Number(a.amount ?? 0))}
+                                                    {fmt(Number(a.collected ?? 0))}
                                                 </div>
                                             ) : (
                                                 <>
@@ -188,7 +196,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                                         of {currency?.symbol}{" "}
                                                         {fmt(
                                                             Number(
-                                                                a.amount ?? 0,
+                                                                (a.remaining+a.collected) ?? 0,
                                                             ),
                                                         )}
                                                     </div>

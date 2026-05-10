@@ -103,7 +103,7 @@ ____________________________ */
 
 .aa-input,
 .aa-select {
-    width: stretch;
+    width: 100%;
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;
@@ -365,7 +365,7 @@ ____________________________ */
 
 /* Submit */
 .aa-submit {
-    width: stretch;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -404,7 +404,7 @@ ____________________________ */
     padding: 10px 14px !important;
     font-size: 12px !important;
     color: #c5d0e8 !important;
-    width: stretch !important;
+    width: 100% !important;
 }
 
 .aa-body .flatpickr-input:focus {
@@ -424,85 +424,179 @@ ____________________________ */
 /* ── Upload image field ── */
 .aa-upload-btns {
     display: flex;
-    gap: 8px;
-    margin-top: 4px;
+    gap: 10px;
+    margin-top: 6px;
 }
+
 .aa-upload-btn {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    padding: 10px 14px;
+    gap: 8px;
+
+    padding: 11px 14px;
     background: #080c18;
     border: 1px dashed #1a2540;
-    border-radius: 8px;
+    border-radius: 10px;
+
     color: #3a4a6b;
     font-size: 11px;
     letter-spacing: 0.06em;
+
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.18s ease;
 }
+
 .aa-upload-btn:hover {
-    border-color: rgba(77, 124, 246, 0.3);
+    border-color: rgba(77, 124, 246, 0.5);
     color: #60a5fa;
-    background: rgba(77, 124, 246, 0.04);
+    background: rgba(77, 124, 246, 0.05);
 }
+
+.aa-upload-btn:active {
+    transform: scale(0.98);
+}
+
 .aa-upload-btn-icon {
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1;
 }
+
+/* ── Preview grid (multiple images) ── */
 .aa-upload-preview {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: #080c18;
-    border: 1px solid #1a2540;
-    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
 }
-.aa-preview-img {
-    width: 52px;
-    height: 52px;
-    object-fit: cover;
-    border-radius: 7px;
+
+/* Each image card */
+.aa-preview-card {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
     border: 1px solid #161d2e;
-    flex-shrink: 0;
+    background: #080c18;
+    transition: all 0.2s ease;
 }
-.aa-preview-info {
-    flex: 1;
-    min-width: 0;
+
+.aa-preview-card:hover {
+    border-color: rgba(77, 124, 246, 0.35);
+    transform: translateY(-2px);
 }
+
+/* Image */
+.aa-preview-img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+}
+
+.aa-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.aa-pdf-preview {
+    height: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 18px;
+    color: #60a5fa;
+    background: #080c18;
+    gap: 4px;
+}
+
+.aa-pdf-preview span {
+    font-size: 9px;
+    color: #c5d0e8;
+    text-align: center;
+    padding: 0 4px;
+}
+
+/* Overlay (filename + remove) */
+.aa-preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.75),
+        rgba(0, 0, 0, 0.1)
+    );
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 6px;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.aa-preview-card:hover .aa-preview-overlay {
+    opacity: 1;
+}
+
+/* File name */
 .aa-preview-name {
-    font-size: 11px;
+    font-size: 9px;
     color: #c5d0e8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 3px;
-}
-.aa-preview-size {
-    font-size: 10px;
-    color: #2e3d5c;
-}
-.aa-preview-remove {
-    background: none;
-    border: none;
-    color: #f87171;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 5px;
-    transition: background 0.15s;
-    flex-shrink: 0;
-}
-.aa-preview-remove:hover {
-    background: rgba(248, 113, 113, 0.1);
 }
 
+/* Remove button */
+.aa-preview-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid #161d2e;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #f87171;
+    font-size: 12px;
+
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.aa-preview-remove:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #f87171;
+}
+
+/* Empty state */
+.aa-upload-empty {
+    font-size: 11px;
+    color: #2e3d5c;
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+}
+
+/* Disabled state */
+.aa-upload-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 .aa-date-btn {
-    width: stretch;
+    width: 100%;
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;
@@ -615,4 +709,14 @@ ____________________________ */
 .aa-cal-drop .rdp-table {
     border-collapse: separate;
     border-spacing: 2px;
+}
+.aa-zero-warning {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.35);
+    color: #fdba74;
+    font-size: 12px;
+    font-weight: 500;
 }

@@ -1,45 +1,72 @@
 const express = require("express");
 const router = express.Router();
-const Appointment = require("../../../models/Appointment")
-var fetchuser = require("../../../middleware/fetchuser");
+const mongoose = require("mongoose");
+const Appointment = require("../../../models/Appointment");
+const fetchuser = require("../../../middleware/fetchuser");
+const requireSubscription = require("../../../middleware/requiresubscription");
 
-router.get("/booked_slots", fetchuser, async (req, res) => {
-    try {
-        const doctorId = req.user.id;
-        const { date } = req.query;
+router.get(
+    "/booked_slots",
+    fetchuser,
+    requireSubscription,
+    async (req, res) => {
+        try {
+            const doctorId =
+                req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
-        const start = new Date(date);
-        start.setHours(0, 0, 0, 0);
+            const { date } = req.query;
 
-        const end = new Date(date);
-        end.setHours(23, 59, 59, 999);
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid or missing date",
+                });
+            }
 
-        const appointments = await Appointment.find({
-            doctor:doctorId,
-            "visits.date": { $gte: start, $lte: end },
-        });
+            const results = await Appointment.aggregate([
+                {
+                    $match: {
+                        doctor: new mongoose.Types.ObjectId(doctorId),
+                    },
+                },
 
-        const bookedSlots = [];
+                { $unwind: "$visits" },
 
-        appointments.forEach((appt) => {
-            appt.visits.forEach((v) => {
-                const sameDay =
-                    new Date(v.date).toDateString() ===
-                    new Date(date).toDateString();
+                {
+                    $match: {
+                        "visits.date": date,
+                        "visits.time": {
+                            $exists: true,
+                            $ne: null,
+                        },
+                    },
+                },
 
-                if (sameDay && v.time) {
-                    bookedSlots.push(v.time);
-                }
+                {
+                    $group: {
+                        _id: null,
+                        slots: {
+                            $push: "$visits.time",
+                        },
+                    },
+                },
+            ]);
+
+            const bookedSlots = results[0]?.slots ?? [];
+
+            res.json({
+                success: true,
+                slots: bookedSlots,
             });
-        });
+        } catch (err) {
+            console.error("Booked slots error:", err);
 
-        res.json({
-            success: true,
-            slots: bookedSlots,
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Server error" });
-    }
-});
+            res.status(500).json({
+                success: false,
+                error: "Server error",
+            });
+        }
+    },
+);
 
-module.exports=router;
+module.exports = router;

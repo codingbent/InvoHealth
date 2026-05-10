@@ -3,9 +3,10 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Admin = require("../../models/Admin");
+const { createLimiter } = require("../../middleware/ratelimiter");
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 
-router.post("/login_admin", async (req, res) => {
+router.post("/login_admin", createLimiter({ max: 10 }), async (req, res) => {
     try {
         let { email, password } = req.body;
 

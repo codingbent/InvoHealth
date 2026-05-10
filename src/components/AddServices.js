@@ -131,10 +131,6 @@ const AddServices = (props) => {
                                 value={amount}
                             />
                         </div>
-                        <div className="as-hint">
-                            ◦ Leave empty if the service price varies per
-                            patient
-                        </div>
                     </div>
                 </div>
 

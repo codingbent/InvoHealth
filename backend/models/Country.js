@@ -6,30 +6,42 @@ const CountrySchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+
     name: {
         type: String,
         required: true,
     },
+
     currency: {
         type: String,
         required: true,
     },
-    dialCode:{
+
+    dialCode: {
         type: String,
-        required:true,
+        required: true,
     },
+
     symbol: {
         type: String,
         required: true,
     },
+
     rate: {
         type: Number,
         required: true,
     },
+
     multiplier: {
         type: Number,
         default: 1,
     },
+
+    timezone: {
+        type: String,
+        required: true,
+    },
+
     active: {
         type: Boolean,
         default: true,

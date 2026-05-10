@@ -58,7 +58,6 @@ export const addAppointment = async (formData) => {
         );
     }
 
-    // 🔥 normalize everything → NO undefined anywhere
     const normalized = normalizeAppointmentResponse(data);
 
     return normalized;

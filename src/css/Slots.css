@@ -37,7 +37,7 @@ ________________________________ */
     border: 1px solid rgba(251, 146, 60, 0.2);
     color: #fb923c;
 }
-.sp-next-badge {
+.sp-selected-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -123,4 +123,75 @@ ________________________________ */
 .sp-slot.next {
     border-color: rgba(74, 222, 128, 0.3);
     color: #4ade80;
+}
+/* __________________________________
+        Responsive Fixes
+__________________________________ */
+
+@media (max-width: 480px) {
+    .sp-wrap {
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .sp-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .sp-badges {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .sp-selected-badge,
+    .sp-now-badge {
+        max-width: 100%;
+        word-break: break-word;
+    }
+
+    .sp-section-header {
+        padding: 10px 12px;
+        font-size: 9px;
+    }
+
+    .sp-slot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+        gap: 8px;
+        padding: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .sp-slot {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 6px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: nowrap;
+    }
+}
+
+/* Ultra-small devices */
+@media (max-width: 360px) {
+    .sp-slot-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sp-slot {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+
+    .sp-selected-badge,
+    .sp-now-badge {
+        font-size: 8px;
+        padding: 3px 7px;
+    }
 }

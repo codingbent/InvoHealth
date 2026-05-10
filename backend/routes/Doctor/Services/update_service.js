@@ -58,14 +58,38 @@ router.put(
             }
 
             if (amount !== undefined) {
-                if (amount !== "" && isNaN(amount)) {
-                    return res.status(400).json({
-                        success: false,
-                        error: "Amount must be a number",
-                    });
-                }
+                // allow clearing amount
+                if (amount === "") {
+                    service.amount = null;
+                } else {
+                    const parsedAmount = Number(amount);
 
-                service.amount = amount === "" ? null : Number(amount);
+                    // reject invalid numbers
+                    if (!Number.isFinite(parsedAmount)) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Amount must be a valid number",
+                        });
+                    }
+
+                    // reject negatives
+                    if (parsedAmount < 0) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Amount cannot be negative",
+                        });
+                    }
+
+                    // optional: prevent absurd values
+                    if (parsedAmount > 10000000) {
+                        return res.status(400).json({
+                            success: false,
+                            error: "Amount too large",
+                        });
+                    }
+
+                    service.amount = parsedAmount;
+                }
             }
 
             await service.save();

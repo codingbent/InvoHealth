@@ -1,10 +1,19 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { authFetch } from "./authfetch";
 import { DayPicker } from "react-day-picker";
-import { X, Check, CalendarDays } from "lucide-react";
+import { X, Check, CalendarDays, ImageIcon, File } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
 import { fetchPaymentMethods } from "../api/payment.api";
 import ServiceList from "./ServiceList";
+
+const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+];
+const MAX_IMAGES = 10;
 
 const EditAppointment = ({
     showAlert,
@@ -14,8 +23,9 @@ const EditAppointment = ({
     availableServices = [],
     onClose,
     onSaved,
+    usage,
 }) => {
-    // ─── Slot / calendar state ───────────────────────────────────────────────
+    // ─── Slot / calendar state ────────────────────────────────────────────────
     const [availability, setAvailability] = useState([]);
     const [timeSlots, setTimeSlots] = useState([]);
     const [bookedSlots, setBookedSlots] = useState([]);
@@ -37,11 +47,9 @@ const EditAppointment = ({
     const [collected, setCollected] = useState(0);
     const [isFullPaid, setIsFullPaid] = useState(false);
     const [initialCollected, setInitialCollected] = useState(0);
-    const [imageRemoved, setImageRemoved] = useState(false); // NEW
-
-    // ─── Image state ──────────────────────────────────────────────────────────
-    const [imageFile, setImageFile] = useState(null);
-    const [imagePreview, setImagePreview] = useState("");
+    const [existingImages, setExistingImages] = useState([]);
+    const [newImageFiles, setNewImageFiles] = useState([]);
+    const [removedUrls, setRemovedUrls] = useState([]);
     const [lightboxImg, setLightboxImg] = useState(null);
 
     // ─── Payment options ──────────────────────────────────────────────────────
@@ -49,6 +57,11 @@ const EditAppointment = ({
 
     // ─── Saving flag ──────────────────────────────────────────────────────────
     const [saving, setSaving] = useState(false);
+
+    const availabilityRef = useRef(availability);
+    useEffect(() => {
+        availabilityRef.current = availability;
+    }, [availability]);
 
     const fmt = (v) =>
         new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(
@@ -64,14 +77,17 @@ const EditAppointment = ({
         return `${hour}:${m} ${ampm}`;
     };
 
-    const dateLabel = (d) =>
-        !d
-            ? "Select date"
-            : new Date(d).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-              });
+    const dateLabel = (d) => {
+        if (!d) return "Select date";
+
+        const [y, m, day] = d.split("-").map(Number);
+
+        return new Date(y, m - 1, day).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    };
 
     const generateSlots = useCallback((start, end, duration) => {
         const step = duration || 15;
@@ -93,11 +109,15 @@ const EditAppointment = ({
         (p) => String(p.id) === String(apptData.paymentMethodId),
     );
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Data fetches
-    // ─────────────────────────────────────────────────────────────────────────
+    // Image usage stats
+    const imagesUsed = usage?.images?.used || 0;
+    const imagesLimit = usage?.images?.limit ?? 0;
+    const totalImagesAfterSave = existingImages.length + newImageFiles.length;
+    const canAddMoreImages =
+        totalImagesAfterSave < MAX_IMAGES &&
+        (imagesLimit === -1 || imagesUsed + newImageFiles.length < imagesLimit);
 
-    // Fetch doctor availability (needed for slot generation)
+    // ─── Data fetches ─────────────────────────────────────────────────────────
     useEffect(() => {
         const fetchAvail = async () => {
             try {
@@ -113,7 +133,6 @@ const EditAppointment = ({
         fetchAvail();
     }, []);
 
-    // Fetch payment methods
     useEffect(() => {
         const load = async () => {
             try {
@@ -126,9 +145,7 @@ const EditAppointment = ({
         load();
     }, []);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Populate form from the visit prop on mount
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── Populate form from visit prop ────────────────────────────────────────
     useEffect(() => {
         if (!visit) return;
 
@@ -143,10 +160,8 @@ const EditAppointment = ({
             };
         });
 
-        const date = visit.date?.slice(0, 10) || "";
-
         setApptData({
-            date,
+            date: visit.date?.slice(0, 10) || "",
             time: visit.time || "",
             service: normalizedServices,
             paymentMethodId: visit.paymentMethodId || "",
@@ -161,25 +176,43 @@ const EditAppointment = ({
         setDiscount(visit.discount || 0);
         setIsPercent(!!visit.isPercent);
         setInitialCollected(visit.collected || 0);
-        setImagePreview(visit.image || "");
-        setImageFile(null);
+
+        // ── Merge legacy image + images array ──────────────────────────────
+        const imgs = [];
+        if (Array.isArray(visit.images)) {
+            visit.images.forEach((img) => {
+                if (typeof img === "string") {
+                    imgs.push({ url: img, type: "image" });
+                } else if (img?.url) {
+                    imgs.push(img);
+                }
+            });
+        } else if (visit.image) {
+            imgs.push({ url: visit.image, type: "image" });
+        }
+
+        setExistingImages(imgs);
+        setNewImageFiles([]);
+        setRemovedUrls([]);
     }, [visit, availableServices]);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Slot fetching
-    // ─────────────────────────────────────────────────────────────────────────
     const fetchSlotsForDate = useCallback(
         async (date, isEdit = false) => {
-            if (!date || !availability.length) return;
+            const avail = availabilityRef.current;
+            if (!date || !avail.length) return;
+
             try {
-                const selectedDay = new Date(date)
-                    .toLocaleDateString("en-US", { weekday: "short" })
-                    .slice(0, 3);
-                const dayData = availability.find((d) => d.day === selectedDay);
+                const [y, m, d] = date.split("-").map(Number);
+                const localDate = new Date(y, m - 1, d);
+                const selectedDay = localDate.toLocaleDateString("en-US", {
+                    weekday: "short",
+                });
+                const dayData = avail.find((d) => d.day === selectedDay);
                 if (!dayData) {
                     setTimeSlots([]);
                     return;
                 }
+
                 let allSlots = [];
                 dayData.slots.forEach((slot) => {
                     allSlots = [
@@ -196,20 +229,19 @@ const EditAppointment = ({
                     `${API_BASE_URL}/api/doctor/appointment/booked_slots?date=${date}`,
                 );
                 const data = await res.json();
-                const booked = data.slots || [];
-                setBookedSlots(booked);
+                setBookedSlots(data.slots || []);
 
-                // In edit mode, show all slots (including the one already booked
-                // for this visit) so the user can change or keep it.
                 if (isEdit) {
                     setTimeSlots(allSlots);
                     return;
                 }
 
-                // For new appointments, strip past slots if today.
                 const today = new Date();
+
+                const selectedDate = new Date(y, m - 1, d);
+
                 const isToday =
-                    new Date(date).toDateString() === today.toDateString();
+                    selectedDate.toDateString() === today.toDateString();
                 if (isToday) {
                     const ct = today.getHours() * 60 + today.getMinutes();
                     allSlots = allSlots.filter((t) => {
@@ -217,22 +249,29 @@ const EditAppointment = ({
                         return h * 60 + m > ct;
                     });
                 }
-                setTimeSlots(allSlots.filter((s) => !booked.includes(s)));
+                setTimeSlots(
+                    allSlots.filter((s) => !(data.slots || []).includes(s)),
+                );
             } catch (err) {
                 console.error("slot fetch error:", err);
             }
         },
-        [availability, generateSlots],
+        [generateSlots], // FIX: removed `availability` — read via ref instead
     );
 
-    // Re-fetch slots whenever date or availability changes.
-    // Pass isEdit=true so the currently-booked slot stays visible.
+    // Trigger slot fetch only when date changes (not when availability ref updates)
     useEffect(() => {
-        if (!apptData.date || !availability.length) return;
+        if (!apptData.date || !availabilityRef.current.length) return;
         fetchSlotsForDate(apptData.date, true);
-    }, [apptData.date, availability, fetchSlotsForDate]);
+    }, [apptData.date, fetchSlotsForDate]);
 
-    // Auto-open the accordion section that contains the selected time
+    // Re-fetch slots once availability loads (runs once on mount after fetch)
+    useEffect(() => {
+        if (!availability.length || !apptData.date) return;
+        fetchSlotsForDate(apptData.date, true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [availability]);
+
     useEffect(() => {
         if (!apptData.time) return;
         const hour = parseInt(apptData.time.split(":")[0]);
@@ -241,9 +280,7 @@ const EditAppointment = ({
         else setOpenSection("Evening");
     }, [apptData.time]);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // finalAmount calculation
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── finalAmount calculation ──────────────────────────────────────────────
     useEffect(() => {
         const total = apptData.service.reduce(
             (sum, s) => sum + (serviceAmounts[s._id] ?? s.amount ?? 0),
@@ -257,26 +294,19 @@ const EditAppointment = ({
         setFinalAmount(Math.round((total - dv) * 100) / 100);
     }, [apptData.service, serviceAmounts, discount, isPercent]);
 
-    // Sync collected to initialCollected once finalAmount is ready
     useEffect(() => {
-        if (finalAmount > 0) {
-            setCollected(initialCollected);
-        }
+        if (finalAmount > 0) setCollected(initialCollected);
     }, [finalAmount, initialCollected]);
 
-    // Clamp collected so it never exceeds finalAmount
     useEffect(() => {
         setCollected((prev) => (prev > finalAmount ? finalAmount : prev));
     }, [finalAmount]);
 
-    // When "full paid" checkbox is toggled, sync collected
     useEffect(() => {
         if (isFullPaid) setCollected(finalAmount);
     }, [isFullPaid, finalAmount]);
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Slot helpers
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── Slot helpers ─────────────────────────────────────────────────────────
     const allSlotsWithSelected = useMemo(() => {
         if (!apptData.time) return timeSlots;
         if (!timeSlots.includes(apptData.time))
@@ -304,9 +334,74 @@ const EditAppointment = ({
         [apptData.service, serviceAmounts],
     );
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Validation
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── Image handlers ───────────────────────────────────────────────────────
+    const handleImageChange = (e) => {
+        const newFiles = Array.from(e.target.files || []);
+        if (!newFiles.length) return;
+
+        const errors = [],
+            valid = [];
+        for (const file of newFiles) {
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                errors.push(`${file.name}: only images or PDFs allowed`);
+                continue;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                errors.push(`${file.name}: exceeds 2MB`);
+                continue;
+            }
+            valid.push(file);
+        }
+        if (errors.length) showAlert(errors.join("; "), "warning");
+        if (!valid.length) return;
+
+        const slotsLeft = Math.min(
+            MAX_IMAGES - (existingImages.length + newImageFiles.length),
+            imagesLimit === -1
+                ? MAX_IMAGES
+                : imagesLimit - imagesUsed - newImageFiles.length,
+        );
+
+        if (valid.length > slotsLeft) {
+            showAlert(`Only ${slotsLeft} more image(s) allowed`, "warning");
+            valid.splice(slotsLeft);
+        }
+
+        setNewImageFiles((prev) => [
+            ...prev,
+            ...valid.map((f) => ({
+                file: f,
+                preview: f.type.startsWith("image/")
+                    ? URL.createObjectURL(f)
+                    : null,
+            })),
+        ]);
+        e.target.value = "";
+    };
+
+    const handleRemoveExisting = (imgObj) => {
+        if (
+            !window.confirm(
+                "Remove this image? It will be permanently deleted when you save.",
+            )
+        )
+            return;
+
+        setExistingImages((prev) => prev.filter((i) => i.url !== imgObj.url));
+        setRemovedUrls((prev) => [...prev, imgObj.url]);
+    };
+
+    const handleRemoveNew = (index) => {
+        setNewImageFiles((prev) => {
+            const updated = [...prev];
+            if (updated[index].preview)
+                URL.revokeObjectURL(updated[index].preview);
+            updated.splice(index, 1);
+            return updated;
+        });
+    };
+
+    // ─── Validation ───────────────────────────────────────────────────────────
     const validateForm = () => {
         if (!apptData.date) return "Please select a date";
         if (timeSlots.length > 0 && !apptData.time)
@@ -316,9 +411,7 @@ const EditAppointment = ({
         return "";
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Submit
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── Submit ───────────────────────────────────────────────────────────────
     const handleUpdateAppt = async () => {
         const error = validateForm();
         if (error) {
@@ -327,45 +420,71 @@ const EditAppointment = ({
         }
 
         setSaving(true);
+
+        const timeoutId = setTimeout(() => {
+            setSaving(false);
+            showAlert(
+                "Request timed out. Please check your connection and try again.",
+                "danger",
+            );
+        }, 30000);
+
         try {
-            // Upload image first if a new file was selected
-            let imageUrl = null;
+            let uploadedUrls = [];
 
-            // KEEP EXISTING IMAGE ONLY IF NOT REMOVED
-            if (!imageRemoved && imagePreview && !imageFile) {
-                imageUrl = visit?.image || null;
-            }
-
-            // UPLOAD NEW IMAGE
-            if (imageFile) {
+            // ONLY upload if new images exist
+            if (newImageFiles.length > 0) {
                 const formData = new FormData();
-                formData.append("image", imageFile);
+
+                for (const { file } of newImageFiles) {
+                    formData.append("images", file);
+                }
 
                 const uploadRes = await authFetch(
-                    `${API_BASE_URL}/api/doctor/image/upload`,
-                    { method: "POST", body: formData },
+                    `${API_BASE_URL}/api/doctor/image/upload-multi`,
+                    {
+                        method: "POST",
+                        body: formData,
+                    },
                 );
 
                 const uploadData = await uploadRes.json();
 
                 if (!uploadRes.ok) {
-                    showAlert("Image upload failed", "danger");
+                    showAlert(
+                        uploadData.error || "Image upload failed",
+                        "danger",
+                    );
                     return;
                 }
 
-                imageUrl = uploadData.url;
+                uploadedUrls = uploadData.images || [];
             }
-            // DELETE IMAGE ONLY ON SAVE
-            if (imageRemoved && visit?.image) {
-                try {
-                    await authFetch(
-                        `${API_BASE_URL}/api/doctor/image/delete_image/${appointmentId}/${visit._id}`,
-                        { method: "DELETE" },
-                    );
-                } catch (err) {
-                    console.error("Delete failed:", err);
-                }
+
+            // ONLY delete if something removed
+            if (removedUrls.length > 0) {
+                await Promise.allSettled(
+                    removedUrls.map((url) =>
+                        authFetch(
+                            `${API_BASE_URL}/api/doctor/image/delete_image/${appointmentId}/${visit._id}`,
+                            {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ imageUrl: url }),
+                            },
+                        ),
+                    ),
+                );
             }
+
+            // Merge images correctly
+            const finalImages = [...existingImages, ...uploadedUrls];
+
+            // IMPORTANT: If nothing changed → avoid unnecessary image update
+            const shouldSendImages =
+                newImageFiles.length > 0 || removedUrls.length > 0;
+
+            // Update appointment
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/appointment/edit_appointment/${appointmentId}/${visit._id}`,
                 {
@@ -373,44 +492,42 @@ const EditAppointment = ({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         date: apptData.date,
-                        time: apptData.time,
+                        time: apptData.time || null,
                         service: apptData.service.map((s) => ({
                             id: s._id,
                             name: s.name,
                             amount: serviceAmounts[s._id] ?? s.amount ?? 0,
                         })),
                         paymentMethodId: selectedPayment?.id || null,
-                        categoryName: selectedPayment?.categoryName || null,
                         discount,
                         isPercent,
                         collected,
-                        image: imageUrl,
+                        ...(shouldSendImages && { images: finalImages }),
                     }),
                 },
             );
 
             const data = await response.json();
+
             if (data.success) {
                 showAlert("Appointment updated successfully!", "success");
-                onSaved?.(); // let the parent refetch — no full-page reload
+                onSaved?.();
                 onClose?.();
             } else {
                 showAlert(data.message || "Update failed", "danger");
             }
         } catch (err) {
             console.error(err);
-            showAlert("Server error. Please try again.", "danger");
+            showAlert(err.message, "danger");
         } finally {
+            clearTimeout(timeoutId);
             setSaving(false);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Render
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <>
-            {/* Modal backdrop */}
             <div
                 className="pd-modal-bg"
                 onClick={() => {
@@ -437,7 +554,7 @@ const EditAppointment = ({
 
                     {/* Body */}
                     <div className="pd-modal-body">
-                        {/* ── Date picker ── */}
+                        {/* Date picker */}
                         <div className="pd-field">
                             <label className="pd-label">
                                 Date &amp; Time
@@ -469,14 +586,24 @@ const EditAppointment = ({
                                     {showCalendar ? "▲" : "▼"}
                                 </span>
                             </button>
-
                             {showCalendar && (
                                 <div className="pd-cal-drop">
                                     <DayPicker
                                         mode="single"
                                         selected={
                                             apptData.date
-                                                ? new Date(apptData.date)
+                                                ? (() => {
+                                                      const [y, m, d] =
+                                                          apptData.date
+                                                              .split("-")
+                                                              .map(Number);
+
+                                                      return new Date(
+                                                          y,
+                                                          m - 1,
+                                                          d,
+                                                      );
+                                                  })()
                                                 : undefined
                                         }
                                         onSelect={(date) => {
@@ -495,14 +622,14 @@ const EditAppointment = ({
                             )}
                         </div>
 
-                        {/* Current selected time label */}
+                        {/* Current time label */}
                         <div className="pd-current-slot">
                             {apptData.time
                                 ? formatTime(apptData.time)
                                 : "No time selected"}
                         </div>
 
-                        {/* ── Time slots ── */}
+                        {/* Time slots */}
                         {Object.entries(groupedSlots).map(([label, slots]) =>
                             slots.length ? (
                                 <div key={label} className="pd-slot-accordion">
@@ -559,7 +686,7 @@ const EditAppointment = ({
                             ) : null,
                         )}
 
-                        {/* ── Services ── */}
+                        {/* Services */}
                         <div className="pd-section-sep">
                             Services &amp; Billing
                             <span className="sg-required">
@@ -633,7 +760,6 @@ const EditAppointment = ({
                                         </div>
                                     ))}
                                 </div>
-
                                 <div className="pd-summary">
                                     <div className="pd-summary-row">
                                         <span>Subtotal</span>
@@ -659,7 +785,7 @@ const EditAppointment = ({
                                                     gap: 3,
                                                 }}
                                             >
-                                                − {currency?.symbol}
+                                                - {currency?.symbol}
                                                 {fmt(
                                                     serviceTotal - finalAmount,
                                                 )}
@@ -683,7 +809,7 @@ const EditAppointment = ({
                             </>
                         )}
 
-                        {/* ── Discount ── */}
+                        {/* Discount */}
                         <div className="pd-section-sep">Discount</div>
                         <div
                             style={{
@@ -716,7 +842,7 @@ const EditAppointment = ({
                             </label>
                         </div>
 
-                        {/* ── Collection ── */}
+                        {/* Collection */}
                         <div className="pd-section-sep">Collection</div>
                         <div className="pd-collected-row">
                             <span style={{ color: "#c5d0e8", fontSize: 11 }}>
@@ -828,14 +954,25 @@ const EditAppointment = ({
                                 );
                             })()}
 
-                        {/* ── Image upload ── */}
+                        {/* ── Multi-image upload ── */}
+                        <div className="pd-section-sep">
+                            <ImageIcon size={11} style={{ marginRight: 5 }} />
+                            Images
+                        </div>
                         <div className="pd-field">
-                            <div className="pd-upload-label-row">
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    marginBottom: 8,
+                                }}
+                            >
                                 <label
                                     className="pd-label"
                                     style={{ margin: 0 }}
                                 >
-                                    Upload Image
+                                    Upload Images
                                     <span
                                         style={{
                                             fontSize: 9,
@@ -844,127 +981,188 @@ const EditAppointment = ({
                                             letterSpacing: 0,
                                         }}
                                     >
-                                        — max 2 MB
+                                        - max 2MB (images, PDF)
                                     </span>
                                 </label>
+                                <span
+                                    style={{ fontSize: 10, color: "#6b7fa8" }}
+                                >
+                                    {existingImages.length +
+                                        newImageFiles.length}
+                                    /{MAX_IMAGES} max
+                                </span>
                             </div>
 
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf"
+                                multiple
                                 style={{ display: "none" }}
                                 id="editImageInput"
-                                onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (!file) return;
-                                    if (!file.type.startsWith("image/")) {
-                                        showAlert(
-                                            "Only images allowed",
-                                            "warning",
-                                        );
-                                        return;
-                                    }
-                                    if (file.size > 2 * 1024 * 1024) {
-                                        showAlert(
-                                            "Max 2 MB allowed",
-                                            "warning",
-                                        );
-                                        return;
-                                    }
-                                    setImageFile(file);
-                                    setImagePreview(URL.createObjectURL(file));
-                                }}
+                                onChange={handleImageChange}
                             />
 
-                            {!imagePreview ? (
+                            {/* Existing + New Images Combined Grid */}
+                            {(existingImages.length > 0 ||
+                                newImageFiles.length > 0) && (
+                                <div className="pd-images-grid">
+                                    {/* Existing Images */}
+                                    {existingImages.map((img, idx) => {
+                                        const url =
+                                            typeof img === "string"
+                                                ? img
+                                                : img?.url || "";
+                                        const isPDF =
+                                            img?.type === "application/pdf" ||
+                                            (url &&
+                                                url.includes("/raw/upload")) ||
+                                            (url &&
+                                                url.includes("fl_attachment"));
+
+                                        return (
+                                            <div
+                                                key={`existing-${idx}`}
+                                                className="pd-preview-card"
+                                            >
+                                                {isPDF ? (
+                                                    <div
+                                                        className="pd-pdf-preview"
+                                                        onClick={() =>
+                                                            window.open(
+                                                                url,
+                                                                "_blank",
+                                                            )
+                                                        }
+                                                        style={{
+                                                            cursor: "pointer",
+                                                        }}
+                                                    >
+                                                        📄
+                                                        <span className="pd-preview-name">
+                                                            PDF
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={url}
+                                                        alt={`img-${idx}`}
+                                                        className="pd-preview-img"
+                                                        onClick={() =>
+                                                            setLightboxImg({
+                                                                url,
+                                                                date: "",
+                                                            })
+                                                        }
+                                                    />
+                                                )}
+
+                                                <div className="pd-preview-overlay">
+                                                    <span className="pd-preview-name">
+                                                        Saved
+                                                    </span>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    className="pd-preview-remove"
+                                                    onClick={() =>
+                                                        handleRemoveExisting(
+                                                            img,
+                                                        )
+                                                    }
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* New Images */}
+                                    {newImageFiles.map(
+                                        ({ file, preview }, idx) => (
+                                            <div
+                                                key={`new-${idx}`}
+                                                className="pd-preview-card"
+                                            >
+                                                {file.type ===
+                                                "application/pdf" ? (
+                                                    <div
+                                                        className="ap-pdf-preview"
+                                                        onClick={() =>
+                                                            window.open(
+                                                                URL.createObjectURL(
+                                                                    file,
+                                                                ),
+                                                                "_blank",
+                                                            )
+                                                        }
+                                                        style={{
+                                                            cursor: "pointer",
+                                                        }}
+                                                    >
+                                                        <File size={18} />
+                                                        <span>{file.name}</span>
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={preview}
+                                                        alt={file.name}
+                                                        className="ap-preview-img"
+                                                    />
+                                                )}
+                                                <div className="pd-preview-overlay">
+                                                    <span className="pd-preview-name">
+                                                        {file.type ===
+                                                        "application/pdf"
+                                                            ? `${(file.size / 1024).toFixed(0)} KB`
+                                                            : file.name}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="pd-preview-remove"
+                                                    onClick={() =>
+                                                        handleRemoveNew(idx)
+                                                    }
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Add more button */}
+                            {canAddMoreImages && (
                                 <button
                                     type="button"
                                     className="pd-upload-btn"
+                                    style={{ marginTop: 8 }}
                                     onClick={() =>
                                         document
                                             .getElementById("editImageInput")
                                             ?.click()
                                     }
                                 >
-                                    ↑ Upload Image
+                                    + Add Images
                                 </button>
-                            ) : (
-                                <div className="pd-upload-preview">
-                                    <img
-                                        src={imagePreview}
-                                        alt="preview"
-                                        className="pd-preview-img"
-                                        style={{ cursor: "zoom-in" }}
-                                        onClick={() =>
-                                            setLightboxImg({
-                                                url: imagePreview,
-                                                date: "",
-                                            })
-                                        }
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div className="pd-preview-name">
-                                            {imageFile?.name || "Current Image"}
-                                        </div>
-                                        <div
-                                            className="pd-preview-size"
-                                            style={{ marginTop: 3 }}
-                                        >
-                                            {imageFile
-                                                ? `${(imageFile.size / 1024).toFixed(0)} KB`
-                                                : "Tap to preview"}
-                                        </div>
-                                    </div>
-                                    <div
+                            )}
+                            {!canAddMoreImages &&
+                                totalImagesAfterSave >= MAX_IMAGES && (
+                                    <p
                                         style={{
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            gap: 6,
-                                            alignItems: "flex-end",
+                                            fontSize: 10,
+                                            color: "#f87171",
+                                            marginTop: 6,
                                         }}
                                     >
-                                        <button
-                                            type="button"
-                                            className="pd-upload-remove"
-                                            onClick={() => {
-                                                const confirmDelete =
-                                                    window.confirm(
-                                                        "This image will be permanently deleted after saving. Continue?",
-                                                    );
-
-                                                if (!confirmDelete) return;
-
-                                                setImageFile(null);
-                                                setImagePreview("");
-                                                setImageRemoved(true);
-                                            }}
-                                        >
-                                            ✕ Remove
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="pd-upload-btn"
-                                            style={{
-                                                marginBottom: 0,
-                                                padding: "4px 10px",
-                                                fontSize: 10,
-                                            }}
-                                            onClick={() =>
-                                                document
-                                                    .getElementById(
-                                                        "editImageInput",
-                                                    )
-                                                    ?.click()
-                                            }
-                                        >
-                                            ↑ Replace
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                        Maximum {MAX_IMAGES} images per visit.
+                                    </p>
+                                )}
                         </div>
 
-                        {/* ── Payment type ── */}
+                        {/* Payment type */}
                         <div className="pd-field">
                             <label className="pd-label">
                                 Payment Type
@@ -1018,25 +1216,62 @@ const EditAppointment = ({
             </div>
 
             {/* Lightbox */}
-            {lightboxImg && (
-                <div
-                    className="pd-lightbox-bg"
-                    onClick={() => setLightboxImg(null)}
-                >
-                    <button
-                        className="pd-lightbox-close"
-                        onClick={() => setLightboxImg(null)}
-                    >
-                        <X size={15} />
-                    </button>
-                    <img
-                        className="pd-lightbox-img"
-                        src={lightboxImg.url}
-                        alt="appointment"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            )}
+            {lightboxImg &&
+                (() => {
+                    const isPDF =
+                        lightboxImg.url.includes("/raw/upload") ||
+                        lightboxImg.url.includes("fl_attachment");
+
+                    return (
+                        <div
+                            className="pd-lightbox-bg"
+                            onClick={() => setLightboxImg(null)}
+                        >
+                            <button
+                                className="pd-lightbox-close"
+                                onClick={() => setLightboxImg(null)}
+                            >
+                                <X size={15} />
+                            </button>
+
+                            {isPDF ? (
+                                <div
+                                    style={{
+                                        textAlign: "center",
+                                        color: "white",
+                                    }}
+                                >
+                                    <p>PDF File</p>
+                                    <button
+                                        onClick={() =>
+                                            window.open(
+                                                lightboxImg.url,
+                                                "_blank",
+                                            )
+                                        }
+                                        style={{
+                                            padding: "8px 14px",
+                                            background: "#2563eb",
+                                            border: "none",
+                                            borderRadius: 6,
+                                            color: "white",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Open PDF
+                                    </button>
+                                </div>
+                            ) : (
+                                <img
+                                    className="pd-lightbox-img"
+                                    src={lightboxImg.url}
+                                    alt="appointment"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            )}
+                        </div>
+                    );
+                })()}
         </>
     );
 };

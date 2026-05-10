@@ -8,6 +8,7 @@ const { getPricing } = require("../../utils/pricingcache");
 const Payment = require("../../models/Payment");
 const { getPayPalAccessToken } = require("../config/paypal");
 const razorpay = require("../config/razorpay");
+const { getSubscriptionStatus } = require("../../utils/subscription_check");
 
 // ─── Rate limiters ───────────────────────────────────────────────────────────
 const rateLimit = require("express-rate-limit");
@@ -75,9 +76,7 @@ async function verifyPayPalWebhookSignature(req) {
 function computeExpiryDate(from, billing) {
     const expiry = new Date(from);
     if (billing === "yearly") {
-        const year = expiry.getFullYear();
-        const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-        expiry.setDate(expiry.getDate() + (isLeap ? 366 : 365));
+        expiry.setFullYear(expiry.getFullYear() + 1);
     } else {
         expiry.setDate(expiry.getDate() + 30);
     }
@@ -141,8 +140,33 @@ router.post("/verify-payment", paymentLimiter, fetchuser, async (req, res) => {
         const existing = await Payment.findOne({
             paymentId: razorpay_payment_id,
         });
-        if (existing)
+        if (existing) {
+            const docCheck = await Doc.findById(req.user.doctorId).select(
+                "subscription",
+            );
+            if (getSubscriptionStatus(docCheck.subscription) !== "active") {
+                const expiryDate = computeExpiryDate(
+                    new Date(),
+                    existing.billingCycle,
+                );
+                await Doc.findByIdAndUpdate(req.user.doctorId, {
+                    "subscription.plan": existing.plan,
+                    "subscription.billingCycle": existing.billingCycle,
+                    "subscription.status": "active",
+                    "subscription.startDate": existing.paidAt,
+                    "subscription.expiryDate": expiryDate,
+                    "subscription.paymentId": existing.paymentId || null,
+                    "subscription.orderId": existing.orderId || null,
+                    "subscription.amountPaid": existing.amountPaid,
+                    "subscription.currency": existing.currency,
+                    "subscription.paymentMethod": existing.paymentMethod,
+                    "usage.excelExports": 0,
+                    "usage.invoiceDownloads": 0,
+                    "usage.imageUploads": 0,
+                });
+            }
             return res.json({ success: true, message: "Already processed" });
+        }
 
         // ── Fetch pricing ──
         const pricing = await getPricing();
@@ -167,6 +191,21 @@ router.post("/verify-payment", paymentLimiter, fetchuser, async (req, res) => {
             );
             const pid = sub.plan_id.toLowerCase();
             billing = pid.includes("year") ? "yearly" : "monthly";
+
+            // Validate amount against DB pricing (TC-R3)
+            const rzPlan = await razorpay.plans.fetch(sub.plan_id);
+            const rzAmount = rzPlan.item?.amount; // in paise
+            const expectedINR =
+                billing === "yearly"
+                    ? Math.round(
+                          planData.monthly * 12 * (1 - discount / 100) * 100,
+                      )
+                    : Math.round(planData.monthly * 100);
+            if (rzAmount && rzAmount !== expectedINR) {
+                return res
+                    .status(400)
+                    .json({ success: false, error: "Plan amount mismatch" });
+            }
         } else if (razorpay_order_id && order) {
             billing = order.notes?.billing;
             if (!billing) {
@@ -246,8 +285,39 @@ router.post("/verify-payment", paymentLimiter, fetchuser, async (req, res) => {
             message: "Payment verified successfully",
         });
     } catch (error) {
-        if (error.code === 11000)
+        if (error.code === 11000) {
+            const existingPayment = await Payment.findOne({
+                paymentId: razorpay_payment_id,
+            });
+            const docCheck = await Doc.findById(req.user.doctorId).select(
+                "subscription",
+            );
+            if (
+                existingPayment &&
+                getSubscriptionStatus(docCheck.subscription) !== "active"
+            ) {
+                const expiryDate = computeExpiryDate(
+                    new Date(),
+                    existingPayment.billingCycle,
+                );
+                await Doc.findByIdAndUpdate(req.user.doctorId, {
+                    "subscription.plan": existingPayment.plan,
+                    "subscription.billingCycle": existingPayment.billingCycle,
+                    "subscription.status": "active",
+                    "subscription.startDate": existingPayment.paidAt,
+                    "subscription.expiryDate": expiryDate,
+                    "subscription.paymentId": existingPayment.paymentId || null,
+                    "subscription.orderId": existingPayment.orderId || null,
+                    "subscription.amountPaid": existingPayment.amountPaid,
+                    "subscription.currency": existingPayment.currency,
+                    "subscription.paymentMethod": existingPayment.paymentMethod,
+                    "usage.excelExports": 0,
+                    "usage.invoiceDownloads": 0,
+                    "usage.imageUploads": 0,
+                });
+            }
             return res.json({ success: true, message: "Already processed" });
+        }
 
         console.error("Razorpay verify-payment error:", error);
         return res.status(500).json({ success: false, error: "Server error" });
@@ -299,6 +369,37 @@ router.post(
                         orderId: orderID,
                     });
                     if (existing) {
+                        const docCheck = await Doc.findById(
+                            req.user.doctorId,
+                        ).select("subscription");
+                        if (
+                            getSubscriptionStatus(docCheck.subscription) !==
+                            "active"
+                        ) {
+                            const expiryDate = computeExpiryDate(
+                                new Date(),
+                                existing.billingCycle,
+                            );
+                            await Doc.findByIdAndUpdate(req.user.doctorId, {
+                                "subscription.plan": existing.plan,
+                                "subscription.billingCycle":
+                                    existing.billingCycle,
+                                "subscription.status": "active",
+                                "subscription.startDate": existing.paidAt,
+                                "subscription.expiryDate": expiryDate,
+                                "subscription.paymentId":
+                                    existing.paymentId || null,
+                                "subscription.orderId":
+                                    existing.orderId || null,
+                                "subscription.amountPaid": existing.amountPaid,
+                                "subscription.currency": existing.currency,
+                                "subscription.paymentMethod":
+                                    existing.paymentMethod,
+                                "usage.excelExports": 0,
+                                "usage.invoiceDownloads": 0,
+                                "usage.imageUploads": 0,
+                            });
+                        }
                         console.log(
                             "[PayPal] Already captured and recorded, returning success:",
                             orderID,
@@ -308,8 +409,6 @@ router.post(
                             message: "Already processed",
                         });
                     }
-                    // Captured by PayPal but not in our DB — fall through with
-                    // captureData = undefined; the status check below will catch it.
                     console.warn(
                         "[PayPal] Order already captured but no Payment record found:",
                         orderID,
@@ -319,7 +418,11 @@ router.post(
                 if (!captureData) {
                     return res.status(502).json({
                         success: false,
-                        error: "Payment capture failed. You have not been charged. Please try again.",
+                        error:
+                            paypalErr?.name === "ORDER_ALREADY_CAPTURED"
+                                ? "Payment was captured by PayPal but could not be verified. Please contact support with Order ID: " +
+                                  orderID
+                                : "Payment capture failed. You have not been charged. Please try again.",
                     });
                 }
             }
@@ -357,6 +460,12 @@ router.post(
             const countryDoc = await Country.findOne({
                 currency: capturedCurrency,
             }).lean();
+
+            if (!countryDoc) {
+                return res
+                    .status(400)
+                    .json({ success: false, error: "Unsupported currency" });
+            }
 
             if (countryDoc) {
                 const rate = countryDoc.rate || 1;
@@ -419,8 +528,44 @@ router.post(
                 });
             } catch (dbErr) {
                 if (dbErr.code === 11000) {
+                    const existingPayment = await Payment.findOne({
+                        orderId: orderID,
+                    });
+                    const docCheck = await Doc.findById(
+                        req.user.doctorId,
+                    ).select("subscription");
+                    if (
+                        existingPayment &&
+                        getSubscriptionStatus(docCheck.subscription) !==
+                            "active"
+                    ) {
+                        const expiryDate = computeExpiryDate(
+                            new Date(),
+                            existingPayment.billingCycle,
+                        );
+                        await Doc.findByIdAndUpdate(req.user.doctorId, {
+                            "subscription.plan": existingPayment.plan,
+                            "subscription.billingCycle":
+                                existingPayment.billingCycle,
+                            "subscription.status": "active",
+                            "subscription.startDate": existingPayment.paidAt,
+                            "subscription.expiryDate": expiryDate,
+                            "subscription.paymentId":
+                                existingPayment.paymentId || null,
+                            "subscription.orderId":
+                                existingPayment.orderId || null,
+                            "subscription.amountPaid":
+                                existingPayment.amountPaid,
+                            "subscription.currency": existingPayment.currency,
+                            "subscription.paymentMethod":
+                                existingPayment.paymentMethod,
+                            "usage.excelExports": 0,
+                            "usage.invoiceDownloads": 0,
+                            "usage.imageUploads": 0,
+                        });
+                    }
                     console.log(
-                        "[PayPal] Duplicate Payment.create blocked by unique index, returning success:",
+                        "[PayPal] Duplicate Payment.create blocked, returning success:",
                         orderID,
                     );
                     return res.json({
@@ -428,7 +573,7 @@ router.post(
                         message: "Already processed",
                     });
                 }
-                throw dbErr; // unexpected DB error — re-throw to outer catch
+                throw dbErr;
             }
 
             // ── Activate subscription ──

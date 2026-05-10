@@ -37,11 +37,6 @@ const AdminDoctors = () => {
     const [updating, setUpdating] = useState(null);
     const [visiblePhones, setVisiblePhones] = useState({});
 
-    useEffect(() => {
-        document.body.classList.remove("light-theme", "dark-theme");
-        document.body.classList.add("dark-theme");
-    }, []);
-
     const fetchDoctors = useCallback(async () => {
         try {
             const token = localStorage.getItem("admintoken");

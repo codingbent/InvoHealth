@@ -1,0 +1,185 @@
+@import "../../css/App.css";
+
+/* OVERLAY */
+.ep-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* MODAL */
+.ep-modal {
+    width: 100%;
+    max-width: 420px;
+    background: #0b1220;
+    border-radius: 16px;
+    border: 1px solid #1f2a44;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+/* HEADER */
+.ep-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid #1f2a44;
+}
+
+.ep-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #e5e7eb;
+}
+
+.ep-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* BODY */
+.ep-body {
+    padding: 20px;
+}
+
+/* FIELD */
+.ep-body label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* INPUT */
+.ep-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2c3a5a;
+    background: #0f172a;
+    color: #e5e7eb;
+    font-size: 14px;
+    outline: none;
+}
+
+.ep-input:focus {
+    border-color: #3b82f6;
+}
+
+/* EMAIL ROW */
+.ep-email-row {
+    display: flex;
+    gap: 8px;
+}
+
+.ep-email-row input {
+    flex: 1;
+}
+
+/* VERIFY BUTTON */
+.ep-verify {
+    background: #1d4ed8;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* VERIFIED TAG */
+.ep-verified {
+    font-size: 12px;
+    color: #22c55e;
+    display: flex;
+    align-items: center;
+}
+
+/* OTP */
+.ep-otp-box {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.ep-confirm {
+    background: #16a34a;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+}
+
+/* DISABLED */
+.ep-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ERROR */
+.ep-error {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #2d1515;
+    border: 1px solid #7f1d1d;
+    color: #f87171;
+    font-size: 13px;
+}
+
+/* FOOTER */
+.ep-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid #1f2a44;
+}
+
+.ep-cancel {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #374151;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+}
+
+.ep-save {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ep-phone-row {
+    display: flex;
+    gap: 8px;
+}
+
+.ep-select {
+    width: 40%;
+    background: #0b1220;
+    border: 1px solid #1f2a44;
+    border-radius: 8px;
+    padding: 8px;
+    color: white;
+}
+
+.ep-input {
+    width: 100%;
+}

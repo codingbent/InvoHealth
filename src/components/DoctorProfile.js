@@ -43,7 +43,7 @@ const PasswordInput = ({
             <div style={{ position: "relative" }}>
                 <input
                     type={isVisible ? "text" : "password"}
-                    className="dp-input"
+                    className="dp-input dp-phone-number"
                     placeholder={placeholder}
                     value={value}
                     onChange={onChange}
@@ -172,7 +172,7 @@ function AddPaymentForm({ categories, subCategories, onAdd }) {
                     </span>
                 </label>
                 <input
-                    className="dp-input"
+                    className="dp-input dp-phone-number"
                     placeholder="e.g. My HDFC Account"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
@@ -201,6 +201,7 @@ export default function DoctorProfile(props) {
     const isExpired = subscription?.status === "expired";
 
     // FIX #9: Initialize staffCountryCode to "" not undefined
+    // eslint-disable-next-line
     const [staffCountryId, setStaffCountryId] = useState("");
 
     // eslint-disable-next-line
@@ -215,6 +216,7 @@ export default function DoctorProfile(props) {
     const [editPaymentsOpen, setEditPaymentsOpen] = useState(false);
     const [editProfileOpen, setEditProfileOpen] = useState(false);
     const [editStaffOpen, setEditStaffOpen] = useState(false);
+    const [editingStaff, setEditingStaff] = useState(false);
     const [editAvailOpen, setEditAvailOpen] = useState(false);
     const [showPhone, setShowPhone] = useState(false);
     const [showApptPhone, setShowApptPhone] = useState(false);
@@ -234,18 +236,114 @@ export default function DoctorProfile(props) {
         _id: "",
         name: "",
         phone: "",
-        countryId: "", // FIX #1/#2: use countryId, not countryCode/dialCode
+        countryId: "",
         role: "",
     });
+    const [specSearch, setSpecSearch] = useState("");
+    const [typeSearch, setTypeSearch] = useState("");
+    const [addingStaff, setAddingStaff] = useState(false);
+    const [visiblePhones, setVisiblePhones] = useState({});
 
-    // FIX #1/#2: editData now uses countryId (ObjectId string) instead of countryCode (dialCode string).
-    // This fixes the USA/Canada +1 ambiguity and completes the migration.
+    const SPECIALIZATIONS = [
+        "Allergy and Immunology",
+        "Anesthesiology",
+        "Cardiology",
+        "Cardiothoracic Surgery",
+        "Dermatology",
+        "Emergency Medicine",
+        "Endocrinology",
+        "Family Medicine",
+        "Gastroenterology",
+        "General Surgery",
+        "Geriatrics",
+        "Hematology",
+        "Immunology",
+        "Infectious Diseases",
+        "Internal Medicine",
+        "Nephrology",
+        "Neurology",
+        "Neurosurgery",
+        "Nuclear Medicine",
+        "Obstetrics and Gynecology",
+        "Oncology",
+        "Ophthalmology",
+        "Orthopedics",
+        "Otorhinolaryngology (ENT)",
+        "Pediatrics",
+        "Pathology",
+        "Pharmacology",
+        "Physical Medicine and Rehabilitation",
+        "Plastic Surgery",
+        "Preventive Medicine",
+        "Psychiatry",
+        "Public Health",
+        "Radiology",
+        "Radiation Oncology",
+        "Respiratory Medicine",
+        "Rheumatology",
+        "Sports Medicine",
+        "Thoracic Surgery",
+        "Urology",
+        "Vascular Surgery",
+        "Critical Care Medicine",
+        "Clinical Genetics",
+        "Pain Medicine",
+        "Palliative Medicine",
+        "Sleep Medicine",
+        "Hospital Medicine",
+        "Transplant Surgery",
+        "Trauma Surgery",
+        "Reproductive Medicine",
+        "Forensic Medicine",
+        "Orthodontics",
+        "Dental Anesthesiology",
+        "Dental Public Health",
+        "Endodontics",
+        "Oral and Maxillofacial Pathology",
+        "Oral and Maxillofacial Radiology",
+        "Oral and Maxillofacial Surgery",
+        "Oral Medicine",
+        "Orofacial Pain",
+        "Dentofacial Orthopedics",
+        "Pediatric Dentistry",
+        "Periodontics",
+        "Prosthodontics",
+    ];
+
+    const DOCTOR_TYPES = [
+        "General Physician",
+        "Dentist",
+        "Surgeon",
+        "Consultant",
+        "Medical Officer",
+        "Primary Care Doctor",
+        "Family Doctor",
+        "Doctor",
+        "Clinician",
+        "Healthcare Provider",
+        "Resident Doctor",
+        "Intern Doctor",
+        "Specialist Doctor",
+        "Super Specialist",
+        "Private Practitioner",
+        "Hospitalist",
+        "GP (General Practitioner)",
+    ];
+
+    const capitalize = (str = "") =>
+        str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+    const existsIgnoreCase = (arr = [], value = "") =>
+        arr.some((v) => v.toLowerCase() === value.toLowerCase());
+
     const [editData, setEditData] = useState({
         name: "",
         clinicName: "",
         phone: "",
         appointmentPhone: "",
-        countryId: "", // was: countryCode — now stores _id
+        countryId: "",
+        specialization: [],
+        doctorType: [],
         regNumber: "",
         degree: [""],
         address: {
@@ -287,9 +385,15 @@ export default function DoctorProfile(props) {
 
     const passwordsMatch =
         passwordData.newPassword === passwordData.confirmPassword;
-    const staffLimit =
-        planKey === "free" ? 1 : (pricing?.[planKey]?.staffLimit ?? 0);
-    const isLimitReached = staffLimit !== -1 && staffCount >= staffLimit;
+
+    const staffLimit = planKey === "free" ? 1 : pricing?.[planKey]?.staffLimit;
+
+    const [canUploadImages, setCanUploadImages] = useState(true);
+
+    const isLimitReached =
+        typeof staffLimit === "number" &&
+        staffLimit !== -1 &&
+        staffCount >= staffLimit;
 
     const formatTime = (time) => {
         const [h, m] = time.split(":");
@@ -299,13 +403,13 @@ export default function DoctorProfile(props) {
         return `${hour}:${m} ${ampm}`;
     };
 
-    const splitPhone = (phone = "") => {
-        const match = phone.match(/^(\+\d+)(\d+)$/);
-        return {
-            countryCode: match?.[1] || "+91",
-            number: match?.[2] || phone,
-        };
-    };
+    // const splitPhone = (phone = "") => {
+    //     const match = phone.match(/^(\+\d+)(\d+)$/);
+    //     return {
+    //         countryCode: match?.[1] || "+91",
+    //         number: match?.[2] || phone,
+    //     };
+    // };
 
     const handleEditChange = (e) =>
         setEditData({ ...editData, [e.target.name]: e.target.value });
@@ -336,10 +440,11 @@ export default function DoctorProfile(props) {
             setDoctor(doc);
             setSubscription(doc.subscription || {});
             setUsage(doc.usage || {});
-            setStaffCount(
-                (data.staff || []).filter((s) => s.isActive && !s.isDeleted)
-                    .length,
-            );
+            if (Array.isArray(data.staff)) {
+                setStaffCount(
+                    data.staff.filter((s) => s.isActive && !s.isDeleted).length,
+                );
+            }
 
             setPaymentMethods(
                 (doc.paymentMethods || []).map((m) => ({
@@ -366,8 +471,11 @@ export default function DoctorProfile(props) {
                 appointmentPhone: doc.appointmentPhone || "",
                 // FIX #1/#2: Store countryId (_id), not dialCode
                 countryId: doc.address?.countryId || "",
+
                 regNumber: doc.regNumber || "",
                 degree: doc.degree?.length ? doc.degree : [""],
+                specialization: doc.specialization || [],
+                doctorType: doc.doctorType || [],
                 address: {
                     line1: doc.address?.line1 || "",
                     line2: doc.address?.line2 || "",
@@ -493,6 +601,8 @@ export default function DoctorProfile(props) {
                 ...(cleanPhone !== null && {
                     phone: `${cleanPhone}`,
                 }),
+                specialization: editData.specialization || [],
+                doctorType: editData.doctorType || [],
                 ...(cleanAppt !== null &&
                     cleanAppt.length > 0 && {
                         appointmentPhone: `${cleanAppt}`,
@@ -528,65 +638,158 @@ export default function DoctorProfile(props) {
     };
 
     const handleAddStaff = async () => {
-        if (subscription?.status === "expired") {
-            props.showAlert("Subscription expired. Please upgrade.", "danger");
-            return;
-        }
-        if (isLimitReached) {
-            props.showAlert(
-                `Staff limit reached (${staffLimit}). Upgrade required.`,
-                "warning",
+        try {
+            if (addingStaff) return;
+
+            if (subscription?.status === "expired") {
+                props.showAlert(
+                    "Subscription expired. Please upgrade.",
+                    "danger",
+                );
+                return;
+            }
+
+            if (isLimitReached) {
+                props.showAlert(
+                    `Staff limit reached (${staffLimit}). Upgrade required.`,
+                    "warning",
+                );
+                return;
+            }
+
+            if (!staffName || !staffPhone || !staffRole) {
+                props.showAlert("All fields required", "danger");
+                return;
+            }
+
+            const cleanPhone = staffPhone.replace(/\D/g, "");
+
+            if (cleanPhone.length < 6 || cleanPhone.length > 15) {
+                props.showAlert("Invalid phone number", "danger");
+                return;
+            }
+
+            setAddingStaff(true);
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/add_staff`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        name: staffName.trim(),
+                        phone: cleanPhone,
+                        role: staffRole,
+                        canUploadImages,
+                    }),
+                },
             );
-            return;
-        }
-        if (!staffName || !staffPhone || !staffRole) {
-            props.showAlert("All fields required", "danger");
-            return;
-        }
-        if (!staffCountryId) {
-            props.showAlert("Select country code for staff phone", "danger");
-            return;
-        }
 
-        // FIX #9: Look up dialCode from the selected countryId to prefix phone number
-        const staffCountry = countries.find((c) => c._id === staffCountryId);
-        if (!staffCountry) {
-            props.showAlert("Invalid country selected", "danger");
-            return;
-        }
+            const data = await res.json();
 
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/staff/add_staff`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: staffName,
-                    // dialCode already contains "+" (e.g. "+91")
-                    phone: `${staffCountry.dialCode}${staffPhone}`,
-                    role: staffRole,
-                }),
-            },
-        );
-        const data = await res.json();
-        if (data.success) {
-            fetchStaff();
-            setStaffName("");
-            setStaffPhone("");
-            setStaffRole("");
-        } else props.showAlert(data.error || "Failed", "danger");
+            if (data.success) {
+                await fetchStaff();
+
+                setStaffName("");
+                setStaffPhone("");
+                setStaffRole("");
+
+                props.showAlert("Staff added successfully", "success");
+            } else {
+                props.showAlert(data.error || "Failed", "danger");
+            }
+        } catch (err) {
+            console.error(err);
+
+            props.showAlert("Network error", "danger");
+        } finally {
+            setAddingStaff(false);
+        }
+    };
+
+    const handleRevealPhone = async (staffId, dialCode) => {
+        try {
+            // toggle OFF
+            if (visiblePhones[staffId]) {
+                setVisiblePhones((prev) => {
+                    const updated = { ...prev };
+
+                    delete updated[staffId];
+
+                    return updated;
+                });
+
+                return;
+            }
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/reveal_phone/${staffId}`,
+            );
+
+            const data = await res.json();
+
+            if (!data.success) {
+                props.showAlert(
+                    data.error || "Failed to fetch number",
+                    "danger",
+                );
+
+                return;
+            }
+
+            // remove dial code
+            const localNumber = data.phone.startsWith(dialCode)
+                ? data.phone.slice(dialCode.length)
+                : data.phone;
+
+            setVisiblePhones((prev) => ({
+                ...prev,
+                [staffId]: localNumber,
+            }));
+
+            // auto-hide
+            setTimeout(() => {
+                setVisiblePhones((prev) => {
+                    const updated = { ...prev };
+
+                    delete updated[staffId];
+
+                    return updated;
+                });
+            }, 15000);
+        } catch (err) {
+            console.error(err);
+
+            props.showAlert("Failed to reveal phone", "danger");
+        }
     };
 
     const toggleStaff = async (id) => {
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/staff/toggle_staff/${id}`,
-            { method: "PUT" },
-        );
-        const data = await res.json();
-        if (data.success) {
-            fetchStaff();
-            props.showAlert(data.message, "success");
-        } else props.showAlert(data.error, "danger");
+        try {
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/toggle_staff/${id}`,
+                { method: "PUT" },
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                await fetchStaff();
+
+                props.showAlert(data.message, "success");
+            } else {
+                props.showAlert(
+                    data.error || "Failed to update staff",
+                    "warning",
+                );
+            }
+        } catch (err) {
+            console.error(err);
+
+            props.showAlert(err.message || "Staff limit reached", "warning");
+        }
     };
 
     const validatePassword = (password) => ({
@@ -654,50 +857,122 @@ export default function DoctorProfile(props) {
         else alert(data.error);
     };
 
-    const openEditStaffModal = (staff) => {
-        // For edit staff: parse existing phone to extract number portion.
-        // Staff phone is stored as dialCode+number (e.g. "+911234567890").
-        // We find the matching country by dialCode to get its _id.
-        const parsed = splitPhone(staff.phone);
-        const matchedCountry = countries.find(
-            (c) => c.dialCode === parsed.countryCode,
-        );
-        setEditStaffData({
-            _id: staff._id,
-            name: staff.name,
-            phone: parsed.number,
-            // FIX #1/#2: store countryId (_id) not dialCode string
-            countryId: matchedCountry?._id || "",
-            role: staff.role,
-        });
-        setEditStaffOpen(true);
+    const openEditStaffModal = async (staff) => {
+        try {
+            const matchedCountry = countries.find(
+                (c) => c._id === (staff.countryId || editData.countryId),
+            );
+
+            let revealedPhone = "";
+
+            // securely fetch decrypted phone
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/reveal_phone/${staff._id}`,
+            );
+
+            const data = await res.json();
+
+            if (data.success && data.phone) {
+                // remove dial code for input field
+                const dialCode = matchedCountry?.dialCode || "";
+
+                revealedPhone = data.phone.startsWith(dialCode)
+                    ? data.phone.slice(dialCode.length)
+                    : data.phone.replace(/\D/g, "");
+            }
+
+            setEditStaffData({
+                _id: staff._id,
+
+                name: staff.name,
+
+                phone: revealedPhone,
+
+                countryId: matchedCountry?._id || editData.countryId || "",
+
+                role: staff.role,
+            });
+
+            setEditStaffOpen(true);
+        } catch (err) {
+            console.error(err);
+
+            props.showAlert("Failed to load staff data", "danger");
+        }
     };
 
     const editstaff = async () => {
-        const staffCountry = countries.find(
-            (c) => c._id === editStaffData.countryId,
-        );
-        if (!staffCountry) {
-            props.showAlert("Please select a valid country", "danger");
-            return;
+        try {
+            if (editingStaff) return;
+
+            const trimmedName = editStaffData.name.trim();
+
+            if (!trimmedName) {
+                props.showAlert("Name is required", "danger");
+                return;
+            }
+
+            if (
+                editStaffData.phone &&
+                (editStaffData.phone.length < 6 ||
+                    editStaffData.phone.length > 15)
+            ) {
+                props.showAlert("Invalid phone number", "danger");
+                return;
+            }
+
+            const staffCountry = countries.find(
+                (c) => c._id === editStaffData.countryId,
+            );
+
+            if (!staffCountry) {
+                props.showAlert("Please select a valid country", "danger");
+                return;
+            }
+
+            setEditingStaff(true);
+
+            const body = {
+                name: trimmedName,
+                role: editStaffData.role,
+            };
+
+            // only send phone if changed
+            if (editStaffData.phone) {
+                body.phone = editStaffData.phone.replace(/\D/g, "");
+            }
+
+            const res = await authFetch(
+                `${API_BASE_URL}/api/doctor/staff/edit_staff/${editStaffData._id}`,
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+
+                    body: JSON.stringify(body),
+                },
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                fetchStaff();
+
+                setEditStaffOpen(false);
+
+                props.showAlert("Staff updated successfully", "success");
+            } else {
+                props.showAlert(data.error || "Failed", "danger");
+            }
+        } catch (err) {
+            console.error(err);
+
+            props.showAlert("Network error", "danger");
+        } finally {
+            setEditingStaff(false);
         }
-        const res = await authFetch(
-            `${API_BASE_URL}/api/doctor/staff/edit_staff/${editStaffData._id}`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: editStaffData.name,
-                    phone: `${staffCountry.dialCode}${editStaffData.phone}`,
-                    role: editStaffData.role,
-                }),
-            },
-        );
-        const data = await res.json();
-        if (data.success) {
-            fetchStaff();
-            setEditStaffOpen(false);
-        } else alert(data.error);
     };
 
     useEffect(() => {
@@ -744,6 +1019,24 @@ export default function DoctorProfile(props) {
         };
         fetchPricing();
     }, []);
+
+    useEffect(() => {
+        const isAnyModalOpen =
+            editProfileOpen ||
+            editStaffOpen ||
+            editAvailOpen ||
+            editPaymentsOpen;
+
+        if (isAnyModalOpen) {
+            document.body.classList.add("dp-modal-open");
+        } else {
+            document.body.classList.remove("dp-modal-open");
+        }
+
+        return () => {
+            document.body.classList.remove("dp-modal-open");
+        };
+    }, [editProfileOpen, editStaffOpen, editAvailOpen, editPaymentsOpen]);
 
     /* ── Skeleton loader ── */
     if (!doctor) {
@@ -953,6 +1246,28 @@ export default function DoctorProfile(props) {
                                         <span className="dp-key">Reg No</span>
                                         <span>{doctor.regNumber || "N/A"}</span>
                                     </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">
+                                            Specialization
+                                        </span>
+                                        <span>
+                                            {doctor.specialization?.length
+                                                ? doctor.specialization.join(
+                                                      ", ",
+                                                  )
+                                                : "N/A"}
+                                        </span>
+                                    </div>
+                                    <div className="dp-row">
+                                        <span className="dp-key">
+                                            Doctor Type
+                                        </span>
+                                        <span>
+                                            {doctor.doctorType?.length
+                                                ? doctor.doctorType.join(", ")
+                                                : "N/A"}
+                                        </span>
+                                    </div>
                                 </div>
                             ),
                         },
@@ -1018,7 +1333,7 @@ export default function DoctorProfile(props) {
                     <div className="dp-field">
                         <label className="dp-label">Staff Name</label>
                         <input
-                            className="dp-input"
+                            className="dp-input dp-phone-number"
                             placeholder="Enter name"
                             value={staffName}
                             onChange={(e) => setStaffName(e.target.value)}
@@ -1026,25 +1341,13 @@ export default function DoctorProfile(props) {
                     </div>
                     <div className="dp-field">
                         <label className="dp-label">Phone Number</label>
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div className="dp-phone-input-wrap">
                             {/* FIX #9: value = countryId (_id), not dialCode string */}
-                            <select
-                                className="dp-input"
-                                style={{ maxWidth: 160 }}
-                                value={staffCountryId}
-                                onChange={(e) =>
-                                    setStaffCountryId(e.target.value)
-                                }
-                            >
-                                <option value="">Country</option>
-                                {countries.map((c) => (
-                                    <option key={c._id} value={c._id}>
-                                        {c.flag} {c.dialCode}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="dp-phone-code-static">
+                                {doctor?.dialCode}
+                            </div>
                             <input
-                                className="dp-input"
+                                className="dp-input dp-phone-number"
                                 placeholder="Enter phone number"
                                 value={staffPhone}
                                 onChange={(e) =>
@@ -1068,6 +1371,21 @@ export default function DoctorProfile(props) {
                             <option value="nurse">Nurse</option>
                         </select>
                     </div>
+                    <div className="dp-field">
+                        <label className="dp-label">Media Upload Access</label>
+
+                        <select
+                            className="dp-select"
+                            value={canUploadImages ? "yes" : "no"}
+                            onChange={(e) =>
+                                setCanUploadImages(e.target.value === "yes")
+                            }
+                            required
+                        >
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
                 </div>
 
                 {isExpired ? (
@@ -1086,7 +1404,7 @@ export default function DoctorProfile(props) {
                 <button
                     className="dp-btn dp-btn-primary dp-mb"
                     onClick={handleAddStaff}
-                    disabled={isLimitReached || isExpired}
+                    disabled={isLimitReached || isExpired || addingStaff}
                 >
                     <UserPlus size={14} /> Add Staff
                 </button>
@@ -1138,7 +1456,34 @@ export default function DoctorProfile(props) {
                                             {s.name}
                                         </div>
                                         <div className="dp-staff-phone">
-                                            <Phone size={11} /> {s.phone}
+                                            <span className="dp-staff-code">
+                                                {doctor?.dialCode || "+"}
+                                            </span>
+
+                                            <span className="dp-staff-number">
+                                                {visiblePhones[s._id]
+                                                    ? visiblePhones[s._id]
+                                                    : s.phoneLast4
+                                                      ? `••••••${s.phoneLast4}`
+                                                      : "••••••••"}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                className="dp-eye-btn"
+                                                onClick={() =>
+                                                    handleRevealPhone(
+                                                        s._id,
+                                                        doctor?.dialCode || "",
+                                                    )
+                                                }
+                                            >
+                                                {visiblePhones[s._id] ? (
+                                                    <EyeOff size={14} />
+                                                ) : (
+                                                    <Eye size={14} />
+                                                )}
+                                            </button>
                                         </div>
                                         <span
                                             className="dp-role-badge"
@@ -1450,7 +1795,7 @@ export default function DoctorProfile(props) {
                                 <div className="dp-field">
                                     <label className="dp-label">Name</label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="name"
                                         value={editData.name}
                                         onChange={handleEditChange}
@@ -1461,7 +1806,7 @@ export default function DoctorProfile(props) {
                                         Medical Center Name
                                     </label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="clinicName"
                                         value={editData.clinicName}
                                         onChange={handleEditChange}
@@ -1469,7 +1814,7 @@ export default function DoctorProfile(props) {
                                 </div>
                                 <div className="dp-field">
                                     <label className="dp-label">Phone</label>
-                                    <div style={{ display: "flex", gap: 8 }}>
+                                    <div className="dp-phone-input-wrap">
                                         <select
                                             className="dp-select"
                                             style={{
@@ -1499,7 +1844,7 @@ export default function DoctorProfile(props) {
                                             ))}
                                         </select>
                                         <input
-                                            className="dp-input"
+                                            className="dp-input dp-phone-number"
                                             value={editData.phone}
                                             onChange={(e) =>
                                                 setEditData({
@@ -1549,7 +1894,7 @@ export default function DoctorProfile(props) {
                                             ))}
                                         </select>
                                         <input
-                                            className="dp-input"
+                                            className="dp-input dp-phone-number"
                                             name="appointmentphone"
                                             placeholder="Phone number"
                                             value={editData.appointmentPhone}
@@ -1568,10 +1913,298 @@ export default function DoctorProfile(props) {
                                 </div>
                                 <div className="dp-field">
                                     <label className="dp-label">
+                                        Specializations
+                                    </label>
+
+                                    <div className="dp-specialization-wrap">
+                                        <input
+                                            className="dp-input dp-phone-number"
+                                            placeholder="Search specialization..."
+                                            value={specSearch}
+                                            onChange={(e) =>
+                                                setSpecSearch(e.target.value)
+                                            }
+                                        />
+
+                                        {specSearch && (
+                                            <div className="dp-specialization-dropdown">
+                                                {(() => {
+                                                    const filtered =
+                                                        SPECIALIZATIONS.filter(
+                                                            (s) =>
+                                                                s
+                                                                    .toLowerCase()
+                                                                    .includes(
+                                                                        specSearch.toLowerCase(),
+                                                                    ) &&
+                                                                !existsIgnoreCase(
+                                                                    editData.specialization,
+                                                                    s,
+                                                                ),
+                                                        );
+
+                                                    return (
+                                                        <>
+                                                            {filtered.map(
+                                                                (item, i) => (
+                                                                    <div
+                                                                        key={i}
+                                                                        className="dp-specialization-item"
+                                                                        onClick={() => {
+                                                                            setEditData(
+                                                                                {
+                                                                                    ...editData,
+                                                                                    specialization:
+                                                                                        [
+                                                                                            ...(editData.specialization ||
+                                                                                                []),
+                                                                                            capitalize(
+                                                                                                item,
+                                                                                            ),
+                                                                                        ],
+                                                                                },
+                                                                            );
+                                                                            setSpecSearch(
+                                                                                "",
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        {capitalize(
+                                                                            item,
+                                                                        )}
+                                                                    </div>
+                                                                ),
+                                                            )}
+
+                                                            {/* ADD CUSTOM */}
+                                                            {filtered.length ===
+                                                                0 &&
+                                                                specSearch.trim() &&
+                                                                !existsIgnoreCase(
+                                                                    editData.specialization,
+                                                                    specSearch,
+                                                                ) && (
+                                                                    <div
+                                                                        className="dp-specialization-item add-new"
+                                                                        onClick={() => {
+                                                                            setEditData(
+                                                                                {
+                                                                                    ...editData,
+                                                                                    specialization:
+                                                                                        [
+                                                                                            ...(editData.specialization ||
+                                                                                                []),
+                                                                                            capitalize(
+                                                                                                specSearch.trim(),
+                                                                                            ),
+                                                                                        ],
+                                                                                },
+                                                                            );
+                                                                            setSpecSearch(
+                                                                                "",
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Plus
+                                                                            size={
+                                                                                16
+                                                                            }
+                                                                        />{" "}
+                                                                        Add "
+                                                                        {capitalize(
+                                                                            specSearch,
+                                                                        )}
+                                                                        "
+                                                                    </div>
+                                                                )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        {/* CHIPS */}
+                                        <div className="dp-chip-container">
+                                            {(
+                                                editData.specialization || []
+                                            ).map((item, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="dp-chip"
+                                                >
+                                                    {capitalize(item)}
+                                                    <span
+                                                        className="dp-chip-close"
+                                                        onClick={() =>
+                                                            setEditData({
+                                                                ...editData,
+                                                                specialization:
+                                                                    editData.specialization.filter(
+                                                                        (s) =>
+                                                                            s !==
+                                                                            item,
+                                                                    ),
+                                                            })
+                                                        }
+                                                    >
+                                                        <X size={14} />
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">
+                                        Doctor Types
+                                    </label>
+
+                                    <div className="dp-specialization-wrap">
+                                        <input
+                                            className="dp-input dp-phone-number"
+                                            placeholder="Search doctor type..."
+                                            value={typeSearch}
+                                            onChange={(e) =>
+                                                setTypeSearch(e.target.value)
+                                            }
+                                        />
+
+                                        {typeSearch && (
+                                            <div className="dp-specialization-dropdown">
+                                                {(() => {
+                                                    const filtered =
+                                                        DOCTOR_TYPES.filter(
+                                                            (t) =>
+                                                                t
+                                                                    .toLowerCase()
+                                                                    .includes(
+                                                                        typeSearch.toLowerCase(),
+                                                                    ) &&
+                                                                !existsIgnoreCase(
+                                                                    editData.doctorType,
+                                                                    t,
+                                                                ),
+                                                        );
+
+                                                    return (
+                                                        <>
+                                                            {filtered.map(
+                                                                (item, i) => (
+                                                                    <div
+                                                                        key={i}
+                                                                        className="dp-specialization-item"
+                                                                        onClick={() => {
+                                                                            setEditData(
+                                                                                {
+                                                                                    ...editData,
+                                                                                    doctorType:
+                                                                                        [
+                                                                                            ...(editData.doctorType ||
+                                                                                                []),
+                                                                                            capitalize(
+                                                                                                item,
+                                                                                            ),
+                                                                                        ],
+                                                                                },
+                                                                            );
+                                                                            setTypeSearch(
+                                                                                "",
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        {capitalize(
+                                                                            item,
+                                                                        )}
+                                                                    </div>
+                                                                ),
+                                                            )}
+
+                                                            {/* ADD CUSTOM */}
+                                                            {filtered.length ===
+                                                                0 &&
+                                                                typeSearch.trim() &&
+                                                                !existsIgnoreCase(
+                                                                    editData.doctorType,
+                                                                    typeSearch,
+                                                                ) && (
+                                                                    <div
+                                                                        className="dp-specialization-item add-new"
+                                                                        onClick={() => {
+                                                                            setEditData(
+                                                                                {
+                                                                                    ...editData,
+                                                                                    doctorType:
+                                                                                        [
+                                                                                            ...(editData.doctorType ||
+                                                                                                []),
+                                                                                            capitalize(
+                                                                                                typeSearch.trim(),
+                                                                                            ),
+                                                                                        ],
+                                                                                },
+                                                                            );
+                                                                            setTypeSearch(
+                                                                                "",
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Plus
+                                                                            size={
+                                                                                16
+                                                                            }
+                                                                        />{" "}
+                                                                        Add "
+                                                                        {capitalize(
+                                                                            typeSearch,
+                                                                        )}
+                                                                        "
+                                                                    </div>
+                                                                )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        {/* CHIPS */}
+                                        <div className="dp-chip-container">
+                                            {(editData.doctorType || []).map(
+                                                (item, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="dp-chip"
+                                                    >
+                                                        {capitalize(item)}
+                                                        <span
+                                                            className="dp-chip-close"
+                                                            onClick={() =>
+                                                                setEditData({
+                                                                    ...editData,
+                                                                    doctorType:
+                                                                        editData.doctorType.filter(
+                                                                            (
+                                                                                t,
+                                                                            ) =>
+                                                                                t !==
+                                                                                item,
+                                                                        ),
+                                                                })
+                                                            }
+                                                        >
+                                                            <X size={14} />
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="dp-field">
+                                    <label className="dp-label">
                                         Registration No
                                     </label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="regNumber"
                                         value={editData.regNumber}
                                         onChange={handleEditChange}
@@ -1592,7 +2225,7 @@ export default function DoctorProfile(props) {
                                     }}
                                 >
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         placeholder="Enter degree"
                                         value={deg}
                                         onChange={(e) =>
@@ -1623,7 +2256,7 @@ export default function DoctorProfile(props) {
                             </div>
                             <div className="dp-field dp-mb">
                                 <input
-                                    className="dp-input"
+                                    className="dp-input dp-phone-number"
                                     name="line1"
                                     placeholder="Address Line 1"
                                     value={editData.address.line1}
@@ -1632,7 +2265,7 @@ export default function DoctorProfile(props) {
                             </div>
                             <div className="dp-field dp-mb">
                                 <input
-                                    className="dp-input"
+                                    className="dp-input dp-phone-number"
                                     name="line2"
                                     placeholder="Address Line 2 (optional)"
                                     value={editData.address.line2}
@@ -1641,7 +2274,7 @@ export default function DoctorProfile(props) {
                             </div>
                             <div className="dp-field dp-mb">
                                 <input
-                                    className="dp-input"
+                                    className="dp-input dp-phone-number"
                                     name="line3"
                                     placeholder="Address Line 3 (optional)"
                                     value={editData.address.line3}
@@ -1652,7 +2285,7 @@ export default function DoctorProfile(props) {
                                 <div className="dp-field">
                                     <label className="dp-label">City</label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="city"
                                         value={editData.address.city}
                                         onChange={handleAddressChange}
@@ -1661,7 +2294,7 @@ export default function DoctorProfile(props) {
                                 <div className="dp-field">
                                     <label className="dp-label">State</label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="state"
                                         value={editData.address.state}
                                         onChange={handleAddressChange}
@@ -1670,7 +2303,7 @@ export default function DoctorProfile(props) {
                                 <div className="dp-field">
                                     <label className="dp-label">Pincode</label>
                                     <input
-                                        className="dp-input"
+                                        className="dp-input dp-phone-number"
                                         name="pincode"
                                         value={editData.address.pincode}
                                         onChange={handleAddressChange}
@@ -1721,7 +2354,7 @@ export default function DoctorProfile(props) {
                             <div className="dp-field dp-mb">
                                 <label className="dp-label">Name</label>
                                 <input
-                                    className="dp-input"
+                                    className="dp-input dp-phone-number"
                                     value={editStaffData.name}
                                     onChange={(e) =>
                                         setEditStaffData({
@@ -1731,28 +2364,13 @@ export default function DoctorProfile(props) {
                                     }
                                 />
                             </div>
-                            <div style={{ display: "flex", gap: 8 }}>
-                                {/* FIX #1/#2: value = countryId (_id) */}
-                                <select
-                                    className="dp-input"
-                                    style={{ maxWidth: 160 }}
-                                    value={editStaffData.countryId}
-                                    onChange={(e) =>
-                                        setEditStaffData({
-                                            ...editStaffData,
-                                            countryId: e.target.value,
-                                        })
-                                    }
-                                >
-                                    <option value="">Country</option>
-                                    {countries.map((c) => (
-                                        <option key={c._id} value={c._id}>
-                                            {c.flag} {c.dialCode}
-                                        </option>
-                                    ))}
-                                </select>
+                            <label className="dp-label">Number</label>
+                            <div className="dp-phone-input-wrap">
+                                <div className="dp-phone-code-static">
+                                    {doctor?.dialCode || "+91"}
+                                </div>
                                 <input
-                                    className="dp-input"
+                                    className="dp-input dp-phone-number"
                                     placeholder="Enter phone number"
                                     value={editStaffData.phone}
                                     onChange={(e) =>
@@ -1872,7 +2490,7 @@ export default function DoctorProfile(props) {
                                         </label>
                                         <input
                                             type="time"
-                                            className="dp-input"
+                                            className="dp-input dp-phone-number"
                                             value={slot.startTime}
                                             onChange={(e) => {
                                                 const u = [...tempSlots];
@@ -1886,7 +2504,7 @@ export default function DoctorProfile(props) {
                                         <label className="dp-label">End</label>
                                         <input
                                             type="time"
-                                            className="dp-input"
+                                            className="dp-input dp-phone-number"
                                             value={slot.endTime}
                                             onChange={(e) => {
                                                 const u = [...tempSlots];
@@ -1902,7 +2520,7 @@ export default function DoctorProfile(props) {
                                         </label>
                                         <input
                                             type="number"
-                                            className="dp-input"
+                                            className="dp-input dp-phone-number"
                                             value={slot.slotDuration}
                                             onChange={(e) => {
                                                 const u = [...tempSlots];

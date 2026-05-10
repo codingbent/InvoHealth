@@ -1,22 +1,18 @@
 export const generateSlots = (start, end, duration = 15) => {
     const slots = [];
 
-    let [h, m] = start.split(":").map(Number);
-    let [endH, endM] = end.split(":").map(Number);
+    let [sh, sm] = start.split(":").map(Number);
+    let [eh, em] = end.split(":").map(Number);
 
-    let current = new Date();
-    current.setHours(h, m, 0, 0);
-
-    const endTime = new Date();
-    endTime.setHours(endH, endM, 0, 0);
+    let current = sh * 60 + sm;
+    const endTime = eh * 60 + em;
 
     while (current < endTime) {
-        const hours = String(current.getHours()).padStart(2, "0");
-        const minutes = String(current.getMinutes()).padStart(2, "0");
+        const h = String(Math.floor(current / 60)).padStart(2, "0");
+        const m = String(current % 60).padStart(2, "0");
 
-        slots.push(`${hours}:${minutes}`);
-
-        current = new Date(current.getTime() + duration * 60000);
+        slots.push(`${h}:${m}`);
+        current += duration;
     }
 
     return slots;

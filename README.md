@@ -1,179 +1,236 @@
-🏥 Medical Center Management System (MERN)
+# 🏥 InvoHealth — Medical Center Management System (MERN)
 
-A full-stack **medical center & Patient Management Web Application** built using the **MERN stack**, designed for doctors and small medical centers to manage patients, appointments, billing, and reports efficiently.
+A full-stack **clinic management and patient workflow system** built using the **MERN stack**, designed for doctors and small medical centers to manage **patients, appointments, billing, and analytics** in a production-ready environment.
 
-This project goes beyond a basic CRUD app and focuses on **real-world medical center workflows**, including OTP-based authentication, secure password recovery, role-based access, and Excel-friendly reporting.
-
----
-
-✨ Features
-
--   👨‍⚕️ Doctor signup & login
-;; -   📱 OTP-based phone verification (2Factor)
--   🔐 Forgot password with OTP reset flow
--   📋 Patient records management
--   📅 Appointment scheduling
--   💳 Billing & invoice generation
--   📊 Excel / CSV export for reports
--   🔍 Filters (date, service, payment mode, etc.)
--   📱 Fully responsive UI
--   ☁️ Cloud-hosted backend & database
+Unlike basic CRUD apps, InvoHealth focuses on **real-world healthcare workflows**, including secure authentication, OTP verification, billing accuracy, and audit-safe reporting.
 
 ---
 
-🛠 Tech Stack
+## 🚀 Key Features
+
+### 👨‍⚕️ Doctor & Authentication
+
+* Secure doctor signup & login (JWT-based)
+* OTP-based email verification (secure + Redis-backed)
+* Forgot password with OTP reset flow
+* Role-based access (doctor, staff, patient)
+
+---
+
+### 📋 Patient Management
+
+* Create and manage patient records
+* Multi-profile support per email
+* Secure patient data isolation
+
+---
+
+### 📅 Appointment System
+
+* Smart appointment scheduling
+* Slot conflict detection
+* Multi-visit tracking per patient
+
+---
+
+### 💳 Billing & Invoicing
+
+* Service-based billing system
+* Percentage & fixed discount handling
+* Accurate financial calculations (no drift)
+* Invoice number tracking (audit-safe)
+
+---
+
+### 📊 Reports & Analytics
+
+* Daily dashboard (default: today)
+* Revenue, collection, pending tracking
+* Service-level analytics with correct discount distribution
+* Excel export (clinic-ready format)
+
+---
+
+### 📱 UI / UX
+
+* Fully responsive (mobile + desktop)
+* Skeleton loaders & smooth transitions
+* Clean, production-grade UI
+
+---
+
+### ☁️ Infrastructure
+
+* Cloud-hosted backend (Render)
+* MongoDB Atlas database
+* Redis-backed OTP system (multi-instance safe)
+
+---
+
+## 🛠 Tech Stack
 
 ### Frontend
 
--   React.js (Create React App)
--   Bootstrap 5
--   React Router DOM
--   Fetch API
+* React.js (CRA)
+* Bootstrap 5
+* React Router DOM
+* Fetch API
 
 ### Backend
 
--   Node.js
--   Express.js
--   MongoDB Atlas
--   JWT Authentication
--   OTP Service (2Factor)
--   bcrypt (password hashing)
+* Node.js + Express.js
+* MongoDB (Mongoose)
+* JWT Authentication
+* Redis (OTP store)
+* bcrypt (password hashing)
 
 ### Deployment
 
--   Frontend: **Vercel**
--   Backend: **Render**
--   Database: **MongoDB Atlas**
+* Frontend → Vercel
+* Backend → Render
+* Database → MongoDB Atlas
 
 ---
 
-📦 Required npm Packages
+## 📦 Installation
 
-### Frontend Dependencies
-```bash
-npm install react react-dom react-router-dom bootstrap axios
-```
-### Backend Dependencies
-```bash
-npm install express mongoose cors dotenv jsonwebtoken bcryptjs axios
-```
+### 1️⃣ Clone Repository
 
-### Dev Dependency
-```bash
-npm install nodemon --save-dev
-```
-
-### Backend (/backend/.env)
-```bash
-PORT=5001
-MONGO_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret
-OTP_API_KEY=your_2factor_api_key
-```
-
-### Frontend (/frontend/.env)
-```bash
-REACT_APP_API_URL=http://localhost:5001
-```
-
-🗄 MongoDB Atlas Setup
-```bash
-Go to https://www.mongodb.com/atlas
-
-Create a free cluster
-
-Create a database user
-
-Whitelist IP (0.0.0.0/0 for development)
-
-Copy the connection string
-
-Paste it into MONGO_URI in .env
-```
-Running the Project Locally
-
-1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/codingbent/InvoHealth.git
-cd medical-center-management-system
+cd InvoHealth
 ```
-2️⃣ Start Backend
+
+---
+
+### 2️⃣ Backend Setup
+
 ```bash
 cd backend
 npm install
 nodemon index.js
 ```
 
-Backend runs at:
+Runs at:
+
 ```bash
 http://localhost:5001
 ```
-3️⃣ Start Frontend
+
+---
+
+### 3️⃣ Frontend Setup
+
 ```bash
 cd frontend
 npm install
 npm start
 ```
 
-Frontend runs at:
+Runs at:
+
 ```bash
 http://localhost:3000
 ```
 
-☁️ Deployment Guide
-Backend (Render)
+---
 
-Create a new Web Service
+🔑 Environment Variables
 
-Connect your GitHub repository
+### Backend (`/backend/.env`)
 
-Build command:
+```env
+PORT=5001
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret_key
+REDIS_URL=your_redis_url
+MAIL_USER=your_email
+MAIL_PASS=your_password
+```
+
+---
+
+### Frontend (`/frontend/.env`)
+
+```env
+REACT_APP_API_URL=http://localhost:5001
+```
+
+---
+
+🗄 MongoDB Setup
+
+1. Create cluster → https://www.mongodb.com/atlas
+2. Create DB user
+3. Allow IP (0.0.0.0/0 for dev)
+4. Add connection string to `.env`
+
+---
+
+☁️ Deployment
+
+### Backend (Render)
+
+* Build:
+
 ```bash
 npm install
 ```
 
-Start command:
+* Start:
+
 ```bash
 node index.js
 ```
 
-Add environment variables in Render dashboard
+---
 
-Frontend (Vercel)
+### Frontend (Vercel)
 
-Import the GitHub repository
+* Import repo
+* Select `/frontend`
+* Add:
 
-Select the frontend folder
-
-Add environment variable:
-```bash
-REACT_APP_API_URL=https://your-render-backend-url
+```env
+REACT_APP_API_URL=https://your-backend-url
 ```
-Deploy
 
+---
 
 🔐 Authentication Flow
 
-Signup → Phone OTP verification
+* Signup → Email OTP verification
+* Login → Email + password
+* Forgot Password → OTP → Reset
+* JWT-protected routes
 
-Login → Email + password
+---
 
-Forgot password → OTP → Reset password
+⚠️ Production Highlights
 
-JWT-based protected routes
+* Redis-backed OTP (no in-memory risk)
+* CSPRNG OTP generation (crypto-safe)
+* No double billing / discount drift
+* Service-level accurate analytics
+* Multi-instance safe architecture
 
-📈 Future Enhancements
+---
 
-Offline-first support (IndexedDB)
+📈 Future Improvements
 
-Analytics dashboard
+* Offline-first (IndexedDB)
+* Advanced analytics dashboard
+* PWA support
+* Dark mode
 
-Progressive Web App (PWA)
-
-Dark mode
+---
 
 👨‍💻 Author
 
-Abhed Agarwal
+**Abhed Agarwal**
 Full Stack Developer (MERN)
-📧 Email: abhed.agl@gmail.com
+
+📧 [abhed.agl@gmail.com](mailto:abhed.agl@gmail.com)
+🌐 https://github.com/codingbent
+
+---

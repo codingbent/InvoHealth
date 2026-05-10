@@ -25,12 +25,25 @@ router.get("/patient_details/:id", fetchuser, async (req, res) => {
             });
         }
 
-        if (patient.doctor.toString() !== req.user.doctorId) {
+        if (!req.user?.doctorId) {
+            return res.status(401).json({
+                message: "Unauthorized - no doctor context",
+            });
+        }
+
+        const doctorId = req.user.doctorId.toString();
+
+        // SUPPORT BOTH SCHEMA
+        const isAuthorized =
+            (Array.isArray(patient.doctors) &&
+                patient.doctors.some((d) => d.toString() === doctorId)) ||
+            (patient.doctor && patient.doctor.toString() === doctorId);
+
+        if (!isAuthorized) {
             return res.status(403).json({
                 message: "Unauthorized",
             });
         }
-
         let maskedNumber = "";
         const needsNumberUpdate = !patient.numberEncrypted;
 
@@ -43,9 +56,40 @@ router.get("/patient_details/:id", fetchuser, async (req, res) => {
         delete patient.numberHash;
         delete patient.numberEncrypted;
 
-        // IMPORTANT FIX
+        const calculateAge = (dob) => {
+            if (!dob) return null;
+
+            const birth = new Date(dob);
+
+            if (isNaN(birth.getTime())) {
+                return null;
+            }
+
+            const today = new Date();
+
+            let age = today.getFullYear() - birth.getFullYear();
+
+            const monthDiff = today.getMonth() - birth.getMonth();
+
+            if (
+                monthDiff < 0 ||
+                (monthDiff === 0 && today.getDate() < birth.getDate())
+            ) {
+                age--;
+            }
+
+            return age >= 0 ? age : null;
+        };
+
+        const computedAge = patient.dob
+            ? calculateAge(patient.dob)
+            : (patient.age ?? null);
+
         return res.json({
             ...patient,
+
+            age: computedAge,
+            dob: patient.dob ? String(patient.dob).slice(0, 10) : "",
 
             countryId: patient.country?._id || "",
             countryName: patient.country?.name || "",

@@ -80,11 +80,11 @@ const sections = [
         title: "Changes to Privacy Policy",
         body: "This Privacy Policy may be updated periodically to reflect changes in our services or legal requirements. Continued use of the platform after updates constitutes acceptance of the revised policy.",
     },
-    {
-        num: "12",
-        title: "Cookies & Local Storage",
-        body: "We use browser storage (localStorage and cookies) to manage authentication tokens and improve user experience. No third-party tracking cookies are used.",
-    },
+    // {
+    //     num: "12",
+    //     title: "Cookies & Local Storage",
+    //     body: "We use browser storage (localStorage and cookies) to manage authentication tokens and improve user experience. No third-party tracking cookies are used.",
+    // },
     {
         num: "13",
         title: "User Rights",
@@ -93,8 +93,8 @@ const sections = [
             "Right to access your data",
             "Right to correct your data",
             "Right to delete your data",
-            "Right to data portability",
-            "Right to object to processing",
+            // "Right to data portability",
+            // "Right to object to processing",
         ],
     },
     {
@@ -115,7 +115,7 @@ const sections = [
             "Razorpay — payment processing (India)",
             "PayPal — international payments",
             "Gmail API — email delivery",
-            "n8n — workflow automation",
+            // "n8n — workflow automation",
         ],
     },
     {

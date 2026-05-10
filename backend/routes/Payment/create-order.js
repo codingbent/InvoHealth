@@ -7,100 +7,107 @@ const fetchuser = require("../../middleware/fetchuser");
 const Doc = require("../../models/Doc");
 const Pricing = require("../../models/Pricing");
 const PLAN_IDS = require("../config/plan_ids");
+const { createLimiter } = require("../../middleware/ratelimiter");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Route 1: RAZORPAY — India / INR only
 // POST /api/payment/create-subscription
 // ─────────────────────────────────────────────────────────────────────────────
-router.post("/create-subscription", fetchuser, async (req, res) => {
-    try {
-        const { plan, billing, currency } = req.body;
+router.post(
+    "/create-subscription",
+    fetchuser,
+    createLimiter({ max: 10 }),
+    async (req, res) => {
+        try {
+            const { plan, billing, currency } = req.body;
 
-        if (!plan || !billing)
-            return res
-                .status(400)
-                .json({ success: false, error: "Plan and billing required" });
-
-        if (!["monthly", "yearly"].includes(billing))
-            return res
-                .status(400)
-                .json({ success: false, error: "Invalid billing cycle" });
-
-        // Hard-block non-INR — this endpoint is Razorpay-only
-        if (currency !== "INR")
-            return res.status(400).json({
-                success: false,
-                error: "This endpoint only supports INR payments",
-            });
-
-        const normalizedPlan = plan.toLowerCase();
-        const plans = PLAN_IDS[normalizedPlan];
-        if (!plans)
-            return res
-                .status(400)
-                .json({ success: false, error: "Invalid plan" });
-
-        const planId = plans[billing];
-        if (!planId)
-            return res.status(500).json({
-                success: false,
-                error: "Plan ID not configured. Contact support.",
-            });
-
-        // ── Fetch doctor ──
-        const doc = await Doc.findById(req.user.doctorId);
-        if (!doc)
-            return res
-                .status(404)
-                .json({ success: false, error: "Doctor not found" });
-
-        // ── Create or reuse Razorpay customer ──
-        let customerId = doc.subscription?.customerId;
-
-        if (!customerId) {
-            try {
-                const customer = await razorpay.customers.create({
-                    name: doc.name || "Doctor",
-                    email: doc.email || "noreply@example.com",
+            if (!plan || !billing)
+                return res.status(400).json({
+                    success: false,
+                    error: "Plan and billing required",
                 });
-                customerId = customer.id;
-            } catch (err) {
-                if (
-                    err.error?.description ===
-                    "Customer already exists for the merchant"
-                ) {
-                    const customers = await razorpay.customers.all({
-                        email: doc.email,
+
+            if (!["monthly", "yearly"].includes(billing))
+                return res
+                    .status(400)
+                    .json({ success: false, error: "Invalid billing cycle" });
+
+            // Hard-block non-INR — this endpoint is Razorpay-only
+            if (currency !== "INR")
+                return res.status(400).json({
+                    success: false,
+                    error: "This endpoint only supports INR payments",
+                });
+
+            const normalizedPlan = plan.toLowerCase();
+            const plans = PLAN_IDS[normalizedPlan];
+            if (!plans)
+                return res
+                    .status(400)
+                    .json({ success: false, error: "Invalid plan" });
+
+            const planId = plans[billing];
+            if (!planId)
+                return res.status(500).json({
+                    success: false,
+                    error: "Plan ID not configured. Contact support.",
+                });
+
+            // ── Fetch doctor ──
+            const doc = await Doc.findById(req.user.doctorId);
+            if (!doc)
+                return res
+                    .status(404)
+                    .json({ success: false, error: "Doctor not found" });
+
+            // ── Create or reuse Razorpay customer ──
+            let customerId = doc.subscription?.customerId;
+
+            if (!customerId) {
+                try {
+                    const customer = await razorpay.customers.create({
+                        name: doc.name || "Doctor",
+                        email: doc.email || "noreply@example.com",
                     });
-                    customerId = customers.items?.[0]?.id;
-                } else {
-                    throw err;
+                    customerId = customer.id;
+                } catch (err) {
+                    if (
+                        err.error?.description ===
+                        "Customer already exists for the merchant"
+                    ) {
+                        const customers = await razorpay.customers.all({
+                            email: doc.email,
+                        });
+                        customerId = customers.items?.[0]?.id;
+                    } else {
+                        throw err;
+                    }
                 }
+
+                await Doc.findByIdAndUpdate(req.user.doctorId, {
+                    "subscription.customerId": customerId,
+                });
             }
 
-            await Doc.findByIdAndUpdate(req.user.doctorId, {
-                "subscription.customerId": customerId,
+            // ── Create Razorpay subscription ──
+            // total_count: yearly = 1 charge, monthly = 12 charges (auto-renews 12×)
+            const subscription = await razorpay.subscriptions.create({
+                plan_id: planId,
+                customer_id: customerId,
+                customer_notify: 1,
+                total_count: billing === "yearly" ? 1 : 12,
+            });
+
+            return res.json({ success: true, subscription });
+        } catch (err) {
+            console.error("RAZORPAY CREATE-SUBSCRIPTION ERROR:", err);
+            return res.status(500).json({
+                success: false,
+                error: err.error?.description || err.message || "Server error",
             });
         }
-
-        // ── Create Razorpay subscription ──
-        // total_count: yearly = 1 charge, monthly = 12 charges (auto-renews 12×)
-        const subscription = await razorpay.subscriptions.create({
-            plan_id: planId,
-            customer_id: customerId,
-            customer_notify: 1,
-            total_count: billing === "yearly" ? 1 : 12,
-        });
-
-        return res.json({ success: true, subscription });
-    } catch (err) {
-        console.error("RAZORPAY CREATE-SUBSCRIPTION ERROR:", err);
-        return res.status(500).json({
-            success: false,
-            error: err.error?.description || err.message || "Server error",
-        });
-    }
-});
+    },
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Route 2: PAYPAL ORDER — International (any non-INR currency)

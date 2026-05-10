@@ -21,8 +21,23 @@ router.put("/update_subscription/:id", fetchadmin, async (req, res) => {
             });
         }
 
+        const ALLOWED_PLANS = ["STARTER", "PRO", "ENTERPRISE"];
+        const ALLOWED_BILLING = ["monthly", "yearly"];
+
+        if (!ALLOWED_PLANS.includes(plan.toUpperCase())) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Invalid plan" });
+        }
+        if (!ALLOWED_BILLING.includes(billingCycle)) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Invalid billing cycle" });
+        }
+        const safeMonths = Math.min(Math.max(parseInt(months) || 1, 1), 36);
+
         const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + months);
+        expiryDate.setMonth(expiryDate.getMonth() + safeMonths);
 
         const updated = await Doc.findByIdAndUpdate(
             req.params.id,
@@ -63,7 +78,7 @@ router.put("/update_subscription/:id", fetchadmin, async (req, res) => {
 
         res.json({
             success: true,
-            message: `Subscription updated to ${plan.toUpperCase()} (${billingCycle}) for ${months} month(s)`,
+            message: `Subscription updated to ${plan.toUpperCase()} (${billingCycle}) for ${safeMonths} month(s)`,
             doctor: updated,
         });
     } catch (err) {

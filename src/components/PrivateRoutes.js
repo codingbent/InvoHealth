@@ -18,11 +18,13 @@ const isTokenValid = (token) => {
 // PRIVATE ROUTE
 export const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem("token");
-
     if (!token || !isTokenValid(token)) {
-        localStorage.removeItem("token"); // cleanup
+        localStorage.removeItem("token");
         return <Navigate to="/login" replace />;
     }
+    const decoded = jwtDecode(token);
+    if (!["doctor", "staff"].includes(decoded?.user?.role))
+        return <Navigate to="/login" />;
 
     return children;
 };
@@ -40,7 +42,7 @@ export const AdminRoute = ({ children }) => {
         const decoded = jwtDecode(token);
 
         // role from token (NOT localStorage)
-        if (decoded.role !== "superadmin") {
+        if (decoded.user?.role !== "superadmin") {
             return <Navigate to="/admin/login_admin" replace />;
         }
 

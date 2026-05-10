@@ -29,7 +29,6 @@ const PaymentSchema = new Schema(
 
         currency: {
             type: String,
-            default: "INR",
         },
 
         // ── Razorpay fields ──
@@ -43,6 +42,7 @@ const PaymentSchema = new Schema(
         orderId: {
             type: String,
             sparse: true,
+            unique: true,
         },
 
         // ── PayPal / shared subscription ID ──

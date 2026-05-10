@@ -56,7 +56,7 @@ const AdminLogin = () => {
                     pointer-events: none;
                 }
                 .al-card {
-                    width: stretch; max-width: 380px;
+                    width: 100%; max-width: 380px;
                     background: #0d1117; border: 1px solid #161d2e;
                     border-radius: 20px; padding: 40px 36px 36px;
                     position: relative; z-index: 1;
@@ -94,7 +94,7 @@ const AdminLogin = () => {
                 .al-field { margin-bottom: 14px; }
                 .al-label { display: block; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #2e3d5c; margin-bottom: 7px; }
                 .al-input {
-                    width: stretch;
+                    width: 100%;
                     background: #080c18; border: 1px solid #1a2540;
                     border-radius: 8px; padding: 10px 14px;
                     font-family: 'DM Mono', monospace; font-size: 12px; color: #c5d0e8;
@@ -104,7 +104,7 @@ const AdminLogin = () => {
                 .al-input::placeholder { color: #252e45; }
                 .al-input:focus { border-color: rgba(251,146,60,0.4); box-shadow: 0 0 0 3px rgba(251,146,60,0.08); }
                 .al-btn {
-                    width: stretch;
+                    width: 100%;
                     display: flex; align-items: center; justify-content: center; gap: 7px;
                     padding: 12px; margin-top: 8px;
                     background: #fb923c; color: #0a0d14; border: none;

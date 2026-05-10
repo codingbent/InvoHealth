@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Staff = require("../../../models/Staff");
 const Doctor = require("../../../models/Doc");
-const Pricing = require("../../../models/Pricing");
 var fetchuser = require("../../../middleware/fetchuser");
 const requireDoctor = require("../../../middleware/requireDoctor");
 const { getPricing } = require("../../../utils/pricingcache");
@@ -10,6 +10,13 @@ const { getPricing } = require("../../../utils/pricingcache");
 router.put("/toggle_staff/:id", fetchuser, requireDoctor, async (req, res) => {
     try {
         const doctorId = req.user.doctorId;
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({
+                success: false,
+                error: "Staff not found",
+            });
+        }
 
         const staff = await Staff.findById(req.params.id);
 
