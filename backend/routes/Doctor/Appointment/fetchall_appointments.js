@@ -6,7 +6,6 @@ const fetchuser = require("../../../middleware/fetchuser");
 const requireSubscription = require("../../../middleware/requiresubscription");
 
 // Maximum number of service names allowed in a single filter request.
-// Prevents CPU spikes from oversized $in arrays.
 const MAX_SERVICE_FILTER_ENTRIES = 50;
 
 // Maximum character length for a single service name in the filter.
@@ -28,12 +27,22 @@ router.get(
                 services,
                 startDate,
                 endDate,
+                type,
             } = req.query;
 
             const VALID_STATUS = ["Unpaid", "Paid", "Partial"];
             const VALID_GENDER = ["male", "female"];
+            const VALID_TYPE = ["upcoming", "history"];
+
             const escapeRegex = (s = "") =>
                 s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            if (type && !VALID_TYPE.includes(type)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid type. Must be 'upcoming' or 'history'.",
+                });
+            }
 
             const parsedLimit = Math.min(parseInt(limit) || 20, 100);
             const parsedSkip = parseInt(skip) || 0;
@@ -49,14 +58,23 @@ router.get(
 
             const visitMatch = {};
 
-            // DATE FILTER
-            // DATE FILTER
             const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 
-            const genderLower = gender?.toLowerCase();
+            if (type === "upcoming" || type === "history") {
+                const todayStr = new Date().toISOString().split("T")[0];
+                visitMatch["visits.date"] = visitMatch["visits.date"] || {};
 
+                if (type === "upcoming") {
+                    visitMatch["visits.date"].$gte = todayStr;
+                } else {
+                    // history: strictly before today
+                    visitMatch["visits.date"].$lt = todayStr;
+                }
+            }
+
+            // ── User-supplied date range filter ──────────────────────────
             if (startDate || endDate) {
-                visitMatch["visits.date"] = {};
+                visitMatch["visits.date"] = visitMatch["visits.date"] || {};
 
                 if (startDate) {
                     if (!isValidDate(startDate)) {
@@ -65,8 +83,10 @@ router.get(
                             error: "Invalid startDate",
                         });
                     }
-
-                    visitMatch["visits.date"].$gte = startDate;
+                    // Don't widen past the tab boundary
+                    const existing = visitMatch["visits.date"].$gte;
+                    visitMatch["visits.date"].$gte =
+                        existing && existing > startDate ? existing : startDate;
                 }
 
                 if (endDate) {
@@ -76,65 +96,55 @@ router.get(
                             error: "Invalid endDate",
                         });
                     }
-
-                    visitMatch["visits.date"].$lte = endDate;
+                    const existing = visitMatch["visits.date"].$lte;
+                    visitMatch["visits.date"].$lte =
+                        existing && existing < endDate ? existing : endDate;
                 }
             }
 
-            // PAYMENT FILTER
+            const genderLower = gender?.toLowerCase();
+
+            // ── Payment filter ───────────────────────────────────────────
             if (payments) {
                 const ids = payments.split(",");
-
                 const validIds = ids.filter((id) =>
                     mongoose.Types.ObjectId.isValid(id),
                 );
-
                 if (!validIds.length) {
                     return res.status(400).json({
                         success: false,
                         error: "Invalid payment IDs",
                     });
                 }
-
                 visitMatch["visits.paymentMethodId"] = {
                     $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
                 };
             }
 
-            // STATUS FILTER
+            // ── Status filter ────────────────────────────────────────────
             if (status) {
                 const statusArray = status.split(",");
-
                 const invalid = statusArray.filter(
                     (s) => !VALID_STATUS.includes(s),
                 );
-
                 if (invalid.length) {
                     return res.status(400).json({
                         success: false,
                         error: "Invalid status filter",
                     });
                 }
-
                 visitMatch["visits.status"] = { $in: statusArray };
             }
 
-            // SERVICE FILTER
+            // ── Service filter ───────────────────────────────────────────
             if (services) {
                 const rawList = services.split(",");
-
-                // FIX 1: Cap the number of entries to prevent oversized $in
-                // arrays that spike MongoDB CPU with no rate-limit backstop.
                 if (rawList.length > MAX_SERVICE_FILTER_ENTRIES) {
                     return res.status(400).json({
                         success: false,
                         error: `Service filter exceeds maximum of ${MAX_SERVICE_FILTER_ENTRIES} entries`,
                     });
                 }
-
-                // FIX 2: Validate every entry is a plain string of reasonable
-                // length. URL-encoded objects (e.g. "[Object]") or excessively
-                // long strings are rejected before they reach the DB.
                 const serviceList = [];
                 for (const entry of rawList) {
                     if (typeof entry !== "string") {
@@ -143,47 +153,41 @@ router.get(
                             error: "Service filter entries must be strings",
                         });
                     }
-
                     const trimmed = entry.trim();
-
-                    if (trimmed.length === 0) continue; // skip blank entries
-
+                    if (trimmed.length === 0) continue;
                     if (trimmed.length > MAX_SERVICE_NAME_LENGTH) {
                         return res.status(400).json({
                             success: false,
                             error: `Service name too long (max ${MAX_SERVICE_NAME_LENGTH} characters)`,
                         });
                     }
-
                     serviceList.push(trimmed);
                 }
-
                 if (serviceList.length === 0) {
                     return res.status(400).json({
                         success: false,
                         error: "Service filter contains no valid entries",
                     });
                 }
-
                 visitMatch["visits.service"] = {
-                    $elemMatch: {
-                        name: { $in: serviceList },
-                    },
+                    $elemMatch: { name: { $in: serviceList } },
                 };
             }
 
-            if (gender) {
-                if (!VALID_GENDER.includes(genderLower)) {
-                    return res
-                        .status(400)
-                        .json({ error: "Invalid gender filter" });
-                }
+            // ── Gender filter ────────────────────────────────────────────
+            if (gender && !VALID_GENDER.includes(genderLower)) {
+                return res.status(400).json({ error: "Invalid gender filter" });
             }
+
+            // ── Sort direction: upcoming ASC, everything else DESC ────────
+            const sortStage =
+                type === "upcoming"
+                    ? { "visits.date": 1, "visits.time": 1 }
+                    : { "visits.date": -1, "visits.time": -1 };
 
             const pipeline = [
                 { $match: matchStage },
 
-                // FETCH DOCTOR ONCE
                 {
                     $lookup: {
                         from: "docs",
@@ -194,7 +198,6 @@ router.get(
                 },
                 { $unwind: "$doc" },
 
-                // FETCH PATIENT
                 {
                     $lookup: {
                         from: "patients",
@@ -205,7 +208,6 @@ router.get(
                 },
                 { $unwind: "$patient" },
 
-                // NOW UNWIND VISITS
                 { $unwind: "$visits" },
 
                 ...(Object.keys(visitMatch).length
@@ -230,7 +232,7 @@ router.get(
                           {
                               $match: {
                                   "patient.gender": {
-                                      $regex: `^${gender}$`,
+                                      $regex: `^${genderLower}$`,
                                       $options: "i",
                                   },
                               },
@@ -238,7 +240,6 @@ router.get(
                       ]
                     : []),
 
-                // USE ALREADY FETCHED DOC
                 {
                     $addFields: {
                         paymentMethod: {
@@ -290,7 +291,7 @@ router.get(
                 {
                     $facet: {
                         data: [
-                            { $sort: { "visits.date": -1, "visits.time": -1 } },
+                            { $sort: sortStage },
                             { $skip: parsedSkip },
                             { $limit: parsedLimit },
                             {
@@ -322,11 +323,7 @@ router.get(
             const data = result?.[0]?.data || [];
             const total = result?.[0]?.totalCount?.[0]?.count || 0;
 
-            return res.json({
-                success: true,
-                data,
-                total,
-            });
+            return res.json({ success: true, data, total });
         } catch (err) {
             console.error("fetchallappointments error:", err);
             return res.status(500).json({

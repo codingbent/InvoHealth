@@ -21,44 +21,40 @@ export default function AppointmentList({
     const isFetchingRef = useRef(false);
 
     useEffect(() => {
+        isFetchingRef.current = false;
+    }, [activeTab]);
+
+    useEffect(() => {
+        // Nothing left to load — disconnect immediately.
         if (appointments.length >= total) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
                 const firstEntry = entries[0];
-
                 if (
                     firstEntry.isIntersecting &&
                     !loading &&
                     !isFetchingRef.current
                 ) {
                     isFetchingRef.current = true;
-
                     IncreaseLimit();
-
                     setTimeout(() => {
                         isFetchingRef.current = false;
                     }, 800);
                 }
             },
-            {
-                threshold: 0.2,
-                rootMargin: "300px",
-            },
+            { threshold: 0.2, rootMargin: "300px" },
         );
 
         const current = loadMoreRef.current;
-
         if (current) observer.observe(current);
-
-        return () => {
-            observer.disconnect();
-        };
+        return () => observer.disconnect();
     }, [appointments.length, total, loading, IncreaseLimit]);
 
     const role = localStorage.getItem("role");
     const fmt = (v) => new Intl.NumberFormat("en-IN").format(v);
 
+    // ── Initial skeleton ─────────────────────────────────────────────
     if (loading && appointments.length === 0) {
         return (
             <div>
@@ -153,7 +149,7 @@ export default function AppointmentList({
                 </div>
             ))}
 
-            {loading || appointments.length < total ? (
+            {appointments.length < total && (
                 <div ref={loadMoreRef} className="al-load-more">
                     {loading && (
                         <>
@@ -163,7 +159,7 @@ export default function AppointmentList({
                         </>
                     )}
                 </div>
-            ) : null}
+            )}
         </>
     );
 }

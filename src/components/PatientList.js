@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { authFetch } from "./authfetch";
@@ -16,32 +16,58 @@ import { API_BASE_URL } from "../components/config";
 import { fetchPaymentMethods } from "../api/payment.api";
 import "../css/Patientlist.css";
 
+const LIMIT = 20;
+
+function buildFilterParams(filters) {
+    const params = new URLSearchParams();
+    if (filters.search) params.set("search", filters.search.toLowerCase());
+    if (filters.gender) params.set("gender", filters.gender);
+    if (filters.payments.length)
+        params.set("payments", filters.payments.join(","));
+    if (filters.status.length) params.set("status", filters.status.join(","));
+    if (filters.services.length)
+        params.set("services", filters.services.join(","));
+    if (filters.startDate) params.set("startDate", filters.startDate);
+    if (filters.endDate) params.set("endDate", filters.endDate);
+    return params;
+}
+
+const INITIAL_TAB_STATE = {
+    appointments: [],
+    page: 0,
+    total: 0,
+    allFetched: false,
+    loading: false,
+};
+
 export default function PatientList(props) {
     const { currency, country, categoryColor, subCategoryColor } = props;
     const refreshTrigger = props.refreshTrigger ?? 0;
     const navigate = useNavigate();
-    const [appointments, setAppointments] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("history");
+
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [selectedGender, setSelectedGender] = useState("");
     const [selectedPayments, setSelectedPayments] = useState([]);
     const [selectedStatus, setSelectedStatus] = useState([]);
     const [selectedServices, setSelectedServices] = useState([]);
-    const [allServices, setAllServices] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedFY, setSelectedFY] = useState("");
-    const [doctor, setDoctor] = useState(null);
-    const [page, setPage] = useState(0);
-    const [filterOpen, setFilterOpen] = useState(false);
-    const [total, setTotal] = useState(0);
-    const [paymentOptions, setPaymentOptions] = useState([]);
-    const limit = 20;
 
+    const [historyState, setHistoryState] = useState(INITIAL_TAB_STATE);
+    const [upcomingState, setUpcomingState] = useState(INITIAL_TAB_STATE);
+
+    const [activeTab, setActiveTab] = useState("history");
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [allServices, setAllServices] = useState([]);
+    const [paymentOptions, setPaymentOptions] = useState([]);
+    const [doctor, setDoctor] = useState(null);
     const [clinicTimezone, setClinicTimezone] = useState(null);
-    // eslint-disable-next-line
-    const [timezoneReady, setTimezoneReady] = useState(false);
+
+    useEffect(() => {
+        setDoctor(localStorage.getItem("name"));
+    }, []);
 
     useEffect(() => {
         authFetch(`${API_BASE_URL}/api/doctor/get_doc`)
@@ -50,55 +76,9 @@ export default function PatientList(props) {
                 const tz = data?.doctor?.timezone || null;
                 if (tz) setClinicTimezone(tz);
             })
-            .catch((err) => {
-                console.error("Failed to fetch clinic timezone:", err);
-            })
-            .finally(() => setTimezoneReady(true)); // always unblock
-    }, []);
-
-    const parseApptAsUTC = useCallback(
-        (date, time = "00:00") => {
-            if (!date) return new Date(0);
-            if (clinicTimezone) {
-                return fromZonedTime(`${date} ${time}`, clinicTimezone);
-            }
-            // Fallback: browser-local (timezone not loaded yet)
-            const [y, m, d] = date.split("-").map(Number);
-            const [hh, mm] = time.split(":").map(Number);
-            return new Date(y, m - 1, d, hh, mm, 0, 0);
-        },
-        [clinicTimezone],
-    );
-
-    const [allFetched, setAllFetched] = useState(false);
-
-    const activeFiltersCount =
-        (searchTerm?.trim() ? 1 : 0) +
-        selectedPayments.length +
-        selectedStatus.length +
-        selectedServices.length +
-        (selectedGender ? 1 : 0) +
-        (startDate || endDate ? 1 : 0) +
-        (selectedFY ? 1 : 0);
-
-    const addRowWithFormat = (
-        sheet,
-        label,
-        value,
-        isCurrency = false,
-        bold = false,
-    ) => {
-        const row = sheet.addRow([label, value]);
-        if (bold) row.font = { bold: true };
-        if (isCurrency) row.getCell(2).numFmt = `${currencySymbol}#,##0`;
-        return row;
-    };
-
-    const currencySymbol = props.currency?.symbol || "₹";
-    const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
-
-    useEffect(() => {
-        setDoctor(localStorage.getItem("name"));
+            .catch((err) =>
+                console.error("Failed to fetch clinic timezone:", err),
+            );
     }, []);
 
     useEffect(() => {
@@ -112,16 +92,6 @@ export default function PatientList(props) {
         };
         loadPaymentMethods();
     }, []);
-
-    useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
-        return () => clearTimeout(t);
-    }, [searchTerm]);
-
-    useEffect(() => {
-        if (!paymentOptions.length) return;
-        setAppointments((prev) => [...prev]);
-    }, [paymentOptions]);
 
     const fetchServices = useCallback(async () => {
         try {
@@ -143,137 +113,130 @@ export default function PatientList(props) {
         fetchServices();
     }, [fetchServices]);
 
-    const fetchAppointments = useCallback(async () => {
-        // FIX: stop fetching once we have everything from the server
-        if (allFetched && page > 0) return;
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchTerm), 1000);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
+
+    const activeFiltersCount =
+        (searchTerm?.trim() ? 1 : 0) +
+        selectedPayments.length +
+        selectedStatus.length +
+        selectedServices.length +
+        (selectedGender ? 1 : 0) +
+        (startDate || endDate ? 1 : 0) +
+        (selectedFY ? 1 : 0);
+
+    const fetchTab = useCallback(async (type, page, filters) => {
+        const setState =
+            type === "upcoming" ? setUpcomingState : setHistoryState;
+
+        setState((prev) => ({ ...prev, loading: true }));
 
         try {
-            setLoading(true);
-            const params = new URLSearchParams();
-            params.set("limit", limit);
-            params.set("skip", page * limit);
-            if (debouncedSearch)
-                params.set("search", debouncedSearch.toLowerCase());
-            if (selectedGender) params.set("gender", selectedGender);
-            if (selectedPayments.length)
-                params.set("payments", selectedPayments.join(","));
-            if (selectedStatus.length)
-                params.set("status", selectedStatus.join(","));
-            if (selectedServices.length)
-                params.set("services", selectedServices.join(","));
-            if (startDate) params.set("startDate", startDate);
-            if (endDate) params.set("endDate", endDate);
+            const params = buildFilterParams(filters);
+            params.set("type", type);
+            params.set("limit", LIMIT);
+            params.set("skip", page * LIMIT);
 
-            const query = params.toString();
             const res = await authFetch(
-                `${API_BASE_URL}/api/doctor/appointment/fetchall_appointments?${query}`,
+                `${API_BASE_URL}/api/doctor/appointment/fetchall_appointments?${params}`,
             );
             const data = await res.json();
             const flatData = Array.isArray(data?.data) ? data.data : [];
-
-            const sortAppointments = (arr = []) =>
-                Array.isArray(arr)
-                    ? [...arr].sort(
-                          (a, b) =>
-                              new Date(`${b.date}T${b.time || "00:00"}`) -
-                              new Date(`${a.date}T${a.time || "00:00"}`),
-                      )
-                    : [];
-
-            setAppointments((prev = []) => {
-                const merged =
-                    page === 0
-                        ? flatData
-                        : [...(Array.isArray(prev) ? prev : []), ...flatData];
-                return sortAppointments(merged);
-            });
-
             const serverTotal = data.total || 0;
-            setTotal(serverTotal);
 
-            // FIX: mark done when we've received all server-side records
-            const fetchedSoFar = page * limit + flatData.length;
-            if (fetchedSoFar >= serverTotal) {
-                setAllFetched(true);
-            }
+            setState((prev) => {
+                const merged =
+                    page === 0 ? flatData : [...prev.appointments, ...flatData];
+
+                const fetchedSoFar = page * LIMIT + flatData.length;
+                return {
+                    appointments: merged,
+                    page,
+                    total: serverTotal,
+                    allFetched: fetchedSoFar >= serverTotal,
+                    loading: false,
+                };
+            });
         } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+            console.error(`fetchTab(${type}) error:`, err);
+            setState((prev) => ({ ...prev, loading: false }));
         }
-    }, [
-        page,
-        debouncedSearch,
-        selectedGender,
-        selectedPayments,
-        selectedStatus,
-        selectedServices,
-        startDate,
-        endDate,
-        allFetched,
-    ]);
+    }, []);
+
+    const filters = useMemo(
+        () => ({
+            search: debouncedSearch,
+            gender: selectedGender,
+            payments: selectedPayments,
+            status: selectedStatus,
+            services: selectedServices,
+            startDate,
+            endDate,
+        }),
+        [
+            debouncedSearch,
+            selectedGender,
+            selectedPayments,
+            selectedStatus,
+            selectedServices,
+            startDate,
+            endDate,
+        ],
+    );
 
     useEffect(() => {
-        fetchAppointments();
-    }, [fetchAppointments]);
+        setHistoryState(INITIAL_TAB_STATE);
+        setUpcomingState(INITIAL_TAB_STATE);
+    }, [filters, selectedFY]);
 
-    // FIX: reset allFetched whenever filters change so fresh data loads
     useEffect(() => {
-        setPage(0);
-        setAllFetched(false);
-    }, [
-        debouncedSearch,
-        selectedGender,
-        selectedPayments,
-        selectedStatus,
-        selectedServices,
-        startDate,
-        endDate,
-        selectedFY,
-    ]);
+        if (historyState.loading) return;
+        if (historyState.allFetched && historyState.page > 0) return;
+        if (activeTab !== "history" && historyState.appointments.length > 0)
+            return;
+
+        fetchTab("history", historyState.page, filters);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [historyState.page, filters]);
+
+    useEffect(() => {
+        if (upcomingState.loading) return;
+        if (upcomingState.allFetched && upcomingState.page > 0) return;
+        if (activeTab !== "upcoming" && upcomingState.appointments.length > 0)
+            return;
+
+        fetchTab("upcoming", upcomingState.page, filters);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [upcomingState.page, filters]);
 
     useEffect(() => {
         if (refreshTrigger === 0) return;
-        setPage(0);
-        setAllFetched(false);
+        setHistoryState(INITIAL_TAB_STATE);
+        setUpcomingState(INITIAL_TAB_STATE);
         setActiveTab("upcoming");
     }, [refreshTrigger]);
 
-    // ── Split appointments into upcoming vs history ──────────────────
-    const { upcomingAppointments, historyAppointments } = useMemo(() => {
-        const upcoming = [];
-        const history = [];
-        const nowUTC = new Date();
-
-        appointments.forEach((a) => {
-            if (!a.date || !a.time) {
-                history.push(a);
-                return;
-            }
-            const apptUTC = parseApptAsUTC(a.date, a.time);
-            if (apptUTC.getTime() >= nowUTC.getTime()) {
-                upcoming.push(a);
-            } else {
-                history.push(a);
-            }
+    const increaseHistoryLimit = useCallback(() => {
+        setHistoryState((prev) => {
+            if (prev.allFetched || prev.loading) return prev;
+            return { ...prev, page: prev.page + 1 };
         });
+    }, []);
 
-        upcoming.sort(
-            (a, b) =>
-                parseApptAsUTC(a.date, a.time) - parseApptAsUTC(b.date, b.time),
-        );
-        history.sort(
-            (a, b) =>
-                parseApptAsUTC(b.date, b.time) - parseApptAsUTC(a.date, a.time),
-        );
+    const increaseUpcomingLimit = useCallback(() => {
+        setUpcomingState((prev) => {
+            if (prev.allFetched || prev.loading) return prev;
+            return { ...prev, page: prev.page + 1 };
+        });
+    }, []);
 
-        return { upcomingAppointments: upcoming, historyAppointments: history };
-    }, [appointments, parseApptAsUTC]);
+    const activeState = activeTab === "upcoming" ? upcomingState : historyState;
+    const activeAppointments = activeState.appointments;
+    const IncreaseLimit =
+        activeTab === "upcoming" ? increaseUpcomingLimit : increaseHistoryLimit;
 
-    const activeAppointments =
-        activeTab === "upcoming" ? upcomingAppointments : historyAppointments;
-
-    // ── Group whichever tab is active ────────────────────────────────
     const appointmentsByMonth = useMemo(() => {
         const grouped = {};
 
@@ -282,16 +245,17 @@ export default function PatientList(props) {
             const dayKey = a.date;
 
             if (clinicTimezone) {
-                const apptUTC = parseApptAsUTC(a.date, a.time || "00:00");
-                const clinicLocalDate = toZonedTime(apptUTC, clinicTimezone);
-                monthKey = clinicLocalDate.toLocaleString("default", {
+                const [y, m, d] = a.date.split("-").map(Number);
+                const [hh, mm] = (a.time || "00:00").split(":").map(Number);
+                const utc = new Date(Date.UTC(y, m - 1, d, hh, mm));
+                const local = toZonedTime(utc, clinicTimezone);
+                monthKey = local.toLocaleString("default", {
                     month: "long",
                     year: "numeric",
                 });
             } else {
                 const [y, m, d] = a.date.split("-").map(Number);
-                const fallback = new Date(y, m - 1, d);
-                monthKey = fallback.toLocaleString("default", {
+                monthKey = new Date(y, m - 1, d).toLocaleString("default", {
                     month: "long",
                     year: "numeric",
                 });
@@ -303,50 +267,99 @@ export default function PatientList(props) {
         });
 
         return grouped;
-    }, [activeAppointments, parseApptAsUTC, clinicTimezone]);
+    }, [activeAppointments, clinicTimezone]);
 
-    const applyFilters = (data) =>
-        data.filter((a) => {
-            const searchMatch =
-                a.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-                a.number?.includes(debouncedSearch);
-            const paymentMatch =
-                selectedPayments.length === 0 ||
-                selectedPayments.includes(String(a.paymentMethodId));
-            const statusMatch =
-                selectedStatus.length === 0 ||
-                selectedStatus.includes(a.status);
-            const genderMatch = !selectedGender || a.gender === selectedGender;
-            const dateMatch =
-                (!startDate || new Date(a.date) >= new Date(startDate)) &&
-                (!endDate || new Date(a.date) <= new Date(endDate));
-            const serviceMatch =
-                selectedServices.length === 0 ||
-                (a.services || []).some((s) =>
-                    selectedServices.includes(
-                        typeof s === "object" ? s.name : s,
+    const monthTotal = useMemo(() => {
+        const totals = {};
+        Object.keys(appointmentsByMonth).forEach((month) => {
+            totals[month] = Object.values(appointmentsByMonth[month]).reduce(
+                (sum, dayApps) =>
+                    sum +
+                    dayApps.reduce(
+                        (daySum, a) =>
+                            daySum + Number(a.collected ?? a.amount ?? 0),
+                        0,
                     ),
-                );
-            return (
-                searchMatch &&
-                paymentMatch &&
-                statusMatch &&
-                genderMatch &&
-                dateMatch &&
-                serviceMatch
+                0,
             );
         });
+        return totals;
+    }, [appointmentsByMonth]);
 
-    const getPaymentLabel = (a) => {
-        const match = paymentOptions.find(
-            (p) => String(p.id) === String(a.paymentMethodId),
-        );
-        let label = "Other";
-        if (match) label = match.subCategoryName || match.categoryName;
-        else if (a?.subCategoryName) label = a.subCategoryName;
-        else if (a?.categoryName) label = a.categoryName;
-        return label?.split(" ")[0];
+    const currencySymbol = props.currency?.symbol || "₹";
+
+    const addRowWithFormat = (
+        sheet,
+        label,
+        value,
+        isCurrency = false,
+        bold = false,
+    ) => {
+        const row = sheet.addRow([label, value]);
+        if (bold) row.font = { bold: true };
+        if (isCurrency) row.getCell(2).numFmt = `${currencySymbol}#,##0`;
+        return row;
     };
+
+    const getPaymentLabel = useCallback(
+        (a) => {
+            const match = paymentOptions.find(
+                (p) => String(p.id) === String(a.paymentMethodId),
+            );
+            let label = "Other";
+            if (match) label = match.subCategoryName || match.categoryName;
+            else if (a?.subCategoryName) label = a.subCategoryName;
+            else if (a?.categoryName) label = a.categoryName;
+            return label?.split(" ")[0];
+        },
+        [paymentOptions],
+    );
+
+    const applyFilters = useCallback(
+        (data) =>
+            data.filter((a) => {
+                const searchMatch =
+                    a.name
+                        ?.toLowerCase()
+                        .includes(debouncedSearch.toLowerCase()) ||
+                    a.number?.includes(debouncedSearch);
+                const paymentMatch =
+                    selectedPayments.length === 0 ||
+                    selectedPayments.includes(String(a.paymentMethodId));
+                const statusMatch =
+                    selectedStatus.length === 0 ||
+                    selectedStatus.includes(a.status);
+                const genderMatch =
+                    !selectedGender || a.gender === selectedGender;
+                const dateMatch =
+                    (!startDate || new Date(a.date) >= new Date(startDate)) &&
+                    (!endDate || new Date(a.date) <= new Date(endDate));
+                const serviceMatch =
+                    selectedServices.length === 0 ||
+                    (a.services || []).some((s) =>
+                        selectedServices.includes(
+                            typeof s === "object" ? s.name : s,
+                        ),
+                    );
+                return (
+                    searchMatch &&
+                    paymentMatch &&
+                    statusMatch &&
+                    genderMatch &&
+                    dateMatch &&
+                    serviceMatch
+                );
+            }),
+        [
+            debouncedSearch,
+            selectedPayments,
+            selectedStatus,
+            selectedGender,
+            startDate,
+            endDate,
+            selectedServices,
+        ],
+    );
 
     const downloadExcel = async () => {
         try {
@@ -357,7 +370,7 @@ export default function PatientList(props) {
             if (!checkRes.ok) {
                 props.showAlert(
                     check.error || "Failed to export Excel",
-                    checkRes.status === 403 ? "danger" : "danger",
+                    "danger",
                 );
                 return;
             }
@@ -404,7 +417,6 @@ export default function PatientList(props) {
         const fromDate = new Date(
             sorted[sorted.length - 1].date,
         ).toLocaleDateString("en-IN");
-
         const toDate = new Date(sorted[0].date).toLocaleDateString("en-IN");
 
         const formatDiscount = (discount, isPercent) => {
@@ -416,11 +428,9 @@ export default function PatientList(props) {
             totalCollected = 0,
             totalPending = 0,
             totalDiscount = 0;
-
         let paidCount = 0,
             partialCount = 0,
             unpaidCount = 0;
-
         const paymentSummary = {};
 
         sorted.forEach((a) => {
@@ -450,14 +460,11 @@ export default function PatientList(props) {
 
         const titleRow = sheet.addRow(["INVOHEALTH — MEDICAL CENTER RECORDS"]);
         titleRow.font = { bold: true, size: 13 };
-
         sheet.addRow([`Doctor:`, doctor || ""]).font = { bold: true };
         sheet.addRow(["Period:", `${fromDate} → ${toDate}`]);
         sheet.addRow(["Generated:", new Date().toLocaleDateString("en-IN")]);
         sheet.addRow([]);
-
         sheet.addRow(["FINANCIAL SUMMARY"]).font = { bold: true, size: 11 };
-
         addRowWithFormat(sheet, "Total Billed", totalRevenue, true, true);
         addRowWithFormat(sheet, "Total Collected", totalCollected, true, true);
         addRowWithFormat(sheet, "Total Pending", totalPending, true, true);
@@ -468,18 +475,13 @@ export default function PatientList(props) {
             true,
             true,
         );
-
         sheet.addRow([]);
-
         sheet.addRow(["VISIT SUMMARY"]).font = { bold: true, size: 11 };
         sheet.addRow(["Total Visits", sorted.length]);
-
         addRowWithFormat(sheet, "Paid", paidCount);
         addRowWithFormat(sheet, "Partial", partialCount);
         addRowWithFormat(sheet, "Unpaid", unpaidCount);
-
         sheet.addRow([]);
-
         sheet.addRow(["COLLECTION BY PAYMENT MODE"]).font = {
             bold: true,
             size: 11,
@@ -492,7 +494,6 @@ export default function PatientList(props) {
                     totalCollected > 0
                         ? ((amount / totalCollected) * 100).toFixed(1)
                         : "0.0";
-
                 const row = sheet.addRow([type, amount, `${pct}%`]);
                 row.getCell(2).numFmt = `${currencySymbol}#,##0`;
             });
@@ -507,14 +508,11 @@ export default function PatientList(props) {
 
         sorted.forEach((a, index) => {
             const day = new Date(a.date).toISOString().split("T")[0];
-
             const billed = Number(a.amount ?? 0);
             const collected = Number(a.collected ?? billed);
             const remaining = billed - collected;
             const discount = Number(a.discount ?? 0);
-
             const discountDisplay = formatDiscount(discount, a.isPercent);
-
             const status =
                 remaining <= 0 ? "Paid" : collected > 0 ? "Partial" : "Unpaid";
 
@@ -530,13 +528,10 @@ export default function PatientList(props) {
                         dayCollectedTotal,
                         dayBilledTotal - dayCollectedTotal,
                     ]);
-
                     totalRow.font = { bold: true };
-
                     [6, 7, 8].forEach((c) => {
                         totalRow.getCell(c).numFmt = `${currencySymbol}#,##0`;
                     });
-
                     sheet.addRow([]);
                 }
 
@@ -566,9 +561,7 @@ export default function PatientList(props) {
                     "Status",
                     "Invoice No",
                 ]);
-
                 headerRow.font = { bold: true };
-
                 headerRow.eachCell((cell) => {
                     cell.fill = {
                         type: "pattern",
@@ -607,7 +600,6 @@ export default function PatientList(props) {
                 Partial: "FFF59E0B",
                 Unpaid: "FFEF4444",
             };
-
             row.getCell(10).font = {
                 color: { argb: statusColors[status] || "FFCCCCCC" },
                 bold: true,
@@ -624,9 +616,7 @@ export default function PatientList(props) {
                     dayCollectedTotal,
                     dayBilledTotal - dayCollectedTotal,
                 ]);
-
                 lastTotalRow.font = { bold: true };
-
                 [6, 7, 8].forEach((c) => {
                     lastTotalRow.getCell(c).numFmt = `${currencySymbol}#,##0`;
                 });
@@ -648,45 +638,20 @@ export default function PatientList(props) {
         ];
 
         const buffer = await workbook.xlsx.writeBuffer();
-
         saveAs(
             new Blob([buffer]),
             `invohealth-records-${toDate.replace(/\//g, "-")}.xlsx`,
         );
     };
 
-    const monthTotal = useMemo(() => {
-        const totals = {};
-        Object.keys(appointmentsByMonth).forEach((month) => {
-            totals[month] = Object.values(appointmentsByMonth[month]).reduce(
-                (sum, dayApps) =>
-                    sum +
-                    dayApps.reduce(
-                        (daySum, a) =>
-                            daySum + Number(a.collected ?? a.amount ?? 0),
-                        0,
-                    ),
-                0,
-            );
-        });
-        return totals;
-    }, [appointmentsByMonth]);
-
-    // FIX: IncreaseLimit only increments if we haven't fetched everything yet
-    const IncreaseLimit = useCallback(() => {
-        if (!allFetched && !loading) {
-            setPage((prev) => prev + 1);
-        }
-    }, [allFetched, loading]);
-
-    // FIX: effectiveTotal hides the sentinel on the upcoming tab once allFetched,
-    // so the IntersectionObserver never fires again when upcoming is empty
-    const effectiveTotal = useMemo(() => {
-        if (activeTab === "upcoming") {
-            return allFetched ? upcomingAppointments.length : total;
-        }
-        return total;
-    }, [activeTab, allFetched, upcomingAppointments.length, total]);
+    // ── Badge label helper ───────────────────────────────────────────
+    // Shows loaded count (e.g. "20+") while more pages remain,
+    // and the exact count (e.g. "38") once all records are fetched.
+    const tabBadge = (state) => {
+        const loaded = state.appointments.length;
+        if (loaded === 0) return null;
+        return state.allFetched ? `${loaded}` : `${loaded}+`;
+    };
 
     return (
         <>
@@ -727,9 +692,9 @@ export default function PatientList(props) {
                     >
                         <History size={13} />
                         History
-                        {historyAppointments.length > 0 && (
+                        {tabBadge(historyState) && (
                             <span className="pl-tab-count pl-tab-count-history">
-                                {historyAppointments.length}
+                                {tabBadge(historyState)}
                             </span>
                         )}
                     </button>
@@ -739,9 +704,9 @@ export default function PatientList(props) {
                     >
                         <CalendarClock size={13} />
                         Upcoming
-                        {upcomingAppointments.length > 0 && (
+                        {tabBadge(upcomingState) && (
                             <span className="pl-tab-count pl-tab-count-upcoming">
-                                {upcomingAppointments.length}
+                                {tabBadge(upcomingState)}
                             </span>
                         )}
                     </button>
@@ -778,9 +743,9 @@ export default function PatientList(props) {
                     navigate={navigate}
                     monthTotal={monthTotal}
                     appointments={activeAppointments}
-                    total={effectiveTotal}
+                    total={activeState.total}
                     IncreaseLimit={IncreaseLimit}
-                    loading={loading}
+                    loading={activeState.loading}
                     categoryColor={categoryColor}
                     subCategoryColor={subCategoryColor}
                     currency={currency}
