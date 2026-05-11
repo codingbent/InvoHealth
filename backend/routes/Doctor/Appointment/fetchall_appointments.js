@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const Appointment = require("../../../models/Appointment");
+const Country = require("../../../models/Country"); // ← add this import
 const fetchuser = require("../../../middleware/fetchuser");
 const requireSubscription = require("../../../middleware/requiresubscription");
 
@@ -52,30 +53,78 @@ router.get(
             const doctorId =
                 req.user.role === "doctor" ? req.user.id : req.user.doctorId;
 
+            // ── Resolve clinic timezone via Doctor → address.countryId → Country ──
+            const doctorDoc = await mongoose
+                .model("Doc")
+                .findById(doctorId)
+                .select("address.countryId")
+                .lean();
+
+            let clinicTimezone = "Asia/Kolkata"; // safe fallback
+            if (doctorDoc?.address?.countryId) {
+                const countryDoc = await Country.findById(
+                    doctorDoc.address.countryId,
+                )
+                    .select("timezone")
+                    .lean();
+                if (countryDoc?.timezone) {
+                    clinicTimezone = countryDoc.timezone;
+                }
+            }
+
             const matchStage = {
                 doctor: new mongoose.Types.ObjectId(doctorId),
             };
 
-            const visitMatch = {};
+            // visitMatch is built as an $and array so $or and field filters
+            // can coexist without overwriting each other
+            const visitAndClauses = [];
 
             const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 
+            // ── Tab boundary filter (time-aware) ─────────────────────────
             if (type === "upcoming" || type === "history") {
-                const todayStr = new Date().toISOString().split("T")[0];
-                visitMatch["visits.date"] = visitMatch["visits.date"] || {};
+                const now = new Date();
+
+                const todayStr = now.toLocaleDateString("en-CA", {
+                    timeZone: clinicTimezone,
+                }); // "YYYY-MM-DD"
+
+                const nowTimeStr = now.toLocaleTimeString("en-GB", {
+                    timeZone: clinicTimezone,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                }); // "HH:MM"
 
                 if (type === "upcoming") {
-                    visitMatch["visits.date"].$gte = todayStr;
+                    // Future dates OR today's remaining slots
+                    visitAndClauses.push({
+                        $or: [
+                            { "visits.date": { $gt: todayStr } },
+                            {
+                                "visits.date": todayStr,
+                                "visits.time": { $gte: nowTimeStr },
+                            },
+                        ],
+                    });
                 } else {
-                    // history: strictly before today
-                    visitMatch["visits.date"].$lt = todayStr;
+                    // Past dates OR today's already-passed slots
+                    visitAndClauses.push({
+                        $or: [
+                            { "visits.date": { $lt: todayStr } },
+                            {
+                                "visits.date": todayStr,
+                                "visits.time": { $lt: nowTimeStr },
+                            },
+                        ],
+                    });
                 }
             }
 
             // ── User-supplied date range filter ──────────────────────────
             if (startDate || endDate) {
-                visitMatch["visits.date"] = visitMatch["visits.date"] || {};
-
+                const rangeClause = {};
                 if (startDate) {
                     if (!isValidDate(startDate)) {
                         return res.status(400).json({
@@ -83,12 +132,8 @@ router.get(
                             error: "Invalid startDate",
                         });
                     }
-                    // Don't widen past the tab boundary
-                    const existing = visitMatch["visits.date"].$gte;
-                    visitMatch["visits.date"].$gte =
-                        existing && existing > startDate ? existing : startDate;
+                    rangeClause.$gte = startDate;
                 }
-
                 if (endDate) {
                     if (!isValidDate(endDate)) {
                         return res.status(400).json({
@@ -96,13 +141,10 @@ router.get(
                             error: "Invalid endDate",
                         });
                     }
-                    const existing = visitMatch["visits.date"].$lte;
-                    visitMatch["visits.date"].$lte =
-                        existing && existing < endDate ? existing : endDate;
+                    rangeClause.$lte = endDate;
                 }
+                visitAndClauses.push({ "visits.date": rangeClause });
             }
-
-            const genderLower = gender?.toLowerCase();
 
             // ── Payment filter ───────────────────────────────────────────
             if (payments) {
@@ -116,9 +158,13 @@ router.get(
                         error: "Invalid payment IDs",
                     });
                 }
-                visitMatch["visits.paymentMethodId"] = {
-                    $in: validIds.map((id) => new mongoose.Types.ObjectId(id)),
-                };
+                visitAndClauses.push({
+                    "visits.paymentMethodId": {
+                        $in: validIds.map(
+                            (id) => new mongoose.Types.ObjectId(id),
+                        ),
+                    },
+                });
             }
 
             // ── Status filter ────────────────────────────────────────────
@@ -133,7 +179,9 @@ router.get(
                         error: "Invalid status filter",
                     });
                 }
-                visitMatch["visits.status"] = { $in: statusArray };
+                visitAndClauses.push({
+                    "visits.status": { $in: statusArray },
+                });
             }
 
             // ── Service filter ───────────────────────────────────────────
@@ -169,15 +217,26 @@ router.get(
                         error: "Service filter contains no valid entries",
                     });
                 }
-                visitMatch["visits.service"] = {
-                    $elemMatch: { name: { $in: serviceList } },
-                };
+                visitAndClauses.push({
+                    "visits.service": {
+                        $elemMatch: { name: { $in: serviceList } },
+                    },
+                });
             }
 
             // ── Gender filter ────────────────────────────────────────────
+            const genderLower = gender?.toLowerCase();
             if (gender && !VALID_GENDER.includes(genderLower)) {
                 return res.status(400).json({ error: "Invalid gender filter" });
             }
+
+            // ── Collapse visitAndClauses into a single $match ────────────
+            const visitMatch =
+                visitAndClauses.length === 1
+                    ? visitAndClauses[0]
+                    : visitAndClauses.length > 1
+                      ? { $and: visitAndClauses }
+                      : null;
 
             // ── Sort direction: upcoming ASC, everything else DESC ────────
             const sortStage =
@@ -210,9 +269,7 @@ router.get(
 
                 { $unwind: "$visits" },
 
-                ...(Object.keys(visitMatch).length
-                    ? [{ $match: visitMatch }]
-                    : []),
+                ...(visitMatch ? [{ $match: visitMatch }] : []),
 
                 ...(safeSearch
                     ? [
