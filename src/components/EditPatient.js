@@ -1,10 +1,31 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { X, Check, CalendarArrowDown } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { authFetch } from "./authfetch";
 import { API_BASE_URL } from "../components/config";
 import { fetchCountries } from "../api/country.api";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const computeAgeFromDob = (dobStr) => {
+    if (!dobStr) return null;
+    const birth = new Date(`${dobStr}T00:00:00`);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age >= 0 && age <= 120 ? age : null;
+};
+
+const estimateDobFromAge = (ageNum) => {
+    if (ageNum === null || ageNum === undefined || ageNum === "") return "";
+    const year = new Date().getFullYear() - ageNum;
+    return `${year}-01-01`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const EditPatient = ({
     patientId,
@@ -19,6 +40,7 @@ const EditPatient = ({
         number: "",
         email: "",
         dob: "",
+        age: "", // editable — linked to dob
         gender: "",
         countryId: "",
     });
@@ -26,19 +48,30 @@ const EditPatient = ({
     const [showDobPicker, setShowDobPicker] = useState(false);
     const [countries, setCountries] = useState([]);
 
-    // Pre-fill form when details or the revealed phone number change
+    // ── Pre-fill ──────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!details) return;
+
+        const rawDob =
+            details.dob && !isNaN(new Date(details.dob).getTime())
+                ? new Date(details.dob).toISOString().split("T")[0]
+                : "";
+
+        // Prefer age stored in DB; fall back to computing it from DOB
+        const storedAge =
+            details.age !== undefined && details.age !== null
+                ? String(details.age)
+                : rawDob
+                  ? String(computeAgeFromDob(rawDob) ?? "")
+                  : "";
 
         setPatient({
             name: details.name || "",
             number: fullNumber || "",
             countryId: details.countryId || details.country?._id || "",
             email: details.email || "",
-            dob:
-                details.dob && !isNaN(new Date(details.dob).getTime())
-                    ? new Date(details.dob).toISOString().split("T")[0]
-                    : "",
+            dob: rawDob,
+            age: storedAge,
             gender: details.gender || "Male",
         });
     }, [details, fullNumber]);
@@ -55,40 +88,44 @@ const EditPatient = ({
         loadCountries();
     }, []);
 
-    const computedAge = useMemo(() => {
-        if (!patient.dob) return null;
-
-        const today = new Date();
-
-        const birth = new Date(`${patient.dob}T00:00:00`);
-
-        if (isNaN(birth.getTime())) return null;
-
-        let age = today.getFullYear() - birth.getFullYear();
-
-        const monthDiff = today.getMonth() - birth.getMonth();
-
-        if (
-            monthDiff < 0 ||
-            (monthDiff === 0 && today.getDate() < birth.getDate())
-        ) {
-            age--;
+    // ── Linked DOB change ─────────────────────────────────────────────────────
+    const handleDobSelect = (dateStr) => {
+        setPatient((prev) => ({ ...prev, dob: dateStr }));
+        const computed = computeAgeFromDob(dateStr);
+        if (computed !== null) {
+            setPatient((prev) => ({
+                ...prev,
+                dob: dateStr,
+                age: String(computed),
+            }));
         }
+        setShowDobPicker(false);
+    };
 
-        return age >= 0 ? age : null;
-    }, [patient.dob]);
+    // ── Linked Age change ─────────────────────────────────────────────────────
+    const handleAgeChange = (val) => {
+        if (val === "") {
+            setPatient((prev) => ({ ...prev, age: "" }));
+            return;
+        }
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 0 || num > 120) return;
+        setPatient((prev) => ({
+            ...prev,
+            age: String(num),
+            dob: estimateDobFromAge(num),
+        }));
+    };
 
     const handleChange = (e) =>
         setPatient((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
+    // ── Submit ────────────────────────────────────────────────────────────────
     const handleSave = async () => {
-        // ── VALIDATION ─────────────────────────────────────────
-
         const name = patient.name.trim();
         const email = patient.email.trim();
         const cleanNumber = patient.number.trim().replace(/\D/g, "");
 
-        // Name
         if (!name) {
             showAlert("Name is required", "warning");
             return;
@@ -102,57 +139,49 @@ const EditPatient = ({
             return;
         }
 
-        if (!patient.dob) {
-            showAlert("Date of birth is required", "warning");
+        // Either DOB or age must be provided
+        if (!patient.dob && !patient.age) {
+            showAlert("Date of birth or age is required", "warning");
             return;
         }
-
-        const birthDate = new Date(patient.dob);
-
-        if (isNaN(birthDate.getTime())) {
-            showAlert("Invalid DOB", "warning");
-            return;
+        if (patient.dob) {
+            const birthDate = new Date(patient.dob);
+            if (isNaN(birthDate.getTime())) {
+                showAlert("Invalid date of birth", "warning");
+                return;
+            }
+            if (birthDate > new Date()) {
+                showAlert("DOB cannot be a future date", "warning");
+                return;
+            }
         }
 
-        if (birthDate > new Date()) {
-            showAlert("DOB cannot be future date", "warning");
-            return;
-        }
-
-        // Gender
         if (!patient.gender) {
             showAlert("Gender is required", "warning");
             return;
         }
-
-        // Country
         if (!patient.countryId) {
             showAlert("Select country", "warning");
             return;
         }
-
-        // Phone (optional but strict if provided)
-        if (cleanNumber) {
-            if (!/^\d{7,15}$/.test(cleanNumber)) {
-                showAlert("Enter valid phone number (7-15 digits)", "warning");
-                return;
-            }
+        if (cleanNumber && !/^\d{7,15}$/.test(cleanNumber)) {
+            showAlert("Enter valid phone number (7–15 digits)", "warning");
+            return;
         }
-
-        // Email (optional but strict if provided)
         if (email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-            if (!emailRegex.test(email)) {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
                 showAlert("Enter valid email address", "warning");
                 return;
             }
-
             if (email.length > 254) {
                 showAlert("Email too long", "warning");
                 return;
             }
         }
+
+        // Derive final DOB — if age-only, estimate Jan 1 of birth year
+        const finalDob =
+            patient.dob || estimateDobFromAge(parseInt(patient.age, 10));
 
         setSaving(true);
 
@@ -160,14 +189,13 @@ const EditPatient = ({
             const payload = {
                 name: patient.name.trim(),
                 countryId: patient.countryId,
-                dob: patient.dob,
                 gender: patient.gender,
                 email: patient.email.trim(),
             };
 
-            if (cleanNumber) {
-                payload.number = cleanNumber;
-            }
+            if (finalDob) payload.dob = finalDob;
+            if (patient.age !== "") payload.age = parseInt(patient.age, 10);
+            if (cleanNumber) payload.number = cleanNumber;
 
             const response = await authFetch(
                 `${API_BASE_URL}/api/doctor/patient/update_patient/${patientId}`,
@@ -178,7 +206,6 @@ const EditPatient = ({
                 },
             );
 
-            // SAFE PARSE
             let result;
             try {
                 result = await response.json();
@@ -204,6 +231,7 @@ const EditPatient = ({
         }
     };
 
+    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="pd-modal-bg" onClick={onClose}>
             <div
@@ -222,6 +250,7 @@ const EditPatient = ({
 
                 {/* Body */}
                 <div className="pd-modal-body">
+                    {/* Name */}
                     <div className="pd-field">
                         <label className="pd-label">
                             Name
@@ -238,6 +267,7 @@ const EditPatient = ({
                         />
                     </div>
 
+                    {/* Phone */}
                     <div className="pd-field">
                         <label className="pd-label">Mobile Number</label>
                         <div
@@ -250,7 +280,6 @@ const EditPatient = ({
                                 background: "#080c18",
                             }}
                         >
-                            {/* COUNTRY SELECTOR — value = country._id (ObjectId) */}
                             <select
                                 className="dp-select"
                                 value={patient.countryId || ""}
@@ -276,7 +305,6 @@ const EditPatient = ({
                                     </option>
                                 ))}
                             </select>
-                            {/* SEPARATOR */}
                             <div
                                 style={{
                                     width: 1,
@@ -284,8 +312,6 @@ const EditPatient = ({
                                     background: "#2e3d5c",
                                 }}
                             />
-
-                            {/* PHONE INPUT — digits only enforced in input handler */}
                             <input
                                 className="pd-input"
                                 type="tel"
@@ -293,17 +319,15 @@ const EditPatient = ({
                                 placeholder="Mobile number"
                                 value={patient.number}
                                 onChange={(e) => {
-                                    // Strip non-digits on input so display stays clean
                                     const digits = e.target.value.replace(
                                         /\D/g,
                                         "",
                                     );
-                                    if (digits.length <= 15) {
+                                    if (digits.length <= 15)
                                         setPatient((prev) => ({
                                             ...prev,
                                             number: digits,
                                         }));
-                                    }
                                 }}
                                 style={{
                                     border: "none",
@@ -312,12 +336,13 @@ const EditPatient = ({
                                     padding: "8px 10px",
                                     background: "transparent",
                                     color: "#c5d0e8",
-                                    marginBottom: "0px",
+                                    marginBottom: 0,
                                 }}
                             />
                         </div>
                     </div>
 
+                    {/* Email */}
                     <div className="pd-field">
                         <label className="pd-label">Email</label>
                         <input
@@ -330,35 +355,32 @@ const EditPatient = ({
                         />
                     </div>
 
+                    {/* DOB + Age — linked pair */}
                     <div className="pd-field">
                         <label className="pd-label">
-                            Date of Birth
+                            Date of Birth &amp; Age
                             <span className="sg-required">
                                 <sup>*</sup>
                             </span>
+                            <span className="pd-label-hint">
+                                {" "}
+                                — enter either, the other fills automatically
+                            </span>
                         </label>
 
-                        <div
-                            style={{
-                                display: "flex",
-                                gap: 8,
-                                alignItems: "center",
-                            }}
-                        >
-                            <div style={{ flex: 1, position: "relative" }}>
+                        <div className="pd-dob-age-row">
+                            {/* DOB picker */}
+                            <div
+                                style={{
+                                    flex: 1,
+                                    position: "relative",
+                                    minWidth: 0,
+                                }}
+                            >
                                 <button
                                     type="button"
-                                    className="pd-input"
+                                    className="pd-input pd-dob-btn"
                                     onClick={() => setShowDobPicker((p) => !p)}
-                                    style={{
-                                        width: "100%",
-                                        textAlign: "left",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        marginBottom: 0,
-                                    }}
                                 >
                                     <span
                                         style={{
@@ -377,10 +399,12 @@ const EditPatient = ({
                                               })
                                             : "Select DOB"}
                                     </span>
-
                                     <CalendarArrowDown
-                                        size={16}
-                                        style={{ color: "#3a4a6b" }}
+                                        size={15}
+                                        style={{
+                                            color: "#3a4a6b",
+                                            flexShrink: 0,
+                                        }}
                                     />
                                 </button>
 
@@ -408,7 +432,6 @@ const EditPatient = ({
                                             }
                                             onSelect={(date) => {
                                                 if (!date) return;
-
                                                 const localDate = [
                                                     date.getFullYear(),
                                                     String(
@@ -418,13 +441,7 @@ const EditPatient = ({
                                                         date.getDate(),
                                                     ).padStart(2, "0"),
                                                 ].join("-");
-
-                                                setPatient((prev) => ({
-                                                    ...prev,
-                                                    dob: localDate,
-                                                }));
-
-                                                setShowDobPicker(false);
+                                                handleDobSelect(localDate);
                                             }}
                                             disabled={(date) =>
                                                 date > new Date()
@@ -434,25 +451,36 @@ const EditPatient = ({
                                 )}
                             </div>
 
-                            {computedAge !== null && (
-                                <div
-                                    style={{
-                                        padding: "8px 10px",
-                                        borderRadius: 8,
-                                        background: "#111827",
-                                        border: "1px solid #243041",
-                                        color: "#c5d0e8",
-                                        fontSize: 12,
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {computedAge} yrs
-                                </div>
-                            )}
+                            {/* Age input — editable */}
+                            <div className="pd-age-wrap">
+                                <input
+                                    type="number"
+                                    className="pd-input pd-age-input"
+                                    placeholder="Age"
+                                    value={patient.age}
+                                    min={0}
+                                    max={120}
+                                    onChange={(e) =>
+                                        handleAgeChange(e.target.value)
+                                    }
+                                />
+                                {patient.age !== "" && (
+                                    <span className="pd-age-unit">yrs</span>
+                                )}
+                            </div>
                         </div>
+
+                        {/* Hint when only age is set */}
+                        {patient.age !== "" && !patient.dob && (
+                            <div className="pd-age-hint">
+                                DOB estimated as Jan 1,{" "}
+                                {new Date().getFullYear() -
+                                    parseInt(patient.age, 10)}
+                            </div>
+                        )}
                     </div>
 
+                    {/* Gender */}
                     <div className="pd-field">
                         <label className="pd-label">
                             Gender

@@ -18,8 +18,11 @@ const AddPatientSkeleton = () => (
     <div className="ap-skeleton">
         <div>
             <div className="ap-skel ap-skel-section" />
-            <div className="ap-skel-row cols-3" style={{ marginTop: 10 }}>
+            <div className="ap-skel-row cols-2" style={{ marginTop: 10 }}>
                 <div className="ap-skel ap-skel-input" />
+                <div className="ap-skel ap-skel-input" />
+            </div>
+            <div className="ap-skel-row cols-2" style={{ marginTop: 10 }}>
                 <div className="ap-skel ap-skel-input" />
                 <div className="ap-skel ap-skel-input" />
             </div>
@@ -80,6 +83,8 @@ const AddPatient = ({
     const [number, setNumber] = useState("");
     const [email, setEmail] = useState("");
     const [dob, setDob] = useState("");
+    const [age, setAge] = useState("");
+    const [showDobCalendar, setShowDobCalendar] = useState(false);
     const [gender, setGender] = useState("Male");
 
     // ── Country ───────────────────────────────────────────────────────────────
@@ -146,17 +151,47 @@ const AddPatient = ({
             minimumFractionDigits: 0,
         }).format(value);
 
-    // ── Compute age from DOB (read-only, derived) ─────────────────────────────
-    const computedAge = useMemo(() => {
-        if (!dob) return null;
-        const today = new Date();
-        const birth = new Date(dob);
+    // ── DOB → Age (auto-compute exact age from a DOB) ─────────────────────────
+    const computeAgeFromDob = (dobStr) => {
+        if (!dobStr) return null;
+        const birth = new Date(dobStr);
         if (isNaN(birth.getTime())) return null;
-        let age = today.getFullYear() - birth.getFullYear();
+        const today = new Date();
+        let computed = today.getFullYear() - birth.getFullYear();
         const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-        return age >= 0 ? age : null;
-    }, [dob]);
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) computed--;
+        return computed >= 0 && computed <= 120 ? computed : null;
+    };
+
+    // ── Age → DOB (estimate as Jan 1 of birth year) ───────────────────────────
+    const estimateDobFromAge = (ageNum) => {
+        if (ageNum === null || ageNum === undefined || ageNum === "") return "";
+        const year = new Date().getFullYear() - ageNum;
+        return `${year}-01-01`;
+    };
+
+    // ── Linked DOB change handler ─────────────────────────────────────────────
+    const handleDobChange = (val) => {
+        setDob(val);
+        const computed = computeAgeFromDob(val);
+        if (computed !== null) {
+            setAge(String(computed));
+        }
+        // Don't blank age if dob is cleared — let the user keep it
+    };
+
+    // ── Linked Age change handler ─────────────────────────────────────────────
+    const handleAgeChange = (val) => {
+        // Allow empty
+        if (val === "") {
+            setAge("");
+            return;
+        }
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 0 || num > 120) return;
+        setAge(String(num));
+        setDob(estimateDobFromAge(num));
+    };
 
     // ── Load payment methods ──────────────────────────────────────────────────
     useEffect(() => {
@@ -301,6 +336,7 @@ const AddPatient = ({
         setName("");
         setEmail("");
         setDob("");
+        setAge("");
         setGender("Male");
         setSelectedServices([]);
         setServiceAmounts({});
@@ -337,12 +373,16 @@ const AddPatient = ({
             return showAlert("Patient name is required", "warning");
         if (name.trim().length < 2)
             return showAlert("Name must be at least 2 characters", "warning");
-        if (!dob) return showAlert("Date of birth is required", "warning");
-        if (new Date(dob) > new Date())
+
+        // At least one of dob or age must be provided
+        if (!dob && !age)
+            return showAlert("Date of birth or age is required", "warning");
+        if (dob && new Date(dob) > new Date())
             return showAlert(
                 "Date of birth cannot be in the future",
                 "warning",
             );
+
         if (selectedServices.length === 0)
             return showAlert("Select at least one service", "warning");
         if (!/^\d{7,15}$/.test(number))
@@ -355,6 +395,9 @@ const AddPatient = ({
             return showAlert("Select payment type", "warning");
         if (!selectedSlot) return showAlert("Select a time slot", "warning");
 
+        // If only age is known, estimate a DOB to send to the server
+        const finalDob = dob || estimateDobFromAge(parseInt(age, 10));
+
         setLoading(true);
 
         try {
@@ -364,7 +407,8 @@ const AddPatient = ({
                 countryId: selectedCountryId,
                 number: number.trim(),
                 email,
-                dob,
+                dob: finalDob,
+                age: age ? parseInt(age, 10) : undefined,
             });
 
             if (!patientRes.success) {
@@ -483,12 +527,9 @@ const AddPatient = ({
                             {/* ── Patient Details ── */}
                             <div className="ap-section">Patient Details</div>
 
-                            {/* Name + Gender in a 2-col grid */}
-                            <div className="ap-grid3 ap-top-grid">
-                                <div
-                                    className="ap-field"
-                                    style={{ gridColumn: "span 1" }}
-                                >
+                            {/* Row 1: Name + Gender */}
+                            <div className="ap-grid2">
+                                <div className="ap-field">
                                     <label htmlFor="name" className="ap-label">
                                         Full Name{" "}
                                         <span className="sg-required">
@@ -528,54 +569,132 @@ const AddPatient = ({
                                         <option value="Female">Female</option>
                                     </select>
                                 </div>
+                            </div>
 
-                                {/* ── DOB + computed age (replaces the old age input) ── */}
+                            {/* Row 2: DOB + Age (linked) */}
+                            <div className="ap-grid2">
                                 <div className="ap-field">
                                     <label htmlFor="dob" className="ap-label">
-                                        Date of Birth
+                                        Date of Birth{" "}
+                                        <span className="ap-label-hint">
+                                            (fills age automatically)
+                                        </span>
+                                    </label>
+                                    <button
+                                        id="dob"
+                                        type="button"
+                                        className="ap-input"
+                                        onClick={() =>
+                                            setShowDobCalendar((p) => !p)
+                                        }
+                                        style={{
+                                            textAlign: "left",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                color: dob
+                                                    ? "#c5d0e8"
+                                                    : "#252e45",
+                                            }}
+                                        >
+                                            {dob
+                                                ? new Date(
+                                                      dob,
+                                                  ).toLocaleDateString(locale, {
+                                                      day: "numeric",
+                                                      month: "short",
+                                                      year: "numeric",
+                                                  })
+                                                : "Select date of birth"}
+                                        </span>
+                                        <CalendarArrowDown
+                                            size={18}
+                                            style={{ color: "#3a4a6b" }}
+                                        />
+                                    </button>
+                                    {showDobCalendar && (
+                                        <div
+                                            className="dp-wrapper"
+                                            style={{
+                                                zIndex: 100,
+                                                marginTop: 4,
+                                            }}
+                                        >
+                                            <DayPicker
+                                                mode="single"
+                                                selected={
+                                                    dob
+                                                        ? new Date(dob)
+                                                        : undefined
+                                                }
+                                                defaultMonth={
+                                                    dob
+                                                        ? new Date(dob)
+                                                        : new Date(
+                                                              new Date().getFullYear() -
+                                                                  30,
+                                                              new Date().getMonth(),
+                                                          )
+                                                }
+                                                disabled={{ after: new Date() }}
+                                                captionLayout="dropdown"
+                                                fromYear={1900}
+                                                toYear={new Date().getFullYear()}
+                                                onSelect={(date) => {
+                                                    if (!date) return;
+                                                    handleDobChange(
+                                                        date.toLocaleDateString(
+                                                            "en-CA",
+                                                        ),
+                                                    );
+                                                    setShowDobCalendar(false);
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="ap-field">
+                                    <label htmlFor="age" className="ap-label">
+                                        Age{" "}
+                                        <span className="ap-label-hint">
+                                            (fills DOB approximately)
+                                        </span>{" "}
                                         <span className="sg-required">
                                             <sup>*</sup>
                                         </span>
                                     </label>
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            gap: 8,
-                                            alignItems: "center",
-                                        }}
-                                    >
+                                    <div className="ap-age-wrap">
                                         <input
-                                            id="dob"
+                                            id="age"
                                             className="ap-input"
-                                            type="date"
-                                            value={dob}
-                                            max={new Date()
-                                                .toISOString()
-                                                .slice(0, 10)} // no future dates
+                                            type="number"
+                                            value={age}
+                                            min={0}
+                                            max={120}
+                                            placeholder="e.g. 35"
                                             onChange={(e) =>
-                                                setDob(e.target.value)
+                                                handleAgeChange(e.target.value)
                                             }
-                                            style={{ flex: 1 }}
                                         />
-                                        {computedAge !== null && (
-                                            <div
-                                                style={{
-                                                    padding: "6px 10px",
-                                                    background:
-                                                        "var(--surface2, #1e2a45)",
-                                                    border: "1px solid var(--border, #2e3d5c)",
-                                                    borderRadius: 8,
-                                                    fontSize: 12,
-                                                    color: "#c5d0e8",
-                                                    whiteSpace: "nowrap",
-                                                    flexShrink: 0,
-                                                    userSelect: "none",
-                                                }}
-                                            >
-                                                {computedAge} yrs
-                                            </div>
+                                        {age !== "" && (
+                                            <span className="ap-age-unit">
+                                                yrs
+                                            </span>
                                         )}
                                     </div>
+                                    {age !== "" && !dob && (
+                                        <div className="ap-age-hint">
+                                            DOB estimated as Jan 1,{" "}
+                                            {new Date().getFullYear() -
+                                                parseInt(age, 10)}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -910,7 +1029,6 @@ const AddPatient = ({
                                         const valid = [];
                                         const errors = [];
 
-                                        // 1. Validate files FIRST
                                         for (const file of selected) {
                                             const isPDF =
                                                 file.type === "application/pdf";
@@ -941,7 +1059,6 @@ const AddPatient = ({
                                             });
                                         }
 
-                                        // 2. THEN cap to remaining slots
                                         if (imageUsage.limit !== -1) {
                                             const slotsLeft = Math.max(
                                                 imageUsage.limit - localUsed,
@@ -952,7 +1069,6 @@ const AddPatient = ({
                                                     `Only ${slotsLeft} more file(s) allowed on your plan`,
                                                     "warning",
                                                 );
-                                                // Revoke URLs for files that won't be added
                                                 valid
                                                     .slice(slotsLeft)
                                                     .forEach(({ preview }) => {

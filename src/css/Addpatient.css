@@ -4,7 +4,6 @@
         Add Patient 
 _________________________________ */
 
-/* FIX ALL OVERFLOW ISSUES */
 *,
 *::before,
 *::after {
@@ -149,6 +148,16 @@ _________________________________ */
     color: var(--text-muted);
     margin-bottom: 6px;
 }
+
+/* Subtle hint text inside label (e.g. "fills age automatically") */
+.ap-label-hint {
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: #2e3d5c;
+    font-style: italic;
+}
+
 .ap-input,
 .ap-select {
     width: 100%;
@@ -187,6 +196,16 @@ _________________________________ */
     opacity: 1;
 }
 
+/* Hide number input spin arrows (age field) */
+.ap-input[type="number"]::-webkit-inner-spin-button,
+.ap-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+/* .ap-input[type="number"] {
+    -moz-appearance: textfield;
+} */
+
 .ap-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232e3d5c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -206,16 +225,47 @@ _________________________________ */
     gap: 12px;
 }
 
+/* Kept for backward compat but not used in patient details anymore */
 .ap-grid3 {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)); /* KEY FIX */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 
 .ap-field {
-    min-width: 0; /* prevents overflow in grid */
+    min-width: 0;
     width: 100%;
     margin-bottom: 10px;
+}
+
+/* ── Age field wrapper (input + "yrs" badge inline) ── */
+.ap-age-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ap-age-wrap .ap-input {
+    padding-right: 44px; /* room for the "yrs" badge */
+}
+
+.ap-age-unit {
+    position: absolute;
+    right: 10px;
+    font-size: 10px;
+    color: #3a4a6b;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 0.06em;
+}
+
+/* Hint shown when age is typed but no DOB is present */
+.ap-age-hint {
+    margin-top: 5px;
+    font-size: 10px;
+    color: #3a5080;
+    font-style: italic;
+    letter-spacing: 0.02em;
 }
 
 .ap-service-row {
@@ -405,14 +455,6 @@ _________________________________ */
     width: 90% !important;
     outline: none !important;
 }
-@media (max-width: 640px) {
-    .ap-grid3 {
-        grid-template-columns: 1fr 1fr;
-    }
-    .ap-modal {
-        max-height: 95vh;
-    }
-}
 
 /* ── Image upload field ── */
 .ap-upload-label-row {
@@ -481,66 +523,6 @@ _________________________________ */
     color: #3a4a6b;
 }
 
-.ap-upload-preview {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    background: #080c18;
-    border: 1px solid #1a2540;
-    border-radius: 8px;
-}
-
-.ap-preview-img {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid #161d2e;
-    flex-shrink: 0;
-}
-
-.ap-preview-name {
-    font-size: 11px;
-    color: #c5d0e8;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-}
-
-.ap-preview-size {
-    font-size: 10px;
-    color: #2e3d5c;
-    margin-top: 3px;
-}
-
-.ap-upload-remove {
-    margin-left: auto;
-    background: none;
-    border: none;
-    font-size: 11px;
-    color: #f87171;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 4px;
-    transition: all 0.15s;
-    flex-shrink: 0;
-}
-
-.ap-upload-remove:hover {
-    background: rgba(248, 113, 113, 0.1);
-    color: #fca5a5;
-}
-
-.ap-status {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: var(--danger);
-}
 .ap-preview-img {
     width: 56px;
     height: 56px;
@@ -549,6 +531,7 @@ _________________________________ */
     border: 1px solid #161d2e;
     flex-shrink: 0;
 }
+
 .ap-preview-name {
     font-size: 11px;
     color: #c5d0e8;
@@ -557,13 +540,13 @@ _________________________________ */
     text-overflow: ellipsis;
     max-width: 160px;
 }
+
 .ap-preview-size {
     font-size: 10px;
     color: #2e3d5c;
     margin-top: 3px;
 }
 
-/* remove button */
 .ap-upload-remove {
     margin-top: 6px;
     background: none;
@@ -579,6 +562,15 @@ _________________________________ */
     color: #fca5a5;
 }
 
+.ap-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--danger);
+}
+
 /* ── react-day-picker navy theme ── */
 .dp-wrapper {
     background: #0d1117;
@@ -588,7 +580,6 @@ _________________________________ */
     display: inline-block;
 }
 
-/* Month/year caption */
 .dp-wrapper .rdp-caption {
     margin-bottom: 10px;
 }
@@ -599,7 +590,6 @@ _________________________________ */
     letter-spacing: 0.04em;
 }
 
-/* Nav buttons — fix the broken box look */
 .dp-wrapper .rdp-nav_button {
     width: 28px;
     height: 28px;
@@ -620,7 +610,6 @@ _________________________________ */
     background: rgba(77, 124, 246, 0.08);
 }
 
-/* Day name headers */
 .dp-wrapper .rdp-head_cell {
     font-size: 9px;
     letter-spacing: 0.12em;
@@ -630,7 +619,6 @@ _________________________________ */
     padding: 6px 0;
 }
 
-/* Day cells */
 .dp-wrapper .rdp-day {
     font-size: 11px;
     color: #6b7fa8;
@@ -646,14 +634,12 @@ _________________________________ */
     color: #60a5fa;
 }
 
-/* Today */
 .dp-wrapper .rdp-day_today:not(.rdp-day_selected) {
     border-color: rgba(77, 124, 246, 0.3);
     color: #60a5fa;
     font-weight: 600;
 }
 
-/* Selected day */
 .dp-wrapper .rdp-day_selected,
 .dp-wrapper .rdp-day_selected:hover {
     background: #4d7cf6 !important;
@@ -662,28 +648,25 @@ _________________________________ */
     font-weight: 600;
 }
 
-/* Outside month days */
 .dp-wrapper .rdp-day_outside {
     color: #1e2d4a;
 }
 
-/* Disabled days */
 .dp-wrapper .rdp-day_disabled {
     color: #1a2540;
     cursor: not-allowed;
 }
 
-/* Remove default focus ring */
 .dp-wrapper .rdp-day:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(77, 124, 246, 0.3);
 }
 
-/* Table spacing */
 .dp-wrapper .rdp-table {
     border-collapse: separate;
     border-spacing: 2px;
 }
+
 .ap-phone-group {
     display: flex;
     gap: 10px;
@@ -694,61 +677,14 @@ _________________________________ */
 .ap-country {
     min-width: 0;
 }
-.ap-grid3 input,
-.ap-grid3 select {
-    width: 100%;
-}
+
 .ap-images-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 10px;
 }
 
-/* Laptop */
-@media (max-width: 1100px) {
-    .ap-grid3 {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* Tablet */
-@media (max-width: 768px) {
-    .ap-grid3 {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .ap-grid2 {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 600px) {
-    .ap-phone-group {
-        flex-direction: column;
-    }
-
-    .ap-country {
-        width: 100%;
-    }
-}
-
-@media (max-width: 600px) {
-    .ap-body {
-        padding: 16px;
-    }
-
-    .ap-header {
-        padding: 16px;
-    }
-
-    .ap-footer {
-        padding: 12px 16px 16px;
-    }
-}
-
-/* ── Skeleton ─────────────────────────────────────────────────────────── */
+/* ── Skeleton ── */
 @keyframes ap-shimmer {
     0% {
         background-position: -400px 0;
@@ -818,4 +754,32 @@ _________________________________ */
 .ap-skel-slot-header {
     height: 38px;
     border-radius: 6px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .ap-grid2 {
+        grid-template-columns: 1fr;
+    }
+    .ap-grid3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .ap-phone-group {
+        flex-direction: column;
+    }
+    .ap-country {
+        width: 100%;
+    }
+    .ap-body {
+        padding: 16px;
+    }
+    .ap-header {
+        padding: 16px;
+    }
+    .ap-footer {
+        padding: 12px 16px 16px;
+    }
 }

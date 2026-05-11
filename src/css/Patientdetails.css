@@ -40,7 +40,6 @@ _______________________________________ */
     transition: color 0.15s;
     background: none;
     border: none;
-
     letter-spacing: 0.04em;
 }
 .pd-back:hover {
@@ -141,7 +140,6 @@ _______________________________________ */
     gap: 6px;
     padding: 8px 18px;
     border-radius: 8px;
-
     font-size: 11px;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -153,8 +151,12 @@ _______________________________________ */
     color: #fff;
     box-shadow: 0 4px 14px rgba(77, 124, 246, 0.25);
 }
-.pd-btn-primary:hover {
+.pd-btn-primary:hover:not(:disabled) {
     background: #6090ff;
+}
+.pd-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 .pd-btn-danger {
     background: transparent;
@@ -191,7 +193,6 @@ _______________________________________ */
 .pd-switch-btn {
     flex: 1;
     padding: 9px 12px;
-
     font-size: 11px;
     letter-spacing: 0.06em;
     font-weight: 500;
@@ -266,7 +267,7 @@ _______________________________________ */
 .pd-td-time {
     font-size: 10px;
     color: var(--text-muted);
-    margin-top: 2;
+    margin-top: 2px;
 }
 .pd-td-services {
     color: #6b7fa8;
@@ -297,8 +298,6 @@ _______________________________________ */
     cursor: pointer;
     border: 1px solid;
     transition: all 0.15s;
-    /* -webkit-appearance: none;    
-    appearance: none;*/
     flex-shrink: 0;
 }
 .pd-icon-inv {
@@ -360,7 +359,6 @@ _______________________________________ */
     font-weight: 500;
     color: #c5d0e8;
 }
-
 .pd-amount-separator {
     font-size: 11px;
     color: #6b7fa8;
@@ -399,7 +397,6 @@ _______________________________________ */
     padding: 20px 0;
     letter-spacing: 0.04em;
 }
-/* GRID */
 .pd-image-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -417,7 +414,6 @@ _______________________________________ */
     color: #e2e8f0;
     backdrop-filter: blur(4px);
 }
-/* CARD */
 .pd-image-card {
     width: 100%;
     height: 110px;
@@ -429,22 +425,16 @@ _______________________________________ */
     transition: all 0.2s ease;
     position: relative;
 }
-
-/* HOVER EFFECT */
 .pd-image-card:hover {
     transform: translateY(-3px);
     border-color: #3b82f6;
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
 }
-
-/* IMAGE */
 .pd-image-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
-
-/* PDF CONTENT */
 .pd-pdf-content {
     width: 100%;
     height: 100%;
@@ -455,8 +445,6 @@ _______________________________________ */
     color: #94a3b8;
     font-size: 26px;
 }
-
-/* FILE LABEL */
 .pd-file-label {
     font-size: 11px;
     margin-top: 4px;
@@ -492,7 +480,6 @@ _______________________________________ */
     color: #c5d0e8;
     font-size: 9px;
     padding: 6px 6px 4px;
-
     letter-spacing: 0.04em;
 }
 
@@ -546,7 +533,6 @@ _______________________________________ */
     padding: 5px 14px;
     font-size: 10px;
     color: #6b7fa8;
-
     letter-spacing: 0.06em;
     white-space: nowrap;
 }
@@ -558,7 +544,6 @@ _______________________________________ */
     border: 1px solid #1a2540;
     border-radius: 8px;
     padding: 9px 12px;
-
     font-size: 12px;
     color: #c5d0e8;
     cursor: pointer;
@@ -578,7 +563,6 @@ _______________________________________ */
     border-color: rgba(77, 124, 246, 0.4);
     box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
 }
-
 .pd-cal-drop {
     background: #0d1117;
     border: 1px solid #161d2e;
@@ -697,7 +681,7 @@ _______________________________________ */
     animation: pd-rise 0.25s ease;
 }
 .pd-modal-sm {
-    max-width: 400px;
+    max-width: 440px; /* slightly wider to accommodate the dob+age row */
 }
 @keyframes pd-rise {
     from {
@@ -772,6 +756,7 @@ _______________________________________ */
     border-top: 1px solid #131929;
     flex-shrink: 0;
 }
+
 /* ── Upload field (Edit Appointment) ── */
 .pd-upload-label-row {
     display: flex;
@@ -779,7 +764,6 @@ _______________________________________ */
     justify-content: space-between;
     margin-bottom: 6px;
 }
-
 .pd-upload-btn {
     display: inline-flex;
     align-items: center;
@@ -794,13 +778,11 @@ _______________________________________ */
     transition: all 0.15s;
     margin-bottom: 10px;
 }
-
 .pd-upload-btn:hover:not(:disabled) {
     border-color: rgba(77, 124, 246, 0.4);
     color: #60a5fa;
     background: rgba(77, 124, 246, 0.04);
 }
-
 .pd-upload-btn--disabled,
 .pd-upload-btn:disabled {
     opacity: 0.4;
@@ -808,7 +790,6 @@ _______________________________________ */
     border-color: #1a2540;
     color: #3a4a6b;
 }
-
 .pd-upload-preview {
     display: flex;
     align-items: center;
@@ -817,15 +798,6 @@ _______________________________________ */
     background: #080c18;
     border: 1px solid #1a2540;
     border-radius: 8px;
-}
-
-.pd-preview-img {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid #161d2e;
-    flex-shrink: 0;
 }
 .pd-preview-overlay {
     position: absolute;
@@ -841,45 +813,34 @@ _______________________________________ */
     opacity: 0;
     transition: opacity 0.2s ease;
 }
-
 .pd-preview-card:hover .pd-preview-overlay {
     opacity: 1;
 }
-
 .pd-preview-name {
     font-size: 9px;
     color: #c5d0e8;
 }
-
-/* Remove button */
 .pd-preview-remove {
     position: absolute;
     top: 6px;
     right: 6px;
-
     width: 22px;
     height: 22px;
     border-radius: 6px;
-
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid #161d2e;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     color: #f87171;
     font-size: 12px;
-
     cursor: pointer;
     transition: all 0.15s ease;
 }
-
 .pd-preview-remove:hover {
     background: rgba(248, 113, 113, 0.15);
     border-color: rgba(248, 113, 113, 0.4);
 }
-
 .pd-preview-card {
     position: relative;
     border-radius: 10px;
@@ -888,32 +849,27 @@ _______________________________________ */
     background: #080c18;
     transition: all 0.2s ease;
 }
-
 .pd-preview-card:hover {
     border-color: rgba(77, 124, 246, 0.35);
     transform: translateY(-2px);
 }
-
 .pd-preview-img {
     width: 100%;
     height: 90px;
     object-fit: cover;
     display: block;
 }
-
 .pd-pdf-preview {
     height: 90px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
     font-size: 18px;
     color: #60a5fa;
     background: #080c18;
     gap: 4px;
 }
-
 .pd-pdf-preview span {
     font-size: 9px;
     color: #c5d0e8;
@@ -931,11 +887,11 @@ _______________________________________ */
     transition: all 0.15s;
     flex-shrink: 0;
 }
-
 .pd-upload-remove:hover {
     background: rgba(248, 113, 113, 0.1);
     color: #fca5a5;
 }
+
 /* ── Form elements ── */
 .pd-label {
     display: block;
@@ -945,6 +901,16 @@ _______________________________________ */
     color: var(--text-muted);
     margin-bottom: 6px;
 }
+
+/* Subtle hint text within label */
+.pd-label-hint {
+    font-size: 8.5px;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    color: #2e3d5c;
+    font-style: italic;
+}
+
 .pd-input,
 .pd-select {
     width: 100%;
@@ -952,7 +918,6 @@ _______________________________________ */
     border: 1px solid #1a2540;
     border-radius: 8px;
     padding: 9px 12px;
-
     font-size: 12px;
     color: #c5d0e8;
     outline: none;
@@ -969,6 +934,14 @@ _______________________________________ */
     border-color: rgba(77, 124, 246, 0.4);
     box-shadow: 0 0 0 3px rgba(77, 124, 246, 0.08);
 }
+
+/* Hide number input spinners (age field) */
+.pd-input[type="number"]::-webkit-inner-spin-button,
+.pd-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .pd-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232e3d5c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -982,6 +955,59 @@ _______________________________________ */
 }
 .pd-field {
     margin-bottom: 12px;
+}
+
+/* ── DOB + Age row ── */
+.pd-dob-age-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+/* DOB picker button — resets margin from pd-input inside the row */
+.pd-dob-btn {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0 !important;
+}
+
+/* Age input wrapper */
+.pd-age-wrap {
+    position: relative;
+    width: 90px;
+    flex-shrink: 0;
+}
+
+.pd-age-input {
+    width: 100%;
+    padding-right: 36px !important;
+    margin-bottom: 0 !important;
+    text-align: center;
+}
+
+.pd-age-unit {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #3a4a6b;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 0.05em;
+}
+
+/* Hint shown when only age is entered */
+.pd-age-hint {
+    margin-top: 5px;
+    font-size: 10px;
+    color: #3a5080;
+    font-style: italic;
+    letter-spacing: 0.02em;
 }
 
 .pd-section-sep {
@@ -1000,7 +1026,6 @@ _______________________________________ */
     height: 1px;
     background: #131929;
 }
-
 .pd-service-row {
     display: flex;
     justify-content: space-between;
@@ -1018,13 +1043,11 @@ _______________________________________ */
     border: 1px solid #161d2e;
     border-radius: 6px;
     padding: 5px 8px;
-
     font-size: 11px;
     color: #c5d0e8;
     outline: none;
     text-align: right;
 }
-
 .pd-summary {
     background: #080c18;
     border: 1px solid #1a2540;
@@ -1093,7 +1116,6 @@ _______________________________________ */
 .pd-slot {
     padding: 6px 12px;
     border-radius: 7px;
-
     font-size: 10px;
     cursor: pointer;
     transition: all 0.15s;
@@ -1119,12 +1141,10 @@ _______________________________________ */
     background: rgba(77, 124, 246, 0.08);
     border: 1px solid rgba(77, 124, 246, 0.2);
     border-radius: 8px;
-
     font-size: 11px;
     color: #60a5fa;
     margin-bottom: 10px;
 }
-
 .pd-percent-toggle {
     display: flex;
     align-items: center;
@@ -1134,7 +1154,6 @@ _______________________________________ */
     border-radius: 7px;
     background: #080c18;
     color: #3a4a6b;
-
     font-size: 10px;
     cursor: pointer;
     transition: all 0.15s;
@@ -1167,121 +1186,108 @@ _______________________________________ */
         width: 100%;
         overflow-x: hidden;
     }
-
     .pd-card {
         padding: 14px;
         border-radius: 12px;
         width: 100%;
         overflow: hidden;
     }
-
     .pd-patient-header {
         align-items: flex-start;
     }
-
     .pd-patient-left {
         width: 100%;
     }
-
     .pd-patient-name {
         font-size: 17px;
         word-break: break-word;
     }
-
     .pd-info-grid {
         grid-template-columns: 1fr 1fr;
     }
-
     .pd-info-item {
         padding: 10px;
         min-width: 0;
     }
-
     .pd-info-value {
         font-size: 11px;
         word-break: break-word;
     }
-
     .pd-actions {
         width: 100%;
         flex-wrap: wrap;
         justify-content: stretch;
     }
-
     .pd-btn {
         flex: 1;
         justify-content: center;
         min-width: 120px;
     }
-
     .pd-table {
         display: none;
     }
-
     .pd-mob-table {
         display: flex !important;
         flex-direction: column;
         gap: 10px;
         width: 100%;
     }
-
     .pd-visit-card {
         width: 100%;
         padding: 12px;
         overflow: hidden;
     }
-
     .pd-visit-row {
         flex-direction: row;
         align-items: flex-start;
         gap: 10px;
     }
-
     .pd-visit-row > div {
         min-width: 0;
     }
-
     .pd-visit-date {
         font-size: 11px;
     }
-
     .pd-visit-time {
         font-size: 10px;
     }
-
     .pd-visit-amount {
         font-size: 12px;
         justify-content: flex-end;
         flex-wrap: wrap;
     }
-
     .pd-visit-sub {
         font-size: 9px;
         text-align: right;
     }
-
     .pd-visit-footer {
         flex-wrap: wrap;
         align-items: center;
         gap: 10px;
     }
-
     .pd-visit-actions {
         width: 100%;
         justify-content: flex-end;
     }
-
     .pd-switch {
         width: 100%;
     }
-
     .pd-switch-btn {
         font-size: 10px;
         padding: 8px;
     }
-
     .pd-image-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    /* Stack DOB + age vertically on very small screens */
+    .pd-dob-age-row {
+        flex-direction: column;
+    }
+    .pd-age-wrap {
+        width: 100%;
+    }
+    .pd-age-input {
+        text-align: left;
     }
 }
 @media (min-width: 641px) {
