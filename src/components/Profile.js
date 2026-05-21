@@ -12,7 +12,6 @@ export default function Profile(props) {
         if (!token) return;
         const decoded = jwtDecode(token);
         setRole(decoded.user.role);
-        // Slight delay so the shimmer loader shows briefly for smoothness
         setTimeout(() => setMounted(true), 80);
     }, []);
 

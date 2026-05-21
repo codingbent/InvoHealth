@@ -27,8 +27,16 @@ function buildFilterParams(filters) {
     if (filters.status.length) params.set("status", filters.status.join(","));
     if (filters.services.length)
         params.set("services", filters.services.join(","));
-    if (filters.startDate) params.set("startDate", filters.startDate);
-    if (filters.endDate) params.set("endDate", filters.endDate);
+    if (filters.startDate) {
+        params.set("startDate", filters.startDate);
+        params.set(
+            "endDate",
+            filters.endDate || new Date().toISOString().split("T")[0],
+        );
+    } else if (filters.endDate) {
+        params.set("endDate", filters.endDate);
+    }
+
     return params;
 }
 

@@ -7,7 +7,7 @@ import {
     BarChart3,
     Image,
 } from "lucide-react";
-import "../css/Tutorials.css"
+import "../css/Tutorials.css";
 
 const tutorials = {
     "Getting Started": [
@@ -285,7 +285,7 @@ export default function Tutorials() {
                                         currentIndex === allVideos.length - 1
                                     }
                                 >
-                                    Next lesson →
+                                    Next →
                                 </button>
                             </div>
                         </div>

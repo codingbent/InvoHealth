@@ -4,7 +4,6 @@
    FILTER PANEL
 ════════════════════════════════ */
 
-/* ── Backdrop ── */
 .fp-backdrop {
     position: fixed;
     inset: 0;
@@ -30,7 +29,6 @@
     }
 }
 
-/* ── Panel shell ── */
 .fp-panel {
     position: fixed;
     top: 0;
@@ -42,23 +40,17 @@
     z-index: 1050;
     display: flex;
     flex-direction: column;
-
-    /* Hidden by default — off-screen to the right */
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: -24px 0 60px rgba(0, 0, 0, 0.5);
-
-    /* Always portaled to body — no overflow constraint */
     will-change: transform;
 }
 
-/* Visible state */
 .fp-panel.open {
     right: 0;
     transform: translateX(0);
 }
 
-/* Top accent line */
 .fp-panel::before {
     content: "";
     position: absolute;
@@ -75,7 +67,6 @@
     pointer-events: none;
 }
 
-/* ── Header ── */
 .fp-header {
     display: flex;
     align-items: center;
@@ -121,10 +112,10 @@
     color: #f87171;
 }
 
-/* ── Body (scrollable) ── */
 .fp-body {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px 22px 12px;
     scrollbar-width: thin;
     scrollbar-color: #1a2540 transparent;
@@ -141,12 +132,10 @@
     border-radius: 2px;
 }
 
-/* ── Section ── */
 .fp-section {
     margin-bottom: 22px;
 }
 
-/* ── Label ── */
 .fp-label {
     display: block;
     font-size: 10px;
@@ -157,7 +146,6 @@
     margin-bottom: 8px;
 }
 
-/* ── Fieldset reset ── */
 .fp-fieldset {
     border: none;
     padding: 0;
@@ -166,12 +154,10 @@
 }
 
 .fp-fieldset legend.fp-label {
-    /* float: left; */
     width: 100%;
     margin-bottom: 8px;
 }
 
-/* ── Text input ── */
 .fp-input {
     width: 100%;
     box-sizing: border-box;
@@ -197,13 +183,11 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
 }
 
-/* Date input color fix for webkit */
 .fp-input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(0.4);
     cursor: pointer;
 }
 
-/* ── Select ── */
 .fp-select {
     width: 100%;
     box-sizing: border-box;
@@ -226,13 +210,11 @@
 .fp-select:focus {
     border-color: rgba(59, 130, 246, 0.45);
 }
-
 .fp-select option {
     background: #0d1117;
     color: #cbd5e1;
 }
 
-/* ── Chip group ── */
 .fp-chips {
     display: flex;
     flex-wrap: wrap;
@@ -277,28 +259,6 @@
     color: #93c5fd;
 }
 
-/* ── Date row ── */
-.fp-date-row {
-    display: grid;
-    /* grid-template-columns: 1fr 1fr; */
-    gap: 10px;
-}
-
-.fp-date-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.fp-date-label {
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #334155;
-}
-
-/* ── Divider ── */
 .fp-divider {
     height: 1px;
     background: linear-gradient(
@@ -310,7 +270,6 @@
     margin: 0 0 22px;
 }
 
-/* ── Footer ── */
 .fp-footer {
     padding: 14px 22px 22px;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -343,14 +302,216 @@
     background: rgba(239, 68, 68, 0.05);
 }
 
-/* Tablet — slightly narrower panel */
+/* ════════════════════════════════
+   DATE RANGE PICKER
+════════════════════════════════ */
+
+.fp-date-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.03);
+    transition: border-color 0.15s;
+    user-select: none;
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.fp-date-trigger:hover,
+.fp-date-trigger.open {
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+.fp-date-trigger.has-value .fp-date-from,
+.fp-date-trigger.has-value .fp-date-to {
+    color: #cbd5e1;
+}
+
+.fp-date-icon {
+    flex-shrink: 0;
+    opacity: 0.4;
+}
+.fp-date-arrow {
+    opacity: 0.3;
+    flex-shrink: 0;
+}
+
+.fp-date-clear {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.fp-date-clear:hover {
+    color: #ef4444;
+}
+
+.fp-date-hint {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: #f59e0b;
+}
+
+/* ── Calendar popover
+   overflow: visible — removes the clipping that hides the Sa column
+   and the last row of dates                                          */
+.fp-calendar-popover {
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #1a2540;
+    background: #090e17;
+    overflow: visible;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* DayPicker root — shrink cell size to fit 7 cols in ~296px */
+.fp-calendar-popover .rdp,
+.fp-calendar-popover .rdp-root {
+    --rdp-accent-color: #4d7cf6;
+    --rdp-accent-color-dark: #4d7cf6;
+    --rdp-background-color: rgba(77, 124, 246, 0.15);
+    --rdp-background-color-dark: rgba(77, 124, 246, 0.15);
+    --rdp-range_start-background: #4d7cf6;
+    --rdp-range_start-color: #ffffff;
+    --rdp-range_end-background: #4d7cf6;
+    --rdp-range_end-color: #ffffff;
+    --rdp-range_middle-background-color: rgba(77, 124, 246, 0.18);
+    --rdp-range_middle-color: #e2e8f0;
+    /* Compact cells: 7 × 34px = 238px + 12px padding = 262px — fits cleanly */
+    --rdp-cell-size: 34px;
+    --rdp-day_button-width: 34px;
+    --rdp-day_button-height: 34px;
+
+    margin: 0;
+    padding: 10px 6px 14px;
+    width: 100%;
+    box-sizing: border-box;
+    color: #e2e8f0;
+}
+
+/* Layout containers fill available width */
+.fp-calendar-popover .rdp-months,
+.fp-calendar-popover .rdp-month,
+.fp-calendar-popover .rdp-month_grid,
+.fp-calendar-popover .rdp-table {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Distribute 7 columns evenly */
+.fp-calendar-popover .rdp-day,
+.fp-calendar-popover .rdp-head_cell,
+.fp-calendar-popover .rdp-weekday {
+    width: calc(100% / 7);
+    max-width: 38px;
+    box-sizing: border-box;
+    padding: 2px 0;
+}
+
+/* Day button — slightly smaller than cell */
+.fp-calendar-popover .rdp-day_button {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    margin: 0 auto;
+}
+
+/* Text elements */
+.fp-calendar-popover .rdp-caption_label,
+.fp-calendar-popover .rdp-month_caption,
+.fp-calendar-popover .rdp-weekday,
+.fp-calendar-popover .rdp-head_cell,
+.fp-calendar-popover .rdp-day {
+    color: #e2e8f0;
+}
+
+/* Nav buttons */
+.fp-calendar-popover .rdp-nav_button,
+.fp-calendar-popover .rdp-button_previous,
+.fp-calendar-popover .rdp-button_next {
+    color: #64748b;
+}
+
+.fp-calendar-popover .rdp-nav_button:hover,
+.fp-calendar-popover .rdp-button_previous:hover,
+.fp-calendar-popover .rdp-button_next:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Outside days */
+.fp-calendar-popover .rdp-day_outside,
+.fp-calendar-popover .rdp-day.rdp-day_outside {
+    opacity: 0.25;
+}
+
+/* Hover — non-selected */
+.fp-calendar-popover
+    .rdp-day:hover:not([class*="selected"]):not([class*="range_start"]):not(
+        [class*="range_end"]
+    ):not([class*="range_middle"]) {
+    background-color: rgba(77, 124, 246, 0.12) !important;
+    border-radius: 6px;
+}
+
+/* Range start & end */
+.fp-calendar-popover .rdp-day_range_start,
+.fp-calendar-popover .rdp-day_range_end,
+.fp-calendar-popover .rdp-day[class*="range_start"],
+.fp-calendar-popover .rdp-day[class*="range_end"],
+.fp-calendar-popover [data-selected="true"][data-range-start],
+.fp-calendar-popover [data-selected="true"][data-range-end] {
+    background-color: #4d7cf6 !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    opacity: 1 !important;
+}
+
+/* Range middle — white bleed fix */
+.fp-calendar-popover .rdp-day_range_middle,
+.fp-calendar-popover .rdp-day[class*="range_middle"],
+.fp-calendar-popover
+    [data-selected="true"]:not([data-range-start]):not([data-range-end]) {
+    background-color: rgba(77, 124, 246, 0.18) !important;
+    color: #e2e8f0 !important;
+    border-radius: 0 !important;
+    opacity: 1 !important;
+}
+
+/* Single selected day */
+.fp-calendar-popover .rdp-day_selected:not([class*="range_middle"]),
+.fp-calendar-popover [data-selected="true"]:not([class*="range_middle"]) {
+    background-color: #4d7cf6 !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+}
+
+/* ════════════════════════════════
+   RESPONSIVE
+════════════════════════════════ */
+
 @media (max-width: 768px) {
     .fp-panel {
         width: 300px;
     }
 }
 
-/* Mobile — full width panel slides up from bottom */
 @media (max-width: 480px) {
     .fp-panel {
         top: auto;
@@ -362,8 +523,6 @@
         border-left: none;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 20px 20px 0 0;
-
-        /* Slide up from bottom instead of right */
         transform: translateY(100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.5);
@@ -373,7 +532,6 @@
         transform: translateY(0);
     }
 
-    /* Remove vertical accent line, add horizontal one */
     .fp-panel::before {
         top: 0;
         left: 10%;
@@ -381,7 +539,6 @@
         height: 1px;
     }
 
-    /* Drag handle indicator on mobile */
     .fp-panel::after {
         content: "";
         position: absolute;
@@ -395,15 +552,9 @@
     }
 
     .fp-header {
-        padding-top: 28px; /* space for drag handle */
+        padding-top: 28px;
     }
-
-    .fp-date-row {
-        grid-template-columns: 1fr; /* Stack dates on small screens */
-    }
-
     .fp-body {
         padding-bottom: 20px;
     }
 }
-

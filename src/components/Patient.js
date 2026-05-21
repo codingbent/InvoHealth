@@ -381,7 +381,7 @@ const Patient = ({
                     <section className="lp-hero">
                         <div className="lp-badge">
                             <Zap size={11} /> Built for repeat-visit OPD &amp;
-                            dermatology clinics
+                            clinics
                         </div>
 
                         <h1 className="lp-h1">

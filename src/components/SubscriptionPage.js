@@ -1,8 +1,3 @@
-// SubscriptionPage.js — FIX: payment history now actually fetched
-// Previously: payments state was initialized as [] and NEVER populated.
-// The /api/payment/payment-history endpoint existed but was never called.
-// Fix: added payment-history fetch in parallel with the other two calls.
-
 import { useEffect, useState, useMemo } from "react";
 import Pricing from "./Pricing";
 import {
@@ -439,7 +434,6 @@ export default function SubscriptionPage({
     };
 
     const renderMobileCards = (list) => {
-
         return (
             <div className="sp-mob-table">
                 {list.map((item) => (

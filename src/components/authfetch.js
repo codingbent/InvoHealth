@@ -44,7 +44,9 @@ export const authFetch = async (url, options = {}) => {
             code === "INVALID_TOKEN" ||
             code === "NO_TOKEN"
         ) {
-            ["token", "name", "role", "plan"].forEach(k => localStorage.removeItem(k));
+            ["token", "name", "role", "plan"].forEach((k) =>
+                localStorage.removeItem(k),
+            );
             window.location.href = "/login";
             throw new AuthError(code, "Session expired. Redirecting to login.");
         }

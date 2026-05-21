@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { toZonedTime } from "date-fns-tz";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import "../css/Filterpanel.css";
 import { fetchPaymentMethods } from "../api/payment.api";
+import { CalendarDays, X } from "lucide-react";
 
 export default function FilterPanel({
     open,
@@ -25,10 +28,72 @@ export default function FilterPanel({
     setSelectedFY,
     isdashboard = false,
     country,
-    clinicTimezone = null, // ← NEW: IANA timezone string e.g. "America/New_York"
+    clinicTimezone = null,
 }) {
     const [paymentOptions, setPaymentOptions] = useState([]);
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const calendarRef = useRef(null);
 
+    // ── Close calendar on outside click ──────────────────────────────
+    useEffect(() => {
+        const handler = (e) => {
+            if (calendarRef.current && !calendarRef.current.contains(e.target))
+                setCalendarOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    // ── Date helpers ─────────────────────────────────────────────────
+    const parseDate = (str) => {
+        if (!str) return undefined;
+        const [y, m, d] = str.split("-").map(Number);
+        return new Date(y, m - 1, d);
+    };
+
+    const toDateStr = (date) => {
+        if (!date) return "";
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    };
+
+    const displayDate = (str) => {
+        if (!str) return null;
+        const [y, m, d] = str.split("-").map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
+    const range = {
+        from: parseDate(startDate),
+        to: parseDate(endDate),
+    };
+
+    const handleRangeSelect = (selectedRange) => {
+        setSelectedFY("");
+        if (!selectedRange) {
+            setStartDate("");
+            setEndDate("");
+            return;
+        }
+        const { from, to } = selectedRange;
+        setStartDate(from ? toDateStr(from) : "");
+        setEndDate(to ? toDateStr(to) : "");
+        // Close once a full range is chosen
+        if (from && to) setCalendarOpen(false);
+    };
+
+    const clearDates = (e) => {
+        e.stopPropagation();
+        setStartDate("");
+        setEndDate("");
+        setSelectedFY("");
+        setCalendarOpen(false);
+    };
+
+    // ── FY helpers ───────────────────────────────────────────────────
     const FY_CONFIG = {
         IN: { startMonth: 3, startDay: 1 },
         UK: { startMonth: 3, startDay: 6 },
@@ -43,12 +108,8 @@ export default function FilterPanel({
         return `FY ${fy}-${String(Number(fy) + 1).slice(-2)}`;
     };
 
-    const getClinicToday = () => {
-        if (clinicTimezone) {
-            return toZonedTime(new Date(), clinicTimezone);
-        }
-        return new Date();
-    };
+    const getClinicToday = () =>
+        clinicTimezone ? toZonedTime(new Date(), clinicTimezone) : new Date();
 
     const formatDate = (date) => {
         const yyyy = date.getFullYear();
@@ -57,7 +118,6 @@ export default function FilterPanel({
         return `${yyyy}-${mm}-${dd}`;
     };
 
-    // ── Quick filter date builders — all use clinic timezone ─────────
     const getTodayRange = () => {
         const today = getClinicToday();
         const s = formatDate(today);
@@ -92,15 +152,9 @@ export default function FilterPanel({
     };
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                const data = await fetchPaymentMethods();
-                setPaymentOptions(data);
-            } catch {
-                alert("Failed to load payments", "danger");
-            }
-        };
-        load();
+        fetchPaymentMethods()
+            .then(setPaymentOptions)
+            .catch(() => alert("Failed to load payments", "danger"));
     }, []);
 
     return (
@@ -142,14 +196,9 @@ export default function FilterPanel({
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Payment Method</legend>
-                            <div
-                                className="fp-chips"
-                                role="group"
-                                aria-label="Payment Method"
-                            >
+                            <div className="fp-chips" role="group">
                                 {Array.isArray(paymentOptions) &&
                                     paymentOptions.map((p) => {
-                                        const label = `${p.subCategoryName}`;
                                         const isActive =
                                             selectedPayments.includes(p.id);
                                         return (
@@ -174,7 +223,7 @@ export default function FilterPanel({
                                                     )
                                                 }
                                             >
-                                                {label}
+                                                {p.subCategoryName}
                                             </button>
                                         );
                                     })}
@@ -188,11 +237,7 @@ export default function FilterPanel({
                                 <legend className="fp-label">
                                     Payment Status
                                 </legend>
-                                <div
-                                    className="fp-chips"
-                                    role="group"
-                                    aria-label="Payment Status"
-                                >
+                                <div className="fp-chips" role="group">
                                     {["Paid", "Partial", "Unpaid"].map(
                                         (type) => {
                                             const isActive =
@@ -203,7 +248,6 @@ export default function FilterPanel({
                                                     type="button"
                                                     role="checkbox"
                                                     aria-checked={isActive}
-                                                    aria-label={type}
                                                     className={`fp-chip ${isActive ? "active" : ""}`}
                                                     onClick={() =>
                                                         setSelectedStatus(
@@ -236,8 +280,6 @@ export default function FilterPanel({
                         </label>
                         <select
                             id="gender"
-                            name="gender"
-                            autoComplete="sex"
                             className="fp-select"
                             value={selectedGender}
                             onChange={(e) => setSelectedGender(e.target.value)}
@@ -254,11 +296,7 @@ export default function FilterPanel({
                         <div className="fp-section">
                             <fieldset className="fp-fieldset">
                                 <legend className="fp-label">Services</legend>
-                                <div
-                                    className="fp-chips"
-                                    role="group"
-                                    aria-label="Services"
-                                >
+                                <div className="fp-chips" role="group">
                                     {allServices.map((s) => {
                                         const active =
                                             selectedServices.includes(s);
@@ -268,8 +306,6 @@ export default function FilterPanel({
                                                 type="button"
                                                 role="checkbox"
                                                 aria-checked={active}
-                                                aria-label={`Service ${s}`}
-                                                name="services"
                                                 className={`fp-chip ${active ? "active" : ""}`}
                                                 onClick={() =>
                                                     setSelectedServices(
@@ -294,19 +330,13 @@ export default function FilterPanel({
                         </div>
                     )}
 
-                    {/* Quick Filters — dates computed in clinic timezone */}
+                    {/* Quick Filters */}
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Quick Filters</legend>
-                            <div
-                                className="fp-chips"
-                                role="group"
-                                aria-label="Quick Filters"
-                            >
+                            <div className="fp-chips" role="group">
                                 <button
                                     type="button"
-                                    name="quickFilter"
-                                    aria-label="Filter Today"
                                     className="fp-chip quick"
                                     onClick={() => {
                                         const { start, end } = getTodayRange();
@@ -319,8 +349,6 @@ export default function FilterPanel({
                                 </button>
                                 <button
                                     type="button"
-                                    name="quickFilter"
-                                    aria-label="Filter This Month"
                                     className="fp-chip quick"
                                     onClick={() => {
                                         const { start, end } =
@@ -334,8 +362,6 @@ export default function FilterPanel({
                                 </button>
                                 <button
                                     type="button"
-                                    name="quickFilter"
-                                    aria-label="Filter Last 30 Days"
                                     className="fp-chip quick"
                                     onClick={() => {
                                         const { start, end } =
@@ -351,48 +377,70 @@ export default function FilterPanel({
                         </fieldset>
                     </div>
 
+                    {/* ── Date Range with DayPicker ─────────────────── */}
                     <div className="fp-section">
                         <fieldset className="fp-fieldset">
                             <legend className="fp-label">Date Range</legend>
-                            <div className="fp-date-row">
-                                <input
-                                    id="start-date"
-                                    name="startDate"
-                                    type="date"
-                                    autoComplete="off"
-                                    className="fp-input"
-                                    value={startDate || ""}
-                                    aria-label="Start Date"
-                                    onChange={(e) => {
-                                        setSelectedFY("");
-                                        setStartDate(e.target.value);
-                                    }}
+
+                            {/* Trigger pill */}
+                            <div
+                                className={`fp-date-trigger ${calendarOpen ? "open" : ""} ${startDate ? "has-value" : ""}`}
+                                onClick={() => setCalendarOpen((p) => !p)}
+                            >
+                                <CalendarDays
+                                    size={14}
+                                    className="fp-date-icon"
                                 />
-                                <input
-                                    id="end-date"
-                                    name="endDate"
-                                    type="date"
-                                    autoComplete="off"
-                                    className="fp-input"
-                                    value={endDate || ""}
-                                    aria-label="End Date"
-                                    onChange={(e) => {
-                                        setSelectedFY("");
-                                        setEndDate(e.target.value);
-                                    }}
-                                />
+                                <span className="fp-date-from">
+                                    {startDate
+                                        ? displayDate(startDate)
+                                        : "Start date"}
+                                </span>
+                                <span className="fp-date-arrow">→</span>
+                                <span className="fp-date-to">
+                                    {endDate
+                                        ? displayDate(endDate)
+                                        : "End date"}
+                                </span>
+                                {(startDate || endDate) && (
+                                    <button
+                                        className="fp-date-clear"
+                                        onClick={clearDates}
+                                        aria-label="Clear dates"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Validation message */}
+                            {startDate && !endDate && (
+                                <p className="fp-date-hint">
+                                    Pick an end date to complete the range
+                                </p>
+                            )}
+
+                            {/* Calendar popup */}
+                            {calendarOpen && (
+                                <div
+                                    className="fp-calendar-popover"
+                                    ref={calendarRef}
+                                >
+                                    <DayPicker
+                                        mode="range"
+                                        selected={range}
+                                        onSelect={handleRangeSelect}
+                                        numberOfMonths={1}
+                                        showOutsideDays
+                                    />
+                                </div>
+                            )}
                         </fieldset>
                     </div>
 
                     <div className="fp-section">
-                        <label htmlFor="financial-year" className="fp-label">
-                            Financial Year
-                        </label>
+                        <label className="fp-label">Financial Year</label>
                         <select
-                            id="financial-year"
-                            name="financialYear"
-                            autoComplete="off"
                             className="fp-select"
                             value={selectedFY}
                             onChange={(e) => {
@@ -423,13 +471,10 @@ export default function FilterPanel({
                             setSelectedServices([]);
                             setSelectedGender("");
                             setSelectedStatus([]);
-                            setStartDate(null);
-                            setEndDate(null);
+                            setStartDate("");
+                            setEndDate("");
                             setSelectedFY("");
-                            setTimeout(() => {
-                                setStartDate("");
-                                setEndDate("");
-                            }, 0);
+                            setCalendarOpen(false);
                         }}
                     >
                         ↺ Reset all filters

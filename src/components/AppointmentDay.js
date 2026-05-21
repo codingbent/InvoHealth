@@ -179,7 +179,11 @@ const AppointmentDay = memo(function AppointmentDay({
                                             {a.status === "Paid" ? (
                                                 <div className="pl-amount-main">
                                                     {currency?.symbol}{" "}
-                                                    {fmt(Number(a.collected ?? 0))}
+                                                    {fmt(
+                                                        Number(
+                                                            a.collected ?? 0,
+                                                        ),
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <>
@@ -196,7 +200,9 @@ const AppointmentDay = memo(function AppointmentDay({
                                                         of {currency?.symbol}{" "}
                                                         {fmt(
                                                             Number(
-                                                                (a.remaining+a.collected) ?? 0,
+                                                                a.remaining +
+                                                                    a.collected ??
+                                                                    0,
                                                             ),
                                                         )}
                                                     </div>
@@ -283,7 +289,7 @@ const AppointmentDay = memo(function AppointmentDay({
                                         {a.status === "Paid" ? (
                                             <div className="pl-mob-amount">
                                                 {currency?.symbol}{" "}
-                                                {fmt(Number(a.amount ?? 0))}
+                                                {fmt(Number(a.collected ?? 0))}
                                             </div>
                                         ) : (
                                             <>
@@ -297,7 +303,15 @@ const AppointmentDay = memo(function AppointmentDay({
                                                 </div>
                                                 <div className="pl-mob-sub">
                                                     of {currency?.symbol}{" "}
-                                                    {fmt(Number(a.amount ?? 0))}
+                                                    {fmt(
+                                                        Number(
+                                                            a.remaining ?? 0,
+                                                        ) +
+                                                            Number(
+                                                                a.collected ??
+                                                                    0,
+                                                            ),
+                                                    )}{" "}
                                                 </div>
                                             </>
                                         )}

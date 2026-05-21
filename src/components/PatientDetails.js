@@ -678,17 +678,7 @@ export default function PatientDetails({
                                 {/* Mobile cards */}
                                 <div className="pd-mob-table">
                                     {appointmentsForView.map((visit) => {
-                                        const col = Number(
-                                            visit.collected ?? 0,
-                                        );
-                                        const tot = Number(visit.amount ?? 0);
-                                        const rem = tot - col;
-                                        const s =
-                                            rem <= 0
-                                                ? "Paid"
-                                                : col > 0
-                                                  ? "Partial"
-                                                  : "Unpaid";
+                                        const s = visit.status;
                                         return (
                                             <div
                                                 key={visit._id}

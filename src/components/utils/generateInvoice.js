@@ -300,7 +300,7 @@ export default function generateInvoicePDF(
         }
 
         const total = includeDiscount
-            ? Number(visit.collected+visit.remaining ?? rawTotal)
+            ? Number(visit.collected + visit.remaining ?? rawTotal)
             : rawTotal;
 
         const collected = Number(visit.collected ?? 0);

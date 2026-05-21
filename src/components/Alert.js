@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info } from "lucide-react";
-import "../css/Alert.css"
+import "../css/Alert.css";
 
 const DURATION = 3500;
 

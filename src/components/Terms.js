@@ -115,7 +115,6 @@ export default function Terms() {
 
     return (
         <div className="lgl-root">
-
             {/* Bg elements */}
             <div className="lgl-grid" aria-hidden />
             <div className="lgl-orb lgl-orb-1" aria-hidden />
