@@ -687,13 +687,7 @@ export default function Pricing() {
                 </div>
 
                 {role !== "doctor" && (
-                    <div
-                        style={{
-                            padding: "12px 48px 0",
-                            position: "relative",
-                            zIndex: 1,
-                        }}
-                    >
+                    <div className="pr-trial-wrap">
                         <div className="lp-trial-banner">
                             <div className="lp-trial-left">
                                 <span className="lp-trial-badge">

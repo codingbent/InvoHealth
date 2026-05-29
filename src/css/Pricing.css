@@ -795,19 +795,52 @@ ____________________ */
     margin-right: 4px;
 }
 
-/* ── Responsive ── */
+.pr-trial-wrap {
+    padding: 12px 48px 0;
+    position: relative;
+    z-index: 1;
+}
+
 @media (max-width: 860px) {
     .pr-grid {
         grid-template-columns: 1fr;
         max-width: 420px;
         margin: 0 auto;
     }
+    
     .pr-topbar {
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
+        align-items: flex-start;
     }
-    .pr-controls-row {
-        flex-direction: column;
-        align-items: center;
+
+    .pr-topbar-right {
+        width: 100%;
+    }
+
+    .pr-trial-wrap {
+        padding: 12px 0 0;
+    }
+
+    .pr-country-pill-wrap {
+        width: 100%;
+    }
+
+    .pr-country-pill {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: space-between;
+    }
+
+    .pr-country-tooltip {
+        right: auto;
+        left: 0;
+        width: calc(100vw - 48px);
+        max-width: 100%;
+    }
+
+    .pr-country-tooltip::before {
+        right: auto;
+        left: 18px;
     }
 }
