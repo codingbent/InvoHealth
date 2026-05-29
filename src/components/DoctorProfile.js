@@ -110,10 +110,7 @@ function AddPaymentForm({ categories, subCategories, onAdd }) {
         onAdd({
             categoryId,
             subCategoryId,
-            label:
-                label.trim() ||
-                filteredSubs.find((s) => s._id === subCategoryId)?.name ||
-                "",
+            label: label.trim() || "",
             isActive: true,
         });
         setCategoryId("");
@@ -1683,36 +1680,6 @@ export default function DoctorProfile(props) {
                             showPasswords={showPasswords}
                             setShowPasswords={setShowPasswords}
                         />
-                        <div style={{ marginTop: 8 }}>
-                            {[
-                                ["length", "Min 8 characters"],
-                                ["uppercase", "Uppercase letter"],
-                                ["lowercase", "Lowercase letter"],
-                                ["number", "Number"],
-                                ["special", "Special character"],
-                            ].map(([key, label]) => (
-                                <div key={key} className="dp-pw-rule">
-                                    <div
-                                        className="dp-pw-rule-dot"
-                                        style={{
-                                            background: passwordRules[key]
-                                                ? "#4ade80"
-                                                : "#1a2540",
-                                        }}
-                                    />
-                                    <span
-                                        style={{
-                                            fontSize: 10,
-                                            color: passwordRules[key]
-                                                ? "#4ade80"
-                                                : "#2e3d5c",
-                                        }}
-                                    >
-                                        {label}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
                     </div>
 
                     <div>
@@ -1741,11 +1708,41 @@ export default function DoctorProfile(props) {
                                 }}
                             >
                                 {passwordsMatch
-                                    ? "✓ Passwords match"
-                                    : "✗ Do not match"}
+                                    ? "✓ Passwords matched"
+                                    : "✗ Passwords did not match"}
                             </div>
                         )}
                     </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                    {[
+                        ["length", "Min 8 characters"],
+                        ["uppercase", "Uppercase letter"],
+                        ["lowercase", "Lowercase letter"],
+                        ["number", "Number"],
+                        ["special", "Special character"],
+                    ].map(([key, label]) => (
+                        <div key={key} className="dp-pw-rule">
+                            <div
+                                className="dp-pw-rule-dot"
+                                style={{
+                                    background: passwordRules[key]
+                                        ? "#4ade80"
+                                        : "#1a2540",
+                                }}
+                            />
+                            <span
+                                style={{
+                                    fontSize: 10,
+                                    color: passwordRules[key]
+                                        ? "#4ade80"
+                                        : "#2e3d5c",
+                                }}
+                            >
+                                {label}
+                            </span>
+                        </div>
+                    ))}
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
                     <button
@@ -2716,15 +2713,16 @@ export default function DoctorProfile(props) {
                                             <div style={{ flex: 1 }}>
                                                 <div
                                                     style={{
-                                                        fontSize: 13,
+                                                        fontSize: 11,
                                                         fontWeight: 500,
                                                     }}
                                                 >
-                                                    {p.label || "Unnamed"}
+                                                    {p.label}
                                                 </div>
                                                 <div
                                                     style={{
-                                                        fontSize: 11,
+                                                        fontSize: 15,
+                                                        fontWeight: 300,
                                                         opacity: 0.45,
                                                         marginTop: 2,
                                                     }}

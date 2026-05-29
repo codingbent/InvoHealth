@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 const Payment = require("../../models/Payment");
 const fetchuser = require("../../middleware/fetchuser");
+const requireDoctor = require("../../middleware/requireDoctor");
 
-router.get("/payment-history", fetchuser, async (req, res) => {
+router.get("/payment-history", fetchuser, requireDoctor, async (req, res) => {
     try {
         const payments = await Payment.find({ doctorId: req.user.doctorId })
             .sort({ paidAt: -1 })
-            .limit(24) // last 24 records (2 years of monthly)
+            .limit(5) // last 24 records (2 years of monthly)
             .lean();
 
         return res.json({ success: true, payments });

@@ -400,12 +400,15 @@ export default function Pricing() {
     const handlePlanChange = async (planKey) => {
         if (!token || processingPlan) return;
 
-        if (
-            !window.confirm(
+        const isExpired = status !== "active";
+
+        if (!isExpired) {
+            const confirmed = window.confirm(
                 "You will be charged immediately and plan will change now. Continue?",
-            )
-        )
-            return;
+            );
+
+            if (!confirmed) return;
+        }
 
         setProcessingPlan(planKey);
 

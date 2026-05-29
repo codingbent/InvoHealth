@@ -72,6 +72,7 @@ export default function PatientList(props) {
     const [paymentOptions, setPaymentOptions] = useState([]);
     const [doctor, setDoctor] = useState(null);
     const [clinicTimezone, setClinicTimezone] = useState(null);
+    const [planExpired, setPlanExpired] = useState(false);
 
     useEffect(() => {
         setDoctor(localStorage.getItem("name"));
@@ -83,6 +84,12 @@ export default function PatientList(props) {
             .then((data) => {
                 const tz = data?.doctor?.timezone || null;
                 if (tz) setClinicTimezone(tz);
+
+                // Check plan expiry from the same doctor fetch
+                const expiry = data?.doctor?.planExpiresAt;
+                if (expiry) {
+                    setPlanExpired(new Date(expiry) < new Date());
+                }
             })
             .catch((err) =>
                 console.error("Failed to fetch clinic timezone:", err),
@@ -139,7 +146,10 @@ export default function PatientList(props) {
         const setState =
             type === "upcoming" ? setUpcomingState : setHistoryState;
 
-        setState((prev) => ({ ...prev, loading: true }));
+        setState((prev) => ({
+            ...prev,
+            loading: true,
+        }));
 
         try {
             const params = buildFilterParams(filters);
@@ -169,7 +179,18 @@ export default function PatientList(props) {
             });
         } catch (err) {
             console.error(`fetchTab(${type}) error:`, err);
-            setState((prev) => ({ ...prev, loading: false }));
+
+            if (
+                err?.message?.includes("Subscription expired") ||
+                err?.message?.includes("SUBSCRIPTION_EXPIRED")
+            ) {
+                setPlanExpired(true);
+            }
+
+            setState((prev) => ({
+                ...prev,
+                loading: false,
+            }));
         }
     }, []);
 
@@ -411,7 +432,19 @@ export default function PatientList(props) {
             exportToExcel(filteredForExport);
         } catch (err) {
             console.error(err);
-            props.showAlert("Something went wrong", "danger");
+
+            if (
+                err?.message?.includes("Subscription expired") ||
+                err?.message?.includes("SUBSCRIPTION_EXPIRED")
+            ) {
+                props.showAlert(
+                    "Your subscription has expired. Please upgrade your plan.",
+                    "danger",
+                );
+                return;
+            }
+
+            props.showAlert(err?.message || "Something went wrong", "danger");
         }
     };
 
@@ -432,7 +465,6 @@ export default function PatientList(props) {
             return isPercent ? `${discount}%` : `${currencySymbol}${discount}`;
         };
 
-        // ── helper: resolve flat discount amount ─────────────────────────
         const resolveDiscount = (a) => {
             const billed = Number(a.amount ?? 0);
             const discount = Number(a.discount ?? 0);
@@ -664,13 +696,15 @@ export default function PatientList(props) {
             `invohealth-records-${toDate.replace(/\//g, "-")}.xlsx`,
         );
     };
-    // ── Badge label helper ───────────────────────────────────────────
-    // Shows loaded count (e.g. "20+") while more pages remain,
-    // and the exact count (e.g. "38") once all records are fetched.
+
     const tabBadge = (state) => {
         const loaded = state.appointments.length;
         if (loaded === 0) return null;
         return state.allFetched ? `${loaded}` : `${loaded}+`;
+    };
+
+    const handleUpgradeClick = () => {
+        navigate("/subscriptionpage#pricing");
     };
 
     return (
@@ -772,6 +806,8 @@ export default function PatientList(props) {
                     paymentOptions={paymentOptions}
                     getPaymentLabel={getPaymentLabel}
                     activeTab={activeTab}
+                    planExpired={planExpired}
+                    onUpgradeClick={handleUpgradeClick}
                 />
             </div>
         </>

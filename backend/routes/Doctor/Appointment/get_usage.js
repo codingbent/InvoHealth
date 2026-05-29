@@ -6,10 +6,9 @@ const {
     getPricing,
     invalidatePricingCache,
 } = require("../../../utils/pricingcache");
-const requireSubscription = require("../../../middleware/requiresubscription");
 const { getSubscriptionStatus } = require("../../../utils/subscription_check");
 
-router.get("/get_usage", fetchuser, requireSubscription, async (req, res) => {
+router.get("/get_usage", fetchuser, async (req, res) => {
     try {
         const doctor = await Doc.findById(req.user.doctorId);
 

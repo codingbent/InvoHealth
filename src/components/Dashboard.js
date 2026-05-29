@@ -842,17 +842,7 @@ export default function Dashboard({
     const serviceFilterActive = analytics?.serviceFilterActive || false;
 
     // ── Waiting for plan resolution ───────────────────────────────────────────
-    if (plan === null) {
-        return (
-            <div className="db-loading-state">
-                <span className="db-loading-dot" />
-                <span className="db-loading-dot" />
-                <span className="db-loading-dot" />
-            </div>
-        );
-    }
-
-    if (!currency?.symbol) return <DashboardSkeleton />;
+    if (plan === null || !currency?.symbol) return <DashboardSkeleton />;
 
     // Shared props for DashboardContent (locked + unlocked render)
     const contentProps = {

@@ -391,3 +391,25 @@ ____________________ */
     letter-spacing: 0.04em;
     margin-top: 8px;
 }
+.lg-submit:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.lg-spinner {
+    width: 14px;
+    height: 14px;
+
+    border: 2px solid rgba(255,255,255,.25);
+    border-top-color: white;
+
+    border-radius: 50%;
+
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

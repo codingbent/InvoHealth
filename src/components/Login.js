@@ -15,6 +15,7 @@ export default function Login(props) {
     const [countries, setCountries] = useState([]);
     const [showInvalid, setShowInvalid] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [isSigningIn, setIsSigningIn] = useState(false);
 
     const handleSetRole = (role) => {
         setLoginAs(role);
@@ -48,35 +49,45 @@ export default function Login(props) {
     // const getFullPhone = () => countryCode + identifier.replace(/\D/g, "");
 
     const loginWithPassword = async () => {
-        const res = await fetch(`${API_BASE_URL}/api/doctor/login_doctor`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                identifier,
-                password,
-                identifierType: "email",
-            }),
-        });
-        const json = await res.json();
-        if (json.success) {
-            localStorage.setItem("token", json.authtoken);
-            localStorage.setItem("name", json.name);
-            localStorage.setItem("role", json.role);
-            localStorage.setItem("plan", json.subscription?.plan || "free");
-            window.location.href = "/";
-        } else {
-            props.showAlert(json.error || "Login failed", "danger");
+        try {
+            setIsSigningIn(true);
+
+            const res = await fetch(`${API_BASE_URL}/api/doctor/login_doctor`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    identifier,
+                    password,
+                    identifierType: "email",
+                }),
+            });
+
+            const json = await res.json();
+
+            if (json.success) {
+                localStorage.setItem("token", json.authtoken);
+                localStorage.setItem("name", json.name);
+                localStorage.setItem("role", json.role);
+
+                window.location.href = "/";
+            } else {
+                props.showAlert(json.error || "Login failed", "danger");
+            }
+        } finally {
+            setIsSigningIn(false);
         }
     };
 
     const staffLogin = async () => {
         try {
             const cleanPhone = identifier.replace(/\D/g, "").replace(/^0+/, "");
-
             if (!cleanPhone || !password) {
                 props.showAlert("Enter phone and password", "danger");
                 return;
             }
+            setIsSigningIn(true);
 
             const res = await authFetch(
                 `${API_BASE_URL}/api/staff/login_staff`,
@@ -129,6 +140,8 @@ export default function Login(props) {
 
             // UNKNOWN
             props.showAlert("Something went wrong. Try again.", "danger");
+        } finally {
+            setIsSigningIn(false);
         }
     };
 
@@ -268,8 +281,22 @@ export default function Login(props) {
                     </Link>
 
                     {/* Submit */}
-                    <button type="submit" className="lg-submit">
-                        <LogIn size={15} /> Sign In
+                    <button
+                        type="submit"
+                        className="lg-submit"
+                        disabled={isSigningIn}
+                    >
+                        {isSigningIn ? (
+                            <>
+                                <span className="lg-spinner"></span>
+                                Signing In...
+                            </>
+                        ) : (
+                            <>
+                                <LogIn size={15} />
+                                Sign In
+                            </>
+                        )}
                     </button>
                 </form>
 

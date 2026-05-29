@@ -101,3 +101,218 @@ ______________________________________ */
     margin-bottom: 10px;
     opacity: 0.3;
 }
+
+/* ___________________________________
+    Expired Plan State
+______________________________________ */
+
+.al-expired-container {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 8px;
+    /* No min-height — content drives height, no scroll */
+}
+
+/* ── Blurred fake data ── */
+.al-expired-fake-data {
+    padding: 8px 4px 24px;
+    filter: blur(4px);
+    opacity: 0.7;
+    pointer-events: none;
+    user-select: none;
+}
+
+.al-expired-month-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    margin-top: 4px;
+}
+
+.al-expired-month-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.al-expired-month-line {
+    height: 1px;
+    background: linear-gradient(90deg, #1e293b, transparent);
+    flex: 1;
+}
+
+.al-expired-month-amount {
+    font-size: 13px;
+    color: #4ade80;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.al-expired-day-label {
+    font-size: 11px;
+    color: #475569;
+    font-weight: 500;
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+}
+
+.al-expired-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+.al-expired-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1e2d45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a7fcb;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+}
+
+.al-expired-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.al-expired-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.al-expired-meta {
+    font-size: 11px;
+    color: #475569;
+}
+
+.al-expired-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.al-expired-time {
+    font-size: 11px;
+    color: #475569;
+}
+
+.al-expired-status {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.al-expired-amount {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+/* ── Overlay ── */
+.al-expired-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+
+/* ── Lock box ── */
+.al-expired-box {
+    width: 100%;
+    max-width: 370px;
+    background: #070f1d;
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 20px;
+    padding: 32px 28px;
+    text-align: center;
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(59, 130, 246, 0.06);
+}
+
+.al-expired-lock-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.al-expired-lock-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.al-expired-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin: 0 0 10px;
+    letter-spacing: 0.01em;
+}
+
+.al-expired-sub {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.65;
+    margin: 0 0 24px;
+}
+
+.al-expired-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 28px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.15s ease;
+    width: 100%;
+}
+
+.al-expired-btn:hover {
+    background: #3b82f6;
+}
+
+.al-expired-btn:active {
+    background: #1d4ed8;
+    transform: scale(0.98);
+}

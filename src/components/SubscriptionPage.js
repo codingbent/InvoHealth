@@ -404,7 +404,13 @@ export default function SubscriptionPage({
                                     </span>
                                 </td>
                                 <td>
-                                    <span className="sp-pill">
+                                    <span
+                                        className="sp-pill"
+                                        style={{
+                                            border: "none",
+                                            borderRadius: "0",
+                                        }}
+                                    >
                                         {(p.billingCycle || "").toUpperCase()}
                                     </span>
                                 </td>
@@ -708,45 +714,40 @@ export default function SubscriptionPage({
                             <Clock size={15} />
                         </div>
                         <div className="sp-card-title">Payment History</div>
-
-                        <div
-                            style={{
-                                marginLeft: "auto",
-                                display: "flex",
-                                gap: 8,
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            {["success", "pending", "failed"].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    style={{
-                                        padding: "6px 12px",
-                                        borderRadius: 8,
-                                        border: "1px solid #2e3d5c",
-                                        background:
-                                            activeTab === tab
-                                                ? tab === "success"
-                                                    ? "rgba(74,222,128,0.15)"
-                                                    : tab === "pending"
-                                                      ? "rgba(251,146,60,0.15)"
-                                                      : "rgba(248,113,113,0.15)"
-                                                : "transparent",
-                                        color:
-                                            tab === "success"
-                                                ? "#4ade80"
-                                                : tab === "pending"
-                                                  ? "#fb923c"
-                                                  : "#f87171",
-                                        cursor: "pointer",
-                                        fontSize: "0.75rem",
-                                    }}
-                                >
-                                    {tab.toUpperCase()}
-                                </button>
-                            ))}
+                        <div className="sp-card-subtitle">
+                            (Last 5 payment records)
                         </div>
+                    </div>
+                    <div className="sp-active-tab">
+                        {["success", "pending", "failed"].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                style={{
+                                    padding: "6px 12px",
+                                    borderRadius: 8,
+                                    border: "1px solid #2e3d5c",
+                                    background:
+                                        activeTab === tab
+                                            ? tab === "success"
+                                                ? "rgba(74,222,128,0.15)"
+                                                : tab === "pending"
+                                                  ? "rgba(251,146,60,0.15)"
+                                                  : "rgba(248,113,113,0.15)"
+                                            : "transparent",
+                                    color:
+                                        tab === "success"
+                                            ? "#4ade80"
+                                            : tab === "pending"
+                                              ? "#fb923c"
+                                              : "#f87171",
+                                    cursor: "pointer",
+                                    fontSize: "0.75rem",
+                                }}
+                            >
+                                {tab.toUpperCase()}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="sp-card-body" style={{ padding: "16px" }}>
