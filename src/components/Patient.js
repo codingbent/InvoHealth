@@ -85,12 +85,12 @@ const ECONOMICS = [
         desc: "Patient register + Excel billing + paper files + WhatsApp reminders — all in one place.",
         color: "#38bdf8",
     },
-    {
-        metric: "Free",
-        label: "migration included",
-        desc: "We import your existing patient data and service list. You don't touch a single row of Excel.",
-        color: "#fb923c",
-    },
+    // {
+    //     metric: "Free",
+    //     label: "migration included",
+    //     desc: "We import your existing patient data and service list. You don't touch a single row of Excel.",
+    //     color: "#fb923c",
+    // },
 ];
 
 // ── Workflow steps ────────────────────────────────────────────────────────
