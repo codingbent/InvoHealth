@@ -37,6 +37,7 @@ export default function AddAppointment({
     country,
     onAppointmentAdded,
     closePanel,
+    preselectedPatient,
 }) {
     // Derive display locale from the doctor's country code ("IN" → "en-IN").
     // Falls back to the browser's locale when country hasn't loaded yet.
@@ -158,6 +159,12 @@ export default function AddAppointment({
         };
         load();
     }, []);
+
+    useEffect(() => {
+        if (preselectedPatient) {
+            setSelectedPatient(preselectedPatient);
+        }
+    }, [preselectedPatient]);
 
     const nextSlot = useMemo(() => {
         if (!currentSlot || !timeSlots.length) return null;

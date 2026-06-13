@@ -15,11 +15,13 @@ import {
     Eye,
     EyeOff,
     Mail,
+    Plus,
 } from "lucide-react";
 import { API_BASE_URL } from "../components/config";
 import { fetchPaymentMethods } from "../api/payment.api";
 import EditAppointment from "./EditAppointment";
 import EditPatient from "./EditPatient";
+import AddAppointment from "./AddAppointment";
 import "../css/Patientdetails.css";
 import { fetchCountries } from "../api/country.api";
 import generateInvoicePDF from "./utils/generateInvoice";
@@ -43,6 +45,7 @@ export default function PatientDetails({
     const [availableServices, setAvailableServices] = useState([]);
     const [paymentOptions, setPaymentOptions] = useState([]);
     const [doctor, setDoctor] = useState(null);
+    const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
 
     // ─── UI state ──────────────────────────────────────────────────────────────
     const [loading, setLoading] = useState(true);
@@ -496,6 +499,14 @@ export default function PatientDetails({
                         >
                             <Pencil size={13} /> Edit Patient
                         </button>
+
+                        <button
+                            className="pd-btn pd-btn-add-appt"
+                            onClick={() => setAddAppointmentOpen(true)}
+                        >
+                            <Plus size={13} /> Add Appointment
+                        </button>
+
                         <button
                             className="pd-btn pd-btn-danger"
                             disabled={deleting}
@@ -1148,6 +1159,54 @@ export default function PatientDetails({
                                     : "Download"}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Add Appointment modal */}
+            {addAppointmentOpen && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.6)",
+                        zIndex: 900,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "center",
+                        overflowY: "auto",
+                        padding: "40px 16px 60px",
+                        backdropFilter: "blur(6px)",
+                    }}
+                    onClick={() => setAddAppointmentOpen(false)}
+                >
+                    <div
+                        className="pd-add-appt-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Close button */}
+                        <button
+                            className="pd-add-appt-close"
+                            onClick={() => setAddAppointmentOpen(false)}
+                        >
+                            <X size={15} />
+                        </button>
+
+                        <AddAppointment
+                            showAlert={showAlert}
+                            currency={currency}
+                            usage={usage}
+                            country={country}
+                            preselectedPatient={{
+                                _id: id,
+                                name: details?.name,
+                                number: fullNumber || details?.numberLast4,
+                            }}
+                            onAppointmentAdded={() => {
+                                fetchData();
+                                setAddAppointmentOpen(false);
+                            }}
+                            closePanel={() => setAddAppointmentOpen(false)}
+                        />
                     </div>
                 </div>
             )}

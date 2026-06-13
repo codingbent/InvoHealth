@@ -112,10 +112,10 @@ const EditAppointment = ({
     // Image usage stats
     const imagesUsed = usage?.images?.used || 0;
     const imagesLimit = usage?.images?.limit ?? 0;
-    const totalImagesAfterSave = existingImages.length + newImageFiles.length;
-    const canAddMoreImages =
-        totalImagesAfterSave < MAX_IMAGES &&
-        (imagesLimit === -1 || imagesUsed + newImageFiles.length < imagesLimit);
+    // const totalImagesAfterSave = existingImages.length + newImageFiles.length;
+    // const canAddMoreImages =
+    //     totalImagesAfterSave < MAX_IMAGES &&
+    //     (imagesLimit === -1 || imagesUsed + newImageFiles.length < imagesLimit);
 
     // ─── Data fetches ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -477,8 +477,37 @@ const EditAppointment = ({
                 );
             }
 
+            const extractPublicId = (url) => {
+                if (!url) return "";
+                // Strip fl_attachment and other transformations before extracting
+                const cleaned = url.replace(/\/upload\/([^/]+\/)*/, "/upload/");
+                const m = cleaned.match(
+                    /\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?$/i,
+                );
+                return m?.[1] ?? "";
+            };
+
+            const normalizedExisting = existingImages.map((img) => {
+                const url = img?.url || (typeof img === "string" ? img : "");
+
+                const isPDF =
+                    img?.type === "application/pdf" ||
+                    img?.resource_type === "raw" ||
+                    url.includes("/raw/upload") ||
+                    url.includes("fl_attachment") ||
+                    url.toLowerCase().endsWith(".pdf");
+
+                const publicId = img?.public_id || extractPublicId(url);
+
+                return {
+                    url,
+                    public_id: publicId,
+                    resource_type: isPDF ? "raw" : "image",
+                    type: isPDF ? "application/pdf" : img?.type || "image/jpeg",
+                };
+            });
             // Merge images correctly
-            const finalImages = [...existingImages, ...uploadedUrls];
+            const finalImages = [...normalizedExisting, ...uploadedUrls];
 
             // IMPORTANT: If nothing changed → avoid unnecessary image update
             const shouldSendImages =
@@ -955,185 +984,201 @@ const EditAppointment = ({
                             })()}
 
                         {/* ── Multi-image upload ── */}
-                        <div className="pd-section-sep">
-                            <ImageIcon size={11} style={{ marginRight: 5 }} />
-                            Images
-                        </div>
-                        <div className="pd-field">
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    marginBottom: 8,
-                                }}
-                            >
-                                <label
-                                    className="pd-label"
-                                    style={{ margin: 0 }}
+                        {existingImages.length > 0 && (
+                            <div className="pd-section-sep">
+                                <ImageIcon
+                                    size={11}
+                                    style={{ marginRight: 5 }}
+                                />
+                                Images
+                            </div>
+                        )}
+                        {existingImages.length > 0 && (
+                            <div className="pd-field">
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        marginBottom: 8,
+                                    }}
                                 >
-                                    Upload Images
+                                    <label
+                                        className="pd-label"
+                                        style={{ margin: 0 }}
+                                    >
+                                        Upload Images
+                                        <span
+                                            style={{
+                                                fontSize: 9,
+                                                marginLeft: 6,
+                                                textTransform: "none",
+                                                letterSpacing: 0,
+                                            }}
+                                        >
+                                            - max 2MB (images, PDF)
+                                        </span>
+                                    </label>
                                     <span
                                         style={{
-                                            fontSize: 9,
-                                            marginLeft: 6,
-                                            textTransform: "none",
-                                            letterSpacing: 0,
+                                            fontSize: 10,
+                                            color: "#6b7fa8",
                                         }}
                                     >
-                                        - max 2MB (images, PDF)
+                                        {existingImages.length +
+                                            newImageFiles.length}
+                                        /{MAX_IMAGES} max
                                     </span>
-                                </label>
-                                <span
-                                    style={{ fontSize: 10, color: "#6b7fa8" }}
-                                >
-                                    {existingImages.length +
-                                        newImageFiles.length}
-                                    /{MAX_IMAGES} max
-                                </span>
-                            </div>
+                                </div>
 
-                            <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                multiple
-                                style={{ display: "none" }}
-                                id="editImageInput"
-                                onChange={handleImageChange}
-                            />
+                                <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    multiple
+                                    style={{ display: "none" }}
+                                    id="editImageInput"
+                                    onChange={handleImageChange}
+                                />
 
-                            {/* Existing + New Images Combined Grid */}
-                            {(existingImages.length > 0 ||
-                                newImageFiles.length > 0) && (
-                                <div className="pd-images-grid">
-                                    {/* Existing Images */}
-                                    {existingImages.map((img, idx) => {
-                                        const url =
-                                            typeof img === "string"
-                                                ? img
-                                                : img?.url || "";
-                                        const isPDF =
-                                            img?.type === "application/pdf" ||
-                                            (url &&
-                                                url.includes("/raw/upload")) ||
-                                            (url &&
-                                                url.includes("fl_attachment"));
+                                {/* Existing + New Images Combined Grid */}
+                                {(existingImages.length > 0 ||
+                                    newImageFiles.length > 0) && (
+                                    <div className="pd-images-grid">
+                                        {/* Existing Images */}
+                                        {existingImages.map((img, idx) => {
+                                            const url =
+                                                typeof img === "string"
+                                                    ? img
+                                                    : img?.url || "";
+                                            const isPDF =
+                                                img?.type ===
+                                                    "application/pdf" ||
+                                                (url &&
+                                                    url.includes(
+                                                        "/raw/upload",
+                                                    )) ||
+                                                (url &&
+                                                    url.includes(
+                                                        "fl_attachment",
+                                                    ));
 
-                                        return (
-                                            <div
-                                                key={`existing-${idx}`}
-                                                className="pd-preview-card"
-                                            >
-                                                {isPDF ? (
-                                                    <div
-                                                        className="pd-pdf-preview"
-                                                        onClick={() =>
-                                                            window.open(
-                                                                url,
-                                                                "_blank",
-                                                            )
-                                                        }
-                                                        style={{
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        📄
+                                            return (
+                                                <div
+                                                    key={`existing-${idx}`}
+                                                    className="pd-preview-card"
+                                                >
+                                                    {isPDF ? (
+                                                        <div
+                                                            className="pd-pdf-preview"
+                                                            onClick={() =>
+                                                                window.open(
+                                                                    url,
+                                                                    "_blank",
+                                                                )
+                                                            }
+                                                            style={{
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            📄
+                                                            <span className="pd-preview-name">
+                                                                PDF
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <img
+                                                            src={url}
+                                                            alt={`img-${idx}`}
+                                                            className="pd-preview-img"
+                                                            onClick={() =>
+                                                                setLightboxImg({
+                                                                    url,
+                                                                    date: "",
+                                                                })
+                                                            }
+                                                        />
+                                                    )}
+
+                                                    <div className="pd-preview-overlay">
                                                         <span className="pd-preview-name">
-                                                            PDF
+                                                            Saved
                                                         </span>
                                                     </div>
-                                                ) : (
-                                                    <img
-                                                        src={url}
-                                                        alt={`img-${idx}`}
-                                                        className="pd-preview-img"
+
+                                                    <button
+                                                        type="button"
+                                                        className="pd-preview-remove"
                                                         onClick={() =>
-                                                            setLightboxImg({
-                                                                url,
-                                                                date: "",
-                                                            })
-                                                        }
-                                                    />
-                                                )}
-
-                                                <div className="pd-preview-overlay">
-                                                    <span className="pd-preview-name">
-                                                        Saved
-                                                    </span>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    className="pd-preview-remove"
-                                                    onClick={() =>
-                                                        handleRemoveExisting(
-                                                            img,
-                                                        )
-                                                    }
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* New Images */}
-                                    {newImageFiles.map(
-                                        ({ file, preview }, idx) => (
-                                            <div
-                                                key={`new-${idx}`}
-                                                className="pd-preview-card"
-                                            >
-                                                {file.type ===
-                                                "application/pdf" ? (
-                                                    <div
-                                                        className="ap-pdf-preview"
-                                                        onClick={() =>
-                                                            window.open(
-                                                                URL.createObjectURL(
-                                                                    file,
-                                                                ),
-                                                                "_blank",
+                                                            handleRemoveExisting(
+                                                                img,
                                                             )
                                                         }
-                                                        style={{
-                                                            cursor: "pointer",
-                                                        }}
                                                     >
-                                                        <File size={18} />
-                                                        <span>{file.name}</span>
-                                                    </div>
-                                                ) : (
-                                                    <img
-                                                        src={preview}
-                                                        alt={file.name}
-                                                        className="ap-preview-img"
-                                                    />
-                                                )}
-                                                <div className="pd-preview-overlay">
-                                                    <span className="pd-preview-name">
-                                                        {file.type ===
-                                                        "application/pdf"
-                                                            ? `${(file.size / 1024).toFixed(0)} KB`
-                                                            : file.name}
-                                                    </span>
+                                                        ×
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    className="pd-preview-remove"
-                                                    onClick={() =>
-                                                        handleRemoveNew(idx)
-                                                    }
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ),
-                                    )}
-                                </div>
-                            )}
+                                            );
+                                        })}
 
-                            {/* Add more button */}
+                                        {/* New Images */}
+                                        {newImageFiles.map(
+                                            ({ file, preview }, idx) => (
+                                                <div
+                                                    key={`new-${idx}`}
+                                                    className="pd-preview-card"
+                                                >
+                                                    {file.type ===
+                                                    "application/pdf" ? (
+                                                        <div
+                                                            className="ap-pdf-preview"
+                                                            onClick={() =>
+                                                                window.open(
+                                                                    URL.createObjectURL(
+                                                                        file,
+                                                                    ),
+                                                                    "_blank",
+                                                                )
+                                                            }
+                                                            style={{
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            <File size={18} />
+                                                            <span>
+                                                                {file.name}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <img
+                                                            src={preview}
+                                                            alt={file.name}
+                                                            className="ap-preview-img"
+                                                        />
+                                                    )}
+                                                    <div className="pd-preview-overlay">
+                                                        <span className="pd-preview-name">
+                                                            {file.type ===
+                                                            "application/pdf"
+                                                                ? `${(file.size / 1024).toFixed(0)} KB`
+                                                                : file.name}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="pd-preview-remove"
+                                                        onClick={() =>
+                                                            handleRemoveNew(idx)
+                                                        }
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Add more button
                             {canAddMoreImages && (
                                 <button
                                     type="button"
@@ -1159,8 +1204,9 @@ const EditAppointment = ({
                                     >
                                         Maximum {MAX_IMAGES} images per visit.
                                     </p>
-                                )}
-                        </div>
+                                )} */}
+                            </div>
+                        )}
 
                         {/* Payment type */}
                         <div className="pd-field">

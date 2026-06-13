@@ -307,7 +307,8 @@ export default function AppointmentList({
                                 Subscription Expired
                             </p>
                             <p className="al-expired-sub">
-                                Your plan has expired. Renew to regain full access to appointment history.
+                                Your plan has expired. Renew to regain full
+                                access to appointment history.
                             </p>
                             <button
                                 className="al-expired-btn"
@@ -319,7 +320,42 @@ export default function AppointmentList({
                     </div>
                 </div>
             ) : (
-                renderMonths(monthKeys)
+                <>
+                    {renderMonths(monthKeys)}
+                    <div ref={loadMoreRef} style={{ height: 1 }} />
+                    {loading && appointments.length > 0 && (
+                        <div className="pl-table-card" style={{ marginTop: 8 }}>
+                            {[1, 2, 3].map((j) => (
+                                <div className="pl-skeleton-row" key={j}>
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "22%", height: 12 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "10%", height: 12 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "12%", height: 18 }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{
+                                            width: "10%",
+                                            height: 12,
+                                            marginLeft: "auto",
+                                        }}
+                                    />
+                                    <div
+                                        className="pl-skeleton"
+                                        style={{ width: "12%", height: 18 }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </>
     );
